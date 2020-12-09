@@ -1,0 +1,7 @@
+ECLIPSE: 
+Eclipse Java EE IDE for Web Developers.
+Version: Oxygen.1 Release (4.7.1)
+OS: Windows 8.1, v.6.3, x86_64 / win32
+
+TEMPLATES:
+Basic Template 1.1.29.14.xml

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
+	<classpathentry kind="lib" path="C:/libraries/db-derby-10.14.2.0-bin/lib/derby.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

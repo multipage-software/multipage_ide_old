@@ -1,0 +1,225 @@
+align-content, -webkit-align-content, n
+align-items, -webkit-align-items, n
+align-self, -webkit-align-self, n
+animation, -webkit-animation, -moz-animation, -o-animation, n
+animation-delay, -webkit-animation-delay, -moz-animation-delay, -o-animation-delay, n
+animation-direction, -webkit-animation-direction, -moz-animation-direction, -o-animation-direction, n
+animation-duration, -webkit-animation-duration, -moz-animation-duration, -o-animation-duration, n
+animation-fill-mode, -webkit-animation-fill-mode, -moz-animation-fill-mode, -o-animation-fill-mode, n
+animation-iteration-count, -webkit-animation-iteration-count, -moz-animation-iteration-count, -o-animation-iteration-count, n
+animation-name, -webkit-animation-name, -moz-animation-name, -o-animation-name, n
+animation-play-state, -webkit-animation-play-state, -moz-animation-play-state, -o-animation-play-state, n
+animation-timing-function, -webkit-animation-timing-function, -moz-animation-timing-function, -o-animation-timing-function, n
+backface-visibility, -webkit-backface-visibility, -moz-backface-visibility, n
+background, a
+background-attachment, n
+background-clip, n
+background-color, a
+background-image, n
+background-origin, n
+background-position, a
+background-repeat, n
+background-size, -webkit-background-size, -moz-background-size, -o-background-size, a
+border, a
+border-bottom, a
+border-bottom-color, a
+border-bottom-left-radius, -webkit-border-bottom-left-radius, -moz-border-bottom-left-radius, a
+border-bottom-right-radius, -webkit-border-bottom-right-radius, -moz-border-bottom-right-radius, a
+border-bottom-style, n
+border-bottom-width, a
+border-collapse, n
+border-color, a
+border-image, -webkit-border-image, -moz-border-image, -o-border-image, n
+border-image-outset, n
+border-image-repeat, n
+border-image-slice, n
+border-image-source, n
+border-image-width, n
+border-left, a
+border-left-color, a
+border-left-style, n
+border-left-width, a
+border-radius, -webkit-border-radius, -moz-border-radius, a
+border-right, a
+border-right-color, a
+border-right-style, n
+border-right-width, a
+border-spacing, a
+border-style, n
+border-top, a
+border-top-color, a
+border-top-left-radius, -webkit-border-top-left-radius, -moz-border-top-left-radius, a
+border-top-right-radius, -webkit-border-top-right-radius, -moz-border-top-right-radius, a
+border-top-style, n
+border-top-width, a
+border-width, a
+bottom, a
+box-decoration-break, n
+box-shadow, -webkit-box-shadow, -moz-box-shadow, a
+box-sizing, -webkit-box-sizing, -moz-box-sizing, n
+break-after, n
+break-before, n
+break-inside, n
+caption-side, n
+clear, n
+clip, a
+color, a
+column-count, -webkit-column-count, -moz-column-count, n
+column-fill, -moz-column-fill, n
+column-gap, -webkit-column-gap, -moz-column-gap, a
+column-rule, -webkit-column-rule, -moz-column-rule, a
+column-rule-color, -webkit-column-rule-color, -moz-column-rule-color, a
+column-rule-style, -webkit-column-rule-style, -moz-column-rule-style, n
+column-rule-width, -webkit-column-rule-width, -moz-column-rule-width, a
+column-span, -webkit-column-span, n
+column-width, -webkit-column-width, -moz-column-width, a
+columns, -webkit-columns, -moz-columns, a
+content, n
+counter-increment, n
+counter-reset, n
+cursor, n
+direction, n
+display, n
+empty-cells, n
+filter, n
+flex, -webkit-flex, -moz-flex, a
+flex-basis, -webkit-flex-basis, -moz-flex-basis, a
+flex-direction, -webkit-flex-direction, -moz-flex-direction, n
+flex-flow, -webkit-flex-flow, -moz-flex-flow, n
+flex-grow, -webkit-flex-grow, -moz-flex-grow, a
+flex-shrink, -webkit-flex-shrink, -moz-flex-shrink, a
+flex-wrap, -webkit-flex-wrap, -moz-flex-wrap, n
+float, n
+font, a
+font-family, n
+font-feature-settings, n
+font-kerning, n
+font-language-override, n
+font-size, a
+font-size-adjust, a
+font-stretch, a
+font-style, n
+font-synthesis, n
+font-variant, n
+font-variant-alternates, n
+font-variant-caps, n
+font-variant-east-asian, n
+font-variant-ligatures, n
+font-variant-numeric, n
+font-variant-position, n
+font-weight, a
+hanging-punctuation, n
+height, a
+hyphens, n
+image-orientation, n
+image-rendering, n
+image-resolution, n
+ime-mode, n
+justify-content, -webkit-justify-content, -moz-justify-content, n
+left, a
+letter-spacing, a
+line-break, n
+line-height, a
+list-style, n
+list-style-image, n
+list-style-position, n
+list-style-type, n
+margin, a
+margin-bottom, a
+margin-left, a
+margin-right, a
+margin-top, a
+mark, n
+mark-after, n
+mark-before, n
+marks, n
+marquee-direction, n
+marquee-play-count, n
+marquee-speed, n
+marquee-style, n
+mask, n
+mask-type, n
+max-height, a
+max-width, a
+min-height, a
+min-width, a
+nav-down, n
+nav-index, n
+nav-left, n
+nav-right, n
+nav-up, n
+object-fit, n
+object-position, n
+opacity, a
+order, -webkit-order, -moz-order, a
+orphans, n
+outline, a
+outline-color, a
+outline-offset, a
+outline-style, n
+outline-width, a
+overflow, n
+overflow-wrap, n
+overflow-x, n
+overflow-y, n
+padding, a
+padding-bottom, a
+padding-left, a
+padding-right, a
+padding-top, a
+page-break-after, n
+page-break-before, n
+page-break-inside, n
+phonemes, n
+perspective, -webkit-perspective, -moz-perspective, a
+perspective-origin, -webkit-perspective-origin, -moz-perspective-origin, a
+position, n
+quotes, n
+resize, -moz-resize, n
+rest, n
+rest-after, n
+rest-before, n
+right, a
+tab-size, -moz-tab-size, -o-tab-size, n
+table-layout, n
+text-align, n
+text-align-last, -moz-text-align-last, n
+text-combine-upright, n
+text-decoration, n
+text-decoration-color, -moz-text-decoration-color, a
+text-decoration-line, -moz-text-decoration-line, n
+text-decoration-style, -moz-text-decoration-style, n
+text-indent, a
+text-justify, n
+text-orientation, n
+text-overflow, -o-text-overflow, n
+text-shadow, a
+text-transform, n
+text-underline-position, n
+top, a
+transform, -webkit-transform, -moz-transform, -ms-transform, -o-transform, a
+transform-origin, -webkit-transform-origin, -moz-transform-origin, -ms-transform-origin, -o-transform-origin, a
+transform-style, -webkit-transform-style, -moz-transform-style, n
+transition, -webkit-transition, -moz-transition, -o-transition, n
+transition-delay, -webkit-transition-delay, -moz-transition-delay, -o-transition-delay, n
+transition-duration, -webkit-transition-duration, -moz-transition-duration, -o-transition-duration, n
+transition-property, -webkit-transition-property, -moz-transition-property, -o-transition-property, n
+transition-timing-function, -webkit-transition-timing-function, -moz-transition-timing-function, -o-transition-timing-function, n
+unicode-bidi, n
+vertical-align, a
+visibility, a
+voice-balance, n
+voice-duration, n
+voice-pitch, n
+voice-pitch-range, n
+voice-rate, n
+voice-stress, n
+voice-volume, n
+white-space, n
+widows, n
+width, a
+word-break, n
+word-spacing, a
+word-wrap, n
+writing-mode, n
+z-index, a
