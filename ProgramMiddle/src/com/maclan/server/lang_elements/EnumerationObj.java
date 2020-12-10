@@ -9,6 +9,8 @@ package com.maclan.server.lang_elements;
 
 import java.util.LinkedList;
 
+import org.graalvm.polyglot.HostAccess;
+
 /**
  * @author
  *
@@ -23,6 +25,7 @@ public class EnumerationObj implements BoxedObject {
 	/**
 	 * Public fields.
 	 */
+	@HostAccess.Export
 	public final long id;
 	
 	/**
@@ -58,6 +61,7 @@ public class EnumerationObj implements BoxedObject {
 	 * Get enumeration description.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getDescription() {
 		
 		return enumeration.getDescription();
@@ -67,6 +71,7 @@ public class EnumerationObj implements BoxedObject {
 	 * Get list of enumeration values.
 	 * @return
 	 */
+	@HostAccess.Export
 	public LinkedList<EnumerationValue> getValues() {
 		
 		LinkedList<com.maclan.EnumerationValue> middleValues = enumeration.getValues();

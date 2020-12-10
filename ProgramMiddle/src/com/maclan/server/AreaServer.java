@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.script.ScriptEngineManager;
 import javax.servlet.http.HttpServletRequest;
 
 import org.multipage.gui.Utility;
@@ -147,11 +146,6 @@ public class AreaServer {
 	 * SlotiInheritance level regex.
 	 */
 	private static final Pattern slotInheritancePattern = Pattern.compile("i([0,9]*)");
-	
-	/**
-	 * JavaScript engine manager.
-	 */
-	private static ScriptEngineManager jsEngineManager;
 	
 	/**
 	 * Provider watch service.
@@ -289,9 +283,6 @@ public class AreaServer {
 	 */
 	public static void init() {
 		
-		// Initialize scripting engines.
-		initScriptingEngines();
-		
 		// Simple language tags processors.
 		simpleLanguagesTagsProcessors();
 		// Area procesor.
@@ -378,17 +369,6 @@ public class AreaServer {
 		trayMenuProcessor();
 		// POST processor
 		postProcessor();
-	}
-	
-	/**
-	 * Initialize scripting engines.
-	 */
-	private static void initScriptingEngines() {
-		
-		jsEngineManager = new ScriptEngineManager();
-		
-		// Loads Nashorn libraries to memory.
-		jsEngineManager.getEngineByName("nashorn");
 	}
 	
 	/**
@@ -2697,7 +2677,7 @@ public class AreaServer {
 					server.state.blocks.popBlockDescriptor(false);
 					
 					String exceptionMessage = server.compileErrorMessage(e, errorFormatHtml);
-					return exceptionMessage;
+					throw new Exception(exceptionMessage);
 				}
 				
 				// Pop block and get result text.

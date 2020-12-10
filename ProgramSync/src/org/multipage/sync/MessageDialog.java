@@ -26,8 +26,10 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.text.SimpleAttributeSet;
@@ -187,22 +189,20 @@ public class MessageDialog extends JDialog {
 			sl_contentPanel.putConstraint(SpringLayout.EAST, scrollPane, -5, SpringLayout.EAST, contentPanel);
 			scrollPane.setBorder(null);
 			contentPanel.add(scrollPane);
-			{
-				textPane = new TextPaneEx();
-				textPane.setContentType("text/html");
-				textPane.setBackground(SystemColor.control);
-				textPane.setBorder(null);
-				textPane.setMargin(new Insets(0, 0, 0, 0));
-				StyledDocument doc = textPane.getStyledDocument();
-				SimpleAttributeSet center = new SimpleAttributeSet();
-				StyleConstants.setAlignment(center, StyleConstants.ALIGN_CENTER);
-				doc.setParagraphAttributes(0, doc.getLength(), center, false);
-				scrollPane.setViewportView(textPane);
-			}
+
 		}
 		{
 			buttonOK = new JButton("org.multipage.sync.textOK");
 			sl_contentPanel.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.NORTH, buttonOK);
+			
+			textPane = new TextPaneEx();
+			textPane.setBackground(UIManager.getColor("control"));
+			scrollPane.setViewportView(textPane);
+			textPane.setContentType("text/html");
+			textPane.setBackground(SystemColor.control);
+			textPane.setBorder(null);
+			textPane.setMargin(new Insets(0, 0, 0, 0));
+
 			sl_contentPanel.putConstraint(SpringLayout.SOUTH, buttonOK, -10, SpringLayout.SOUTH, contentPanel);
 			sl_contentPanel.putConstraint(SpringLayout.EAST, buttonOK, -10, SpringLayout.EAST, contentPanel);
 			contentPanel.add(buttonOK);
@@ -271,13 +271,13 @@ public class MessageDialog extends JDialog {
 	 */
 	protected void onDetail() {
 		
-		// Disable the flag ...
-		if (noDetails()) {
-			detailsDisplayed = false;
+		// Switch the flag ...
+		if (areDetails()) {
+			detailsDisplayed = !detailsDisplayed;
 		}
 		else {
-			// ... or switch the flag
-			detailsDisplayed = !detailsDisplayed;
+			// ... or disable the flag
+			detailsDisplayed = false;
 		}
 		
 		// Display remembered message depending on the previous flag
@@ -290,7 +290,7 @@ public class MessageDialog extends JDialog {
 	private void displayRememberedMessage() {
 		
 		// Check the detailed message
-		if (noDetails()) {
+		if (!areDetails()) {
 			detailsDisplayed = false;
 		}
 		
@@ -323,13 +323,13 @@ public class MessageDialog extends JDialog {
 	}
 	
 	/**
-	 * Returns true if there are no details to display
+	 * Returns true if there are details to display
 	 * @return
 	 */
-	private boolean noDetails() {
+	private boolean areDetails() {
 
-		boolean noDetails = (messageDetails == null || messageDetails.isEmpty());
-		return noDetails;
+		boolean areDetails = (messageDetails != null && !messageDetails.isEmpty());
+		return areDetails;
 	}
 
 	/**
@@ -436,6 +436,21 @@ public class MessageDialog extends JDialog {
 	}
 	
 	/**
+	 * Make the dialog message HTML coded
+	 * @param message
+	 * @return
+	 */
+	public static String makeHtmlMessage(String message) {
+		
+		message = message.trim();
+		
+		String finalMessage = message.replaceAll("\n|(\r\n?)", "<br>");
+		finalMessage = String.format("<html><font size=\"3\" face=\"Monospace\">%s</font></html>", finalMessage);
+		
+		return finalMessage;
+	}
+	
+	/**
 	 * Display message
 	 * @param message
 	 * @param messageDetails
@@ -444,41 +459,48 @@ public class MessageDialog extends JDialog {
 		
 		SwingUtilities.invokeLater(() -> {
 			
-			// Create dialog window
-			if (MessageDialog.dialog == null) {
-				MessageDialog.dialog = new MessageDialog();
+			try {
+				// Create dialog window
+				if (MessageDialog.dialog == null) {
+					MessageDialog.dialog = new MessageDialog();
+				}
+				
+				// Load message prefix
+				String prefix = Resources.getString("org.multipage.sync.messageSyncError");
+				String messageText = String.format("%s\n%s", prefix, message);
+				
+				// Check if detailed message exists
+				boolean existsDetail = messageDetails != null && !messageDetails.isEmpty();
+				
+				// Show/hide details control
+				MessageDialog.dialog.labelDetail.setVisible(existsDetail);
+				
+				// If there exist message details, inform user about that
+				if (existsDetail) {
+					messageText += "\n\n" + Resources.getString("org.multipage.sync.messageSeeDetails");
+				}
+				
+				// Prepare message details. Color possible Area Server exceptions in the detailed message.
+				String finalMessageDetails = Utility.colorHtmlTexts(messageDetails, areaServerErrorRegex, regexErrorGroup, errorColor);
+				
+				// Remember the messages
+				MessageDialog.dialog.message = makeHtmlMessage(messageText);
+				MessageDialog.dialog.messageDetails = existsDetail ? makeHtmlMessage(finalMessageDetails) : null;
+				
+				// Set the flag
+				MessageDialog.dialog.detailsDisplayed = false;
+				
+				// Display remembered message depending on the previous flag
+				MessageDialog.dialog.displayRememberedMessage();
+				
+				// Set visible
+				dialog.setAlwaysOnTop(true);
+				dialog.setVisible(true);
 			}
-			
-			// Load message prefix
-			String prefix = Resources.getString("org.multipage.sync.messageSyncError");
-			String messageText = String.format("%s\n%s", prefix, message);
-			messageText = messageText.trim();
-			
-			// If there exist message details, inform user about that
-			if (messageDetails != null && !messageDetails.isEmpty()) {
-				messageText += "\n\n" + Resources.getString("org.multipage.sync.messageSeeDetails");
+			catch (Exception e) {
+				
+				Utility.show2(MessageDialog.dialog, e.getMessage());
 			}
-			
-			// Prepare message details. Replace new lines with breaks. Color possible Area Server exceptions in the detailed message
-			// and wrap it with html tag.
-			String finalMessageDetails = messageDetails.replaceAll("\n|(\r\n?)", "<br>");
-			finalMessageDetails = Utility.colorHtmlTexts(finalMessageDetails, areaServerErrorRegex, regexErrorGroup, errorColor);
-			finalMessageDetails = String.format("<html>%s</html>", finalMessageDetails);
-			
-			// Remember the messages
-			MessageDialog.dialog.message = messageText;
-			MessageDialog.dialog.messageDetails = finalMessageDetails;
-			
-			// Set the flag
-			MessageDialog.dialog.detailsDisplayed = false;
-			
-			// Display remembered message depending on the previous flag
-			MessageDialog.dialog.displayRememberedMessage();
-			
-			// Set visible
-			dialog.setAlwaysOnTop(true);
-			dialog.setVisible(true);
-			
 		});
 	}
 	

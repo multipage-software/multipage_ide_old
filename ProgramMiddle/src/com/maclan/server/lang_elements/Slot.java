@@ -7,6 +7,8 @@
 
 package com.maclan.server.lang_elements;
 
+import org.graalvm.polyglot.HostAccess;
+
 import com.maclan.MiddleUtility;
 import com.maclan.server.AreaServer;
 
@@ -29,11 +31,13 @@ public class Slot implements BoxedObject {
 	/**
 	 * Slot alias.
 	 */
+	@HostAccess.Export
 	public final String alias;
 	
 	/**
 	 * Slot value.
 	 */
+	@HostAccess.Export
 	public Object value;
 
 	/**
@@ -91,6 +95,7 @@ public class Slot implements BoxedObject {
 	 * Get slot area.
 	 * @return
 	 */
+	@HostAccess.Export
 	public Area getArea() {
 		
 		return new Area(server, (com.maclan.Area) slot.getHolder());
@@ -100,6 +105,7 @@ public class Slot implements BoxedObject {
 	 * Returns true value if this slot has a default value.
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean isDefault() {
 		
 		return slot.isDefault();
@@ -109,6 +115,7 @@ public class Slot implements BoxedObject {
 	 * Returns false value if this slot has a default value.
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean isNotDefault() {
 		
 		return !slot.isDefault();
@@ -117,6 +124,7 @@ public class Slot implements BoxedObject {
 	/**
 	 * External provider was changed.
 	 */
+	@HostAccess.Export
 	public boolean isExternalChange() {
 		
 		return slot.isExternalChange();
@@ -126,6 +134,7 @@ public class Slot implements BoxedObject {
 	 * Get special value.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getSpecialValue() {
 		
 		return slot.getSpecialValueNull();
@@ -134,6 +143,7 @@ public class Slot implements BoxedObject {
 	/**
 	 * Get area ID value.
 	 */
+	@HostAccess.Export
 	public Long getAreaIdValue() {
 		
 		return slot.getAreaIdValue();
@@ -143,6 +153,7 @@ public class Slot implements BoxedObject {
 	 * Get slot type.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getType() {
 		
 		try {
@@ -160,6 +171,7 @@ public class Slot implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public String getPath()
 		throws Exception {
 		
@@ -170,6 +182,7 @@ public class Slot implements BoxedObject {
 	 * Input slot value.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String input() {
 		
 		String textValue = "";
@@ -191,6 +204,7 @@ public class Slot implements BoxedObject {
 	 * @param outputText
 	 * @return
 	 */
+	@HostAccess.Export
 	public void output(String outputText)
 		throws Exception {
 		
@@ -206,6 +220,7 @@ public class Slot implements BoxedObject {
 	 * @param fileExtension
 	 * @return
 	 */
+	@HostAccess.Export
 	public void backup(String fileExtension)
 		throws Exception {
 		
@@ -216,6 +231,7 @@ public class Slot implements BoxedObject {
 	 * Lock external source.
 	 * @param readOnly
 	 */
+	@HostAccess.Export
 	public void lock(boolean readOnly)
 		throws Exception {
 		
@@ -225,6 +241,7 @@ public class Slot implements BoxedObject {
 	/**
 	 * Revert external provider source code.
 	 */
+	@HostAccess.Export
 	public void revert()
 		throws Exception {
 		
@@ -234,6 +251,7 @@ public class Slot implements BoxedObject {
 	/**
 	 * Unlock input.
 	 */
+	@HostAccess.Export
 	public void unlockInput()
 		throws Exception {
 		
@@ -245,6 +263,7 @@ public class Slot implements BoxedObject {
 	 * Is input lock.
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean isInputLock()
 		throws Exception {
 		
@@ -256,6 +275,7 @@ public class Slot implements BoxedObject {
 	/**
 	 * Unlock output.
 	 */
+	@HostAccess.Export
 	public void unlockOutput()
 		throws Exception {
 		
@@ -267,6 +287,7 @@ public class Slot implements BoxedObject {
 	 * Is output lock.
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean isOutputLock()
 		throws Exception {
 		
@@ -279,6 +300,7 @@ public class Slot implements BoxedObject {
 	 * Watch source change in external provider.
 	 * @return
 	 */
+	@HostAccess.Export
 	public void watch() {
 		
 		try {

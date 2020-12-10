@@ -7,6 +7,8 @@
 
 package com.maclan.server.lang_elements;
 
+import org.graalvm.polyglot.HostAccess;
+
 /**
  * @author
  *
@@ -49,6 +51,7 @@ public class Request implements BoxedObject {
 	 * @param name
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getParameter(String name) {
 		
 		return server.state.request.getParameter(name);
@@ -59,6 +62,7 @@ public class Request implements BoxedObject {
 	 * @param name
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getHeaderProperty(String name) {
 		
 		String headerProperty = server.state.request.getOriginalRequest().getHeader(name);
@@ -69,6 +73,7 @@ public class Request implements BoxedObject {
 	 * Read all POSTed data using character encoding of the request.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String post() throws Exception {
 		
 		return server.state.request.post();

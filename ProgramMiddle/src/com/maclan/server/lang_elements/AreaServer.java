@@ -9,6 +9,7 @@ package com.maclan.server.lang_elements;
 
 import java.util.LinkedList;
 
+import org.graalvm.polyglot.HostAccess;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -20,6 +21,8 @@ import com.maclan.server.JavaScriptBlockDescriptor;
 import com.maclan.server.ScriptingEngine;
 
 import jdk.nashorn.internal.runtime.Undefined;
+
+
 
 /**
  * @author
@@ -35,24 +38,31 @@ public class AreaServer implements BoxedObject {
 	/**
 	 * Request.
 	 */
+	@HostAccess.Export
 	public Request request;
 	
 	/**
 	 * Response.
 	 */
+	@HostAccess.Export
 	public Response response;
 	
 	/**
 	 * Level of tags processing.
 	 */
+	@HostAccess.Export
 	public final long level;
 	
 	/**
 	 * Area references.
 	 */
+	@HostAccess.Export
 	public       Area thisArea;
+	@HostAccess.Export
 	public final Area startArea;
+	@HostAccess.Export
 	public final Area homeArea;
+	@HostAccess.Export
 	public final Area requestedArea;
 	
 	/**
@@ -80,11 +90,16 @@ public class AreaServer implements BoxedObject {
 	/**
 	 * Print parameter.
 	 */
-	public void print(String text)
+	@HostAccess.Export
+	public void print(Object object)
 		throws Exception {
 		
-		if (text == null) {
+		String text = null;
+		if (object == null) {
 			text = "null";
+		}
+		else {
+			text = object.toString();
 		}
 		
 		BlockDescriptor blockDescriptor = server.state.blocks.getCurrentBlockDescriptor();
@@ -102,11 +117,16 @@ public class AreaServer implements BoxedObject {
 	/**
 	 * Println parameter.
 	 */
-	public void println(String text)
+	@HostAccess.Export
+	public void println(Object object)
 		throws Exception {
 		
-		if (text == null) {
+		String text = null;
+		if (object == null) {
 			text = "null";
+		}
+		else {
+			text = object.toString();
 		}
 		
 		BlockDescriptor blockDescriptor = server.state.blocks.getCurrentBlockDescriptor();
@@ -286,6 +306,7 @@ public class AreaServer implements BoxedObject {
 	 * Returns true value if a rendering is in progress.
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean isRendering() {
 		
 		return server.isRendering();
@@ -296,6 +317,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public long getStartLanguageId() throws Exception {
 		
 		return server.getStartLanguageId();
@@ -307,6 +329,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Area area(Undefined undefined) throws Exception {
 		
 		return area();
@@ -317,6 +340,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Area area() throws Exception {
 		
 		return thisArea;
@@ -328,6 +352,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Area area(Long areaId) throws Exception {
 		
 		return new Area(server, server.getArea(areaId));
@@ -339,6 +364,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public Area area(String alias) throws Exception {
 		
 		return new Area(server, server.getArea(alias));
@@ -350,6 +376,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public LinkedList<Area> subareas(Object areaObject) throws Exception {
 		
 		com.maclan.Area area = getAreaJsParameter(areaObject);
@@ -371,6 +398,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public LinkedList<Area> superareas(Object areaObject) throws Exception {
 		
 		com.maclan.Area area = getAreaJsParameter(areaObject);
@@ -391,6 +419,7 @@ public class AreaServer implements BoxedObject {
 	 * @param slot
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void input(Slot slot) throws Exception {
 		
 		server.input((com.maclan.Slot) slot.unbox());
@@ -401,6 +430,7 @@ public class AreaServer implements BoxedObject {
 	 * @param slot
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void watch(Slot slot) throws Exception {
 		
 		server.input((com.maclan.Slot) slot.unbox());
@@ -410,6 +440,7 @@ public class AreaServer implements BoxedObject {
 	 * Stop watching all.
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void stopWatchingAll() throws Exception {
 		
 		server.stopWatchingAll();
@@ -425,6 +456,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Object slot(String slotAlias, Object areaObjectOrType, Object skipDefaultOrArea, Boolean parent, Long inheritanceLevel) throws Exception {
 		
 		if (areaObjectOrType instanceof String) {
@@ -450,10 +482,11 @@ public class AreaServer implements BoxedObject {
 	 * Get area slot.
 	 * @param slotAlias
 	 * @param areaObject
-	 * @param type - d ... skip default values, v ... return slot value, i or iXXX ... inherit (from XXX level), p ... only slots from parents
+	 * @param type - "d" skip default values, "v" return slot value, "i" or "iXXX" inherit (from XXX level), "p" only slots from parents
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public Object slot(String slotAlias, Object areaObject, String type) throws Exception {
 		
 		Object slotOrValue = server.slot(
@@ -477,6 +510,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public boolean slotDefined(String slotAlias, Object areaObject, Boolean skipDefault, Boolean parent) throws Exception {
 		
 		return server.slotDefined(
@@ -492,6 +526,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Resource resource(Long resourceId) throws Exception {
 		
 		if (resourceId == null) {
@@ -509,6 +544,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Resource areaResource(String name, Object areaObject) throws Exception {
 		
 		com.maclan.Resource middleResource = server.resource(name, getAreaJsParameter(areaObject));
@@ -526,6 +562,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String getResourceUrl(String resourceName, Object areaObject) throws Exception {
 		
 		com.maclan.Area area = getAreaJsParameter(areaObject);
@@ -569,6 +606,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String getAreaUrl(Object areaObject, Long languageId, Long versionId, Boolean localhost) throws Exception {
 		
 		return server.getAreaUrl(getAreaJsParameter(areaObject).getId(), languageId, versionId, localhost, null);
@@ -581,6 +619,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String createTree(Object rootAreaObject, String relationName) throws Exception {
 
 		return server.createTree(getAreaJsParameter(rootAreaObject), relationName).toString();
@@ -592,6 +631,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public EnumerationObj getEnumeration(String description) throws Exception {
 		
 		com.maclan.EnumerationObj middleEnum = server.getEnumeration(description);
@@ -609,6 +649,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public EnumerationValue getEnumeration(String description, String valueName) throws Exception {
 		
 		com.maclan.EnumerationValue middleEnumValue = server.getEnumeration(description, valueName);
@@ -624,6 +665,7 @@ public class AreaServer implements BoxedObject {
 	 * @param variableName
 	 * @return
 	 */
+	@HostAccess.Export
 	public boolean defined(String variableName) {
 		
 		return server.state.blocks.findVariable(variableName) != null;
@@ -636,6 +678,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String process(String textToProcess, Object areaObject) throws Exception {
 		
 		com.maclan.Area area = getAreaJsParameter(areaObject);
@@ -649,6 +692,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String process(String textToProcess) throws Exception {
 		
 		return server.processTextCloned(server.state.area, textToProcess);
@@ -661,6 +705,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String processWithErrors(String textToProcess, Object areaObject) throws Exception {
 		
 		com.maclan.Area area = getAreaJsParameter(areaObject);
@@ -674,6 +719,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public String processWithErrors(String textToProcess) throws Exception {
 		
 		return server.processTextClonedWithErrors(server.state.area, textToProcess);
@@ -684,6 +730,7 @@ public class AreaServer implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
+	@HostAccess.Export
 	public Object get(String variableName) throws Exception {
 		
 		// Get variable value, box it and return the value.
@@ -699,6 +746,7 @@ public class AreaServer implements BoxedObject {
 	 * @param variableValue
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void set(String variableName, Object variableValue) throws Exception {
 		
 		// Unbox the value and set it.
@@ -712,6 +760,7 @@ public class AreaServer implements BoxedObject {
 	 * @param variableValue
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void variable(String variableName, Object variableValue) throws Exception {
 		
 		// Unbox variable value and create variable that holds this value.
@@ -723,6 +772,7 @@ public class AreaServer implements BoxedObject {
 	 * Get current language ID.
 	 * @return
 	 */
+	@HostAccess.Export
 	public long getCurrentLangId() {
 		
 		Language language = server.getCurrentLanguage();
@@ -736,6 +786,7 @@ public class AreaServer implements BoxedObject {
 	/**
 	 * Clear CSS rules.
 	 */
+	@HostAccess.Export
 	public void clearCssRules() {
 		
 		server.clearCssRules();
@@ -748,6 +799,7 @@ public class AreaServer implements BoxedObject {
 	 * @param mediaSlotName
 	 * @param importantSlotName
 	 */
+	@HostAccess.Export
 	public void insertCssRules(Area area, String selector, String mediaSlotName, String importantSlotName) throws Exception {
 		
 		server.insertCssRules(area.area, selector, mediaSlotName, importantSlotName);
@@ -760,6 +812,7 @@ public class AreaServer implements BoxedObject {
 	 * @param importantSlotName
 	 * @throws Exception
 	 */
+	@HostAccess.Export
 	public void insertGlobalCss(String selector, String mediaSlotName, String importantSlotName) throws Exception {
 		
 		server.insertCssRules(selector, mediaSlotName, importantSlotName);
@@ -769,6 +822,7 @@ public class AreaServer implements BoxedObject {
 	 * Get CSS rules.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getCssRules() {
 		
 		String cssRules = server.getCssRules();
@@ -779,6 +833,7 @@ public class AreaServer implements BoxedObject {
 	 * Deprecated function name.
 	 * @return
 	 */
+	@HostAccess.Export
 	public String getGlobalCss() {
 		
 		return getCssRules();
