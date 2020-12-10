@@ -130,12 +130,12 @@ public abstract class AreaEditorFrameBase extends JFrame {
 	/**
 	 * Tab content lookup table.
 	 */
-	protected Hashtable<Component, TabContent> tabContentsTable = new Hashtable<Component, TabContent>();
+	protected Hashtable<Component, TabContentActions> tabContentsTable = new Hashtable<Component, TabContentActions>();
 	
 	/**
 	 * Old tab content.
 	 */
-	protected TabContent oldTabContent;
+	protected TabContentActions oldTabContent;
 	
 	/**
 	 * Dependencies panel.
@@ -244,7 +244,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		// Implement information loading and saving.
 		Component component = getTabbedPane().getSelectedComponent();
 		// Get tab content interface.
-		TabContent tabContent = tabContentsTable.get(component);
+		TabContentActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke load information.
@@ -409,8 +409,8 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		
 		component.add(content);
 		
-		if (content instanceof TabContent) {
-			tabContentsTable.put(component, (TabContent) content);
+		if (content instanceof TabContentActions) {
+			tabContentsTable.put(component, (TabContentActions) content);
 		}
 	}
 	
@@ -423,7 +423,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		Component component = getTabbedPane().getSelectedComponent();
 		
 		// Get tab content interface.
-		TabContent tabContent = tabContentsTable.get(component);
+		TabContentActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke save information.
@@ -440,7 +440,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		Component component = getTabbedPane().getSelectedComponent();
 		
 		// Get tab content interface.
-		TabContent tabContent = tabContentsTable.get(component);
+		TabContentActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke load information.

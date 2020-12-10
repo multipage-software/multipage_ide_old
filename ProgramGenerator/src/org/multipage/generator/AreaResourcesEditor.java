@@ -30,7 +30,7 @@ import java.awt.event.*;
  * @author
  *
  */
-public class AreaResourcesEditor extends JPanel implements SearchableResourcesList, TabContent {
+public class AreaResourcesEditor extends JPanel implements SearchableResourcesList, TabContentActions {
 
 	// $hide>>$
 	/**

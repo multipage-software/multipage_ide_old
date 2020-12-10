@@ -9,7 +9,7 @@ package com.maclan.server.lang_elements;
 
 import java.awt.Dimension;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 
 /**
  * @author
@@ -30,9 +30,9 @@ public class Resource implements BoxedObject {
 	/**
 	 * Public fields.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final long id;
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final MimeType mime;
 	
 	/**
@@ -74,7 +74,7 @@ public class Resource implements BoxedObject {
 	 * Gets resource length.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public long getLength() throws Exception {
 		
 
@@ -86,7 +86,7 @@ public class Resource implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public Dimension getImageSize() throws Exception {
 		
 		return server.getImageSize(resource);
@@ -96,7 +96,7 @@ public class Resource implements BoxedObject {
 	 * Get description.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public String getDescription() {
 		
 		return resource.getDescription();

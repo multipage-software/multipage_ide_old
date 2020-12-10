@@ -7,7 +7,7 @@
 
 package com.maclan.server.lang_elements;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 
 /**
  * @author
@@ -52,7 +52,7 @@ public class Response implements BoxedObject {
 	 * @param headerName
 	 * @param headerContent
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public void setHeader(String headerName, String headerContent) {
 		
 		server.state.response.setHeader(headerName, headerContent);
@@ -63,7 +63,7 @@ public class Response implements BoxedObject {
 	 * @param renderClassName
 	 * @param renderClassText
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public void setRenderClass(String renderClassName, String renderClassText) {
 		
 		server.state.response.setRenderClass(renderClassName, renderClassText);
@@ -72,7 +72,7 @@ public class Response implements BoxedObject {
 	/**
 	 * Get render class.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public RenderClass getRenderClass() {
 		
 		if (server.isRendering()) {

@@ -4290,6 +4290,7 @@ public class MiddleLightImpl implements MiddleLight {
 	 * @param password
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private String getConnectionString(String databaseDirectory, String user, String password) {
 		
 		String databaseHome = getDatabaseHomeDirectory(databaseDirectory);

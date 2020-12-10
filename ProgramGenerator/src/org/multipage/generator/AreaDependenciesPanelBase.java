@@ -22,7 +22,7 @@ import com.maclan.*;
  * @author
  *
  */
-public class AreaDependenciesPanelBase extends JPanel implements TabContent {
+public class AreaDependenciesPanelBase extends JPanel implements TabContentActions {
 
 	/**
 	 * Version.

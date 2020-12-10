@@ -11,14 +11,13 @@ import java.awt.Toolkit;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import javax.swing.SwingUtilities;
-
 import org.multipage.util.Lock;
 
 /**
  * @author user
  *
  */
+@SuppressWarnings("unused")
 public class GuiWatchDog {
 	
 	/**
@@ -39,6 +38,7 @@ public class GuiWatchDog {
 	/**
 	 * Restore AWT dispatch thread.
 	 */
+	
 	private static void restoreAwtDispatch() {
 		
 		try {

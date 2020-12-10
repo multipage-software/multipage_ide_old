@@ -9,7 +9,7 @@ package com.maclan.server.lang_elements;
 
 import java.util.LinkedList;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 import org.multipage.util.Obj;
 
 import com.maclan.MiddleResult;
@@ -33,11 +33,11 @@ public class Area implements BoxedObject {
 	/**
 	 * Public properties.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String name;
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final long id;
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String alias;
 
 	/**
@@ -82,7 +82,7 @@ public class Area implements BoxedObject {
 	 * @param level
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean inherits(Area inheritedArea, Long level) throws Exception {
 		
 		return server.inherits(area, inheritedArea.area, level);
@@ -93,7 +93,7 @@ public class Area implements BoxedObject {
 	 * @param inheritedArea
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean inherits(Area inheritedArea) throws Exception {
 		
 		return server.inherits(area, inheritedArea.area, null);
@@ -105,7 +105,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public AreaRelation getSubRelation(Area subArea) throws Exception {
 		
 		// Check parameter.
@@ -125,7 +125,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public AreaRelation getSuperRelation(Area superArea) throws Exception {
 		
 		// Check parameter.
@@ -143,7 +143,7 @@ public class Area implements BoxedObject {
 	 * Get pure name without possible localization info.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public String getPureName() {
 		
 		return area.getDescription();
@@ -152,7 +152,7 @@ public class Area implements BoxedObject {
 	/**
 	 * Returns true value if this area is current (server.thisArea).
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isCurrent() {
 		
 		return area.getId() == server.state.middle.getCurrentRootArea().getId();
@@ -163,7 +163,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isHome() throws Exception {
 		
 		Obj<com.maclan.Area> homeArea = new Obj<com.maclan.Area>();
@@ -180,7 +180,7 @@ public class Area implements BoxedObject {
 	 * Returns true value if this area is visible.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isVisible() {
 		
 		return area.isVisible();
@@ -190,7 +190,7 @@ public class Area implements BoxedObject {
 	 * Returns true value if this area is requested.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isRequested() {
 		
 		return area.getId() == server.state.requestedArea.getId();
@@ -200,7 +200,7 @@ public class Area implements BoxedObject {
 	 * Returns true value if this area is a constructor.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isConstructor() {
 		
 		return area.isConstructorArea();
@@ -210,7 +210,7 @@ public class Area implements BoxedObject {
 	 * Returns true value if this area is a constructor.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isStartArea() {
 		
 		return area.isStartArea();
@@ -220,7 +220,7 @@ public class Area implements BoxedObject {
 	 * Returns area file name.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public String getFileName() {
 		
 		return area.getFileName();
@@ -231,7 +231,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public Area getRelatedArea() throws Exception {
 		
 		server.loadRelatedAreaData(area);
@@ -249,7 +249,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public LinkedList<Slot> getSlots() throws Exception {
 		
 		server.loadAreaSlotsData(area);
@@ -273,7 +273,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public Area getConstructorArea() throws Exception {
 		
 		com.maclan.Area middleArea  = server.getConstructorArea(area);
@@ -289,7 +289,7 @@ public class Area implements BoxedObject {
 	 * @return
 	 * @throws Exception 
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public Area getFirstVisibleSuperArea() throws Exception {
 		
 		com.maclan.Area middleArea = server.getFirstVisibleSuperArea(area.getId());

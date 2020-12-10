@@ -631,6 +631,7 @@ public class DebugViewer extends JFrame {
 	 * @param show
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unused")
 	private void pageReloadException(boolean show) throws Exception {
 		
 		if (show) {

@@ -7,7 +7,7 @@
 
 package com.maclan.server.lang_elements;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 
 /**
  * @author
@@ -23,9 +23,9 @@ public class MimeType implements BoxedObject {
 	/**
 	 * Public fields.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String type;
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String extension;
 	
 	/**

@@ -13,8 +13,8 @@ import javax.script.ScriptEngineManager;
 import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Value;
+//graalvm import org.graalvm.polyglot.Context;
+//graalvm import org.graalvm.polyglot.Value;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
 
@@ -47,7 +47,7 @@ public class ScriptingEngine {
 	/**
 	 * Graal Polyglot instance.
 	 */
-	private Context graalPolyglot = null;
+//graalvm private Context graalPolyglot = null;
 	
 	/**
 	 * Currently used.
@@ -106,14 +106,14 @@ public class ScriptingEngine {
 		// On Graal Polyglot engine
 		case graalPolyglot:
 			
-			// Create Graal Polyglot.
-			graalPolyglot = org.graalvm.polyglot.Context.newBuilder("js")./*allowHostAccess(HostAccess.ALL).*/build();
-			
-			// Check the engine.
-			if (graalPolyglot == null) {
-				j.logMessage("com.maclan.server.messageCannotGetGraalPolyglotScritpingEngine");
-			}
-			break;
+//graalvm			// Create Graal Polyglot.
+//graalvm			graalPolyglot = org.graalvm.polyglot.Context.newBuilder("js")./*allowHostAccess(HostAccess.ALL).*/build();
+//graalvm			
+//graalvm			// Check the engine.
+//graalvm			if (graalPolyglot == null) {
+//graalvm				j.logMessage("com.maclan.server.messageCannotGetGraalPolyglotScritpingEngine");
+//graalvm			}
+//graalvm			break;
 		}
 	}
 	
@@ -137,12 +137,12 @@ public class ScriptingEngine {
 			// On Graal Polyglot engine
 		case graalPolyglot:
 			
-			// Initialize Graal Polyglot context.
-			if (graalPolyglot != null) {
-				// No operation.
-				;
-			}
-			break;
+//graalvm			// Initialize Graal Polyglot context.
+//graalvm			if (graalPolyglot != null) {
+//graalvm				// No operation.
+//graalvm				;
+//graalvm			}
+//graalvm			break;
 		}
 	}
 	
@@ -183,13 +183,13 @@ public class ScriptingEngine {
 		// On Graal Polyglot engine
 		case graalPolyglot:
 			
-			// Check the engine.
-			if (graalPolyglot != null) {
-				
-				// Set Graal Polyglot
-				graalPolyglot.getBindings("js").putMember("server", new com.maclan.server.lang_elements.AreaServer(server));
-			}
-			break;
+//graalvm			// Check the engine.
+//graalvm			if (graalPolyglot != null) {
+//graalvm				
+//graalvm				// Set Graal Polyglot
+//graalvm				graalPolyglot.getBindings("js").putMember("server", new com.maclan.server.lang_elements.AreaServer(server));
+//graalvm			}
+//graalvm			break;
 		}
 	}
 	
@@ -216,13 +216,13 @@ public class ScriptingEngine {
 		// On Graal Polyglot engine
 		case graalPolyglot:
 			
-			// Check the engine.
-			if (graalPolyglot != null) {
-				
-				// Run the script with prerequisites in the Graal Polyglot engine.
-				graalPolyglot.eval("js", prerequisitesScript);
-			}
-			break;
+//graalvm			// Check the engine.
+//graalvm			if (graalPolyglot != null) {
+//graalvm				
+//graalvm				// Run the script with prerequisites in the Graal Polyglot engine.
+//graalvm				graalPolyglot.eval("js", prerequisitesScript);
+//graalvm			}
+//graalvm			break;
 		}
 	}
 	
@@ -254,14 +254,14 @@ public class ScriptingEngine {
 			// On Graal Polyglot engine
 		case graalPolyglot:
 			
-			// Check the engine.
-			if (graalPolyglot != null) {
-				
-				// Run the script with Graal Polyglot engine.
-				Value valueObject = graalPolyglot.eval("js", scriptText);
-				value = valueObject.as(Object.class);
-			}
-			break;
+//graalvm			// Check the engine.
+//graalvm			if (graalPolyglot != null) {
+//graalvm				
+//graalvm				// Run the script with Graal Polyglot engine.
+//graalvm				Value valueObject = graalPolyglot.eval("js", scriptText);
+//graalvm				value = valueObject.as(Object.class);
+//graalvm			}
+//graalvm			break;
 		}
 		
 		// Return the resulting value.

@@ -460,6 +460,7 @@ public class XdebugClient extends DebugClient {
 	 * Returns true value if a command can be processed
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private boolean readyToProcessCommand() {
 		
 		return this.command.isEmpty() && readyToProcessCommand;
@@ -953,6 +954,7 @@ public class XdebugClient extends DebugClient {
 	 * @param session
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private boolean exists(Session session) {
 		
 		return session != Session.none;

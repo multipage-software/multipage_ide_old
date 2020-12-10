@@ -7,7 +7,7 @@
 
 package com.maclan.server.lang_elements;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 
 /**
  * @author
@@ -42,7 +42,7 @@ public class AreaRelation implements BoxedObject {
 	 * Get relation sub name.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public String getSubName() {
 		
 		return relation.getRelationNameSub();
@@ -52,7 +52,7 @@ public class AreaRelation implements BoxedObject {
 	 * Get relation super name.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public String getSuperName() {
 		
 		return relation.getRelationNameSuper();
@@ -62,7 +62,7 @@ public class AreaRelation implements BoxedObject {
 	 * Returns true value if the relation inherits.
 	 * @return
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public boolean isInheritance() {
 		
 		return relation.isInheritance();

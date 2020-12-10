@@ -481,7 +481,9 @@ public enum Event {
 				// Enter idle state.
 				if (!moreEvents) {
 					boolean test = Lock.waitFor(dispatchLock, 250);
-					System.out.format("Event dispatcher timeout is %b\n", test);
+					if (test) {
+						System.out.format("Event dispatcher timeout is %b\n", test);
+					}
 				}
 			}
 			

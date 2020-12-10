@@ -7,7 +7,7 @@
 
 package com.maclan.server.lang_elements;
 
-import org.graalvm.polyglot.HostAccess;
+//graalvm import org.graalvm.polyglot.HostAccess;
 
 /**
  * @author
@@ -23,13 +23,13 @@ public class RenderClass implements BoxedObject {
 	/**
 	 * Name field.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String name;
 	
 	/**
 	 * Text field.
 	 */
-	@HostAccess.Export
+	//graalvm @HostAccess.Export
 	public final String text;
 	
 	/**

@@ -12,7 +12,7 @@ package org.multipage.generator;
  * @author
  *
  */
-public interface TabContent {
+public interface TabContentActions {
 
 	/**
 	 * On load panel information.

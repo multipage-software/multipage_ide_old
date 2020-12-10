@@ -1,25 +1,23 @@
 package org.multipage.generator;
 
+import java.util.LinkedList;
+
+import javax.swing.ButtonGroup;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.SpringLayout;
 
 import org.multipage.generator.RevertExternalProvidersDialog.ListEntry;
 import org.multipage.gui.Utility;
 
-import com.maclan.MiddleUtility;
 import com.maclan.server.ServerUtilities;
-
-import java.awt.BorderLayout;
-import java.util.LinkedList;
 
 import name.fraser.neil.plaintext.diff_match_patch;
 import name.fraser.neil.plaintext.diff_match_patch.Diff;
-import javax.swing.JEditorPane;
-import javax.swing.JScrollPane;
-import javax.swing.SpringLayout;
-import javax.swing.JLabel;
-import javax.swing.JRadioButton;
-import javax.swing.ButtonGroup;
 
 /**
  * 

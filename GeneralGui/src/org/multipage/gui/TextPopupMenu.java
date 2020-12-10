@@ -7,12 +7,17 @@
 
 package org.multipage.gui;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.beans.PropertyChangeListener;
+import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-import javax.swing.*;
-import javax.swing.text.*;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
+import javax.swing.text.JTextComponent;
 
 import org.multipage.util.Resources;
 

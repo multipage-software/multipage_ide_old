@@ -60,11 +60,7 @@
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-io-2.6-bin/commons-io-2.6/commons-io-2.6.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-lang3-3.7-bin/commons-lang3-3.7/commons-lang3-3.7.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/graalvm-ce-java11-20.2.0">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-text-1.9-bin/commons-text-1.9/commons-text-1.9.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

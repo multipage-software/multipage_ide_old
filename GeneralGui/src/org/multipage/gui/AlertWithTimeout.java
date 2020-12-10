@@ -1,25 +1,23 @@
 package org.multipage.gui;
 
-import javax.swing.JDialog;
-import javax.swing.JLabel;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.LinkedList;
 
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
-
-import javax.swing.JButton;
-import java.awt.Dimension;
-import javax.swing.JPanel;
-import java.awt.Component;
-import java.awt.Toolkit;
-import java.awt.event.ActionListener;
-import java.util.LinkedList;
-import java.awt.event.ActionEvent;
 
 /**
  * 
