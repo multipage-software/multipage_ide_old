@@ -144,7 +144,7 @@ public class SyncMain {
 			
 			// Load menu from area server.
 			areaServerClient = AreaServerClient.newInstance(popupMenu);
-			areaServerClient.loadMenu();
+			areaServerClient.loadMenu(false);
 			
 			// Menu item for program termination.
 			if (isStandalone) {

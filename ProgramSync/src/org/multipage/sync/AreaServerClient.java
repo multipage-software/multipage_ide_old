@@ -135,7 +135,7 @@ public class AreaServerClient {
 			SwingUtilities.invokeLater(() -> {
 				
 				try {
-					areaServerClient.loadMenu();
+					areaServerClient.loadMenu(true);
 				}
 				catch (Exception e) {
 					
@@ -163,9 +163,10 @@ public class AreaServerClient {
 	
 	/**
 	 * Load menu from area server.
+	 * @param userInvoked 
 	 * @param popup
 	 */
-	public void loadMenu()
+	public void loadMenu(boolean userInvoked)
 			throws Exception {
 		
 		// Create new thread
@@ -257,6 +258,11 @@ public class AreaServerClient {
 							}
 							
 						});
+					}
+					
+					// If user is reloading the menu and there are no menu items, inform user about it
+					if (userInvoked && length <= 0) {
+						MessageDialog.show("org.multipage.sync.messageNoMenuItemsLoaded");
 					}
 					
 					// Add reload menu item

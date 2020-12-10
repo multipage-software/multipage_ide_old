@@ -460,34 +460,44 @@ public class MessageDialog extends JDialog {
 		SwingUtilities.invokeLater(() -> {
 			
 			try {
+				
 				// Create dialog window
 				if (MessageDialog.dialog == null) {
 					MessageDialog.dialog = new MessageDialog();
 				}
+				String messageText = message;
+						
+				// Trim the message
+				if (messageText == null || messageText.trim().isEmpty()) {
+					messageText = Resources.getString("org.multipage.sync.messageUnknownError");
+				}
 				
 				// Load message prefix
 				String prefix = Resources.getString("org.multipage.sync.messageSyncError");
-				String messageText = String.format("%s\n%s", prefix, message);
+				messageText = String.format("%s\n%s", prefix, message);
 				
 				// Check if detailed message exists
-				boolean existsDetail = messageDetails != null && !messageDetails.isEmpty();
+				boolean existsDetail = messageDetails != null && !messageDetails.trim().isEmpty();
 				
 				// Show/hide details control
 				MessageDialog.dialog.labelDetail.setVisible(existsDetail);
 				
+				// Remember the message
+				MessageDialog.dialog.message = makeHtmlMessage(messageText);
+				
 				// If there exist message details, inform user about that
 				if (existsDetail) {
 					messageText += "\n\n" + Resources.getString("org.multipage.sync.messageSeeDetails");
+					
+					// Prepare message details. Color possible Area Server exceptions in the detailed message.
+					String finalMessageDetails = Utility.colorHtmlTexts(messageDetails, areaServerErrorRegex, regexErrorGroup, errorColor);
+					MessageDialog.dialog.messageDetails = makeHtmlMessage(finalMessageDetails);
+				}
+				else {
+					MessageDialog.dialog.messageDetails = "";
 				}
 				
-				// Prepare message details. Color possible Area Server exceptions in the detailed message.
-				String finalMessageDetails = Utility.colorHtmlTexts(messageDetails, areaServerErrorRegex, regexErrorGroup, errorColor);
-				
-				// Remember the messages
-				MessageDialog.dialog.message = makeHtmlMessage(messageText);
-				MessageDialog.dialog.messageDetails = existsDetail ? makeHtmlMessage(finalMessageDetails) : null;
-				
-				// Set the flag
+				// Initialize the flag
 				MessageDialog.dialog.detailsDisplayed = false;
 				
 				// Display remembered message depending on the previous flag
@@ -499,7 +509,7 @@ public class MessageDialog extends JDialog {
 			}
 			catch (Exception e) {
 				
-				Utility.show2(MessageDialog.dialog, e.getMessage());
+				Utility.show2(null, e.getLocalizedMessage());
 			}
 		});
 	}
