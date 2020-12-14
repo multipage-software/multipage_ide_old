@@ -389,7 +389,7 @@ public class ProgramGenerator {
 	 * @param areasDiagramEditor
 	 * @return
 	 */
-	public static AreasDiagram newAreasDiagram(AreasDiagramEditor areasDiagramEditor) {
+	public static AreasDiagram newAreasDiagram(AreasDiagramPanel areasDiagramEditor) {
 		
 		if (extensionToBuilder != null) {
 			return extensionToBuilder.newAreasDiagram(areasDiagramEditor);

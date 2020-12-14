@@ -58,7 +58,7 @@ import com.maclan.VersionObj;
  * @author
  *
  */
-public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
+public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	
 	// $hide>>$
 	/**
@@ -150,7 +150,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	/**
 	 * Create the panel.
 	 */
-	public AreasDiagramEditor() {
+	public AreasDiagramPanel() {
 		panelFavorites.setLayout(new BorderLayout(0, 0));
 
 		initComponents();
@@ -374,7 +374,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(areaId);
 			
-			Event.propagate(AreasDiagramEditor.this, Event.selectDiagramAreas, selectedAreaIds);
+			Event.propagate(AreasDiagramPanel.this, Event.selectDiagramAreas, selectedAreaIds);
 		}
 	}
 	
@@ -413,7 +413,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(area.getId());
 			
-			Event.propagate(AreasDiagramEditor.this, Event.selectDiagramAreas, selectedAreaIds);
+			Event.propagate(AreasDiagramPanel.this, Event.selectDiagramAreas, selectedAreaIds);
 			
 			// On sub/super areas.
 			if (buttonSubAreas.isSelected() || buttonSuperAreas.isSelected()) {
@@ -564,13 +564,13 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		// Listen for area view state change.
 		Event.receiver(this, ActionGroup.areaViewStateChange, data -> {
 				
-			if ((Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this.areasDiagram)
-					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this))
+			if ((Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramPanel.this.areasDiagram)
+					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramPanel.this))
 					&& data.relatedInfo instanceof HashSet) {
 				
 				selectedAreaIds = (HashSet) data.relatedInfo;
 			}
-			else if (AreasDiagramEditor.this.isShowing()) {
+			else if (AreasDiagramPanel.this.isShowing()) {
 				
 				if (Event.is(data, Event.selectAll)) {
 					selectedAreaIds = ProgramGenerator.getAllAreaIds();
@@ -584,7 +584,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		// Listen for area view change.
 		Event.receiver(this, ActionGroup.areaViewChange, data -> {
 			
-			boolean isShowing = AreasDiagramEditor.this.isShowing();
+			boolean isShowing = AreasDiagramPanel.this.isShowing();
 			
 			if (isShowing) {
 			
@@ -596,9 +596,9 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 				}
 			}
 			
-			if (Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this.areasDiagram)
-					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this)
-					|| Event.sourceObject(data, Event.mainTabChange, AreasDiagramEditor.this.areasDiagram)
+			if (Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramPanel.this.areasDiagram)
+					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramPanel.this)
+					|| Event.sourceObject(data, Event.mainTabChange, AreasDiagramPanel.this.areasDiagram)
 					|| (isShowing && Event.is(data, Event.selectAll, Event.unselectAll))) {
 				
 				// Diaplay related areas.
@@ -609,12 +609,12 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		// Listen for GUI changes.
 		Event.receiver(this, ActionGroup.guiChange, data -> {
 			
-			if (Event.is(data, Event.focusTabArea) && AreasDiagramEditor.this.isShowing()) {
+			if (Event.is(data, Event.focusTabArea) && AreasDiagramPanel.this.isShowing()) {
 				
 				Long tabAreaId = data.relatedInfo instanceof Long ? (Long) data.relatedInfo : 0L;
 				focusAreaNear(tabAreaId);
 			}
-			else if (Event.is(data, Event.focusHomeArea) && AreasDiagramEditor.this.isShowing()) {
+			else if (Event.is(data, Event.focusHomeArea) && AreasDiagramPanel.this.isShowing()) {
 				
 				focusHomeArea();
 			}
@@ -654,7 +654,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	 * Initialize diagram editor.
 	 * @param currentAreasEditor 
 	 */
-	public void initDiagramEditor(AreasDiagramEditor currentAreasEditor) {
+	public void initDiagramEditor(AreasDiagramPanel currentAreasEditor) {
 		
 		splitPane.setDividerLocation(currentAreasEditor.splitPane.getDividerLocation());
 		splitPaneTree.setDividerLocation(currentAreasEditor.splitPaneTree.getDividerLocation());
@@ -1394,7 +1394,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		areasDiagram.onTabPanelChange(e, selectedIndex);
 		
 		// Propagate event.
-		Event.propagate(AreasDiagramEditor.this, Event.mainTabChange);
+		Event.propagate(AreasDiagramPanel.this, Event.mainTabChange);
 	}
 	
 	/**
@@ -1417,6 +1417,40 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	public HashSet<Long> getSelectedAreaIds() {
 		
 		return this.selectedAreaIds;
+	}
+
+	/**
+	 * No tab text.
+	 */
+	@Override
+	public String getTabDescription() {
+		
+		return "";
+	}
+	
+	/**
+	 * Update panel.
+	 */
+	@Override
+	public void reload() {
+		
+		
+	}
+	
+	/**
+	 * Get tab state
+	 */
+	@Override
+	public TabState getTabState() {
+		
+		// Try to get inner area diagram and return its state.
+		AreasDiagram areasDiagram = this.getDiagram();
+		if (areasDiagram == null) {
+			return null;
+		}
+		
+		TabState tabState = areasDiagram.getTabState();
+		return tabState;
 	}
 }
 
@@ -1573,12 +1607,12 @@ class FavoritesModel extends AbstractListModel {
 	/**
 	 * Editor reference.
 	 */
-	private AreasDiagramEditor editor;
+	private AreasDiagramPanel editor;
 	
 	/**
 	 * Constructor.
 	 */
-	public FavoritesModel(AreasDiagramEditor editor) {
+	public FavoritesModel(AreasDiagramPanel editor) {
 		
 		this.editor = editor;
 	}

@@ -8,5 +8,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-text-1.9-bin/commons-text-1.9/commons-text-1.9.jar"/>
+	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-lang3-3.7-bin/commons-lang3-3.7/commons-lang3-3.7.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

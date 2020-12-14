@@ -69,10 +69,10 @@ public class TabPanel extends DnDTabbedPane {
 				
 				// Invoke events.
 				Component component = tab.getComponentAt(selectedIndex);
-				if (component instanceof TabPanelComponent) {
+				if (component instanceof TabItemInterface) {
 					
-					TabPanelComponent tabPanel = (TabPanelComponent) component;
-					tabPanel.onTabPanelChange(e, selectedIndex);
+					TabItemInterface tabPanelActions = (TabItemInterface) component;
+					tabPanelActions.onTabPanelChange(e, selectedIndex);
 				}
 				
 				SwingUtilities.invokeLater(new Runnable() {
@@ -93,8 +93,8 @@ public class TabPanel extends DnDTabbedPane {
 				Component child = e.getChild();
 				
 				// If it is areas diagram editor, close it.
-				if (child instanceof AreasDiagramEditor) {
-					AreasDiagramEditor editor = (AreasDiagramEditor) child;
+				if (child instanceof AreasDiagramPanel) {
+					AreasDiagramPanel editor = (AreasDiagramPanel) child;
 					editor.dispose();
 					return;	
 				}
@@ -121,7 +121,7 @@ public class TabPanel extends DnDTabbedPane {
 					
 					// Get selected tab.
 					int selectedIndex = getSelectedIndex();
-					ContentOfTab tabComponent = (ContentOfTab) getTabComponentAt(selectedIndex);
+					TabLabel tabComponent = (TabLabel) getTabComponentAt(selectedIndex);
 					
 					// Get text.
 					String text = null;
@@ -156,7 +156,7 @@ public class TabPanel extends DnDTabbedPane {
 	 * @param topAreaId 
 	 * @param selectIt
 	 */
-	public void addAreasEditor(Component areasEditor, ContentOfTab.Type type, String title, Long topAreaId, boolean selectIt) {
+	public void addAreasEditor(Component areasEditor, TabType type, String title, Long topAreaId, boolean selectIt) {
 		
 		this.component = areasEditor;
 		
@@ -170,7 +170,7 @@ public class TabPanel extends DnDTabbedPane {
 			text = title;
 		}
 		
-		setTabComponentAt(index, new ContentOfTab(text, topAreaId, this, areasEditor, type));
+		setTabComponentAt(index, new TabLabel(text, topAreaId, this, areasEditor, type));
 		
 		if (selectIt) {
 			setSelectedIndex(index);
@@ -196,7 +196,7 @@ public class TabPanel extends DnDTabbedPane {
 		
 		int index = getTabCount() - 1;
 		
-		setTabComponentAt(index, new ContentOfTab(url, -1L, this, monitor, ContentOfTab.Type.browser));
+		setTabComponentAt(index, new TabLabel(url, -1L, this, monitor, TabType.monitor));
 		
 		if (selectIt) {
 			setSelectedIndex(index);
@@ -214,9 +214,9 @@ public class TabPanel extends DnDTabbedPane {
 	public void setTabTitle(int index, String title) {
 		
 		Component component = getTabComponentAt(index);
-		if (component instanceof ContentOfTab) {
+		if (component instanceof TabLabel) {
 			
-			((ContentOfTab) component).setDescription(title);
+			((TabLabel) component).setDescription(title);
 		}
 		else {
 			setTitleAt(index, title);
@@ -231,9 +231,9 @@ public class TabPanel extends DnDTabbedPane {
 	public String getTabTitle(int index) {
 		
 		Component component = getTabComponentAt(index);
-		if (component instanceof ContentOfTab) {
+		if (component instanceof TabLabel) {
 			
-			return ((ContentOfTab) component).getDescription();
+			return ((TabLabel) component).getDescription();
 		}
 		String title = getTitleAt(index);
 		if (title != null) {
@@ -289,18 +289,18 @@ public class TabPanel extends DnDTabbedPane {
 			// Get tab component.
 			Component tabComponent = getTabComponentAt(tabIndex);
 			// Check the component.
-			if (!(tabComponent instanceof ContentOfTab)) {
+			if (!(tabComponent instanceof TabLabel)) {
 				continue;
 			}
 			// Get content.
-			ContentOfTab content = (ContentOfTab) tabComponent;
+			TabLabel content = (TabLabel) tabComponent;
 			// Get contained component.
 			Component component = content.component;
 			// Check type.
-			if (!(component instanceof TabContainerComponent)) {
+			if (!(component instanceof TabItemInterface)) {
 				continue;
 			}
-			TabContainerComponent tabContainerComponent = (TabContainerComponent) component;
+			TabItemInterface tabContainerComponent = (TabItemInterface) component;
 			tabContainerComponent.reload();
 			// Get tab description.
 			String description = tabContainerComponent.getTabDescription();
@@ -314,20 +314,32 @@ public class TabPanel extends DnDTabbedPane {
 	}
 
 	/**
-	 * Get area diagram editors.
+	 * Get tabs states.
 	 * @return
 	 */
-	public LinkedList<ContentOfTab> getClonedDiagrams() {
+	public LinkedList<TabState> getTabsStates() {
 		
-		LinkedList<ContentOfTab> list = new LinkedList<ContentOfTab>();
+		LinkedList<TabState> list = new LinkedList<TabState>();
 		
 		// Do loop for all tab components.
 		for (int index = 1; index < getTabCount(); index++) {
-			Component tabComponent = getTabComponentAt(index);
 			
-			if (tabComponent instanceof ContentOfTab) {
+			// Get tab label at index position
+			Component component = getTabComponentAt(index);
+			if (!(component instanceof TabLabel)) {
+				continue;
+			}
+			TabLabel tabLabel = (TabLabel) component;
+			
+			// Get tab component
+			component = tabLabel.getPanelComponent();
+			if (component instanceof TabItemInterface) {
 				
-				list.add((ContentOfTab) tabComponent);
+				// Get tab state and add it to the list
+				TabItemInterface tabInterface = (TabItemInterface) component;
+				TabState tabState = tabInterface.getTabState();
+				
+				list.add(tabState);
 			}
 		}
 		
@@ -346,17 +358,27 @@ public class TabPanel extends DnDTabbedPane {
 			return null;
 		}
 		
-		// Get tab content.
+		// Get tab component.
 		Component component = getTabComponentAt(index);
-		if (!(component instanceof ContentOfTab)) {
+		if (!(component instanceof TabItemInterface)) {
 			
 			return null;
 		}
 		
-		ContentOfTab contentOfTab = (ContentOfTab) component;
+		// Get tab state
+		TabItemInterface tabInterface = (TabItemInterface) component;
+		tabInterface.getTabState();
 		
-		// Return top area.
-		return contentOfTab.getTopAreaId();
+		if (!(tabInterface instanceof AreasTabState)) {
+			return null;
+		}
+		
+		// Get the area ID and return it
+		AreasTabState areasTabState = (AreasTabState) tabInterface;
+		long topAreaId = areasTabState.areaId;
+		
+		// Return top area ID.
+		return topAreaId;
 	}
 
 	/**
@@ -373,9 +395,9 @@ public class TabPanel extends DnDTabbedPane {
 	public void onRemoveTab() {
 		
 		// Delegate call.
-		if (component instanceof TabPanelComponent) {
-			TabPanelComponent tabComponent = (TabPanelComponent) component;
-			tabComponent.beforeTabPanelRemoved();
+		if (component instanceof TabItemInterface) {
+			TabItemInterface tabInterface = (TabItemInterface) component;
+			tabInterface.beforeTabPanelRemoved();
 		}
 		
 		if (removeListener != null) {

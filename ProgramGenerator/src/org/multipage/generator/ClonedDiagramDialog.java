@@ -31,14 +31,14 @@ public class ClonedDiagramDialog extends JDialog {
 	/**
 	 * Serialized window type.
 	 */
-	private static ContentOfTab.Type windowTypeState;
+	private static TabType windowTypeState;
 
 	/**
 	 * Set default states.
 	 */
 	public static void setDefaultData() {
 		
-		windowTypeState = ContentOfTab.Type.treeView;
+		windowTypeState = TabType.areasTree;
 	}
 
 	/**
@@ -61,7 +61,7 @@ public class ClonedDiagramDialog extends JDialog {
 	public static void serializeData(ObjectInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
-		windowTypeState = Utility.readInputStreamObject(inputStream, ContentOfTab.Type.class);
+		windowTypeState = Utility.readInputStreamObject(inputStream, TabType.class);
 	}
 	
 	/**
@@ -86,7 +86,7 @@ public class ClonedDiagramDialog extends JDialog {
 	 * @param caption
 	 * @return
 	 */
-	public static String showDialog(Component parent, String caption, Obj<ContentOfTab.Type> type) {
+	public static String showDialog(Component parent, String caption, Obj<TabType> type) {
 		
 		ClonedDiagramDialog dialog = new ClonedDiagramDialog(Utility.findWindow(parent));
 		dialog.setProperties(caption);
@@ -201,11 +201,11 @@ public class ClonedDiagramDialog extends JDialog {
 		
 		switch (windowTypeState) {
 		
-		case diagram:
+		case areasDiagram:
 			radioDiagram.setSelected(true);
 			break;
 			
-		case treeView:
+		case areasTree:
 		default:
 			radioAreaTree.setSelected(true);
 		}
@@ -263,15 +263,15 @@ public class ClonedDiagramDialog extends JDialog {
 	 * Get clone type.
 	 * @return
 	 */
-	private ContentOfTab.Type getCloneType() {
+	private TabType getCloneType() {
 		
 		if (radioDiagram.isSelected()) {
-			return ContentOfTab.Type.diagram;
+			return TabType.areasDiagram;
 		}
 		else if (radioAreaTree.isSelected()) {
-			return ContentOfTab.Type.treeView;
+			return TabType.areasTree;
 		}
-		return ContentOfTab.Type.unknown;
+		return TabType.unknown;
 	}
 	
 	/**

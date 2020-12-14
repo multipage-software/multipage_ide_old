@@ -44,7 +44,7 @@ public interface ExtensionToBuilder {
 	 * @param areasDiagramEditor
 	 * @return
 	 */
-	AreasDiagram newAreasDiagram(AreasDiagramEditor areasDiagramEditor);
+	AreasDiagram newAreasDiagram(AreasDiagramPanel areasDiagramEditor);
 
 	/**
 	 * Create new slot list panel.

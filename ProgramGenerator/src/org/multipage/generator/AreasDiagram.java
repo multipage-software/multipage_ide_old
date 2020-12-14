@@ -63,7 +63,7 @@ import com.maclan.ResourceConstructor;
  * @author
  *
  */
-public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
+public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 
 	/**
 	 * Version.
@@ -255,13 +255,13 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	/**
 	 * A reference to parent editor panel.
 	 */
-	private AreasDiagramEditor parentEditor;
+	private AreasDiagramPanel parentEditor;
 	
 	/**
 	 * Constructor.
 	 * @param parent 
 	 */
-	public AreasDiagram(AreasDiagramEditor parentEditor) {
+	public AreasDiagram(AreasDiagramPanel parentEditor) {
 		
 		// Remeber reference to the parent editor.
 		this.parentEditor = parentEditor;
@@ -3007,7 +3007,6 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	@Override
 	protected void resetToolTipHistory() {
 		
-		
 	}
 	
 	/**
@@ -3030,5 +3029,39 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		
 		// Remove listeners.
 		removeListeners();
+	}
+
+	/**
+	 * No tab text.
+	 */
+	@Override
+	public String getTabDescription() {
+		
+		return "";
+	}
+
+	/**
+	 * Update panel.
+	 */
+	@Override
+	public void reload() {
+		
+	}
+
+	/**
+	 * Get tab state
+	 */
+	@Override
+	public TabState getTabState() {
+		
+		// Create new tab state
+		AreasDiagramTabState tabState = new AreasDiagramTabState();
+		
+		// Get diagram coordinates and return the state object
+		tabState.translationx = getTranslatingX();
+		tabState.translationy = getTranslatingY();
+		tabState.zoom = getZoom();
+		
+		return tabState;
 	}
 }

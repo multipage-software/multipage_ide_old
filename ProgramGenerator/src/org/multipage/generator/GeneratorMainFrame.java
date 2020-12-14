@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
@@ -128,9 +127,9 @@ public class GeneratorMainFrame extends JFrame {
 	private static String mainDiagramName;
 	
 	/**
-	 * Cloned diagrams' states.
+	 * Contents of tabs.
 	 */
-	private static LinkedList<DiagramCloneItem> clonedDiagrams;
+	private static LinkedList<TabState> tabsStates;
 
 	/**
 	 * Selected tab index.
@@ -142,59 +141,6 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	private static DebugViewer debugViewer;
 	
-	/**
-	 * Diagram clone item.
-	 */
-	static class DiagramCloneItem implements Serializable {
-		
-		/**
-		 * Version.
-		 */
-		private static final long serialVersionUID = 1L;
-
-		String title;
-		public Long topAreaId;
-		
-		double translationx;
-		double translationy;
-		
-		double zoom;
-		
-		ContentOfTab.Type contentType;
-
-		/**
-		 * Create new item.
-		 * @param tabItem
-		 * @return
-		 */
-		public static DiagramCloneItem create(ContentOfTab tabItem) {
-			
-			DiagramCloneItem item = new DiagramCloneItem();
-			
-			item.title = tabItem.getDescription();
-			item.topAreaId = tabItem.getTopAreaId();
-			item.contentType = tabItem.type;
-
-			// Try to get area diagram and set item coordinates.
-			Component panelComponent = tabItem.getPanelComponent();
-			if (ContentOfTab.Type.diagram.equals(item.contentType)) {
-				
-				AreasDiagramEditor areasEditor = (AreasDiagramEditor) panelComponent;
-				AreasDiagram areasDiagram = areasEditor.getDiagram();
-				
-				// Set coordinates.
-				if (areasDiagram != null) {
-					
-					item.translationx = areasDiagram.getTranslatingX();
-					item.translationy = areasDiagram.getTranslatingY();
-					item.zoom = areasDiagram.getZoom();
-				}
-			}
-			
-			return item;
-		}
-	}
-
 	/**
 	 * Load data.
 	 * @param inputStream
@@ -213,12 +159,12 @@ public class GeneratorMainFrame extends JFrame {
 		// Load "show ID button" state.
 		showIdButtonState = inputStream.readBoolean();
 		// Load editor states.
-		AreasDiagramEditor.splitPositionStateMain = inputStream.readInt();
-		AreasDiagramEditor.splitPositionStateSecondary = inputStream.readInt();
+		AreasDiagramPanel.splitPositionStateMain = inputStream.readInt();
+		AreasDiagramPanel.splitPositionStateSecondary = inputStream.readInt();
 		
 		int count = inputStream.readInt();
 		while (count > 0) {
-			AreasDiagramEditor.selectedAreasIdsState.add(inputStream.readLong());
+			AreasDiagramPanel.selectedAreasIdsState.add(inputStream.readLong());
 			count--;
 		}
 		// Load text.
@@ -229,8 +175,8 @@ public class GeneratorMainFrame extends JFrame {
 		ExportDialog.exportFolder = inputStream.readUTF();
 		// Load main diagram name.
 		mainDiagramName = inputStream.readUTF();
-		// Load cloned diagrams.
-		clonedDiagrams = readClonedDiagrams(inputStream);
+		// Load states of tabs.
+		tabsStates = readTabStates(inputStream);
 		// Load selected tab index.
 		selectedTabIndex = inputStream.readInt();
 	}
@@ -249,11 +195,11 @@ public class GeneratorMainFrame extends JFrame {
 		// Save "show ID button" state.
 		outputStream.writeBoolean(showIdButtonState);
 		// Save editor states.
-		outputStream.writeInt(AreasDiagramEditor.splitPositionStateMain);
-		outputStream.writeInt(AreasDiagramEditor.splitPositionStateSecondary);
+		outputStream.writeInt(AreasDiagramPanel.splitPositionStateMain);
+		outputStream.writeInt(AreasDiagramPanel.splitPositionStateSecondary);
 		
-		outputStream.writeInt(AreasDiagramEditor.selectedAreasIdsState.size());
-		for (long areaId : AreasDiagramEditor.selectedAreasIdsState) {
+		outputStream.writeInt(AreasDiagramPanel.selectedAreasIdsState.size());
+		for (long areaId : AreasDiagramPanel.selectedAreasIdsState) {
 			outputStream.writeLong(areaId);
 		}
 		// Save text.
@@ -265,7 +211,7 @@ public class GeneratorMainFrame extends JFrame {
 		// Save main diagram name.
 		outputStream.writeUTF(mainDiagramName);
 		// Save cloned diagrams.
-		outputStream.writeObject(clonedDiagrams);
+		outputStream.writeObject(tabsStates);
 		// Save selected tab index.
 		outputStream.writeInt(selectedTabIndex);
 	}
@@ -279,22 +225,22 @@ public class GeneratorMainFrame extends JFrame {
 		extendedState = NORMAL;
 		showIdButtonState = true;
 		mainDiagramName = Resources.getString("org.multipage.generator.textMainAreasTab");
-		clonedDiagrams = new LinkedList<DiagramCloneItem>();
+		tabsStates = new LinkedList<TabState>();
 		selectedTabIndex = 0;
 	}
 
 	/**
-	 * Read cloned diagrams.
+	 * Read tabs states.
 	 * @param inputStream
 	 * @return
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	private static LinkedList<DiagramCloneItem> readClonedDiagrams(
+	private static LinkedList<TabState> readTabStates(
 			ObjectInputStream inputStream)
 					throws IOException, ClassNotFoundException {
 		
-		LinkedList<DiagramCloneItem> list = new LinkedList<DiagramCloneItem>();
+		LinkedList<TabState> list = new LinkedList<TabState>();
 		
 		// Read list object.
 		Object object = inputStream.readObject();
@@ -304,8 +250,8 @@ public class GeneratorMainFrame extends JFrame {
 			for (Object item : ((LinkedList) object)) {
 				
 				// Add item to the output list.
-				if (item instanceof DiagramCloneItem) {
-					list.add((DiagramCloneItem) item);
+				if (item instanceof TabState) {
+					list.add((TabState) item);
 				}
 			}
 		}
@@ -323,49 +269,63 @@ public class GeneratorMainFrame extends JFrame {
 	}
 
 	/**
-	 * Load cloned diagrams.
+	 * Load tab states and create appropriate tab panels.
 	 */
-	private void loadClonedDiagrams() {
+	private void loadTabPanels() {
 		
 		// Reset flag.
 		boolean cloned = false;
 		
 		// Do loop for all diagram states.
-		for (DiagramCloneItem cloneDiagramItem : clonedDiagrams) {
+		for (TabState tabState : tabsStates) {
 			
 			// Clone diagram.
-			ContentOfTab.Type type = cloneDiagramItem.contentType;
-			String title = cloneDiagramItem.title;
-			Long topAreaId = cloneDiagramItem.topAreaId;
+			TabType type = tabState.type;
+			String title = tabState.title;
 			
-			if (cloneDiagramItem.topAreaId > 0) {
-				if (ContentOfTab.Type.diagram.equals(type)) {
-					
-					AreasDiagramEditor diagramEditor = createDiagram(title, topAreaId);
-					if (diagramEditor == null) {
-						continue;
-					}
-					
-					// Set flag.
-					cloned = true;
+			// Try to get area ID for this tab from tab state
+			Long areaId = null;
+			if (tabState instanceof AreasTabState) {
 				
-					// Get areas diagram.
-					AreasDiagram diagram = diagramEditor.getDiagram();
-					
-					// Set diagram position.
-					diagram.setDiagramPosition(cloneDiagramItem.translationx,
-							cloneDiagramItem.translationy, cloneDiagramItem.zoom);
-				}
-				else if (ContentOfTab.Type.treeView.equals(type)) {
-					
-					createTreeView(title, topAreaId);
-					
-					// Set flag.
-					cloned = true;
-				}
+				AreasTabState areaTabState = (AreasTabState) tabState;
+				areaId = areaTabState.areaId;
 			}
 			
-			if (ContentOfTab.Type.browser.equals(type)) {
+			// On areas diagram
+			if (TabType.areasDiagram.equals(type) && tabState instanceof AreasDiagramTabState) {
+				
+				// Get extended tab state
+				AreasDiagramTabState extendedTabState = (AreasDiagramTabState) tabState;
+				
+				// Create areas diagram panel
+				AreasDiagramPanel diagramPanel = createAreasDiagram(title, areaId);
+				if (diagramPanel == null) {
+					continue;
+				}
+				
+				// Set flag.
+				cloned = true;
+			
+				// Get inner areas diagram.
+				AreasDiagram innerAreasDiagram = diagramPanel.getDiagram();
+				
+				// Set position of areas in the inner panel.
+				innerAreasDiagram.setDiagramPosition(extendedTabState.translationx,
+						extendedTabState.translationy, extendedTabState.zoom);
+			}
+			
+			// On areas tree view
+			else if (TabType.areasTree.equals(type) && tabState instanceof AreasTreeTabState) {
+				
+				// Create new areas tree view
+				createAreasTreeView(title, areaId);
+				
+				// Set flag.
+				cloned = true;
+			}
+			
+			// On HTML browser
+			else if (TabType.monitor.equals(type)) {
 				
 				String url = title;
 				tabPanel.addMonitor(url, false);
@@ -416,7 +376,7 @@ public class GeneratorMainFrame extends JFrame {
 		// Lighten read only elements state.
 		lightReadOnly.setSelected(!AreaShapes.readOnlyLighter);
 		// Create cloned diagrams.
-		loadClonedDiagrams();
+		loadTabPanels();
 	}
 
 	/**
@@ -434,23 +394,23 @@ public class GeneratorMainFrame extends JFrame {
 		mainDiagramName = tabPanel.getTabTitle(0);
 		// Save selected tab state.
 		selectedTabIndex = tabPanel.getSelectedIndex();
-		// Save cloned diagrams.
-		saveClonedDiagrams();
+		// Save tabs states.
+		saveTabsStates();
 	}
 
 	/**
-	 * Save cloned diagrams.
+	 * Save tabs states.
 	 */
-	private void saveClonedDiagrams() {
+	private void saveTabsStates() {
 		
-		clonedDiagrams.clear();
+		tabsStates.clear();
 		
-		// Do loop for all area diagrams.
-		LinkedList<ContentOfTab> tabItems = tabPanel.getClonedDiagrams();
-		for (ContentOfTab tabItem : tabItems) {
+		// Do loop for all tabs of the panel.
+		LinkedList<TabState> tabStates = tabPanel.getTabsStates();
+		for (TabState tabState : tabStates) {
 			
-			DiagramCloneItem diagramCloneState = DiagramCloneItem.create(tabItem);
-			clonedDiagrams.add(diagramCloneState);
+			// Add new item
+			tabsStates.add(tabState);
 		}
 	}
 
@@ -462,7 +422,7 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * AreasDiagram.
 	 */
-	private AreasDiagramEditor mainAreaDiagramEditor;
+	private AreasDiagramPanel mainAreaDiagramEditor;
 
 	/**
 	 * Status bar.
@@ -727,7 +687,7 @@ public class GeneratorMainFrame extends JFrame {
 			if (Event.passes(() -> {
 				
 				if ((Event.sourceClass(data, Event.selectDiagramAreas, AreasDiagram.class)
-						|| Event.sourceClass(data, Event.selectDiagramAreas, AreasDiagramEditor.class)
+						|| Event.sourceClass(data, Event.selectDiagramAreas, AreasDiagramPanel.class)
 						|| Event.sourceClass(data, Event.selectTreeArea, AreasTreeEditorPanel.class)
 						|| Event.sourceClass(data, Event.selectListArea, AreasTreeEditorPanel.class))
 						&& data.relatedInfo instanceof HashSet) {
@@ -736,9 +696,9 @@ public class GeneratorMainFrame extends JFrame {
 						return true;
 				}
 				
-				if (Event.sourceClass(data, Event.mainTabChange, AreasDiagramEditor.class)) {
+				if (Event.sourceClass(data, Event.mainTabChange, AreasDiagramPanel.class)) {
 					
-					AreasDiagramEditor areasDiagramEditor = (AreasDiagramEditor) data.source;
+					AreasDiagramPanel areasDiagramEditor = (AreasDiagramPanel) data.source;
 					selectedAreaIds.ref = areasDiagramEditor.getSelectedAreaIds();
 					return true;
 				}
@@ -845,9 +805,9 @@ public class GeneratorMainFrame extends JFrame {
 	 * Create new areas diagram editor object.
 	 * @return
 	 */
-	protected AreasDiagramEditor newAreasDiagramEditor() {
+	protected AreasDiagramPanel newAreasDiagramEditor() {
 		
-		return new AreasDiagramEditor();
+		return new AreasDiagramPanel();
 	}
 	
 	/**
@@ -945,7 +905,7 @@ public class GeneratorMainFrame extends JFrame {
 	private void onChangeTab() {
 		
 		// Get visible area editor.
-		AreasDiagramEditor editor = getVisibleAreasEditor();
+		AreasDiagramPanel editor = getVisibleAreasEditor();
 		if (editor != null) {
 			editor.getDiagram().updateUndoRedo();
 		}
@@ -1649,9 +1609,9 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Area diagram editor.
 	 */
-	public AreasDiagramEditor getAreaDiagramEditor() {
+	public AreasDiagramPanel getAreaDiagramEditor() {
 		
-		AreasDiagramEditor editor = getVisibleAreasEditor();
+		AreasDiagramPanel editor = getVisibleAreasEditor();
 		if (editor != null) {
 			return editor;
 		}
@@ -1793,7 +1753,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUndoFocus() {
 		
-		AreasDiagramEditor editor = getVisibleAreasEditor();
+		AreasDiagramPanel editor = getVisibleAreasEditor();
 		if (editor != null) {
 			// Delegate the call.
 			editor.getDiagram().undoFocus();
@@ -1805,7 +1765,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onRedoFocus() {
 		
-		AreasDiagramEditor editor = getVisibleAreasEditor();
+		AreasDiagramPanel editor = getVisibleAreasEditor();
 		if (editor != null) {
 			// Delegate the call.
 			editor.getDiagram().redoFocus();
@@ -1835,11 +1795,11 @@ public class GeneratorMainFrame extends JFrame {
 	 * @param diagramName
 	 * @param topAreaId
 	 */
-	public AreasDiagramEditor createDiagram(String diagramName, Long topAreaId) {
+	public AreasDiagramPanel createAreasDiagram(String diagramName, Long topAreaId) {
 		
 		// Create new areas editor.
-		AreasDiagramEditor newAreasEditor = new AreasDiagramEditor();
-		AreasDiagramEditor currentAreasEditor = getVisibleAreasEditor();
+		AreasDiagramPanel newAreasEditor = new AreasDiagramPanel();
+		AreasDiagramPanel currentAreasEditor = getVisibleAreasEditor();
 		
 		newAreasEditor.initDiagramEditor(currentAreasEditor);
 		
@@ -1853,7 +1813,7 @@ public class GeneratorMainFrame extends JFrame {
 		double zoom = currentDiagram.getZoom();
 		
 		// Add new tab.
-		tabPanel.addAreasEditor(newAreasEditor, ContentOfTab.Type.diagram, diagramName, topAreaId, false);
+		tabPanel.addAreasEditor(newAreasEditor, TabType.areasDiagram, diagramName, topAreaId, false);
 		diagram.setDiagramPosition(translationX, translationY, zoom);
 		diagram.setUndoRedoComponents(undoButton, redoButton);
 		
@@ -1872,7 +1832,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * @param title
 	 * @param areaId
 	 */
-	private AreasTreeEditorPanel createTreeView(String title, Long rootAreaId) {
+	private AreasTreeEditorPanel createAreasTreeView(String title, Long rootAreaId) {
 		
 		// Trim input.
 		if (rootAreaId == null) {
@@ -1881,7 +1841,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Add new tree view.
 		AreasTreeEditorPanel areasTreePanel = new AreasTreeEditorPanel(rootAreaId);
-		tabPanel.addAreasEditor(areasTreePanel, ContentOfTab.Type.treeView, title, rootAreaId, true);
+		tabPanel.addAreasEditor(areasTreePanel, TabType.areasTree, title, rootAreaId, true);
 		
 		// Select the new tab.
 		int count = tabPanel.getTabCount();
@@ -1915,7 +1875,7 @@ public class GeneratorMainFrame extends JFrame {
 		String areaName = area != null ? area.getDescription() : "";
 		
 		// Get diagram description.
-		Obj<ContentOfTab.Type> type = new Obj<ContentOfTab.Type>();
+		Obj<TabType> type = new Obj<TabType>();
 		String title = ClonedDiagramDialog.showDialog(this, areaName, type);
 		if (title == null) {
 			return;
@@ -1924,28 +1884,23 @@ public class GeneratorMainFrame extends JFrame {
 		Long areaId = area == null ? null : area.getId();
 		
 		// On diagram.
-		if (ContentOfTab.Type.diagram.equals(type.ref)) {
+		if (TabType.areasDiagram.equals(type.ref)) {
 			
 			// Clone diagram.
-			final AreasDiagramEditor areasDiagramEditor = createDiagram(title, areaId);
+			final AreasDiagramPanel areasDiagramEditor = createAreasDiagram(title, areaId);
 			
 			// Focus area.
 			if (areasDiagramEditor != null) {
-				
-				SwingUtilities.invokeLater(new Runnable() {
-					@Override
-					public void run() {
-						
+				SwingUtilities.invokeLater(() -> {
 						areasDiagramEditor.focusAreaNear(area.getId());
-					}
 				});
 			}
 		}
 		// On tree view.
-		else if (ContentOfTab.Type.treeView.equals(type.ref)) {
+		else if (TabType.areasTree.equals(type.ref)) {
 			
 			// Clone tree view.
-			createTreeView(title, areaId);
+			createAreasTreeView(title, areaId);
 		}
 	}
 	
@@ -1971,7 +1926,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Get visible area editor.
 	 * @return
 	 */
-	public AreasDiagramEditor getVisibleAreasEditor() {
+	public AreasDiagramPanel getVisibleAreasEditor() {
 		
 		int index = tabPanel.getSelectedIndex();
 		if (index == -1) {
@@ -1979,17 +1934,17 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		Component component = tabPanel.getComponentAt(index);
-		if (component instanceof AreasDiagramEditor) {
+		if (component instanceof AreasDiagramPanel) {
 			
-			AreasDiagramEditor editor = (AreasDiagramEditor) component;
+			AreasDiagramPanel editor = (AreasDiagramPanel) component;
 			return editor;
 		}
 		
 		// Otherwise return main editor.
 		component = tabPanel.getComponentAt(0);
-		if (component instanceof AreasDiagramEditor) {
+		if (component instanceof AreasDiagramPanel) {
 			
-			AreasDiagramEditor editor = (AreasDiagramEditor) component;
+			AreasDiagramPanel editor = (AreasDiagramPanel) component;
 			return editor;
 		}
 		
@@ -3001,7 +2956,7 @@ public class GeneratorMainFrame extends JFrame {
 	public static AreasDiagram getVisibleAreasDiagram() {
 		
 		if (mainFrame != null) {
-			AreasDiagramEditor editor = mainFrame.getVisibleAreasEditor();
+			AreasDiagramPanel editor = mainFrame.getVisibleAreasEditor();
 			
 			if (editor != null) {
 				return editor.getDiagram();

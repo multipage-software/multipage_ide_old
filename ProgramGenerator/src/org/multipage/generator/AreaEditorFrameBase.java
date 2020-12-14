@@ -130,12 +130,12 @@ public abstract class AreaEditorFrameBase extends JFrame {
 	/**
 	 * Tab content lookup table.
 	 */
-	protected Hashtable<Component, TabContentActions> tabContentsTable = new Hashtable<Component, TabContentActions>();
+	protected Hashtable<Component, EditorTabActions> tabContentsTable = new Hashtable<Component, EditorTabActions>();
 	
 	/**
 	 * Old tab content.
 	 */
-	protected TabContentActions oldTabContent;
+	protected EditorTabActions oldTabContent;
 	
 	/**
 	 * Dependencies panel.
@@ -244,7 +244,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		// Implement information loading and saving.
 		Component component = getTabbedPane().getSelectedComponent();
 		// Get tab content interface.
-		TabContentActions tabContent = tabContentsTable.get(component);
+		EditorTabActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke load information.
@@ -409,8 +409,8 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		
 		component.add(content);
 		
-		if (content instanceof TabContentActions) {
-			tabContentsTable.put(component, (TabContentActions) content);
+		if (content instanceof EditorTabActions) {
+			tabContentsTable.put(component, (EditorTabActions) content);
 		}
 	}
 	
@@ -423,7 +423,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		Component component = getTabbedPane().getSelectedComponent();
 		
 		// Get tab content interface.
-		TabContentActions tabContent = tabContentsTable.get(component);
+		EditorTabActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke save information.
@@ -440,7 +440,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		Component component = getTabbedPane().getSelectedComponent();
 		
 		// Get tab content interface.
-		TabContentActions tabContent = tabContentsTable.get(component);
+		EditorTabActions tabContent = tabContentsTable.get(component);
 		if (tabContent != null) {
 			
 			// Invoke load information.

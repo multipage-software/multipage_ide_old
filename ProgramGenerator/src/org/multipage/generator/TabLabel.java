@@ -18,7 +18,7 @@ import org.multipage.util.*;
 /**
  * Tab content.
  */
-public class ContentOfTab extends JPanel {
+public class TabLabel extends JPanel {
 
 	/**
 	 * Version.
@@ -36,25 +36,6 @@ public class ContentOfTab extends JPanel {
 	private static final int size = 20;
 	
 	/**
-	 * Types of content.
-	 */
-	public static enum Type {
-		
-		/**
-		 * Enumeration of types.
-		 */
-		diagram,
-		treeView,
-		browser,
-		unknown;
-	};
-	
-	/**
-	 * This type of content.
-	 */
-	public Type type = Type.unknown;
-	
-	/**
 	 * Close button.
 	 */
 	private JButton close;
@@ -63,33 +44,26 @@ public class ContentOfTab extends JPanel {
 	 * Tab panel reference.
 	 */
 	private TabPanel tabPanel;
-	
-	/**
-	 * Top area ID.
-	 */
-	private Long topAreaId;
 
 	/**
 	 * Component.
 	 */
-	Component component;
+	public Component component;
 	
 	/**
 	 * Label.
 	 */
-	JLabel label;
+	public JLabel label;
 
 	/**
 	 * Constructor.
 	 * @param index 
 	 * @param tabPanel 
 	 */
-	public ContentOfTab(String text, Long topAreaId, final TabPanel tabPanel, Component component, Type type) {
+	public TabLabel(String text, Long topAreaId, final TabPanel tabPanel, Component component, TabType type) {
 		
 		this.tabPanel = tabPanel;
-		this.topAreaId = topAreaId;
 		this.component = component;
-		this.type = type;
 		
 		// Add components.
 		setLayout(null);
@@ -172,8 +146,8 @@ public class ContentOfTab extends JPanel {
 	 */
 	protected void onRemoveTab() {
 		
-		if (component instanceof TabPanelComponent) {
-			TabPanelComponent tabComponent = (TabPanelComponent) component;
+		if (component instanceof TabItemInterface) {
+			TabItemInterface tabComponent = (TabItemInterface) component;
 			tabComponent.beforeTabPanelRemoved();
 		}
 
@@ -187,12 +161,5 @@ public class ContentOfTab extends JPanel {
 	public Component getPanelComponent() {
 		
 		return component;
-	}
-
-	/**
-	 * @return the topAreaId
-	 */
-	public Long getTopAreaId() {
-		return topAreaId;
 	}
 }

@@ -73,7 +73,7 @@ import javax.swing.event.ChangeListener;
  * @author
  *
  */
-public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, TabContainerComponent {
+public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	
 	/**
 	 * Version.
@@ -1552,5 +1552,20 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 		
 		// Remove listeners.
 		removeListeners();
+	}
+	
+	/**
+	 * Get tab state
+	 */
+	@Override
+	public TabState getTabState() {
+		
+		// Create new area tree panel state
+		AreasTreeTabState tabState = new AreasTreeTabState();
+		
+		// Set state components
+		tabState.areaId = areaId;
+		
+		return tabState;
 	}
 }

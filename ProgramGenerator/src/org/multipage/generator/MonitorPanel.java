@@ -24,7 +24,7 @@ import javafx.scene.web.WebView;
  * @author user
  *
  */
-public class MonitorPanel extends Panel implements TabPanelComponent {
+public class MonitorPanel extends Panel implements TabItemInterface {
 
 	/**
 	 * Version
@@ -156,5 +156,34 @@ public class MonitorPanel extends Panel implements TabPanelComponent {
 		if (swtBrowser != null) {
 			swtBrowser.dispose();
 		}
+	}
+
+	/**
+	 * No tab text.
+	 */
+	@Override
+	public String getTabDescription() {
+		
+		return "";
+	}
+	
+	/**
+	 * Update panel.
+	 */
+	@Override
+	public void reload() {
+		
+	}
+
+	@Override
+	public TabState getTabState() {
+		
+		// Create new monitor tab state object
+		MonitorTabState tabState = new MonitorTabState();
+		
+		// Set state object components and return the state
+		tabState.url = url;
+		
+		return tabState;
 	}
 }
