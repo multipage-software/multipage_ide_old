@@ -503,6 +503,31 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		}
 	}
+	
+	/**
+	 * Select home area
+	 */
+	private void selectHomeArea() {
+		
+		// Clear selection
+		tree.clearSelection();
+		
+		// Traverse tree elements starting from the root element
+		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
+			
+			// If the node hold home area and select it
+			if (userObject instanceof Area) {
+				Area area = (Area) userObject;
+				
+				boolean isHomeArea = ProgramGenerator.getAreasModel().isHomeArea(area);
+				if (isHomeArea) {
+					
+					TreePath homeNodePath = new TreePath(node.getPath());
+					tree.addSelectionPath(homeNodePath);
+				}
+			}
+		});
+	}
 
 	/**
 	 * Select and expand new area tree item.
@@ -857,9 +882,17 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		Event.receiver(this, ActionGroup.areaViewChange, (data) -> {
 			
 			reload();
+			
+			// On focus home area
+			if (Event.is(data, Event.focusHomeArea)) {
+				
+				if (isShowing()) {
+					selectHomeArea();
+				}
+			}
 		});
 	}
-	
+
 	/**
 	 * Removes attached listeners.
 	 */
@@ -952,7 +985,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			Arrays.stream(areaIds).forEach(areaId -> { areaIdsLookup.add(areaId); });
 			
 			// Traverse tree elements
-			Utility.traverseElements(tree, (userObject, parentNode) -> {
+			Utility.traverseElements(tree, userObject -> node -> parentNode -> {
 				
 				// If the area ID of user object should be displayed, expand the parent node
 				if (userObject instanceof Area) {

@@ -116,6 +116,7 @@ public enum Event {
 	
 	// Focus on the home area.
 	focusHomeArea(
+			ActionGroup.areaViewChange,
 			ActionGroup.guiChange
 			),
 	

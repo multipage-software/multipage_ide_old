@@ -76,9 +76,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -4366,7 +4366,7 @@ public class Utility {
 	 * @param tree
 	 * @param object
 	 */
-	public static void traverseElements(JTree tree, BiConsumer<Object, DefaultMutableTreeNode> consumer) {
+	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Consumer<DefaultMutableTreeNode>>> curriedFunctions) {
 		
 		// Recursive function
 		class Helper {
@@ -4381,7 +4381,7 @@ public class Utility {
 					DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) parent;
 					
 					Object userObject = treeNode.getUserObject();
-					consumer.accept(userObject, parentNode);
+					curriedFunctions.apply(userObject).apply(treeNode).accept(parentNode);
 				}
 			}
 			
