@@ -76,7 +76,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -131,6 +133,7 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import javax.swing.text.StyledEditorKit;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
@@ -2248,6 +2251,35 @@ public class Utility {
 		
 		return outputExpandedPaths.toArray(new TreePath[0]);
 	}
+	
+	/**
+	 * Traverse expanded elements info
+	 * @param tree
+	 * @return
+	 */
+	public static <T> void traverseExpandedElements(JTree tree, Consumer<Object> consumer) {
+		
+		// Get list of expanded elements
+		int displayedRowCount = tree.getRowCount();
+		for (int displayedRow = 0; displayedRow < displayedRowCount; displayedRow++) {
+			
+			// Retrieve leaf component of the path
+			TreePath displayedPath = tree.getPathForRow(displayedRow);
+			Object leafComponent = displayedPath.getLastPathComponent();
+			
+			// Get corresponding element
+			if (leafComponent instanceof DefaultMutableTreeNode) {
+				DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) leafComponent;
+				
+				Object nodeUserObject = treeNode.getUserObject();
+				if (nodeUserObject != null) {
+					
+					// Use callback for user object of the node
+					consumer.accept(nodeUserObject);
+				}
+			}
+		}
+	}
 
 	/**
 	 * Set expanded paths.
@@ -4327,5 +4359,57 @@ public class Utility {
 		matcher.appendTail(output);
 		
 		return output.toString();
+	}
+	
+	/**
+	 * Traverse tree elements
+	 * @param tree
+	 * @param object
+	 */
+	public static void traverseElements(JTree tree, BiConsumer<Object, DefaultMutableTreeNode> consumer) {
+		
+		// Recursive function
+		class Helper {
+			
+			void consume(TreeNode node, TreeNode parent) {
+				
+				// Check the node type
+				if (node instanceof DefaultMutableTreeNode && parent instanceof DefaultMutableTreeNode) {
+					
+					// Call input consumer for the userObject and its parent node
+					DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) node;
+					DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) parent;
+					
+					Object userObject = treeNode.getUserObject();
+					consumer.accept(userObject, parentNode);
+				}
+			}
+			
+			void traverseRecursively(TreeNode parentNode) {
+				
+				// Enumerate children
+				Enumeration<? extends TreeNode> childrenEnumerator = parentNode.children();
+				while (childrenEnumerator.hasMoreElements()) {
+					
+					// Consume the child node
+					TreeNode child = childrenEnumerator.nextElement();
+					consume(child, parentNode);
+					
+					// Do recursion fo the child node
+					traverseRecursively(child);
+				}
+			};
+		};
+		
+		// Get the root node
+		Object rootObject = tree.getModel().getRoot();
+		if (rootObject instanceof TreeNode) {
+			Helper helper = new Helper();
+			
+			// Consume the root node and traverse the tree recursively from the root node
+			TreeNode rootNode = (TreeNode) rootObject;
+			helper.consume(rootNode, null);
+			helper.traverseRecursively(rootNode);
+		}
 	}
 }

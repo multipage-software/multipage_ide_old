@@ -34,6 +34,14 @@ public class AreasDiagramTabState extends AreasTabState implements Serializable 
 	 * Initial zoom of the diagram.
 	 */
 	public double zoom = 1.0;
+	
+	/**
+	 * Constructor
+	 */
+	public AreasDiagramTabState() {
+		
+		type = TabType.areasDiagram;
+	}
 		
 	/**
 	 * Set this tab state from the input tab state

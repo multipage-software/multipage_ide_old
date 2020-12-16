@@ -18,6 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -41,6 +42,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
@@ -66,7 +68,6 @@ import org.multipage.util.Resources;
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
 import com.maclan.AreasModel;
-import javax.swing.event.ChangeListener;
 
 /**
  * 
@@ -234,6 +235,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	 * Button show ID.
 	 */
 	private JToggleButton buttonShowIds;
+	
+	/**
+	 * A reference to the tab label
+	 */
+	private TabLabel tabLabel;
 	
 	/**
 	 * Inheritance for super areas.
@@ -930,6 +936,62 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	}
 	
 	/**
+	 * Display area IDs specified in the input set
+	 */
+	public void displayAreaIds(Long [] areaIds) {
+		
+		// Check the input array
+		if (areaIds == null) {
+			return;
+		}
+		
+		SwingUtilities.invokeLater(() -> {
+			
+			// Create look up set from the input array
+			HashSet<Long> areaIdsLookup = new HashSet<Long>();
+			Arrays.stream(areaIds).forEach(areaId -> { areaIdsLookup.add(areaId); });
+			
+			// Traverse tree elements
+			Utility.traverseElements(tree, (userObject, parentNode) -> {
+				
+				// If the area ID of user object should be displayed, expand the parent node
+				if (userObject instanceof Area) {
+					Area area = (Area) userObject;
+					
+					long areaId = area.getId();
+					if (areaIdsLookup.contains(areaId)) {
+						
+						TreePath pathToNode = new TreePath(parentNode.getPath());
+						tree.expandPath(pathToNode);
+					}
+				}
+			});
+		});
+	}
+	
+	/**
+	 * Get set of area IDs that are expanded in the areas tree control
+	 * @return
+	 */
+	public Long [] getDisplayedAreaIds() {
+		
+		// Traverse displayed elements of the tree view 
+		final HashSet<Long> displayedAreaIds = new HashSet<Long>();
+		Utility.traverseExpandedElements(tree, userObject -> {
+			
+			// Try to get area ID and add it to the output set
+			if (userObject instanceof Area) {
+				Area area = (Area) userObject;
+				
+				long areaId = area.getId();
+				displayedAreaIds.add(areaId);
+			}
+		});
+		
+		return displayedAreaIds.toArray(new Long [] {});
+	}
+	
+	/**
 	 * Create tree.
 	 */
 	private void createTree() {
@@ -1563,9 +1625,39 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		// Create new area tree panel state
 		AreasTreeTabState tabState = new AreasTreeTabState();
 		
+		// Set title
+		tabState.title = tabLabel.getDescription();
+		
 		// Set state components
 		tabState.areaId = areaId;
 		
+		// Set area IDs displayed in the tree view
+		tabState.displayedArea = getDisplayedAreaIds();
+		
 		return tabState;
+	}
+	
+	/**
+	 * Set reference to a tab label
+	 */
+	@Override
+	public void setTabLabel(TabLabel tabLabel) {
+		
+		this.tabLabel = tabLabel;
+	}
+	
+	/**
+	 * Set top area ID
+	 */
+	@Override
+	public void setAreaId(Long topAreaId) {
+		
+		// Trim the area ID
+		if (topAreaId == null) {
+			topAreaId = 0L;
+		}
+		
+		// Set area ID
+		this.areaId = topAreaId;
 	}
 }

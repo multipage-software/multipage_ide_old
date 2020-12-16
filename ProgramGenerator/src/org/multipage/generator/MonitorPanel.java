@@ -47,6 +47,11 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	 * Home URL.
 	 */
 	private String url;
+	
+	/**
+	 * A reference to the tab label
+	 */
+	private TabLabel tabLabel;
 
 	/**
 	 * Create the panel.
@@ -181,9 +186,32 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 		// Create new monitor tab state object
 		MonitorTabState tabState = new MonitorTabState();
 		
+		// Set title
+		tabState.title = tabLabel.getDescription();
+		
 		// Set state object components and return the state
 		tabState.url = url;
 		
+		// Reset the area ID
+		tabState.areaId = -1L;
+		
 		return tabState;
+	}
+	
+	/**
+	 * Set reference to a tab label
+	 */
+	@Override
+	public void setTabLabel(TabLabel tabLabel) {
+		
+		this.tabLabel = tabLabel;
+	}
+	
+	/**
+	 * Set top area ID
+	 */
+	@Override
+	public void setAreaId(Long topAreaId) {
+		
 	}
 }

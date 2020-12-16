@@ -279,17 +279,8 @@ public class GeneratorMainFrame extends JFrame {
 		// Do loop for all diagram states.
 		for (TabState tabState : tabsStates) {
 			
-			// Clone diagram.
+			// Get tab type
 			TabType type = tabState.type;
-			String title = tabState.title;
-			
-			// Try to get area ID for this tab from tab state
-			Long areaId = null;
-			if (tabState instanceof AreasTabState) {
-				
-				AreasTabState areaTabState = (AreasTabState) tabState;
-				areaId = areaTabState.areaId;
-			}
 			
 			// On areas diagram
 			if (TabType.areasDiagram.equals(type) && tabState instanceof AreasDiagramTabState) {
@@ -298,7 +289,7 @@ public class GeneratorMainFrame extends JFrame {
 				AreasDiagramTabState extendedTabState = (AreasDiagramTabState) tabState;
 				
 				// Create areas diagram panel
-				AreasDiagramPanel diagramPanel = createAreasDiagram(title, areaId);
+				AreasDiagramPanel diagramPanel = createAreasDiagram(extendedTabState.title, extendedTabState.areaId);
 				if (diagramPanel == null) {
 					continue;
 				}
@@ -317,18 +308,24 @@ public class GeneratorMainFrame extends JFrame {
 			// On areas tree view
 			else if (TabType.areasTree.equals(type) && tabState instanceof AreasTreeTabState) {
 				
+				// Get extended tab state
+				AreasTreeTabState extendedTabState = (AreasTreeTabState) tabState;
+				
 				// Create new areas tree view
-				createAreasTreeView(title, areaId);
+				createAreasTreeView(extendedTabState.title, extendedTabState.areaId, extendedTabState.displayedArea);
 				
 				// Set flag.
 				cloned = true;
 			}
 			
 			// On HTML browser
-			else if (TabType.monitor.equals(type)) {
+			else if (TabType.monitor.equals(type) && tabState instanceof MonitorTabState) {
 				
-				String url = title;
-				tabPanel.addMonitor(url, false);
+				// Get extended tab state
+				MonitorTabState extendedTabState = (MonitorTabState) tabState;
+				
+				// Add new monitor to the tab panel
+				tabPanel.addMonitor(extendedTabState.url, false);
 				
 				// Set flag.
 				cloned = true;
@@ -403,15 +400,8 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	private void saveTabsStates() {
 		
-		tabsStates.clear();
-		
-		// Do loop for all tabs of the panel.
-		LinkedList<TabState> tabStates = tabPanel.getTabsStates();
-		for (TabState tabState : tabStates) {
-			
-			// Add new item
-			tabsStates.add(tabState);
-		}
+		// Load tab states
+		tabsStates = tabPanel.getTabsStates();
 	}
 
 	/**
@@ -1830,9 +1820,10 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Create area tree view.
 	 * @param title
+	 * @param displayedAreas 
 	 * @param areaId
 	 */
-	private AreasTreeEditorPanel createAreasTreeView(String title, Long rootAreaId) {
+	private AreasTreeEditorPanel createAreasTreeView(String title, Long rootAreaId, Long [] displayedAreas) {
 		
 		// Trim input.
 		if (rootAreaId == null) {
@@ -1841,6 +1832,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Add new tree view.
 		AreasTreeEditorPanel areasTreePanel = new AreasTreeEditorPanel(rootAreaId);
+		areasTreePanel.displayAreaIds(displayedAreas);
 		tabPanel.addAreasEditor(areasTreePanel, TabType.areasTree, title, rootAreaId, true);
 		
 		// Select the new tab.
@@ -1900,7 +1892,7 @@ public class GeneratorMainFrame extends JFrame {
 		else if (TabType.areasTree.equals(type.ref)) {
 			
 			// Clone tree view.
-			createAreasTreeView(title, areaId);
+			createAreasTreeView(title, areaId, new Long [] {});
 		}
 	}
 	

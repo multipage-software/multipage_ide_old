@@ -119,7 +119,12 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 * Focused area shape position.
 	 */
 	private static final int focusAreaShapeLocation = 30;
-
+	
+	/**
+	 * Top area ID
+	 */
+	private Long topAreaId = 0L;
+	
 	/**
 	 * Dialog states.
 	 */
@@ -3057,11 +3062,31 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		// Create new tab state
 		AreasDiagramTabState tabState = new AreasDiagramTabState();
 		
+		// Set the area ID
+		tabState.areaId = topAreaId;
+		
 		// Get diagram coordinates and return the state object
 		tabState.translationx = getTranslatingX();
 		tabState.translationy = getTranslatingY();
 		tabState.zoom = getZoom();
 		
 		return tabState;
+	}
+	
+	/**
+	 * Set reference to a tab label
+	 */
+	@Override
+	public void setTabLabel(TabLabel tabLabel) {
+		
+	}
+	
+	/**
+	 * Set top area ID
+	 */
+	@Override
+	public void setAreaId(Long topAreaId) {
+		
+		this.topAreaId = topAreaId;
 	}
 }

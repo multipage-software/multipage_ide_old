@@ -112,6 +112,17 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 * Selected area.
 	 */
 	private Area areaSelection = null;
+	
+	/**
+	 * A reference to the tab label
+	 */
+	private TabLabel tabLabel;
+	
+	/**
+	 * Top area ID
+	 */
+	@SuppressWarnings("unused")
+	private Long topAreaId = 0L;
 
 	// $hide<<$
 	/**
@@ -1443,14 +1454,42 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	@Override
 	public TabState getTabState() {
 		
-		// Try to get inner area diagram and return its state.
+		// Try to get inner area diagram, set and return the state object.
 		AreasDiagram areasDiagram = this.getDiagram();
 		if (areasDiagram == null) {
 			return null;
 		}
-		
 		TabState tabState = areasDiagram.getTabState();
+		
+		// Set title and return the state object
+		tabState.title = tabLabel.getDescription();
 		return tabState;
+	}
+	
+	/**
+	 * Set reference to a tab label
+	 */
+	@Override
+	public void setTabLabel(TabLabel tabLabel) {
+		
+		this.tabLabel = tabLabel;
+	}
+	
+	/**
+	 * Set top area ID
+	 */
+	@Override
+	public void setAreaId(Long topAreaId) {
+		
+		this.topAreaId = topAreaId;
+		
+		// Try to get inner area diagram and set top area ID.
+		AreasDiagram areasDiagram = this.getDiagram();
+		if (areasDiagram == null) {
+			return;
+		}
+		
+		areasDiagram.setAreaId(topAreaId);
 	}
 }
 

@@ -43,4 +43,16 @@ public interface TabItemInterface {
 	 * @return
 	 */
 	TabState getTabState();
+	
+	/**
+	 * Set reference to a tab label object
+	 * @param tabLabel
+	 */
+	void setTabLabel(TabLabel tabLabel);
+	
+	/**
+	 * Set area ID
+	 * @param topAreaId
+	 */
+	void setAreaId(Long topAreaId);
 }

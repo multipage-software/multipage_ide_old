@@ -21,6 +21,11 @@ public class AreasTreeTabState extends AreasTabState implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * Set of area IDs currently displayed (expanded) in the tree view
+	 */
+	public Long [] displayedArea = null;
+	
+	/**
 	 * Constructor
 	 */
 	public AreasTreeTabState() {

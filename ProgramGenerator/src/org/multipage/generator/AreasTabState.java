@@ -23,7 +23,7 @@ public class AreasTabState extends TabState implements Serializable {
 	/**
 	 * Area ID.
 	 */
-	public long areaId = -1;
+	public long areaId = 0L;
 		
 	/**
 	 * Set this tab state from the input tab state

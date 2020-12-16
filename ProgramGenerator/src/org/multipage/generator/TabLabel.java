@@ -51,6 +51,11 @@ public class TabLabel extends JPanel {
 	public Component component;
 	
 	/**
+	 * Label text
+	 */
+	public String labelText = "";
+	
+	/**
 	 * Label.
 	 */
 	public JLabel label;
@@ -60,10 +65,26 @@ public class TabLabel extends JPanel {
 	 * @param index 
 	 * @param tabPanel 
 	 */
+	/**
+	 * @param text
+	 * @param topAreaId
+	 * @param tabPanel
+	 * @param component
+	 * @param type
+	 */
 	public TabLabel(String text, Long topAreaId, final TabPanel tabPanel, Component component, TabType type) {
 		
 		this.tabPanel = tabPanel;
 		this.component = component;
+		this.labelText = text;
+		
+		// Try to set reference to this object and save area ID in the input component
+		if (component instanceof TabItemInterface) {
+			TabItemInterface tabItem = (TabItemInterface) component;
+			
+			tabItem.setTabLabel(this);
+			tabItem.setAreaId(topAreaId);
+		}
 		
 		// Add components.
 		setLayout(null);
