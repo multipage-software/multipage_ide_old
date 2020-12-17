@@ -303,7 +303,7 @@ public class ToolList implements CursorArea {
 		
 		if (isOnUpShifter(point) || isOnDownShifter(point)) {
 			// Schedule timer.
-			timer = new java.util.Timer();
+			timer = new java.util.Timer("IDE-Tool-List");
 			timerTask = new TimerTask() {
 				@Override
 				public void run() {

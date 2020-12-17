@@ -20,6 +20,8 @@ import java.util.function.Function;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.browser.ProgressAdapter;
+import org.eclipse.swt.browser.ProgressEvent;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -78,6 +80,11 @@ public final class SwtBrowserCanvas extends Canvas {
     private final AtomicReference<SwtThread> swtThreadReference = new AtomicReference<>();
     
     /**
+     * URL of the content
+     */
+	private String url = "localhost";
+    
+    /**
      * 
      * @return
      */
@@ -108,8 +115,17 @@ public final class SwtBrowserCanvas extends Canvas {
 	 */
 	public static boolean createInstance(Function<SwtBrowserCanvas, String> callback) {
 		
+		// Create SWT browser and initialize it
 		SwtBrowserCanvas browser = new SwtBrowserCanvas();
-		return browser.initialise(callback);
+		boolean initialized = browser.initialise(callback);
+		
+		// If the SWT browser is not initialized, dispose the thread
+		if (!initialized) {
+			browser.dispose();
+		}
+		
+		// Return the flag
+		return initialized;
 	}
 	
     /**
@@ -130,7 +146,9 @@ public final class SwtBrowserCanvas extends Canvas {
     	
         // This action must be executed on the SWT thread
         getBrowser().getDisplay().asyncExec(() -> {
-        	getBrowser().setUrl(url != null ? url : initialUrl);
+        	
+        	this.url = url != null ? url : initialUrl;
+        	getBrowser().setUrl(this.url);
         });
     }
 
@@ -176,9 +194,12 @@ public final class SwtBrowserCanvas extends Canvas {
      * This should be called from a {@link WindowListener#windowClosing(WindowEvent)} implementation.
      */
     public void dispose() {
+    	
         browserReference.set(null);
         SwtThread swtThread = swtThreadReference.getAndSet(null);
+        
         if (swtThread != null) {
+        	swtThread.exitThread = true;
             swtThread.interrupt();
         }
     }
@@ -198,14 +219,21 @@ public final class SwtBrowserCanvas extends Canvas {
          * Callback lambda.
          */
 		private Function<SwtBrowserCanvas, String> callback;
+		
+		/**
+		 * Exit thread flag should be set to leave the thread main loop
+		 */
+		public boolean exitThread = false;
 
         /**
          * Create a thread.
          *
-         * @param browserCreatedLatch initialisation latch.
+         * @param browserCreatedLatch initialization latch.
          * @param callback 
          */
         private SwtThread(CountDownLatch browserCreatedLatch, Function<SwtBrowserCanvas, String> callback) {
+        	
+        	this.setName("IDE-SWT-Browser");
             this.browserCreatedLatch = browserCreatedLatch;
             this.callback = callback;
         }
@@ -228,13 +256,16 @@ public final class SwtBrowserCanvas extends Canvas {
             }
             finally {
                 // Guarantee the count-down so as not to block the caller, even in case of error -
-                // there is a theoretical (rare) chance of failure to initialise the SWT components
+                // there is a theoretical (rare) chance of failure to initialize the SWT components
                 browserCreatedLatch.countDown();
             }
             // Execute the SWT event dispatch loop...
             try {
                 shell.open();
                 while (!isInterrupted() && !shell.isDisposed()) {
+                	if (exitThread) {
+                		break;
+                	}
                     if (!display.readAndDispatch()) {
                         display.sleep();
                     }
@@ -248,4 +279,25 @@ public final class SwtBrowserCanvas extends Canvas {
             }
         }
     }
+    
+    /**
+     * Reload content
+     */
+	public void reload() {
+		
+		// Run on SWT thread
+		Display.getDefault().asyncExec(() -> {
+			
+			// Workaround needed because of caching
+			getBrowser().addProgressListener(new ProgressAdapter() {
+		        public void completed(ProgressEvent event) {
+		        	getBrowser().removeProgressListener(this);
+		        	
+		        	getBrowser().refresh();
+		        }
+		    });
+			
+			getBrowser().setUrl(url);
+		});
+	}
 }

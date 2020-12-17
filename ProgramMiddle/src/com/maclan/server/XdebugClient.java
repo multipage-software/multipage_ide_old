@@ -513,7 +513,7 @@ public class XdebugClient extends DebugClient {
 	public void activate() throws Exception {
 			
 		// Start main thread that accepts socket connection
-		socketChannelThread = new Thread("Loop-Processing-Xdebug-Commands") {
+		socketChannelThread = new Thread("IDE-Xdebug-Client") {
 
 			/**
 			 * Thread entry

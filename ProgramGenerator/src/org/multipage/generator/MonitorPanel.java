@@ -32,6 +32,11 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * A flag when it is set, informs about successful embedding of the native SWT browser
+	 */
+	private static Boolean nativeBrowserSuccessful = null;
+	
+	/**
 	 * Web view objects.
 	 */
     private WebView webViewBrowser = null;
@@ -41,7 +46,7 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	/**
 	 * SWT view objects.
 	 */
-	private SwtBrowserCanvas swtBrowser = null;
+	private SwtBrowserCanvas swtBrowserNative = null;
 	
 	/**
 	 * Home URL.
@@ -52,7 +57,12 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	 * A reference to the tab label
 	 */
 	private TabLabel tabLabel;
-
+	
+	/**
+	 * Java FX panel reference
+	 */
+	private JFXPanel javaFxPanel;
+	
 	/**
 	 * Create the panel.
 	 * @param url 
@@ -85,46 +95,89 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 		// Try to open SWT browser (with native code).
 		SwingUtilities.invokeLater(() -> {
 			
-			boolean success = SwtBrowserCanvas.createInstance((SwtBrowserCanvas browser) -> {
+			// On the very first pass of this method the following nativeBrowserSuccessful flag is not set
+			if (nativeBrowserSuccessful == null || nativeBrowserSuccessful) {
 				
-				swtBrowser = browser;
-				
-				// Add SWT browser to the center of the panel.
-				MonitorPanel.this.add(swtBrowser, BorderLayout.CENTER);
-				return url;
-			});
-		
-			if (!success) {
+				// Try to create SWT browser (with native libraries support for some of the operating systems)
+				nativeBrowserSuccessful = SwtBrowserCanvas.createInstance((SwtBrowserCanvas browser) -> {
+					
+					swtBrowserNative = browser;
+					
+					// Add SWT browser to the center of the panel.
+					MonitorPanel.this.add(swtBrowserNative, BorderLayout.CENTER);
+					return url;
+				});
+			}
+			
+			// Try to create JavaFX browser
+			if (!nativeBrowserSuccessful) {
 					
 				// Remove SWT browser.
-				swtBrowser = null;
+				swtBrowserNative = null;
 				
 				// Otherwise use JavaFX panel for webViewBrowser.
-				JFXPanel javaFxPanel = new JFXPanel();
+				javaFxPanel = new JFXPanel();
 				
 				// Add JavaFX panel.
 				add(javaFxPanel, BorderLayout.CENTER);
 				
 				// Initialize scene.
 				Platform.setImplicitExit(false);
-				Platform.runLater(new Runnable() {
+				Platform.runLater(() -> {
+						
+					webViewBrowser = new WebView();
+					webEngine = webViewBrowser.getEngine();
 					
-					@Override
-					public void run() {
-						
-						webViewBrowser = new WebView();
-						webEngine = webViewBrowser.getEngine();
-						
-						webEngine.load(url);
-						
-						scene = new Scene(webViewBrowser, 750, 500, Color.web("#666970"));
-						javaFxPanel.setScene(scene);
-					}
+					webEngine.load(url);
+					
+					scene = new Scene(webViewBrowser, 750, 500, Color.web("#666970"));
+					javaFxPanel.setScene(scene);
 				});
+			}
+		});
+		
+		// Set listeners
+		setListeners();
+	}
+	
+	/**
+	 * Set listeners
+	 */
+	private void setListeners() {
+		
+		// GUI change receiver
+		Event.receiver(this, ActionGroup.guiChange, data -> {
+			
+			// On update
+			if (Event.is(data, Event.update)) {
+				
+				// Reload content of the monitor
+				if (isShowing()) {
+					reloadContent();
+				}
 			}
 		});
 	}
 	
+	/**
+	 * Reload content of the monitor
+	 */
+	private void reloadContent() {
+		
+		SwingUtilities.invokeLater(() -> {
+			
+			// Impose reload of current browser
+			if (swtBrowserNative != null) {
+				swtBrowserNative.reload();
+			}
+			else {
+				Platform.runLater(() -> {
+					webEngine.reload();
+				});
+			}
+		});
+	}
+
 	/**
 	 * Load URL.
 	 */
@@ -158,8 +211,8 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	@Override
 	public void beforeTabPanelRemoved() {
 		
-		if (swtBrowser != null) {
-			swtBrowser.dispose();
+		if (swtBrowserNative != null) {
+			swtBrowserNative.dispose();
 		}
 	}
 

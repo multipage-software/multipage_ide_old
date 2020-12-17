@@ -106,7 +106,7 @@ public class RestartApplication {
 	 */
 	public static void runRestartWathdog() {
 		
-		watchDog = new Timer(true);
+		watchDog = new Timer("IDE-Restart-WatchDog", true);
 		
 		watchDog.schedule(new TimerTask() {
 			@Override
