@@ -85,4 +85,18 @@ public class j {
 		String message = Resources.getString(stringResource);
 		log(message, strings);
 	}
+	
+	/**
+	 * Print stack trace
+	 * @param caption
+	 */
+	public static void printStackTrace(String caption) {
+		
+		try {
+			throw new Exception(caption);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }

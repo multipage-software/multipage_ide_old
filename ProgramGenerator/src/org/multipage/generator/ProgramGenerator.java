@@ -679,6 +679,9 @@ public class ProgramGenerator {
 			// LOG
 			System.out.format("RELOAD MODEL: operation time span %sms\n", new Date().getTime() - start);
 			
+			// Propagate event
+			Event.propagate(model, Event.modelUpdated);
+			
 			return result;
 		}
 	}

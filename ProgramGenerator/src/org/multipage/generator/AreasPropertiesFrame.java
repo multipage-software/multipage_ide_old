@@ -80,27 +80,6 @@ public class AreasPropertiesFrame extends JFrame {
 	 */
 	private static LinkedList<AreasPropertiesFrame> frames =
 		new LinkedList<AreasPropertiesFrame>();
-	
-	/**
-	 * Update frames.
-	 */
-	public static void updateInformation() {
-		
-		AreasProperties.declineTextChangeEvents = true;
-		
-		// Update area properties frames.
-		for (AreasPropertiesFrame frame : frames) {
-			frame.updateFrameInformation();
-		}
-
-		// Post enabling text change events.
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				AreasProperties.declineTextChangeEvents = false;
-			}
-		});
-	}
 
 	/**
 	 * Editor.
@@ -240,14 +219,6 @@ public class AreasPropertiesFrame extends JFrame {
 	private void setIcons() {
 		
 		setIconImage(Images.getImage("org/multipage/generator/images/main_icon.png"));
-	}
-	
-	/**
-	 * Update information.
-	 */
-	private void updateFrameInformation() {
-		
-		editor.updateEditor();
 	}
 
 	/**

@@ -863,28 +863,28 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		});
 
 		// Add area view state event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, (data) -> {
+		Event.receiver(this, EventGroup.areaViewStateChange, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
 				
-				if (Event.is(data, Event.selectAll)) {
+				if (action.foundFor(Event.selectAll)) {
 					
 					setAllSelection(true);
 				}
-				else if (Event.is(data, Event.unselectAll)) {
+				else if (action.foundFor(Event.unselectAll)) {
 					setAllSelection(false);
 				}
 			}
 		});
 		
 		// Add area view event listener.
-		Event.receiver(this, ActionGroup.areaViewChange, (data) -> {
+		Event.receiver(this, EventGroup.areaViewChange, action -> {
 			
 			reload();
 			
 			// On focus home area
-			if (Event.is(data, Event.focusHomeArea)) {
+			if (action.foundFor(Event.focusHomeArea)) {
 				
 				if (isShowing()) {
 					selectHomeArea();
@@ -915,7 +915,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
     	
     	if (paths != null) {
     	
-	    	// Do loop for all paths and avoid duplicite areas.
+	    	// Do loop for all paths and avoid duplicate areas.
 	    	for (TreePath path : paths) {
 	    		DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
 	    		

@@ -7,16 +7,28 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.SpringLayout;
 
-import org.multipage.gui.*;
-
-import com.maclan.Area;
-
-import java.awt.event.*;
-import java.util.LinkedList;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
 
 /**
  * 
@@ -35,11 +47,11 @@ public class AreasProperties extends AreasPropertiesBase {
 	 */
 	private JLabel labelAreaDescription;
 	private JTextField textDescription;
-	private JButton buttonSaveArea;
+	private JButton buttonSaveDescription;
 	private JMenuBar menuBar;
 	private JMenu menuArea;
 	private JMenuItem menuEditResources;
-	private JButton buttonDeleteText;
+	private JButton buttonDeleteDescription;
 	private JSplitPane splitPane;
 	private SlotListPanel panelSlotList;
 	private JLabel labelAreaAlias;
@@ -67,10 +79,10 @@ public class AreasProperties extends AreasPropertiesBase {
 		setComponentsReferences(
 			labelAreaDescription,
 			textDescription,
-			buttonSaveArea,
+			buttonSaveDescription,
 			menuArea,
 			menuEditResources,
-			buttonDeleteText,
+			buttonDeleteDescription,
 			splitPane,
 			panelSlotList,
 			labelAreaAlias,
@@ -83,6 +95,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		// $hide<<$
 	}
 
+	
 	/**
 	 * Initialize components.
 	 */
@@ -96,12 +109,12 @@ public class AreasProperties extends AreasPropertiesBase {
 		add(labelAreaDescription);
 		
 		textDescription = new TextFieldEx();
-		textDescription.addKeyListener(new KeyAdapter() {
+		textDescription.addFocusListener(new FocusAdapter() {
 			@Override
-			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					onDescriptionEnter();
-				}
+			public void focusGained(FocusEvent e) {
+				
+				// Reactivate GUI.
+				GeneratorMainFrame.reactivateGui();
 			}
 		});
 		springLayout.putConstraint(SpringLayout.NORTH, textDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
@@ -109,18 +122,13 @@ public class AreasProperties extends AreasPropertiesBase {
 		add(textDescription);
 		textDescription.setColumns(10);
 		
-		buttonSaveArea = new JButton("");
-		springLayout.putConstraint(SpringLayout.EAST, textDescription, -3, SpringLayout.WEST, buttonSaveArea);
-		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveArea, 6, SpringLayout.SOUTH, labelAreaDescription);
-		springLayout.putConstraint(SpringLayout.SOUTH, buttonSaveArea, 0, SpringLayout.SOUTH, textDescription);
-		buttonSaveArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				saveDescription();
-			}
-		});
-		buttonSaveArea.setMargin(new Insets(0, 0, 0, 0));
-		buttonSaveArea.setPreferredSize(new Dimension(18, 18));
-		add(buttonSaveArea);
+		buttonSaveDescription = new JButton("");
+		springLayout.putConstraint(SpringLayout.EAST, textDescription, -3, SpringLayout.WEST, buttonSaveDescription);
+		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
+		springLayout.putConstraint(SpringLayout.SOUTH, buttonSaveDescription, 0, SpringLayout.SOUTH, textDescription);
+		buttonSaveDescription.setMargin(new Insets(0, 0, 0, 0));
+		buttonSaveDescription.setPreferredSize(new Dimension(18, 18));
+		add(buttonSaveDescription);
 		
 		menuBar = new JMenuBar();
 		menuBar.setPreferredSize(new Dimension(0, 24));
@@ -159,19 +167,19 @@ public class AreasProperties extends AreasPropertiesBase {
 		});
 		menuArea.add(menuEditDependencies);
 		
-		buttonDeleteText = new JButton("");
-		springLayout.putConstraint(SpringLayout.EAST, buttonDeleteText, -10, SpringLayout.EAST, this);
-		springLayout.putConstraint(SpringLayout.EAST, buttonSaveArea, -3, SpringLayout.WEST, buttonDeleteText);
-		springLayout.putConstraint(SpringLayout.SOUTH, buttonDeleteText, 0, SpringLayout.SOUTH, textDescription);
-		buttonDeleteText.addActionListener(new ActionListener() {
+		buttonDeleteDescription = new JButton("");
+		springLayout.putConstraint(SpringLayout.EAST, buttonDeleteDescription, -10, SpringLayout.EAST, this);
+		springLayout.putConstraint(SpringLayout.EAST, buttonSaveDescription, -3, SpringLayout.WEST, buttonDeleteDescription);
+		springLayout.putConstraint(SpringLayout.SOUTH, buttonDeleteDescription, 0, SpringLayout.SOUTH, textDescription);
+		buttonDeleteDescription.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onDeleteLocalText();
 			}
 		});
-		springLayout.putConstraint(SpringLayout.NORTH, buttonDeleteText, 6, SpringLayout.SOUTH, labelAreaDescription);
-		buttonDeleteText.setPreferredSize(new Dimension(18, 18));
-		buttonDeleteText.setMargin(new Insets(0, 0, 0, 0));
-		add(buttonDeleteText);
+		springLayout.putConstraint(SpringLayout.NORTH, buttonDeleteDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
+		buttonDeleteDescription.setPreferredSize(new Dimension(18, 18));
+		buttonDeleteDescription.setMargin(new Insets(0, 0, 0, 0));
+		add(buttonDeleteDescription);
 		
 		splitPane = new JSplitPane();
 		splitPane.setBorder(null);
@@ -194,7 +202,7 @@ public class AreasProperties extends AreasPropertiesBase {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					onAliasEnter();
+					onAliasKey();
 				}
 			}
 		});
@@ -222,19 +230,5 @@ public class AreasProperties extends AreasPropertiesBase {
 		buttonSaveAlias.setPreferredSize(new Dimension(18, 18));
 		buttonSaveAlias.setMargin(new Insets(0, 0, 0, 0));
 		add(buttonSaveAlias);
-	}
-	
-	/**
-	 * On set areas.
-	 */
-	@Override
-	protected void onSetAreas(LinkedList<Area> areas) {
-		
-		if (areas.size() != 1) {
-			return;
-		}
-		
-		Area area = areas.getFirst();
-		textAlias.setEnabled(!area.isProtected());
 	}
 }

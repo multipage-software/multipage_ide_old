@@ -330,11 +330,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private void setListeners() {
 		
 		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, data -> {
+		Event.receiver(this, EventGroup.areaViewStateChange, action -> {
 			
 			// Reload diagram.
-			if (Event.is(data, Event.loadDiagrams)
-					|| Event.is(data, Event.update)) {
+			if (action.foundFor(Event.loadDiagrams) || action.foundFor(Event.requestUpdateAll)) {
 				
 				reload(false, false);
 				setOverview();
@@ -342,12 +341,12 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});	
 		
 		// Add area view event listener.
-		Event.receiver(this, ActionGroup.areaViewChange, data -> {
+		Event.receiver(this, EventGroup.areaViewChange, acion -> {
 			
-			if (Event.sourceObject(data, Event.mainTabChange, AreasDiagram.this.parentEditor)
-					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagram.this.parentEditor)
-					|| Event.is(data, Event.update)
-					|| Event.is(data, Event.selectAll)) {
+			if (Event.sourceObject(acion, Event.mainTabChange, AreasDiagram.this.parentEditor)
+					|| Event.sourceObject(acion, Event.selectDiagramAreas, AreasDiagram.this.parentEditor)
+					|| acion.foundFor(Event.requestUpdateAll)
+					|| acion.foundFor(Event.selectAll)) {
 				
 				if (!AreasDiagram.this.isShowing()) {
 					return;
@@ -358,7 +357,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				selectAreas(selectedAreaIds);
 				setOverview();
 			}
-			if (Event.is(data, Event.unselectAll)) {
+			if (acion.foundFor(Event.unselectAll)) {
 				
 				if (!AreasDiagram.this.isShowing()) {
 					return;
@@ -370,12 +369,12 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Add GUI event listener.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		Event.receiver(this, EventGroup.guiChange, action -> {
 			
 			// Repaint GUI.
-			if (Event.is(data, Event.loadDiagrams, Event.selectDiagramAreas, Event.mainTabChange)
-					|| Event.targetClass(data, AreasDiagram.class)
-					|| Event.is(data, Event.update, Event.selectAll, Event.unselectAll)) {
+			if (action.foundFor(Event.loadDiagrams, Event.selectDiagramAreas, Event.mainTabChange)
+					|| Event.targetClass(action, AreasDiagram.class)
+					|| action.foundFor(Event.requestUpdateAll, Event.selectAll, Event.unselectAll)) {
 								
 				if (!AreasDiagram.this.isShowing()) {
 					return;
@@ -385,7 +384,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			}
 			
 			// Focus currently visible areas diagram on the Basic Area.
-			if (Event.sourceClass(data, Event.focusBasicArea, GeneratorMainFrame.class)
+			if (Event.sourceClass(action, Event.focusBasicArea, GeneratorMainFrame.class)
 					&& AreasDiagram.this.isShowing()) {
 				
 				center();

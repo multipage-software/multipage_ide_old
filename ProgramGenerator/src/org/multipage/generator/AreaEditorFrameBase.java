@@ -1020,9 +1020,6 @@ public abstract class AreaEditorFrameBase extends JFrame {
 	 */
 	private void updateAreaChanges() {
 		
-		// Reload siblings panel.
-		// Set description.
-		GeneratorMainFrame.getFrame().setAreaDescription(area.getDescription());
 		// Update information.
 		long areaId = area.getId();
 		Event.propagate(AreaEditorFrameBase.this, Event.updateAreaChanges, areaId);

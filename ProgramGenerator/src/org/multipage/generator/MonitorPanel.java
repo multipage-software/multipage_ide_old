@@ -146,10 +146,10 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	private void setListeners() {
 		
 		// GUI change receiver
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		Event.receiver(this, EventGroup.guiChange, action -> {
 			
 			// On update
-			if (Event.is(data, Event.update)) {
+			if (action.foundFor(Event.requestUpdateAll)) {
 				
 				// Reload content of the monitor
 				if (isShowing()) {

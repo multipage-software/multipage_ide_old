@@ -565,7 +565,7 @@ public class SlotListPanel extends JPanel {
 	private void setListener() {
 		
 		// Create event receiver
-		Event.receiver(this, ActionGroup.slotViewChange, data -> {
+		Event.receiver(this, EventGroup.slotViewChange, action -> {
 			
 			// Update slot list
 			update();

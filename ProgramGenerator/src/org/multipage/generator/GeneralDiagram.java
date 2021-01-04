@@ -154,7 +154,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateVisibleDiagrams() {
 		
-		Event.propagate(GeneralDiagram.class, Event.update);
+		Event.propagate(GeneralDiagram.class, Event.requestUpdateAll);
 	}
 	
 	/**
@@ -507,11 +507,11 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		positionSaveTimer.setRepeats(false);
 		
 		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		Event.receiver(this, EventGroup.guiChange, action -> {
 			
 			if (Event.passes(() -> {
 				
-				if (Event.sourceClass(data, Event.loadDiagrams, GeneratorMainFrame.class)) {
+				if (Event.sourceClass(action, Event.loadDiagrams, GeneratorMainFrame.class)) {
 					return true;
 				}
 				return false;

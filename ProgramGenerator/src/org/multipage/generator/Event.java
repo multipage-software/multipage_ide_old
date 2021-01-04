@@ -32,107 +32,116 @@ public enum Event {
 	
 	// Load diagrams on application start up.
 	loadDiagrams(
-			ActionGroup.areaViewStateChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewStateChange,
+			EventGroup.guiChange
 			),
 	
 	// On select areas.
 	selectDiagramAreas(
-			ActionGroup.areaViewStateChange,
-			ActionGroup.areaViewChange,
-			ActionGroup.slotViewChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewStateChange,
+			EventGroup.areaViewChange,
+			EventGroup.slotViewChange,
+			EventGroup.guiChange
 			),
 	
 	// Select/unselect all areas.
 	selectAll(
-			ActionGroup.areaViewStateChange,
-			ActionGroup.areaViewChange,
-			ActionGroup.slotViewChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewStateChange,
+			EventGroup.areaViewChange,
+			EventGroup.slotViewChange,
+			EventGroup.guiChange
 			),
 	
 	// Select/unselect all areas.
 	unselectAll(
-			ActionGroup.areaViewStateChange,
-			ActionGroup.areaViewChange,
-			ActionGroup.slotViewChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewStateChange,
+			EventGroup.areaViewChange,
+			EventGroup.slotViewChange,
+			EventGroup.guiChange
 			),
 	
 	// Main tab panel selection
 	mainTabChange(
-			ActionGroup.areaViewChange,
-			ActionGroup.slotViewChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewChange,
+			EventGroup.slotViewChange,
+			EventGroup.guiChange
 			),
 	
 	// Subpanel tab change.
 	subTabChange(
-			ActionGroup.slotViewChange
+			EventGroup.slotViewChange
 			),
 	
 	// Select tree area.
 	selectTreeArea(
-			ActionGroup.slotViewChange
+			EventGroup.slotViewChange
 			),
 	
 	// Select list area.
 	selectListArea(
-			ActionGroup.slotViewChange
+			EventGroup.slotViewChange
 			),
 	
 	// On show/hide IDs in areas diagram..
 	showHideIds(
-			ActionGroup.guiChange
+			EventGroup.guiChange
 			),
 	
 	// Show read only areas in areas diagram.
 	showReadOnlyAreas(
-			ActionGroup.guiChange
+			EventGroup.guiChange
 			),
 	
-	// Update model and GUI controls.
-	update(
-			ActionGroup.areaModelChange,
-			ActionGroup.slotModelChange,
-			ActionGroup.areaViewStateChange,
-			ActionGroup.slotViewStateChange,
-			ActionGroup.guiStateChange,
-			ActionGroup.areaViewChange,
-			ActionGroup.slotViewChange,
-			ActionGroup.guiChange
+	// Request update of all information.
+	requestUpdateAll(
+			EventGroup.areaModelChange,
+			EventGroup.slotModelChange,
+			EventGroup.areaViewStateChange,
+			EventGroup.slotViewStateChange,
+			EventGroup.guiStateChange,
+			EventGroup.areaViewChange,
+			EventGroup.slotViewChange,
+			EventGroup.guiStateChange,
+			EventGroup.guiChange
 			),
 	
 	// Focus on the Basic Area.
 	focusBasicArea(
-			ActionGroup.guiChange
+			EventGroup.guiChange
 			),
 	
 	// Focus on the tab area.
 	focusTabArea(
-			ActionGroup.guiChange
+			EventGroup.guiChange
 			),
 	
 	// Focus on the home area.
 	focusHomeArea(
-			ActionGroup.areaViewChange,
-			ActionGroup.guiChange
+			EventGroup.areaViewChange,
+			EventGroup.guiChange
 			),
 	
 	// Monitor home page in web browser.
 	monitorHomePage(
-			ActionGroup.guiChange
+			EventGroup.guiChange
 			),
 	// Update home area.
 	updateHomeArea(
-			ActionGroup.areaModelChange,
-			ActionGroup.areaViewChange
+			EventGroup.areaModelChange,
+			EventGroup.areaViewChange
 			),
 	// Save slot.
 	saveSlot(
-			ActionGroup.slotModelChange,
-			ActionGroup.slotViewChange
+			EventGroup.slotModelChange,
+			EventGroup.slotViewChange
+			),
+	// Indicates updates areas model
+	modelUpdated(
+			EventGroup.areaModelChange
+			),
+	// Reactivate GUI
+	reactivateGui(
+			EventGroup.guiStateChanged
 			),
 	// Update of area sub relation.
 	updateAreaSubRelation,
@@ -176,10 +185,6 @@ public enum Event {
 	createTextResource,
 	// Change reas properties.
 	changeAreasProperties,
-	// Update area description.
-	updateAreaDescription,
-	// Save area alias.
-	saveAreaAlias,
 	// Delete locaized text of an area.
 	deleteAreaLocalizedText,
 	// Update start resource for an area.
@@ -264,7 +269,7 @@ public enum Event {
 	/**
 	 * Included in groups.
 	 */
-	private HashSet<ActionGroup> includedInGroups = new HashSet<ActionGroup>();
+	private HashSet<EventGroup> includedInGroups = new HashSet<EventGroup>();
 	
 	/**
 	 * Enable event LOG on STD ERR.
@@ -300,6 +305,22 @@ public enum Event {
 		
 		// Event reflection.
 		StackTraceElement reflection;
+		
+		/**
+		 * Check is this event is among input event list.
+		 * @param data
+		 * @param events
+		 * @return
+		 */
+		public boolean foundFor(Event ... events) {
+			
+			for (Event event : events) {
+				if (this.event.equals(event)) {
+					return true;
+				}
+			}
+			return false;
+		}
 		
 		// Compute hash code.
 		@Override
@@ -418,7 +439,7 @@ public enum Event {
 	/**
 	 * Event rules. (With keys as groups and actions related to them.)
 	 */
-	public static LinkedHashMap<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> rules = new LinkedHashMap<ActionGroup, HashMap<Object, HashSet<ActionHandle>>>();
+	public static LinkedHashMap<EventGroup, HashMap<Object, HashSet<ActionHandle>>> rules = new LinkedHashMap<EventGroup, HashMap<Object, HashSet<ActionHandle>>>();
 	
 	/**
 	 * Main event dispatch thread.
@@ -461,9 +482,9 @@ public enum Event {
 					// Dispatch actions using rules.
 					synchronized (rules) {
 						
-						for (Map.Entry<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
+						for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
 							
-							ActionGroup actionGroup = entry.getKey();
+							EventGroup actionGroup = entry.getKey();
 							Boolean isInActionGroup = event.isInActionGroup(actionGroup);
 							if (isInActionGroup != null && isInActionGroup) {
 								
@@ -497,9 +518,9 @@ public enum Event {
 	 * Constructor
 	 * @param guichange
 	 */
-	Event(ActionGroup ... actionGroups) {
+	Event(EventGroup ... actionGroups) {
 		
-		for (ActionGroup actionGroup : actionGroups) {
+		for (EventGroup actionGroup : actionGroups) {
 			includedInGroups.add(actionGroup);
 		}
 	}
@@ -527,7 +548,7 @@ public enum Event {
 	 * @param actionGroup
 	 * @return - on error returns null value
 	 */
-	public Boolean isInActionGroup(ActionGroup actionGroup) {
+	public Boolean isInActionGroup(EventGroup actionGroup) {
 		
 		Boolean included = includedInGroups == null ? null : includedInGroups.contains(actionGroup);
 		
@@ -544,7 +565,7 @@ public enum Event {
 	 * @param actionsMap
 	 * @param data
 	 */
-	public static void invokeActions(ActionGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, Data data) {
+	public static void invokeActions(EventGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, Data data) {
 		
 		if (actionsMap == null) {
 			return;
@@ -583,7 +604,7 @@ public enum Event {
 	
 	/**
 	 * Propagate event.
-	 * @param source - the source is ofent an object that calls propagate(...) method
+	 * @param source - the source is an object that calls propagate(...) method
 	 * @param event  - can be Target that specifies common target group or
 	 *                 it can be any other object in application
 	 * @param info   - the first info object is saved as relatedInfo and additional items
@@ -597,7 +618,7 @@ public enum Event {
 	
 	/**
 	 * Propagate event.
-	 * @param source - the source is ofent an object that calls propagate(...) method
+	 * @param source - the source is an object that calls propagate(...) method
 	 * @param target - can be Target that specifies common target group or
 	 *                 it can be any other object in application
 	 * @param event  - current event
@@ -650,95 +671,96 @@ public enum Event {
 	}
 	
 	/**
-	 * Register new action for a group.
-	 * @param key - a key for action group
-	 * @param actionGroup
+	 * Register new action for an event group.
+	 * @param key - a key for event group
+	 * @param eventGroup
 	 * @param action
 	 * @return - input key for action group
 	 */
-	public static Object receiver(Object key, ActionGroup actionGroup, Consumer<Event.Data> action) {
+	public static Object receiver(Object key, EventGroup eventGroup, Consumer<Event.Data> action) {
 		
 		final long timeSpanMs = 500;
 		
 		// Delegate the call.
-		return doAdd(key, actionGroup, action, timeSpanMs, null);
+		return doAdd(key, eventGroup, action, timeSpanMs, null);
 	}
 	
 	/**
-	 * Register new action for a group.
-	 * @param key - a key for action group
-	 * @param actionGroup
+	 * Register new action for an event group.
+	 * @param key - a key for event group
+	 * @param eventGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @return a key for action group
 	 */
-	public static Object add(Object key, ActionGroup actionGroup, Consumer<Event.Data> action, Long timeSpanMs) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Event.Data> action, Long timeSpanMs) {
 		
 		// Delegate the call.
-		return doAdd(key, actionGroup, action, timeSpanMs, null);
+		return doAdd(key, eventGroup, action, timeSpanMs, null);
 	}
 
 	/**
-	 * Register new action for a group.
-	 * @param key - a key for action group
-	 * @param actionGroup
+	 * Register new action for an event group.
+	 * @param key - a key for event group
+	 * @param eventGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, ActionGroup actionGroup, Consumer<Data> action, String identifier) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Data> action, String identifier) {
 		
 		// Delegate the call.
-		return doAdd(key, actionGroup, action, defaultTimeSpanMs, identifier);
+		return doAdd(key, eventGroup, action, defaultTimeSpanMs, identifier);
 	}
 	
 	/**
-	 * Register new action for a group.
-	 * @param key - a key for action group
-	 * @param actionGroup
+	 * Register new action for an event group.
+	 * @param key - a key for event group
+	 * @param eventGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, ActionGroup actionGroup, Consumer<Data> action, Long timeSpanMs, String identifier) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Data> action, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
-		return doAdd(key, actionGroup, action, timeSpanMs, identifier);
+		return doAdd(key, eventGroup, action, timeSpanMs, identifier);
 	}
 	
 	/**
-	 * Register new action for a group.
-	 * @param key - a key for action group
-	 * @param actionGroup
+	 * Register new action for an event group.
+	 * @param key - a key for event group
+	 * @param eventGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object doAdd(Object key, ActionGroup actionGroup, Consumer<Event.Data> action, Long timeSpanMs, String identifier) {
+	private static Object doAdd(Object key, EventGroup eventGroup, Consumer<Event.Data> action, Long timeSpanMs, String identifier) {
 		
 		// Try to get existing actions or create a new set.
 		synchronized (rules) {
-		
-			HashMap<Object, HashSet<ActionHandle>> actionsMap = rules.get(actionGroup);
+			
+			// Get actions
+			HashMap<Object, HashSet<ActionHandle>> actionsMap = rules.get(eventGroup);
 			if (actionsMap != null) {
-				rules.remove(actionGroup);
+				rules.remove(eventGroup);
 			}
 			else {
 				actionsMap = new HashMap<Object, HashSet<ActionHandle>>();
 			}
 			
-			rules.put(actionGroup, actionsMap);
+			rules.put(eventGroup, actionsMap);
 			
-			// Sort rules.
+			// Sort rules depending on its priority, determined by a position in enumeration.
 			rules = Utility.sort(rules, (Object key1, Object key2) -> {
 				
-				ActionGroup actionGroup1 = (ActionGroup) key1;
-				ActionGroup actionGroup2 = (ActionGroup) key2;
+				EventGroup eventGroup1 = (EventGroup) key1;
+				EventGroup eventGroup2 = (EventGroup) key2;
 				
-				int delta = actionGroup1.ordinal() - actionGroup2.ordinal();
+				int delta = eventGroup1.ordinal() - eventGroup2.ordinal();
 				return delta;
 			});
 			
@@ -779,7 +801,7 @@ public enum Event {
 	public static void remove(Object key) {
 		
 		// Remove actions for all groups.
-		for (Map.Entry<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
+		for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
 			
 			HashMap<Object, HashSet<ActionHandle>> actionsMap = entry.getValue();
 			
@@ -891,21 +913,4 @@ public enum Event {
 		
 		return targetObject.equals(data.target);
 	}
-	
-	/**
-	 * Check is this event is among input event list.
-	 * @param data
-	 * @param events
-	 * @return
-	 */
-	public static boolean is(Data data, Event ... events) {
-		
-		for (Event event : events) {
-			if (data.event.equals(event)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 }

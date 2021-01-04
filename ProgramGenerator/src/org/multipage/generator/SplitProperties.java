@@ -238,8 +238,15 @@ public class SplitProperties extends JPanel {
 	 */
 	public void maximize() {
 		
+		// TODO: debug
+		SwingUtilities.invokeLater(() -> {
+			GeneratorMainFrame.getFrame().setState(JFrame.ICONIFIED);
+			GeneratorMainFrame.getFrame().setState(JFrame.NORMAL);
+			GeneratorMainFrame.getFrame().toFront();
+		});
+		
 		// Set flag.
-		minimized  = false;
+		minimized = false;
 		// Show properties.
 		properties.setVisible(true);
 		// Split panels.

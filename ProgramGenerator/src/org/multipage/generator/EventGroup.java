@@ -11,7 +11,7 @@ package org.multipage.generator;
  * @author user
  *
  */
-public enum ActionGroup {
+public enum EventGroup {
 	
 	// Sets prirority of actions. (First groups have higher priority.)
 	
@@ -30,5 +30,7 @@ public enum ActionGroup {
 	// Change of slot view.
 	slotViewChange,
 	// Change of GUI.
-	guiChange;
+	guiChange,
+	// State of GUI changed
+	guiStateChanged;
 }

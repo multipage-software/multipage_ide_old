@@ -10,6 +10,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -29,7 +30,6 @@ import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -95,6 +95,11 @@ public class GeneratorMainFrame extends JFrame {
 	 * Menu size.
 	 */
 	private static final Dimension preferredMenuSize = new Dimension(240, 22);
+	
+	/**
+	 * A flag that indicates reactivation of GUI.
+	 */
+	private static Obj<Boolean> guiReactivationInProgress = new Obj<Boolean>(false);
 
 	/**
 	 * Close window callback.
@@ -494,16 +499,6 @@ public class GeneratorMainFrame extends JFrame {
 	 * Reset area tree copy timer.
 	 */
 	private javax.swing.Timer resetAreaTreeCopyTimer;
-
-	/**
-	 * Update information timer.
-	 */
-	private javax.swing.Timer updateInformationTimer;
-
-	/**
-	 * Is first update request flag.
-	 */
-	private boolean isFirstUpdateRequest;
 	
 	/**
 	 * Toggle debug button.
@@ -554,9 +549,6 @@ public class GeneratorMainFrame extends JFrame {
 		// Reload areas model.
 		MiddleResult result = ProgramGenerator.reloadModel();
 		result.showError(this);
-		
-		// Set timer for information update.
-		initUpdateInformationTimer();
 	}
 
 	/**
@@ -657,56 +649,56 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		// Listen for area model changes.
-		Event.receiver(this, ActionGroup.areaModelChange, (data) -> {
+		Event.receiver(this, EventGroup.areaModelChange, action -> {
 			
 			// Reload areas model.
-			if (data.source instanceof GeneratorMainFrame
-					|| data.source instanceof Settings
-					|| Event.is(data, Event.update)) {
+			if (action.source instanceof GeneratorMainFrame
+					|| action.source instanceof Settings
+					|| action.foundFor(Event.requestUpdateAll)) {
 				
 				ProgramGenerator.reloadModel();
 			}
 		});
 		
 		// Listen for slot view changes.
-		Event.receiver(this, ActionGroup.slotViewChange, (data) -> {
+		Event.receiver(this, EventGroup.slotViewChange, (action) -> {
 			
 			// Show slot list the right side of the main frame
 			Obj<HashSet<Long>> selectedAreaIds = new Obj<HashSet<Long>>();
 			
 			if (Event.passes(() -> {
 				
-				if ((Event.sourceClass(data, Event.selectDiagramAreas, AreasDiagram.class)
-						|| Event.sourceClass(data, Event.selectDiagramAreas, AreasDiagramPanel.class)
-						|| Event.sourceClass(data, Event.selectTreeArea, AreasTreeEditorPanel.class)
-						|| Event.sourceClass(data, Event.selectListArea, AreasTreeEditorPanel.class))
-						&& data.relatedInfo instanceof HashSet) {
+				if ((Event.sourceClass(action, Event.selectDiagramAreas, AreasDiagram.class)
+						|| Event.sourceClass(action, Event.selectDiagramAreas, AreasDiagramPanel.class)
+						|| Event.sourceClass(action, Event.selectTreeArea, AreasTreeEditorPanel.class)
+						|| Event.sourceClass(action, Event.selectListArea, AreasTreeEditorPanel.class))
+						&& action.relatedInfo instanceof HashSet) {
 						
-						selectedAreaIds.ref = (HashSet<Long>) data.relatedInfo;
+						selectedAreaIds.ref = (HashSet<Long>) action.relatedInfo;
 						return true;
 				}
 				
-				if (Event.sourceClass(data, Event.mainTabChange, AreasDiagramPanel.class)) {
+				if (Event.sourceClass(action, Event.mainTabChange, AreasDiagramPanel.class)) {
 					
-					AreasDiagramPanel areasDiagramEditor = (AreasDiagramPanel) data.source;
+					AreasDiagramPanel areasDiagramEditor = (AreasDiagramPanel) action.source;
 					selectedAreaIds.ref = areasDiagramEditor.getSelectedAreaIds();
 					return true;
 				}
 				
-				if (Event.sourceClass(data, Event.mainTabChange, AreasTreeEditorPanel.class)
-						|| Event.sourceClass(data, Event.subTabChange, AreasTreeEditorPanel.class)) {
+				if (Event.sourceClass(action, Event.mainTabChange, AreasTreeEditorPanel.class)
+						|| Event.sourceClass(action, Event.subTabChange, AreasTreeEditorPanel.class)) {
 					
-					AreasTreeEditorPanel areasTreeEditorPanel = (AreasTreeEditorPanel) data.source;
+					AreasTreeEditorPanel areasTreeEditorPanel = (AreasTreeEditorPanel) action.source;
 					selectedAreaIds.ref = areasTreeEditorPanel.getSelectedAreaIds();
 					return true;
 				}
 				
-				if (Event.is(data, Event.selectAll)) {
+				if (action.foundFor(Event.selectAll)) {
 					selectedAreaIds.ref = ProgramGenerator.getAllAreaIds();
 					return true;
 				}
 				
-				if (Event.is(data, Event.unselectAll)) {
+				if (action.foundFor(Event.unselectAll)) {
 					selectedAreaIds.ref = new HashSet<Long>();
 					return true;
 				}
@@ -719,15 +711,71 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Listen for GUI changes.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		Event.receiver(this, EventGroup.guiChange, data -> {
 			
 			if (Event.monitorHomePage.equals(data.event)) {
 				
 				 monitorHomePage();
 			}
 		});
+		
+		// Listen for GUI state changes.
+		Event.receiver(this, EventGroup.guiStateChanged, data -> {
+			
+			if (Event.reactivateGui.equals(data.event)) {
+				
+				// Initialize focused component.
+				Component focusedComponent = null;
+				
+				// Try to get focused component from the event information.
+				Object relatedInfo = data.relatedInfo;
+				if (relatedInfo instanceof Component) {
+					focusedComponent = (Component) relatedInfo;
+				}
+				
+				// Do reactivation.
+				invokeReactivationOfGui(focusedComponent);
+			}
+		});
  	}
 	
+	/**
+	 * Reactivate GUI.
+	 */
+	public static void reactivateGui() {
+		
+		// Get current focused control.
+		Component focusedControl = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		
+		// Propagate the event with focused control.
+		Event.propagate(GeneratorMainFrame.class, Event.reactivateGui, focusedControl);
+	}
+	
+	/**
+	 * Invoke reactivation of the GUI.
+	 * @param focusedComponent - currently focused GUI component.
+	 */
+	public void invokeReactivationOfGui(Component focusedComponent) {
+		
+		// Coalesce reactivation events.
+		if (guiReactivationInProgress.ref) {
+			return;
+		}
+		
+		// Set the flag.
+		guiReactivationInProgress.ref = true;
+		
+		// Reactivate GUI.
+		getFrame().setAlwaysOnTop(true);
+		getFrame().setAlwaysOnTop(false);
+		focusedComponent.requestFocus();
+		
+		// Reset the flag.
+		SwingUtilities.invokeLater(() -> {
+			guiReactivationInProgress.ref = false;
+		});
+	}
+
 	/**
 	 * Create connection watch dog.
 	 */
@@ -851,10 +899,6 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Call on close method.
 		onClose();
-		
-		if (updateInformationTimer != null) {
-			updateInformationTimer.stop();
-		}
 		
 		// Close properties.
 		properties.setNoArea();
@@ -1461,87 +1505,7 @@ public class GeneratorMainFrame extends JFrame {
 			getAreaDiagram().resetDiagramPosition();
 		}
 	}
-
-	/**
-	 * Initialize update information timer.
-	 */
-	private void initUpdateInformationTimer() {
-		
-		updateInformationTimer = new javax.swing.Timer(100, (e) -> {
-			
-			if (!isFirstUpdateRequest) {
-				updateVievers();
-			}
-		});
-		
-		updateInformationTimer.setRepeats(false);
-		updateInformationTimer.setCoalesce(true);
-	}
 	
-	/**
-	 * Update viewers .
-	 */
-	public void updateVievers() {
-		
-		long start = new Date().getTime();
-		// Update visible area viewers.
-		System.out.format("UPDATE EVENT: %dms in AreaViewer.updateVisible()", new Date().getTime() - start);
-		
-		// Update 
-		AreasPropertiesFrame.updateInformation();
-		
-		Utility.traverseUI((component) -> {
-			
-			if (component instanceof SlotListPanel) {
-				
-				SlotListPanel slotListPanel = (SlotListPanel) component;
-				slotListPanel.updatePanelInformation();
-				return true;
-			}
-			return false;
-		});
-		
-		repaint();
-	}
-	
-	/**
-	 * On update visible information about slots.
-	 * @param source - source object of update event
-	 * @param slotIds - set of updates slots (their IDs), if the set is null all slots are updated.
-	 */
-	public static void updateSlotInformation(Object source, HashSet<Long> slotIds) {
-		
-		// Delegate call.
-		updateInformation(source, Update.ALL);
-	}
-	
-	/**
-	 * On update data.
-	 * @param source - source object of update event
-	 * @param updateObjects - objects to update MODEL | EDITORS | PROPERTIES
-	 */
-	public static void updateInformation(Object source, int updateObjects) {
-		
-		GeneratorMainFrame frame = getFrame();
-		
-		// Coalesce update requests.
-		if (frame.updateInformationTimer != null) {
-			
-			if (!frame.updateInformationTimer.isRunning()) {
-				
-				frame.isFirstUpdateRequest = true;
-				frame.updateVievers();
-			}
-			else {
-				frame.isFirstUpdateRequest = false;
-			}
-			frame.updateInformationTimer.restart();
-		}
-		else {
-			frame.updateVievers();
-		}
-	}
-
 	/**
 	 * @return the tabPanel
 	 */
@@ -1686,21 +1650,11 @@ public class GeneratorMainFrame extends JFrame {
 	}
 
 	/**
-	 * Set area description.
-	 * @param description
-	 */
-	public void setAreaDescription(String description) {
-
-		// Set area programs area description.
-		properties.getAreaEditor().setAreaDescription(description);
-	}
-	
-	/**
 	 * On update data.
 	 */
 	public void onUpdate() {
 		
-		Event.propagate(GeneratorMainFrame.this, Event.update);
+		Event.propagate(GeneratorMainFrame.this, Event.requestUpdateAll);
 	}
 
 	/**

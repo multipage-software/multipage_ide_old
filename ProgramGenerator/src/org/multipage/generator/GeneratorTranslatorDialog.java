@@ -69,6 +69,6 @@ public class GeneratorTranslatorDialog extends TranslatorDialog {
 	@Override
 	protected void onUpdateInformation() {
 		
-		Event.propagate(GeneratorTranslatorDialog.this, Event.update);
+		Event.propagate(GeneratorTranslatorDialog.this, Event.requestUpdateAll);
 	}
 }

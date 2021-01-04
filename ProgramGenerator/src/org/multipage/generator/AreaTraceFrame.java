@@ -1054,7 +1054,7 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onUpdateInformation() {
 		
-		Event.propagate(AreaTraceFrame.this, Event.update);
+		Event.propagate(AreaTraceFrame.this, Event.requestUpdateAll);
 	}
 	
 	/**

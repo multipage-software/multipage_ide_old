@@ -1004,10 +1004,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 	 * Update area changes.
 	 */
 	private void updateAreaChanges() {
-
-		// Reload siblings panel.
-		// Set description.
-		GeneratorMainFrame.getFrame().setAreaDescription(area.getDescription());
+		
 		// Update information.
 		long areaId = area.getId();
 		Event.propagate(AreaEditorPanelBase.this, Event.updateAreaChanges, areaId);
