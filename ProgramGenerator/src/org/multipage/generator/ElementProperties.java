@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -99,7 +99,7 @@ public class ElementProperties extends JPanel {
 	public void setNoArea() {
 		
 		// Delegate call.
-		areaEditor.setSaveChanges();
+		areaEditor.saveChanges();
 		
 		// Set message.
 		message.setText(Resources.getString("org.multipage.generator.textNoAreaSelected"));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -12,10 +12,6 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -24,11 +20,10 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
-import javax.swing.JTextField;
 import javax.swing.SpringLayout;
 
 import org.multipage.gui.Images;
-import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.TextFieldAutoSave;
 
 /**
  * 
@@ -46,7 +41,7 @@ public class AreasProperties extends AreasPropertiesBase {
 	 * Components.
 	 */
 	private JLabel labelAreaDescription;
-	private JTextField textDescription;
+	private TextFieldAutoSave textDescription;
 	private JButton buttonSaveDescription;
 	private JMenuBar menuBar;
 	private JMenu menuArea;
@@ -55,7 +50,7 @@ public class AreasProperties extends AreasPropertiesBase {
 	private JSplitPane splitPane;
 	private SlotListPanel panelSlotList;
 	private JLabel labelAreaAlias;
-	private JTextField textAlias;
+	private TextFieldAutoSave textAlias;
 	private JButton buttonSaveAlias;
 	private JPanel panelExtension;
 	private JMenuItem menuEditDependencies;
@@ -108,15 +103,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.EAST, labelAreaDescription, -10, SpringLayout.EAST, this);
 		add(labelAreaDescription);
 		
-		textDescription = new TextFieldEx();
-		textDescription.addFocusListener(new FocusAdapter() {
-			@Override
-			public void focusGained(FocusEvent e) {
-				
-				// Reactivate GUI.
-				GeneratorMainFrame.reactivateGui();
-			}
-		});
+		textDescription = new TextFieldAutoSave(AreasPropertiesBase.areaDescription);
 		springLayout.putConstraint(SpringLayout.NORTH, textDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
 		springLayout.putConstraint(SpringLayout.WEST, textDescription, 10, SpringLayout.WEST, this);
 		add(textDescription);
@@ -197,15 +184,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.WEST, labelAreaAlias, 10, SpringLayout.WEST, this);
 		add(labelAreaAlias);
 		
-		textAlias = new TextFieldEx();
-		textAlias.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					onAliasKey();
-				}
-			}
-		});
+		textAlias = new TextFieldAutoSave(AreasPropertiesBase.areaAlias);
 		springLayout.putConstraint(SpringLayout.NORTH, splitPane, 6, SpringLayout.SOUTH, textAlias);
 		
 		panelExtension = new JPanel();
@@ -222,7 +201,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.EAST, buttonSaveAlias, -10, SpringLayout.EAST, this);
 		buttonSaveAlias.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				saveAlias();
+				textAlias.saveText();
 			}
 		});
 		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveAlias, 0, SpringLayout.NORTH, textAlias);

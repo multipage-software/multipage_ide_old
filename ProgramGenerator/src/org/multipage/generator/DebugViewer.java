@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 (C) sechance
+ * Copyright 2010-2018 (C) vakol
  * 
  * Created on : 31-07-2018
  *
@@ -42,7 +42,6 @@ import org.w3c.dom.NodeList;
 
 import com.maclan.server.XdebugClient;
 import com.maclan.server.XdebugPacket;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 import javax.swing.JSplitPane;
 import java.awt.event.WindowAdapter;
@@ -740,7 +739,7 @@ public class DebugViewer extends JFrame {
 			if (!responsePacket.isEmpty()) {
 				String base64 = responsePacket.getString("/response/property/text()");
 				if (base64 != null) {
-					byte [] bytes = Base64.decode(base64);
+					byte [] bytes = Utility.decodeBase64(base64);
 					String valueText = new String(bytes);
 					textOutput.setText(valueText);
 				}
@@ -917,7 +916,7 @@ public class DebugViewer extends JFrame {
 							if (node != null) {
 								
 								String valueText = node.getTextContent();
-								valueText = new String(Base64.decode(valueText));
+								valueText = new String(Utility.decodeBase64(valueText));
 								
 								Node nameNode = node.getAttributes().getNamedItem("name");
 								if (nameNode != null) {
