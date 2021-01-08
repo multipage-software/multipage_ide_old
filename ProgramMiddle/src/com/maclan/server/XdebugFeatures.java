@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 (C) vakol
+ * Copyright 2010-2018 (C) sechance
  * 
  * Created on : 16-08-2018
  *

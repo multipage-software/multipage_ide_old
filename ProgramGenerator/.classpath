@@ -19,7 +19,7 @@
 	<classpathentry kind="lib" path="C:/libraries/javafx-sdk-14.0.1/lib/javafx-swt.jar"/>
 	<classpathentry kind="lib" path="C:/libraries/javafx-sdk-14.0.1/lib/javafx.swing.jar"/>
 	<classpathentry kind="lib" path="C:/libraries/swt-4.5.2-win32-win32-x86_64/swt.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-10">
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>

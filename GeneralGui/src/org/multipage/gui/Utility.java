@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) vakol
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -66,7 +66,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -4412,16 +4411,5 @@ public class Utility {
 			helper.consume(rootNode, null);
 			helper.traverseRecursively(rootNode);
 		}
-	}
-	
-	/**
-	 * Decode Base64 text value.
-	 * @param valueText
-	 * @return
-	 */
-	public static byte [] decodeBase64(String valueText) {
-		
-		byte [] decodedBytes = Base64.getDecoder().decode(valueText);
-		return decodedBytes;
 	}
 }

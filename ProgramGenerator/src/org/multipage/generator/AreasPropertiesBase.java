@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) vakol
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -7,35 +7,22 @@
 
 package org.multipage.generator;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.LinkedList;
-import java.util.Properties;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import javax.swing.*;
 
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JSplitPane;
-import javax.swing.SwingUtilities;
+import java.awt.*;
+import java.util.*;
 
-import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.Images;
-import org.multipage.gui.TextFieldAutoSave;
-import org.multipage.gui.Utility;
-import org.multipage.util.Obj;
-import org.multipage.util.Resources;
-import org.multipage.util.j;
+import javax.swing.Timer;
+import javax.swing.event.*;
 
-import com.maclan.Area;
-import com.maclan.AreasModel;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
+import org.multipage.basic.*;
+import org.multipage.gui.*;
+import org.multipage.util.*;
+
+import com.maclan.*;
+
+import java.awt.event.*;
+import java.io.*;
 
 /**
  * @author
@@ -48,13 +35,12 @@ public class AreasPropertiesBase extends JPanel {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
-	
+
 	/**
-	 * Class constants.
+	 * Save timer delay in milliseconds.
 	 */
-	public static final int areaDescription = 0;
-	public static final int areaAlias = 1;
-	
+	private static final int saveTimerDelay = 2000;
+		
 	/**
 	 * Splitter position.
 	 */
@@ -115,13 +101,29 @@ public class AreasPropertiesBase extends JPanel {
 	 * Area nodes.
 	 */
 	protected LinkedList<Area> areas;
+	
+	/**
+	 * A flag that indicates automatic update of the description performed by the software.
+	 */
+	private boolean automaticDescriptionUpdate = false;
+	
+	/**
+	 * A flag that indicates automatic update of the alias performed by the software.
+	 */
+	private boolean automaticAliasUpdate = false;
+
+	/**
+	 * Automatic save timers.
+	 */
+	private Timer saveDescriptionTimer;
+	private Timer saveAliasTimer;
 
 	// $hide<<$
 	/**
 	 * Components.
 	 */
 	private JLabel labelAreaDescription;
-	private TextFieldAutoSave textDescription;
+	private JTextField textDescription;
 	private JButton buttonSaveDescription;
 	private JMenu menuArea;
 	private JMenuItem menuEditResources;
@@ -129,7 +131,7 @@ public class AreasPropertiesBase extends JPanel {
 	private JSplitPane splitPane;
 	protected SlotListPanel panelSlotList;
 	private JLabel labelAreaAlias;
-	protected TextFieldAutoSave textAlias;
+	protected JTextField textAlias;
 	private JButton buttonSaveAlias;
 	private JPanel panelExtension;
 	private JMenuItem menuEditDependencies;
@@ -142,7 +144,7 @@ public class AreasPropertiesBase extends JPanel {
 	 */
 	protected void setComponentsReferences(
 			JLabel labelAreaDescription,
-			TextFieldAutoSave textDescription,
+			JTextField textDescription,
 			JButton buttonSaveArea,
 			JMenu menuArea,
 			JMenuItem menuEditResources,
@@ -150,7 +152,7 @@ public class AreasPropertiesBase extends JPanel {
 			JSplitPane splitPane,
 			SlotListPanel panelSlotList,
 			JLabel labelAreaAlias,
-			TextFieldAutoSave textAlias,
+			JTextField textAlias,
 			JButton buttonSaveAlias,
 			JPanel panelExtension,
 			JMenuItem menuEditDependencies,
@@ -191,6 +193,8 @@ public class AreasPropertiesBase extends JPanel {
 		setToolTips();
 		// Set the listeners.
 		setListeners();
+		// Set save timers.
+		setSaveTimers();
 		// Load dialog.
 		loadDialog();
 	}
@@ -220,6 +224,37 @@ public class AreasPropertiesBase extends JPanel {
 	 * Set text editor listeners.
 	 */
 	private void setListeners() {
+		
+		// Set text boxes content change
+        textDescription.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				onChangeDescription();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				onChangeDescription();
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				onChangeDescription();
+			}
+        });
+
+        textAlias.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				onChangeAlias();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				onChangeAlias();
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				onChangeAlias();
+			}
+        });
         
         // Event receivers
         Event.receiver(this, EventGroup.areaModelChange, action -> {
@@ -227,46 +262,16 @@ public class AreasPropertiesBase extends JPanel {
         	// On areas model updated
         	if (action.foundFor(Event.modelUpdated)) {
         		
-        		// Set automatic text update.
-        		setAutomaticTextUpdate();
+        		// Unlock description and alias text boxes
+        		lockDescription(false);
+        		lockAlias(false);
         		
         		// Consider the changes of description and alias
-        		onChangeTexts();
-        		
-        		// Unlock description and alias text boxes
-        		lockInputs(false);
+        		onChangeDescription();
+        		onChangeAlias();
         	}
         });
     }
-	
-	/**
-	 * Set automatic text update.
-	 */
-	private void setAutomaticTextUpdate() {
-		
-		textDescription.automaticUpdate = true;
-		textAlias.automaticUpdate = true;		
-	}
-
-	/**
-	 * On change description or alias.
-	 */
-	private void onChangeTexts() {
-		
-		textDescription.onChangeText();
-		textAlias.onChangeText();
-	}
-
-	/**
-	 * Lock inputs.
-	 * @param lock
-	 */
-	private void lockInputs(boolean lock) {
-		
-		// Unlock description and alias text boxes
-    	textDescription.lockInput(lock);
-    	textAlias.lockInput(lock);
-	}
 	
 	/**
 	 * Dispose.
@@ -334,6 +339,32 @@ public class AreasPropertiesBase extends JPanel {
 	}
 	
 	/**
+	 * Set description text box.
+	 * @param text
+	 */
+	private void setDescription(String text) {
+		
+		// Set flag
+		automaticDescriptionUpdate = true;
+		
+		// Set text box
+		textDescription.setText(text);
+	}
+	
+	/**
+	 * Set alias text box.
+	 * @param text
+	 */
+	private void setAlias(String text) {
+		
+		// Set flag
+		automaticAliasUpdate = true;
+		
+		// Set text box
+		textAlias.setText(text);
+	}
+	
+	/**
 	 * Set area.
 	 */
 	public void setAreas(LinkedList<Area> areas) {
@@ -350,7 +381,8 @@ public class AreasPropertiesBase extends JPanel {
 			}
 			
 			// Try to save current changes.
-			saveChanges();
+			saveDescription();
+			saveAlias();
 			
 			// Get number of areas and set the flag
 			int areaCount = selectedAreas.size();
@@ -370,8 +402,8 @@ public class AreasPropertiesBase extends JPanel {
 					Area area = selectedAreas.getFirst();
 					
 					// Set texts
-					textDescription.setText(area.getDescription());
-					textAlias.setText(area.getAlias());
+					setDescription(area.getDescription());
+					setAlias(area.getAlias());
 				}
 				
 				else if (areaCount > 1) {
@@ -379,12 +411,13 @@ public class AreasPropertiesBase extends JPanel {
 					final String message = Resources.getString("org.multipage.generator.textMultipleAreasSelection");
 					
 					// Set messages
-					textDescription.setText(message);
-					textAlias.setText(message);
+					setDescription(message);
+					setAlias(message);
 				}
 				
 				// Lock/unlock text boxes
-				lockInputs(lockTextBoxes);
+				lockDescription(lockTextBoxes);
+				lockAlias(lockTextBoxes);
 				
 				// Extended method.
 				setAreaExtension();
@@ -397,7 +430,8 @@ public class AreasPropertiesBase extends JPanel {
 			}
 			
 			// Lock/unlock text boxes
-			lockInputs(lockTextBoxes);
+			lockDescription(lockTextBoxes);
+			lockAlias(lockTextBoxes);
 		});
 	}
 	
@@ -421,32 +455,134 @@ public class AreasPropertiesBase extends JPanel {
 	/**
 	 * Save changes.
 	 */
-	public void saveChanges() {
+	public void setSaveChanges() {
 
 		// Try to save existing changes.
-		textDescription.saveText();
-		textAlias.saveText();
+		saveDescription();
+		saveAlias();
+	}
+	
+	/**
+	 * Lock description text box input
+	 */
+	private void lockDescription(boolean lock) {
+		
+		j.log("LOCK DESCRIPTION = %b", lock);
+		j.printStackTrace("LOCK DESCRIPTION");
+		
+		// Enable/disable the text box
+		textDescription.setEnabled(!lock);
+		textDescription.setBackground(Color.WHITE);
+		
+		// Enable/disable the buttons
+		buttonSaveDescription.setEnabled(!lock);
+		buttonDeleteText.setEnabled(!lock);
+	}
+	
+	/**
+	 * Lock alias text box input
+	 * @param lock
+	 */
+	private void lockAlias(boolean lock) {
+		
+		j.log("LOCK ALIAS = %b", lock);
+		j.printStackTrace("LOCK ALIAS");
+		
+		// Enable/disable the text box
+		textAlias.setEnabled(!lock);
+		textAlias.setBackground(Color.WHITE);
+		
+		// Enable/disable the button
+		buttonSaveAlias.setEnabled(!lock);
 	}
 
 	/**
-	 * Set callback event functions.
+	 * Save description.
 	 */
-	public void setCallbacks() {
+	public void saveDescription() {
 		
-		/**
-		 * Save text callback event.
-		 */
-		BiConsumer<String, Consumer<String>> saveTextEvent = (description, setTextEvent) -> {
+		// If the areas reference is not set exit the method.
+		if (areas == null) {
+			return;
+		}
+		
+		// Only one area must be selected.
+		if (areas.size() != 1) {
+			return;
+		}
+
+		// If the description changes...
+		if (isAreaDescriptionChangedByUser()) {
 			
 			j.log("TEXT SAVE description");
 			
-			// If the areas reference is not set exit the method.
-			if (areas == null) {
+			// Try to save the area description.
+			Middle middle = ProgramBasic.getMiddle();
+			MiddleResult result;
+			Properties login = ProgramBasic.getLoginProperties();
+			Area area = areas.getFirst();
+			String description = textDescription.getText();
+			
+			// Check area reference.
+			if (area == null) {
 				return;
 			}
 			
-			// Only one area must be selected.
-			if (areas.size() != 1) {
+			result = middle.updateAreaDescription(login, area, description);
+			if (result != MiddleResult.OK) {
+				setDescription("");
+				result.show(this);
+			}
+			
+			// Remove highlight
+			textDescription.setForeground(Color.BLACK);
+
+			// Lock the text box
+			lockDescription(true);
+
+			// Propagate update event
+			Event.propagate(AreasPropertiesBase.this, Event.requestUpdateAll);
+		}
+	}
+
+	/**
+	 * Save alias.
+	 */
+	public void saveAlias() {
+		
+		// If the areas reference is not set exit the method.
+		if (areas == null) {
+			return;
+		}
+		
+		// Only one area must be selected.
+		if (areas.size() != 1) {
+			return;
+		}
+
+		// If the description changes...
+		if (isAreaAliasChangedByUser()) {
+			
+			j.log("TEXT SAVE alias");
+			
+			// Get new area alias.
+			Area area;
+			try {
+				area = areas.getFirst();
+			}
+			catch (Exception e) {
+				return;
+			}
+			
+			long areaId = area.getId();
+			
+			String alias = textAlias.getText();
+
+			// Check alias uniqueness against project root.
+			AreasModel model = ProgramGenerator.getAreasModel();
+			if (!model.isAreaAliasUnique(alias, areaId)) {
+				
+				Utility.show(this, "org.multipage.generator.messageAreaAliasAlreadyExists", alias);
 				return;
 			}
 			
@@ -454,81 +590,156 @@ public class AreasPropertiesBase extends JPanel {
 			Middle middle = ProgramBasic.getMiddle();
 			MiddleResult result;
 			Properties login = ProgramBasic.getLoginProperties();
-			Area area = areas.getFirst();
 			
-			// Check area reference.
-			if (area == null) {
-				return;
-			}
-			
-			// Update description.
-			result = middle.updateAreaDescription(login, area, description);
+			result = middle.updateAreaAlias(login, areaId, alias);
 			if (result != MiddleResult.OK) {
-				
-				// On error reset description and display message.
-				setTextEvent.accept("");
+				setAlias("");
 				result.show(this);
 			}
+			else {
+				area.setAlias(alias);
+			}
 			
-			// Propagate update event
-			Event.propagate(AreasPropertiesBase.this, Event.requestUpdateAll);
-		};
-		
-		textDescription.saveTextEvent = saveTextEvent;
-		textAlias.saveTextEvent = saveTextEvent;
-		
-		/**
-		 * Enable/disable callback events.
-		 */
-		textDescription.enableEvent = lock -> {
+			// Remove highlight
+			textAlias.setForeground(Color.BLACK);
 			
-			// Enable or disable  buttons.
-			buttonSaveDescription.setEnabled(!lock);
-			buttonDeleteText.setEnabled(!lock);
-		};
+			// Lock the text box
+			lockAlias(true);
+
+			// Decline change text events.
+			Event.propagate(AreasPropertiesBase.this, Event.requestUpdateAll, areaId);
+		}
+	}
+
+	/**
+	 * Returns true value if the area description changes.
+	 * @return
+	 */
+	private boolean isAreaDescriptionChangedByUser() {
 		
-		textAlias.enableEvent = lock -> {
-			
-			// Enable or disable  buttons.
-			buttonSaveAlias.setEnabled(!lock);
-		};
+		// Check the flag
+		if (automaticDescriptionUpdate) {
+			return false;
+		}
 		
-		/**
-		 * Get genuine text callback event.
-		 */
-		textDescription.getGenuineTextEvent = () -> {
-			
-			// Get area description.
+		// Find out description changes
+		try {
 			Area area = areas.getFirst();		
-			String text = area.getDescription();
+			String text = textDescription.getText();
 			
-			return text;
-		};
-		
-		textAlias.getGenuineTextEvent = () -> {
-			
-			// Get area alias.
-			Area area = areas.getFirst();		
-			String text = area.getAlias();
-			
-			return text;
-		};
-		
-		/**
-		 * Reactivate GUI callback event.
-		 */
-		Runnable reactivateGUI = () -> {
-			
-			// Reactivate GUI. (Error fix, Swing looses keyboard)
-			GeneratorMainFrame.reactivateGui();
-			
-			j.log("GUI REACTIVATED");
-		};
-		
-		textDescription.focusGained = reactivateGUI;
-		textAlias.focusGained = reactivateGUI;
+			return text.compareTo(area.getDescription()) != 0;
+		}
+		catch (Exception e) {
+			return false;
+		}
 	}
 	
+	/**
+	 * Returns true value if the area alias changes.
+	 * @return
+	 */
+	private boolean isAreaAliasChangedByUser() {
+		
+		// Check the flag
+		if (automaticAliasUpdate) {
+			return false;
+		}
+		
+		// Find out alias changes
+		try {
+			Area area = areas.getFirst();
+			String text = textAlias.getText();
+		
+			return text.compareTo(area.getAlias()) != 0;
+		}
+		catch (Exception e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Set save timer.
+	 */
+	private void setSaveTimers() {
+
+		// Create timer firing one event.
+		saveDescriptionTimer = new Timer(saveTimerDelay, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				saveDescription();
+			}
+		});
+				
+		saveDescriptionTimer.setInitialDelay(saveTimerDelay);
+		saveDescriptionTimer.setRepeats(false);
+		
+		// Create timer firing one event.
+		saveAliasTimer = new Timer(saveTimerDelay, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				saveAlias();
+			}
+		});
+		
+		saveAliasTimer.setInitialDelay(saveTimerDelay);
+		saveAliasTimer.setRepeats(false);
+		
+	}
+
+	/**
+	 * On change description.
+	 */
+	protected void onChangeDescription() {
+		
+		j.printStackTrace("CHANGE DESCRIPTION");
+		
+		Color color;
+	
+		// If the current area description is not equal to loaded area
+		// description set red text color.
+		if (isAreaDescriptionChangedByUser()) {
+			color = Color.RED;
+		
+			// Start save timer.
+			saveDescriptionTimer.restart();
+		}
+		else {
+			color = Color.black;
+			
+			// End of automatic sequence
+			automaticDescriptionUpdate = false;
+		}
+		
+		textDescription.setForeground(color);
+	}
+
+	/**
+	 * On change alias.
+	 */
+	protected void onChangeAlias() {
+		
+		j.printStackTrace("CHANGE ALIAS");
+		
+		Color color;
+	
+		// If the current area alias is not equal to loaded area
+		// alias set red text color.
+		if (isAreaAliasChangedByUser()) {
+			color = Color.RED;
+		
+			// Start save timer.
+			saveAliasTimer.restart();
+		}
+		else {
+			color = Color.black;
+			
+			// End of automatic sequence
+			automaticAliasUpdate = false;
+		}
+		
+		textAlias.setForeground(color);
+	}
+
 	/**
 	 * On edit area.
 	 */
@@ -596,5 +807,27 @@ public class AreasPropertiesBase extends JPanel {
 		
 		// Update information.
 		Event.propagate(AreasPropertiesBase.this, Event.deleteAreaLocalizedText, areaId);
+	}
+
+	/**
+	 * On description key input.
+	 */
+	protected void onDescriptionKey() {
+		
+		j.printStackTrace("DESCRIPTION KEY");
+		
+		// Reset the flag
+		automaticDescriptionUpdate = false;
+	}
+	
+	/**
+	 * On alias key input.
+	 */
+	protected void onAliasKey() {
+		
+		j.printStackTrace("ALIAS KEY");
+		
+		// Reset the flag
+		automaticAliasUpdate = false;
 	}
 }

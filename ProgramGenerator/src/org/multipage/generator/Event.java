@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 (C) vakol
+ * Copyright 2010-2020 (C) sechance
  * 
  * Created on : 18-06-2017
  *
@@ -16,7 +16,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.swing.SwingUtilities;
 
@@ -30,9 +29,6 @@ import org.multipage.util.Obj;
  *
  */
 public enum Event {
-	
-	// Special event that runs forwarded user lambda function on the event thread.
-	_invokeLater,
 	
 	// Load diagrams on application start up.
 	loadDiagrams(
@@ -290,7 +286,7 @@ public enum Event {
 	/**
 	 * Event data object.
 	 */
-	public static class ActionData {
+	public static class Data {
 		
 		// Event.
 		Event event;
@@ -346,7 +342,7 @@ public enum Event {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			ActionData other = (ActionData) obj;
+			Data other = (Data) obj;
 			if (event != other.event)
 				return false;
 			if (reflection == null) {
@@ -371,13 +367,13 @@ public enum Event {
 	private static class ActionHandle {
 		
 		// ActionGroup lambda function.
-		Consumer<ActionData> action;
+		Consumer<Data> action;
 		
 		// Time span in milliseconds.
 		Long timeSpanMs;
 		
 		// Delay start. Maps event data hash code to delay timeout variable.
-		Hashtable<ActionData, Obj<Long>> delayStarts;
+		Hashtable<Data, Obj<Long>> delayStarts;
 		
 		// A stack trace. ActionGroup reflection.
 		StackTraceElement reflection;
@@ -386,11 +382,11 @@ public enum Event {
 		String identifier;
 		
 		// Constructor.
-		ActionHandle(Consumer<ActionData> action, Long timeSpanMs, StackTraceElement reflection, String identifier) {
+		ActionHandle(Consumer<Data> action, Long timeSpanMs, StackTraceElement reflection, String identifier) {
 			
 			this.action = action;
 			this.timeSpanMs = timeSpanMs;
-			this.delayStarts = new Hashtable<ActionData, Obj<Long>>();
+			this.delayStarts = new Hashtable<Data, Obj<Long>>();
 			this.reflection = reflection;
 			this.identifier = identifier;
 		}
@@ -401,11 +397,11 @@ public enum Event {
 		}
 		
 		// Get delay start.
-		public Obj<Long> getDelayStart(ActionData eventData) {
+		public Obj<Long> getDelayStart(Data eventData) {
 			
-			for (Map.Entry<ActionData, Obj<Long>> entry : delayStarts.entrySet()) {
+			for (Map.Entry<Data, Obj<Long>> entry : delayStarts.entrySet()) {
 				
-				ActionData eventDataKey = entry.getKey();
+				Data eventDataKey = entry.getKey();
 				if (eventDataKey.equals(eventData)) {
 					return entry.getValue();
 				}
@@ -414,18 +410,18 @@ public enum Event {
 		}
 		
 		// Store new delay start.
-		public void putDelayStart(ActionData eventData, Obj<Long> delayStart) {
+		public void putDelayStart(Data eventData, Obj<Long> delayStart) {
 			
 			Obj<Long> timeSpanMs = new Obj<Long>();
 			delayStarts.put(eventData, timeSpanMs);
 		}
 		
 		// Remove xiststing delay start.
-		public void removeDelayStart(ActionData eventData) {
+		public void removeDelayStart(Data eventData) {
 			
-			for (Map.Entry<ActionData, Obj<Long>> entry : delayStarts.entrySet()) {
+			for (Map.Entry<Data, Obj<Long>> entry : delayStarts.entrySet()) {
 				
-				ActionData eventDataKey = entry.getKey();
+				Data eventDataKey = entry.getKey();
 				if (eventDataKey.equals(eventData)) {
 					
 					delayStarts.remove(eventDataKey);
@@ -438,7 +434,7 @@ public enum Event {
 	/**
 	 * Event queue.
 	 */
-	public static LinkedList<ActionData> queue = new LinkedList<ActionData>();
+	public static LinkedList<Data> queue = new LinkedList<Data>();
 	
 	/**
 	 * Event rules. (With keys as groups and actions related to them.)
@@ -469,38 +465,31 @@ public enum Event {
 			
 			while (!stopMainThread) {
 				
-				ActionData actionData = null;
+				Data data = null;
 				
 				// Dispatch event.
 				synchronized (queue) {
 					
 					if (!queue.isEmpty()) {
-						actionData = queue.removeFirst();
+						data = queue.removeFirst();
 					}
 				}
 				
-				if (actionData != null) {
+				if (data != null) {
 					
-					Event event = actionData.event;
+					Event event = data.event;
 					
-					// On special events skip the rules.
-					if (isSpecial(event)) {
-						invokeSpecialAction(actionData);
-					}
-					else {
+					// Dispatch actions using rules.
+					synchronized (rules) {
 						
-						// Dispatch actions using rules.
-						synchronized (rules) {
+						for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
 							
-							for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
+							EventGroup actionGroup = entry.getKey();
+							Boolean isInActionGroup = event.isInActionGroup(actionGroup);
+							if (isInActionGroup != null && isInActionGroup) {
 								
-								EventGroup actionGroup = entry.getKey();
-								Boolean isInActionGroup = event.isInActionGroup(actionGroup);
-								if (isInActionGroup != null && isInActionGroup) {
-									
-									HashMap<Object, HashSet<ActionHandle>> actionsMap = entry.getValue();
-									invokeActions(actionGroup, actionsMap, actionData);
-								}
+								HashMap<Object, HashSet<ActionHandle>> actionsMap = entry.getValue();
+								invokeActions(actionGroup, actionsMap, data);
 							}
 						}
 					}
@@ -534,46 +523,6 @@ public enum Event {
 		for (EventGroup actionGroup : actionGroups) {
 			includedInGroups.add(actionGroup);
 		}
-	}
-	
-	/**
-	 * Check for a special event.
-	 * @param event
-	 * @return
-	 */
-	private static boolean isSpecial(Event event) {
-		
-		return Event._invokeLater.equals(event);
-	}
-
-	/**
-	 * Invoke special action.
-	 * @param actionData
-	 */
-	private static void invokeSpecialAction(ActionData actionData) {
-		
-		// On invoke later a lambda function.
-		SwingUtilities.invokeLater(() -> {
-			
-			try {
-				if (Event._invokeLater.equals(actionData.event) && actionData.target instanceof Function) {
-					
-					// Retrieve lambda function reference and run the lambda function.
-					Function<ActionData, Exception> lambdaFunction = (Function<ActionData, Exception>) actionData.target;
-					Exception exception = lambdaFunction.apply(actionData);
-					
-					// Throw possible exception (for future debugging and other purposes).
-					if (exception != null) {
-						throw exception;
-					}
-				}
-			}
-			catch (Exception e) {
-				
-				// Print stack trace for the special event.
-				e.printStackTrace();
-			}
-		});
 	}
 
 	/**
@@ -616,7 +565,7 @@ public enum Event {
 	 * @param actionsMap
 	 * @param data
 	 */
-	public static void invokeActions(EventGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, ActionData data) {
+	public static void invokeActions(EventGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, Data data) {
 		
 		if (actionsMap == null) {
 			return;
@@ -694,7 +643,7 @@ public enum Event {
 		// Add event to the queue.
 		synchronized (queue) {
 			
-			Event.ActionData data = new Event.ActionData();
+			Event.Data data = new Event.Data();
 			
 			data.source = source;
 			data.target = target;
@@ -720,28 +669,6 @@ public enum Event {
 			Lock.notify(dispatchLock);
 		}
 	}
-
-	/**
-	 * Invoke lambda function later on the event thread
-	 * @param labdaFunction
-	 */
-	public static void invokeLater(Function<ActionData, Exception> labdaFunction) {
-		
-		// Add event to the queue.
-		synchronized (queue) {
-			
-			// Create special _invokeLater event and put it into the event queue.
-			Event.ActionData data = new Event.ActionData();
-			
-			data.source = Event.class;
-			data.target = labdaFunction;
-			data.event = Event._invokeLater;
-			
-			queue.add(data);
-			
-			Lock.notify(dispatchLock);
-		}
-	}
 	
 	/**
 	 * Register new action for an event group.
@@ -750,7 +677,7 @@ public enum Event {
 	 * @param action
 	 * @return - input key for action group
 	 */
-	public static Object receiver(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action) {
+	public static Object receiver(Object key, EventGroup eventGroup, Consumer<Event.Data> action) {
 		
 		final long timeSpanMs = 500;
 		
@@ -766,7 +693,7 @@ public enum Event {
 	 * @param timeSpanMs
 	 * @return a key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Event.Data> action, Long timeSpanMs) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, timeSpanMs, null);
@@ -781,7 +708,7 @@ public enum Event {
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<ActionData> action, String identifier) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Data> action, String identifier) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, defaultTimeSpanMs, identifier);
@@ -796,7 +723,7 @@ public enum Event {
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<ActionData> action, Long timeSpanMs, String identifier) {
+	public static Object add(Object key, EventGroup eventGroup, Consumer<Data> action, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, timeSpanMs, identifier);
@@ -811,7 +738,7 @@ public enum Event {
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object doAdd(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs, String identifier) {
+	private static Object doAdd(Object key, EventGroup eventGroup, Consumer<Event.Data> action, Long timeSpanMs, String identifier) {
 		
 		// Try to get existing actions or create a new set.
 		synchronized (rules) {
@@ -888,7 +815,7 @@ public enum Event {
 	 * @param actionHandle
 	 * @return - if the event shold be skipped, returns true value
 	 */
-	public static boolean delay(ActionData eventData, ActionHandle actionHandle) {
+	public static boolean delay(Data eventData, ActionHandle actionHandle) {
 		
 		// Get time span in milliseconds.
 		Long timeSpanMs = actionHandle.timeSpanMs;
@@ -948,7 +875,7 @@ public enum Event {
 	 * @param source
 	 * @return
 	 */
-	public static boolean sourceClass(ActionData data, Event event, Class sourceClass) {
+	public static boolean sourceClass(Data data, Event event, Class sourceClass) {
 		
 		return event.equals(data.event) && sourceClass.equals(data.source.getClass());
 	}
@@ -960,7 +887,7 @@ public enum Event {
 	 * @param sourceObject
 	 * @return
 	 */
-	public static boolean sourceObject(ActionData data, Event event, Object sourceObject) {
+	public static boolean sourceObject(Data data, Event event, Object sourceObject) {
 		
 		return event.equals(data.event) && sourceObject.equals(data.source);
 	}
@@ -971,7 +898,7 @@ public enum Event {
 	 * @param areasDiagram
 	 * @return
 	 */
-	public static boolean targetClass(ActionData data, Class targetClass) {
+	public static boolean targetClass(Data data, Class targetClass) {
 		
 		return targetClass.equals(data.target);
 	}
@@ -982,7 +909,7 @@ public enum Event {
 	 * @param areasDiagram
 	 * @return
 	 */
-	public static boolean targetObject(ActionData data, Object targetObject) {
+	public static boolean targetObject(Data data, Object targetObject) {
 		
 		return targetObject.equals(data.target);
 	}
