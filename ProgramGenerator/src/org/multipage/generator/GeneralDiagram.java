@@ -507,7 +507,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		positionSaveTimer.setRepeats(false);
 		
 		// Add redraw event listener.
-		Event.receiver(this, EventGroup.guiChange, action -> {
+		Event.receiver(this, ActionGroup.guiChange, action -> {
 			
 			if (Event.passes(() -> {
 				

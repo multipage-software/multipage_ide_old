@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 (C) Vaclav Kolarcik
+ * Copyright 2010-2019 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -146,7 +146,7 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	private void setListeners() {
 		
 		// GUI change receiver
-		Event.receiver(this, EventGroup.guiChange, action -> {
+		Event.receiver(this, ActionGroup.guiChange, action -> {
 			
 			// On update
 			if (action.foundFor(Event.requestUpdateAll)) {

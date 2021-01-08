@@ -65,7 +65,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		// Initialize components.
 		initComponents();
 		// Post creation.
-		// $hide>>$
+		//$hide>>$
 		panelSlotList = ProgramGenerator.newSlotListPanel();
 		splitPane.setLeftComponent(panelSlotList);
 		
@@ -87,7 +87,7 @@ public class AreasProperties extends AreasPropertiesBase {
 			menuEditDependencies,
 			menuAreaEdit);
 		postCreate();
-		// $hide<<$
+		//$hide<<$
 	}
 
 	
@@ -103,11 +103,13 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.EAST, labelAreaDescription, -10, SpringLayout.EAST, this);
 		add(labelAreaDescription);
 		
+		//$hide>>$
 		textDescription = new TextFieldAutoSave(AreasPropertiesBase.areaDescription);
 		springLayout.putConstraint(SpringLayout.NORTH, textDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
 		springLayout.putConstraint(SpringLayout.WEST, textDescription, 10, SpringLayout.WEST, this);
 		add(textDescription);
 		textDescription.setColumns(10);
+		//$hide<<$
 		
 		buttonSaveDescription = new JButton("");
 		springLayout.putConstraint(SpringLayout.EAST, textDescription, -3, SpringLayout.WEST, buttonSaveDescription);
@@ -132,14 +134,14 @@ public class AreasProperties extends AreasPropertiesBase {
 		menuEditResources = new JMenuItem("org.multipage.generator.menuAreaEditResources");
 		menuEditResources.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.RESOURCES);
+				onEditArea(AreaEditor.RESOURCES); //$hide$
 			}
 		});
 		
 		menuAreaEdit = new JMenuItem("org.multipage.generator.menuAreaEdit");
 		menuAreaEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.NOT_SPECIFIED);
+				onEditArea(AreaEditor.NOT_SPECIFIED); //$hide$
 			}
 		});
 		menuArea.add(menuAreaEdit);
@@ -149,7 +151,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		menuEditDependencies = new JMenuItem("org.multipage.generator.menuAreaEditDependencies");
 		menuEditDependencies.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.DEPENDENCIES);
+				onEditArea(AreaEditor.DEPENDENCIES); //$hide$
 			}
 		});
 		menuArea.add(menuEditDependencies);
@@ -160,7 +162,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonDeleteDescription, 0, SpringLayout.SOUTH, textDescription);
 		buttonDeleteDescription.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onDeleteLocalText();
+				onDeleteLocalText(); //$hide$
 			}
 		});
 		springLayout.putConstraint(SpringLayout.NORTH, buttonDeleteDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
@@ -184,8 +186,10 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.WEST, labelAreaAlias, 10, SpringLayout.WEST, this);
 		add(labelAreaAlias);
 		
+		//$hide>>$
 		textAlias = new TextFieldAutoSave(AreasPropertiesBase.areaAlias);
 		springLayout.putConstraint(SpringLayout.NORTH, splitPane, 6, SpringLayout.SOUTH, textAlias);
+		//$hide<<$
 		
 		panelExtension = new JPanel();
 		panelExtension.setBorder(null);
@@ -201,7 +205,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		springLayout.putConstraint(SpringLayout.EAST, buttonSaveAlias, -10, SpringLayout.EAST, this);
 		buttonSaveAlias.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				textAlias.saveText();
+//				textAlias.saveText(); //$hide$
 			}
 		});
 		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveAlias, 0, SpringLayout.NORTH, textAlias);

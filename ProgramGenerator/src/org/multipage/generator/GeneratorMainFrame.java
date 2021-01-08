@@ -650,7 +650,7 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		// Listen for area model changes.
-		Event.receiver(this, EventGroup.areaModelChange, action -> {
+		Event.receiver(this, ActionGroup.areaModelChange, action -> {
 			
 			// Reload areas model.
 			if (action.source instanceof GeneratorMainFrame
@@ -662,7 +662,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Listen for slot view changes.
-		Event.receiver(this, EventGroup.slotViewChange, (action) -> {
+		Event.receiver(this, ActionGroup.slotViewChange, (action) -> {
 			
 			// Show slot list the right side of the main frame
 			Obj<HashSet<Long>> selectedAreaIds = new Obj<HashSet<Long>>();
@@ -712,7 +712,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Listen for GUI changes.
-		Event.receiver(this, EventGroup.guiChange, data -> {
+		Event.receiver(this, ActionGroup.guiChange, data -> {
 			
 			if (Event.monitorHomePage.equals(data.event)) {
 				
@@ -721,7 +721,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Listen for GUI state changes.
-		Event.receiver(this, EventGroup.guiStateChanged, data -> {
+		Event.receiver(this, ActionGroup.guiStateChanged, data -> {
 			
 			if (Event.reactivateGui.equals(data.event)) {
 				

@@ -573,7 +573,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	private void setListeners() {
 		
 		// Listen for area view state change.
-		Event.receiver(this, EventGroup.areaViewStateChange, action -> {
+		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
 				
 			if ((Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this.areasDiagram)
 					|| Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this))
@@ -593,7 +593,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// Listen for area view change.
-		Event.receiver(this, EventGroup.areaViewChange, action -> {
+		Event.receiver(this, ActionGroup.areaViewChange, action -> {
 			
 			boolean isShowing = AreasDiagramPanel.this.isShowing();
 			
@@ -618,7 +618,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// Listen for GUI changes.
-		Event.receiver(this, EventGroup.guiChange, action -> {
+		Event.receiver(this, ActionGroup.guiChange, action -> {
 			
 			if (action.foundFor(Event.focusTabArea) && AreasDiagramPanel.this.isShowing()) {
 				

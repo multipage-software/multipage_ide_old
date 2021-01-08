@@ -11,7 +11,7 @@ package org.multipage.generator;
  * @author user
  *
  */
-public enum EventGroup {
+public enum ActionGroup {
 	
 	// Sets prirority of actions. (First groups have higher priority.)
 	

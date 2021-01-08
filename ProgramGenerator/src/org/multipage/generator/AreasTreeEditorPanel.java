@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 (C) Vaclav Kolarcik
+ * Copyright 2010-2020 (C) vakol
  * 
  * Created on : 06-04-2020
  *
@@ -863,7 +863,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		});
 
 		// Add area view state event listener.
-		Event.receiver(this, EventGroup.areaViewStateChange, action -> {
+		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
@@ -879,7 +879,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		});
 		
 		// Add area view event listener.
-		Event.receiver(this, EventGroup.areaViewChange, action -> {
+		Event.receiver(this, ActionGroup.areaViewChange, action -> {
 			
 			reload();
 			

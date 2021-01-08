@@ -82,4 +82,20 @@ class AreasDiagramPanelClone extends AreasDiagramTabState implements TabItemInte
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+
+
+	@Override
+	public void setTabLabel(TabLabel tabLabel) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+	@Override
+	public void setAreaId(Long topAreaId) {
+		// TODO Auto-generated method stub
+		
+	}
 }

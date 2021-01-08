@@ -26,6 +26,7 @@ import javax.swing.SwingUtilities;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.TextCaret;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -43,7 +44,7 @@ import com.maclan.MiddleResult;
  */
 public class AreasPropertiesBase extends JPanel {
 	
-	// $hide>>$
+	//$hide>>$
 	/**
 	 * Version.
 	 */
@@ -116,7 +117,7 @@ public class AreasPropertiesBase extends JPanel {
 	 */
 	protected LinkedList<Area> areas;
 
-	// $hide<<$
+	//$hide<<$
 	/**
 	 * Components.
 	 */
@@ -176,7 +177,8 @@ public class AreasPropertiesBase extends JPanel {
 	 * Post creation.
 	 */
 	protected void postCreate() {
-
+		
+		//$hide>>$
 		// Add programs list.
 		if (!postCreateExtension(this, panelExtension)) {
 			splitPane.setRightComponent(null);
@@ -191,8 +193,13 @@ public class AreasPropertiesBase extends JPanel {
 		setToolTips();
 		// Set the listeners.
 		setListeners();
+		// Set callback functions.
+		setCallbacks();
 		// Load dialog.
 		loadDialog();
+		// Reactivate GUI.
+		GeneratorMainFrame.reactivateGui();
+		//$hide<<$
 	}
 	
 	/**
@@ -222,7 +229,7 @@ public class AreasPropertiesBase extends JPanel {
 	private void setListeners() {
         
         // Event receivers
-        Event.receiver(this, EventGroup.areaModelChange, action -> {
+        Event.receiver(this, ActionGroup.areaModelChange, action -> {
         	
         	// On areas model updated
         	if (action.foundFor(Event.modelUpdated)) {

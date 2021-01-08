@@ -36,116 +36,116 @@ public enum Event {
 	
 	// Load diagrams on application start up.
 	loadDiagrams(
-			EventGroup.areaViewStateChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewStateChange,
+			ActionGroup.guiChange
 			),
 	
 	// On select areas.
 	selectDiagramAreas(
-			EventGroup.areaViewStateChange,
-			EventGroup.areaViewChange,
-			EventGroup.slotViewChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewStateChange,
+			ActionGroup.areaViewChange,
+			ActionGroup.slotViewChange,
+			ActionGroup.guiChange
 			),
 	
 	// Select/unselect all areas.
 	selectAll(
-			EventGroup.areaViewStateChange,
-			EventGroup.areaViewChange,
-			EventGroup.slotViewChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewStateChange,
+			ActionGroup.areaViewChange,
+			ActionGroup.slotViewChange,
+			ActionGroup.guiChange
 			),
 	
 	// Select/unselect all areas.
 	unselectAll(
-			EventGroup.areaViewStateChange,
-			EventGroup.areaViewChange,
-			EventGroup.slotViewChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewStateChange,
+			ActionGroup.areaViewChange,
+			ActionGroup.slotViewChange,
+			ActionGroup.guiChange
 			),
 	
 	// Main tab panel selection
 	mainTabChange(
-			EventGroup.areaViewChange,
-			EventGroup.slotViewChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewChange,
+			ActionGroup.slotViewChange,
+			ActionGroup.guiChange
 			),
 	
 	// Subpanel tab change.
 	subTabChange(
-			EventGroup.slotViewChange
+			ActionGroup.slotViewChange
 			),
 	
 	// Select tree area.
 	selectTreeArea(
-			EventGroup.slotViewChange
+			ActionGroup.slotViewChange
 			),
 	
 	// Select list area.
 	selectListArea(
-			EventGroup.slotViewChange
+			ActionGroup.slotViewChange
 			),
 	
 	// On show/hide IDs in areas diagram..
 	showHideIds(
-			EventGroup.guiChange
+			ActionGroup.guiChange
 			),
 	
 	// Show read only areas in areas diagram.
 	showReadOnlyAreas(
-			EventGroup.guiChange
+			ActionGroup.guiChange
 			),
 	
 	// Request update of all information.
 	requestUpdateAll(
-			EventGroup.areaModelChange,
-			EventGroup.slotModelChange,
-			EventGroup.areaViewStateChange,
-			EventGroup.slotViewStateChange,
-			EventGroup.guiStateChange,
-			EventGroup.areaViewChange,
-			EventGroup.slotViewChange,
-			EventGroup.guiStateChange,
-			EventGroup.guiChange
+			ActionGroup.areaModelChange,
+			ActionGroup.slotModelChange,
+			ActionGroup.areaViewStateChange,
+			ActionGroup.slotViewStateChange,
+			ActionGroup.guiStateChange,
+			ActionGroup.areaViewChange,
+			ActionGroup.slotViewChange,
+			ActionGroup.guiStateChange,
+			ActionGroup.guiChange
 			),
 	
 	// Focus on the Basic Area.
 	focusBasicArea(
-			EventGroup.guiChange
+			ActionGroup.guiChange
 			),
 	
 	// Focus on the tab area.
 	focusTabArea(
-			EventGroup.guiChange
+			ActionGroup.guiChange
 			),
 	
 	// Focus on the home area.
 	focusHomeArea(
-			EventGroup.areaViewChange,
-			EventGroup.guiChange
+			ActionGroup.areaViewChange,
+			ActionGroup.guiChange
 			),
 	
 	// Monitor home page in web browser.
 	monitorHomePage(
-			EventGroup.guiChange
+			ActionGroup.guiChange
 			),
 	// Update home area.
 	updateHomeArea(
-			EventGroup.areaModelChange,
-			EventGroup.areaViewChange
+			ActionGroup.areaModelChange,
+			ActionGroup.areaViewChange
 			),
 	// Save slot.
 	saveSlot(
-			EventGroup.slotModelChange,
-			EventGroup.slotViewChange
+			ActionGroup.slotModelChange,
+			ActionGroup.slotViewChange
 			),
 	// Indicates updates areas model
 	modelUpdated(
-			EventGroup.areaModelChange
+			ActionGroup.areaModelChange
 			),
 	// Reactivate GUI
 	reactivateGui(
-			EventGroup.guiStateChanged
+			ActionGroup.guiStateChanged
 			),
 	// Update of area sub relation.
 	updateAreaSubRelation,
@@ -273,7 +273,7 @@ public enum Event {
 	/**
 	 * Included in groups.
 	 */
-	private HashSet<EventGroup> includedInGroups = new HashSet<EventGroup>();
+	private HashSet<ActionGroup> includedInGroups = new HashSet<ActionGroup>();
 	
 	/**
 	 * Enable event LOG on STD ERR.
@@ -443,7 +443,7 @@ public enum Event {
 	/**
 	 * Event rules. (With keys as groups and actions related to them.)
 	 */
-	public static LinkedHashMap<EventGroup, HashMap<Object, HashSet<ActionHandle>>> rules = new LinkedHashMap<EventGroup, HashMap<Object, HashSet<ActionHandle>>>();
+	public static LinkedHashMap<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> rules = new LinkedHashMap<ActionGroup, HashMap<Object, HashSet<ActionHandle>>>();
 	
 	/**
 	 * Main event dispatch thread.
@@ -492,9 +492,9 @@ public enum Event {
 						// Dispatch actions using rules.
 						synchronized (rules) {
 							
-							for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
+							for (Map.Entry<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
 								
-								EventGroup actionGroup = entry.getKey();
+								ActionGroup actionGroup = entry.getKey();
 								Boolean isInActionGroup = event.isInActionGroup(actionGroup);
 								if (isInActionGroup != null && isInActionGroup) {
 									
@@ -529,9 +529,9 @@ public enum Event {
 	 * Constructor
 	 * @param guichange
 	 */
-	Event(EventGroup ... actionGroups) {
+	Event(ActionGroup ... actionGroups) {
 		
-		for (EventGroup actionGroup : actionGroups) {
+		for (ActionGroup actionGroup : actionGroups) {
 			includedInGroups.add(actionGroup);
 		}
 	}
@@ -599,7 +599,7 @@ public enum Event {
 	 * @param actionGroup
 	 * @return - on error returns null value
 	 */
-	public Boolean isInActionGroup(EventGroup actionGroup) {
+	public Boolean isInActionGroup(ActionGroup actionGroup) {
 		
 		Boolean included = includedInGroups == null ? null : includedInGroups.contains(actionGroup);
 		
@@ -616,7 +616,7 @@ public enum Event {
 	 * @param actionsMap
 	 * @param data
 	 */
-	public static void invokeActions(EventGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, ActionData data) {
+	public static void invokeActions(ActionGroup actionGroup, HashMap<Object, HashSet<ActionHandle>> actionsMap, ActionData data) {
 		
 		if (actionsMap == null) {
 			return;
@@ -750,7 +750,7 @@ public enum Event {
 	 * @param action
 	 * @return - input key for action group
 	 */
-	public static Object receiver(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action) {
+	public static Object receiver(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action) {
 		
 		final long timeSpanMs = 500;
 		
@@ -766,7 +766,7 @@ public enum Event {
 	 * @param timeSpanMs
 	 * @return a key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs) {
+	public static Object add(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, timeSpanMs, null);
@@ -781,7 +781,7 @@ public enum Event {
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<ActionData> action, String identifier) {
+	public static Object add(Object key, ActionGroup eventGroup, Consumer<ActionData> action, String identifier) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, defaultTimeSpanMs, identifier);
@@ -796,7 +796,7 @@ public enum Event {
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, EventGroup eventGroup, Consumer<ActionData> action, Long timeSpanMs, String identifier) {
+	public static Object add(Object key, ActionGroup eventGroup, Consumer<ActionData> action, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
 		return doAdd(key, eventGroup, action, timeSpanMs, identifier);
@@ -811,7 +811,7 @@ public enum Event {
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object doAdd(Object key, EventGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs, String identifier) {
+	private static Object doAdd(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs, String identifier) {
 		
 		// Try to get existing actions or create a new set.
 		synchronized (rules) {
@@ -830,8 +830,8 @@ public enum Event {
 			// Sort rules depending on its priority, determined by a position in enumeration.
 			rules = Utility.sort(rules, (Object key1, Object key2) -> {
 				
-				EventGroup eventGroup1 = (EventGroup) key1;
-				EventGroup eventGroup2 = (EventGroup) key2;
+				ActionGroup eventGroup1 = (ActionGroup) key1;
+				ActionGroup eventGroup2 = (ActionGroup) key2;
 				
 				int delta = eventGroup1.ordinal() - eventGroup2.ordinal();
 				return delta;
@@ -874,7 +874,7 @@ public enum Event {
 	public static void remove(Object key) {
 		
 		// Remove actions for all groups.
-		for (Map.Entry<EventGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
+		for (Map.Entry<ActionGroup, HashMap<Object, HashSet<ActionHandle>>> entry : rules.entrySet()) {
 			
 			HashMap<Object, HashSet<ActionHandle>> actionsMap = entry.getValue();
 			

@@ -330,7 +330,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private void setListeners() {
 		
 		// Add redraw event listener.
-		Event.receiver(this, EventGroup.areaViewStateChange, action -> {
+		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
 			
 			// Reload diagram.
 			if (action.foundFor(Event.loadDiagrams) || action.foundFor(Event.requestUpdateAll)) {
@@ -341,7 +341,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});	
 		
 		// Add area view event listener.
-		Event.receiver(this, EventGroup.areaViewChange, acion -> {
+		Event.receiver(this, ActionGroup.areaViewChange, acion -> {
 			
 			if (Event.sourceObject(acion, Event.mainTabChange, AreasDiagram.this.parentEditor)
 					|| Event.sourceObject(acion, Event.selectDiagramAreas, AreasDiagram.this.parentEditor)
@@ -369,7 +369,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Add GUI event listener.
-		Event.receiver(this, EventGroup.guiChange, action -> {
+		Event.receiver(this, ActionGroup.guiChange, action -> {
 			
 			// Repaint GUI.
 			if (action.foundFor(Event.loadDiagrams, Event.selectDiagramAreas, Event.mainTabChange)
