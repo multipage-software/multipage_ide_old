@@ -66,6 +66,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -4411,5 +4412,16 @@ public class Utility {
 			helper.consume(rootNode, null);
 			helper.traverseRecursively(rootNode);
 		}
+	}
+	
+	/**
+	 * Decode Base 64 text.
+	 * @param base64String
+	 * @return
+	 */
+	public static byte[] decodeBase64(String base64String) {
+		
+		byte[] decodedBytes = Base64.getDecoder().decode(base64String);
+		return decodedBytes;
 	}
 }

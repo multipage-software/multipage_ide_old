@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -60,6 +60,7 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -768,7 +769,9 @@ public class GeneratorMainFrame extends JFrame {
 		// Reactivate GUI.
 		getFrame().setAlwaysOnTop(true);
 		getFrame().setAlwaysOnTop(false);
-		focusedComponent.requestFocus();
+		focusedComponent.requestFocusInWindow();
+		
+		j.log("REACIVATION FOCUSED THE COMPONENT");
 		
 		// Reset the flag.
 		SwingUtilities.invokeLater(() -> {
