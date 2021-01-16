@@ -2083,7 +2083,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 
 			Obj<Long> descriptionId = new Obj<Long>();
 			// Get area description ID.
-			result = loadAreaDescriptionId(area.getId(), descriptionId );
+			result = loadAreaDescriptionId(area.getId(), descriptionId);
 			if (result.isOK()) {
 
 				// Update text.
@@ -6074,6 +6074,20 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Save area alias.
+	 * @param login
+	 * @param area
+	 * @param alias
+	 * @return
+	 */
+	public MiddleResult updateAreaAlias(Properties login, Area area, String alias) {
+		
+		// Delegate the call.
+		long areaId = area.getId();
+		return updateAreaAlias(login, areaId, alias);
 	}
 
 	/**

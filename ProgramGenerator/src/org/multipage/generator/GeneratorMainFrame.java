@@ -60,7 +60,6 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -767,11 +766,45 @@ public class GeneratorMainFrame extends JFrame {
 		guiReactivationInProgress.ref = true;
 		
 		// Reactivate GUI.
-		getFrame().setAlwaysOnTop(true);
-		getFrame().setAlwaysOnTop(false);
-		focusedComponent.requestFocusInWindow();
 		
-		j.log("REACIVATION FOCUSED THE COMPONENT");
+		// 1. Set always on top.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().setAlwaysOnTop(true);
+		});
+		
+		// 2. Sleep for a while.
+		SwingUtilities.invokeLater(() -> {
+			try {
+				Thread.sleep(20);
+			}
+			catch (Exception e) {
+			}
+		});
+		
+		// 3. Reset always on top.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().setAlwaysOnTop(false);
+		});
+		
+		// 4. Ensure the frame is visible.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().setVisible(true);
+		});
+		
+		// 5. Bring the frame to front.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().toFront();
+		});
+		
+		// 6. Restore focus.
+		SwingUtilities.invokeLater(() -> {
+			focusedComponent.requestFocusInWindow();
+		});
+		
+		// 7. Repaint the frame.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().repaint();
+		});
 		
 		// Reset the flag.
 		SwingUtilities.invokeLater(() -> {

@@ -104,20 +104,23 @@ public class AreasProperties extends AreasPropertiesBase {
 		add(labelAreaDescription);
 		
 		//$hide>>$
-		textDescription = new TextFieldAutoSave(AreasPropertiesBase.areaDescription);
+		textDescription = new TextFieldAutoSave("DESCRIPTION");
 		springLayout.putConstraint(SpringLayout.NORTH, textDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
 		springLayout.putConstraint(SpringLayout.WEST, textDescription, 10, SpringLayout.WEST, this);
 		add(textDescription);
 		textDescription.setColumns(10);
 		//$hide<<$
 		
-		buttonSaveDescription = new JButton("");
+		buttonSaveDescription = new JButton();
 		springLayout.putConstraint(SpringLayout.EAST, textDescription, -3, SpringLayout.WEST, buttonSaveDescription);
 		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveDescription, 6, SpringLayout.SOUTH, labelAreaDescription);
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonSaveDescription, 0, SpringLayout.SOUTH, textDescription);
 		buttonSaveDescription.setMargin(new Insets(0, 0, 0, 0));
 		buttonSaveDescription.setPreferredSize(new Dimension(18, 18));
 		add(buttonSaveDescription);
+		buttonSaveDescription.addActionListener(e -> {
+			saveDescriptionChanges();
+		});
 		
 		menuBar = new JMenuBar();
 		menuBar.setPreferredSize(new Dimension(0, 24));
@@ -187,7 +190,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		add(labelAreaAlias);
 		
 		//$hide>>$
-		textAlias = new TextFieldAutoSave(AreasPropertiesBase.areaAlias);
+		textAlias = new TextFieldAutoSave("ALIAS");
 		springLayout.putConstraint(SpringLayout.NORTH, splitPane, 6, SpringLayout.SOUTH, textAlias);
 		//$hide<<$
 		
@@ -203,15 +206,14 @@ public class AreasProperties extends AreasPropertiesBase {
 		buttonSaveAlias = new JButton("");
 		springLayout.putConstraint(SpringLayout.EAST, textAlias, -3, SpringLayout.WEST, buttonSaveAlias);
 		springLayout.putConstraint(SpringLayout.EAST, buttonSaveAlias, -10, SpringLayout.EAST, this);
-		buttonSaveAlias.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-//				textAlias.saveText(); //$hide$
-			}
-		});
+		
 		springLayout.putConstraint(SpringLayout.NORTH, buttonSaveAlias, 0, SpringLayout.NORTH, textAlias);
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonSaveAlias, 0, SpringLayout.SOUTH, textAlias);
 		buttonSaveAlias.setPreferredSize(new Dimension(18, 18));
 		buttonSaveAlias.setMargin(new Insets(0, 0, 0, 0));
 		add(buttonSaveAlias);
+		buttonSaveAlias.addActionListener(e -> {
+			saveAliasChanges();
+		});
 	}
 }

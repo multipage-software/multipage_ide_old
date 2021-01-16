@@ -12,8 +12,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.Properties;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -26,15 +26,12 @@ import javax.swing.SwingUtilities;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
-import org.multipage.gui.TextCaret;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
-import com.maclan.AreasModel;
 import com.maclan.Middle;
 import com.maclan.MiddleResult;
 
@@ -51,15 +48,15 @@ public class AreasPropertiesBase extends JPanel {
 	private static final long serialVersionUID = 1L;
 	
 	/**
-	 * Class constants.
-	 */
-	public static final int areaDescription = 0;
-	public static final int areaAlias = 1;
-	
-	/**
 	 * Splitter position.
 	 */
 	private static int splitterPositionState = 400;
+	
+	/**
+	 * Constants.
+	 */
+	public static final String description = "DESCRIPTION";
+	public static final String alias = "ALIAS";
 	
 	/**
 	 * Load dialog.
@@ -116,7 +113,7 @@ public class AreasPropertiesBase extends JPanel {
 	 * Area nodes.
 	 */
 	protected LinkedList<Area> areas;
-
+	
 	//$hide<<$
 	/**
 	 * Components.
@@ -191,8 +188,6 @@ public class AreasPropertiesBase extends JPanel {
 		setIcons();
 		// Set tool tips.
 		setToolTips();
-		// Set the listeners.
-		setListeners();
 		// Set callback functions.
 		setCallbacks();
 		// Load dialog.
@@ -200,6 +195,15 @@ public class AreasPropertiesBase extends JPanel {
 		// Reactivate GUI.
 		GeneratorMainFrame.reactivateGui();
 		//$hide<<$
+	}
+	
+	/**
+	 * Get areas.
+	 * @return
+	 */
+	private LinkedList<Area> getAreas() {
+		
+		return this.areas;
 	}
 	
 	/**
@@ -221,58 +225,6 @@ public class AreasPropertiesBase extends JPanel {
 			JPanel panelExtension) {
 		
 		return false;
-	}
-	
-	/**
-	 * Set text editor listeners.
-	 */
-	private void setListeners() {
-        
-        // Event receivers
-        Event.receiver(this, ActionGroup.areaModelChange, action -> {
-        	
-        	// On areas model updated
-        	if (action.foundFor(Event.modelUpdated)) {
-        		
-        		// Set automatic text update.
-        		setAutomaticTextUpdate();
-        		
-        		// Consider the changes of description and alias
-        		onChangeTexts();
-        		
-        		// Unlock description and alias text boxes
-        		lockInputs(false);
-        	}
-        });
-    }
-	
-	/**
-	 * Set automatic text update.
-	 */
-	private void setAutomaticTextUpdate() {
-		
-		textDescription.automaticUpdate = true;
-		textAlias.automaticUpdate = true;		
-	}
-
-	/**
-	 * On change description or alias.
-	 */
-	private void onChangeTexts() {
-		
-		textDescription.onChangeText();
-		textAlias.onChangeText();
-	}
-
-	/**
-	 * Lock inputs.
-	 * @param lock
-	 */
-	private void lockInputs(boolean lock) {
-		
-		// Unlock description and alias text boxes
-    	textDescription.lockInput(lock);
-    	textAlias.lockInput(lock);
 	}
 	
 	/**
@@ -315,30 +267,6 @@ public class AreasPropertiesBase extends JPanel {
 		Utility.localize(menuEditDependencies);
 		Utility.localize(menuAreaEdit);
 	}
-
-	/**
-	 * Update editor.
-	 */
-	public void updateEditor() {
-		
-		if (areas == null) {
-			return;
-		}
-		
-		// Reload areas.
-		LinkedList<Area> newAreas = new LinkedList<Area>();
-		AreasModel model = ProgramGenerator.getAreasModel();
-		
-		for (Area area : areas) {
-			Area newArea = model.getArea(area.getId());
-			if (newArea != null) {
-				newAreas.add(newArea);
-			}
-		}
-		
-		areas = newAreas;
-		setAreas(areas);
-	}
 	
 	/**
 	 * Set area.
@@ -356,15 +284,31 @@ public class AreasPropertiesBase extends JPanel {
 				selectedAreas = new LinkedList<Area>();
 			}
 			
-			// Try to save current changes.
-			saveChanges();
+			// Try to save unsaved changes in description and/or alias.
+			if (!textDescription.states.isSaved()) {
+				
+				Area changedArea = (Area) textDescription.getUser();
+				if (changedArea != null) {
+					
+					textDescription.saveText();
+				}
+			}
+			if (!textAlias.states.isSaved()) {
+				
+				Area changedArea = (Area) textAlias.getUser();
+				if (changedArea != null) {
+					
+					textAlias.saveText();
+				}
+			}
+			
+			// Initialize user objects.
+			textDescription.setUser(null);
+			textAlias.setUser(null);
 			
 			// Get number of areas and set the flag
 			int areaCount = selectedAreas.size();
 			boolean isSingleArea = areaCount == 1;
-			
-			// Set the lock flag
-			boolean lockTextBoxes = !isSingleArea;
 			
 			// If areas has been changed, display the changes.
 			if (!Utility.contentEquals(this.areas, selectedAreas)) {
@@ -372,50 +316,50 @@ public class AreasPropertiesBase extends JPanel {
 				// Remember the areas
 				this.areas = selectedAreas;
 				
+				String description = null;
+				String alias = null;
+				
 				// If is single area selected, enable description editing.
 				if (isSingleArea) {
+					
+					// Get area.
 					Area area = selectedAreas.getFirst();
 					
-					// Set texts
-					textDescription.setText(area.getDescription());
-					textAlias.setText(area.getAlias());
+					// Set user object of text boxes to this area.
+					textDescription.setUser(area);
+					textAlias.setUser(area);
+					
+					// Get description and alias. Trim the texts.
+					description = area.getDescription();
+					alias = area.getAlias();
+					
+					if (description == null) {
+						description = "";
+					}
+					if (alias == null) {
+						alias = "";
+					}
+					
+					// Update description, alias.
+					textDescription.setTextEx(description);
+					textAlias.setTextEx(alias);
 				}
-				
 				else if (areaCount > 1) {
 					
 					final String message = Resources.getString("org.multipage.generator.textMultipleAreasSelection");
 					
-					// Set messages
-					textDescription.setText(message);
-					textAlias.setText(message);
+					// Display message.
+					textDescription.setTextEx(message);
+					textAlias.setTextEx(message);
 				}
-				
-				// Lock/unlock text boxes
-				lockInputs(lockTextBoxes);
 				
 				// Extended method.
 				setAreaExtension();
 				
 				// Set the list of available slots
 				panelSlotList.setAreas(selectedAreas);
-				
-				// Invoke callback function.
-				onSetAreas(this.areas);
 			}
-			
-			// Lock/unlock text boxes
-			lockInputs(lockTextBoxes);
 		});
-	}
-	
-	/**
-	 * Set areas callback method.
-	 * @param areas
-	 */
-	protected void onSetAreas(LinkedList<Area> areas) {
-		
-		// Override this method.
-		
 	}
 
 	/**
@@ -426,12 +370,20 @@ public class AreasPropertiesBase extends JPanel {
 	}
 
 	/**
-	 * Save changes.
+	 * Save description changes.
 	 */
-	public void saveChanges() {
+	public void saveDescriptionChanges() {
 
 		// Try to save existing changes.
 		textDescription.saveText();
+	}
+	
+	/**
+	 * Save alias changes.
+	 */
+	public void saveAliasChanges() {
+
+		// Try to save existing changes.
 		textAlias.saveText();
 	}
 
@@ -443,9 +395,10 @@ public class AreasPropertiesBase extends JPanel {
 		/**
 		 * Save text callback event.
 		 */
-		BiConsumer<String, Consumer<String>> saveTextEvent = (description, setTextEvent) -> {
+		Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextEvent = textBox -> onSaveFinished -> onRequestUpdate -> {
 			
-			j.log("TEXT SAVE description");
+			// Get current areas.
+			LinkedList<Area> areas = getAreas();
 			
 			// If the areas reference is not set exit the method.
 			if (areas == null) {
@@ -459,7 +412,7 @@ public class AreasPropertiesBase extends JPanel {
 			
 			// Try to save the area description.
 			Middle middle = ProgramBasic.getMiddle();
-			MiddleResult result;
+			MiddleResult result = MiddleResult.OK;
 			Properties login = ProgramBasic.getLoginProperties();
 			Area area = areas.getFirst();
 			
@@ -468,21 +421,63 @@ public class AreasPropertiesBase extends JPanel {
 				return;
 			}
 			
-			// Update description.
-			result = middle.updateAreaDescription(login, area, description);
-			if (result != MiddleResult.OK) {
+			// Initialize the flag.
+			boolean saved = false;
+			
+			// Get text box text.
+			String text = null;
+			
+			// Update description or alias.
+			if (AreasPropertiesBase.description.equals(textBox.identifier)) {
 				
-				// On error reset description and display message.
-				setTextEvent.accept("");
+				if (textBox.isTextChange()) {
+					
+					text = textBox.getText();
+					result = middle.updateAreaDescription(login, area, text);
+					
+					saved = true;
+				}
+			}
+			else if (AreasPropertiesBase.alias.equals(textBox.identifier))  {
+				
+				if (textBox.isTextChange()) {
+					
+					text = textBox.getText();
+					result = middle.updateAreaAlias(login, area, text);
+					
+					saved = true;
+				}
+			}
+			
+			// On error display a message.
+			if (result != MiddleResult.OK) {
 				result.show(this);
 			}
+			
+			// On saves event...
+			if (saved) {
+				// Call finished function.
+				onSaveFinished.run();
+				
+				// Call request update function.
+				onRequestUpdate.run();
+			}
+		};
+		
+		textDescription.saveTextEvent = saveTextEvent;
+		textAlias.saveTextEvent = saveTextEvent;
+		
+		/**
+		 * Request update.
+		 */
+		Runnable updateEvent = () -> {
 			
 			// Propagate update event
 			Event.propagate(AreasPropertiesBase.this, Event.requestUpdateAll);
 		};
 		
-		textDescription.saveTextEvent = saveTextEvent;
-		textAlias.saveTextEvent = saveTextEvent;
+		textDescription.updateEvent = updateEvent;
+		textAlias.updateEvent = updateEvent;
 		
 		/**
 		 * Enable/disable callback events.
@@ -505,19 +500,23 @@ public class AreasPropertiesBase extends JPanel {
 		 */
 		textDescription.getGenuineTextEvent = () -> {
 			
+			// Get current areas.
+			LinkedList<Area> areas = getAreas();
+			
 			// Get area description.
 			Area area = areas.getFirst();		
 			String text = area.getDescription();
-			
 			return text;
 		};
 		
 		textAlias.getGenuineTextEvent = () -> {
 			
+			// Get current areas.
+			LinkedList<Area> areas = getAreas();
+			
 			// Get area alias.
 			Area area = areas.getFirst();		
 			String text = area.getAlias();
-			
 			return text;
 		};
 		
@@ -528,12 +527,10 @@ public class AreasPropertiesBase extends JPanel {
 			
 			// Reactivate GUI. (Error fix, Swing looses keyboard)
 			GeneratorMainFrame.reactivateGui();
-			
-			j.log("GUI REACTIVATED");
 		};
 		
-		textDescription.focusGained = reactivateGUI;
-		textAlias.focusGained = reactivateGUI;
+		textDescription.focusGainedEvent = reactivateGUI;
+		textAlias.focusGainedEvent = reactivateGUI;
 	}
 	
 	/**

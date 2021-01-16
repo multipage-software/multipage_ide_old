@@ -99,4 +99,29 @@ public class j {
 			e.printStackTrace();
 		}
 	}
+	
+	/**
+	 * Get function on stack.
+	 * @param stackLevel
+	 * @return
+	 */
+	public static String stack(int stackLevel) {
+		
+		// Omit current and the caller level.
+		stackLevel += 2;
+		
+		// Get stack info.
+		StackTraceElement [] stack = Thread.currentThread().getStackTrace();
+		
+		// Try to get stack element at given level.
+		if (stackLevel > 0 && stackLevel <= stack.length) {
+			StackTraceElement stackElement = stack[stackLevel];
+			
+			// Dump stack level.
+			String stackElementDump = stackElement.toString();
+			return stackElementDump;
+		}
+		
+		return "unknown";
+	}
 }

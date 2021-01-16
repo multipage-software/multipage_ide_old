@@ -98,9 +98,6 @@ public class ElementProperties extends JPanel {
 	 */
 	public void setNoArea() {
 		
-		// Delegate call.
-		areaEditor.saveChanges();
-		
 		// Set message.
 		message.setText(Resources.getString("org.multipage.generator.textNoAreaSelected"));
 		viewMessage();

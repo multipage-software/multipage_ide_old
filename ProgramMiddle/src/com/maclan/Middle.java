@@ -869,6 +869,15 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult updateAreaAlias(Properties login, long areaId, String alias);
+	
+	/**
+	 * Save area alias.
+	 * @param login
+	 * @param areaId
+	 * @param alias
+	 * @return
+	 */
+	public MiddleResult updateAreaAlias(Properties login, Area area, String alias);
 
 	/**
 	 * Update start language.
