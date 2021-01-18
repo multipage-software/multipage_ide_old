@@ -64,6 +64,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
@@ -891,6 +892,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				}
 			}
 		});
+		
+		// Add GUI change listener.
+		Event.receiver(this, ActionGroup.guiStateChange, action -> {
+			
+		});
 	}
 
 	/**
@@ -1361,6 +1367,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 						Utility.expandTop(tree, true);
 					}
 				});
+				
+				j.log("AREA TREE RELOADED");
 			}
 			else {
 				// Get current selected items.

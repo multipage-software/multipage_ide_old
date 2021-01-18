@@ -720,7 +720,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Listen for GUI state changes.
-		Event.receiver(this, ActionGroup.guiStateChanged, data -> {
+		Event.receiver(this, ActionGroup.guiStateChange, data -> {
 			
 			if (Event.reactivateGui.equals(data.event)) {
 				

@@ -30,6 +30,7 @@ import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.Middle;
@@ -291,6 +292,8 @@ public class AreasPropertiesBase extends JPanel {
 				if (changedArea != null) {
 					
 					textDescription.saveText();
+					
+					j.log("DESCRIPTION SAVED");
 				}
 			}
 			if (!textAlias.states.isSaved()) {
@@ -299,6 +302,8 @@ public class AreasPropertiesBase extends JPanel {
 				if (changedArea != null) {
 					
 					textAlias.saveText();
+					
+					j.log("ALIAS SAVED");
 				}
 			}
 			

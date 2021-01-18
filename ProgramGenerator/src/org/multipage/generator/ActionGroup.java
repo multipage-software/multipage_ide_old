@@ -30,7 +30,5 @@ public enum ActionGroup {
 	// Change of slot view.
 	slotViewChange,
 	// Change of GUI.
-	guiChange,
-	// State of GUI changed
-	guiStateChanged;
+	guiChange
 }

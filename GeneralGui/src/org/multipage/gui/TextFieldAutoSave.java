@@ -215,6 +215,18 @@ public class TextFieldAutoSave extends TextFieldEx {
 					focusGainedEvent.run();
 				}
 			}
+			
+			// Wrap the call.
+			@Override
+			public void focusLost(FocusEvent e) {
+				
+				super.focusLost(e);
+				
+				// Try to save unsaved text content.
+				if (!states.isSaved()) {
+					saveTextInternal();
+				}
+			}
 		});
 		
 		// Add a listener that saves the text box caret.
@@ -489,18 +501,6 @@ public class TextFieldAutoSave extends TextFieldEx {
 				// Reset caret.
 				TextFieldAutoSave.lastTextCaret = null;
 			}
-		});
-	}
-
-	/**
-	 * Request end of update signal.
-	 */
-	public void updateEnd() {
-		
-		SwingUtilities.invokeLater(() -> {
-			
-			// Reinitialize states.
-			states.initialize();
 		});
 	}
 }

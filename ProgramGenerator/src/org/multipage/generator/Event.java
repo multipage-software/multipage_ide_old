@@ -145,7 +145,7 @@ public enum Event {
 			),
 	// Reactivate GUI
 	reactivateGui(
-			ActionGroup.guiStateChanged
+			ActionGroup.guiStateChange
 			),
 	// Update of area sub relation.
 	updateAreaSubRelation,
@@ -746,86 +746,86 @@ public enum Event {
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for event group
-	 * @param eventGroup
+	 * @param actionGroup
 	 * @param action
 	 * @return - input key for action group
 	 */
-	public static Object receiver(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action) {
+	public static Object receiver(Object key, ActionGroup actionGroup, Consumer<Event.ActionData> action) {
 		
 		final long timeSpanMs = 500;
 		
 		// Delegate the call.
-		return doAdd(key, eventGroup, action, timeSpanMs, null);
+		return doAdd(key, actionGroup, action, timeSpanMs, null);
 	}
 	
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for event group
-	 * @param eventGroup
+	 * @param actionGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @return a key for action group
 	 */
-	public static Object add(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs) {
+	public static Object add(Object key, ActionGroup actionGroup, Consumer<Event.ActionData> action, Long timeSpanMs) {
 		
 		// Delegate the call.
-		return doAdd(key, eventGroup, action, timeSpanMs, null);
+		return doAdd(key, actionGroup, action, timeSpanMs, null);
 	}
 
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for event group
-	 * @param eventGroup
+	 * @param actionGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, ActionGroup eventGroup, Consumer<ActionData> action, String identifier) {
+	public static Object add(Object key, ActionGroup actionGroup, Consumer<ActionData> action, String identifier) {
 		
 		// Delegate the call.
-		return doAdd(key, eventGroup, action, defaultTimeSpanMs, identifier);
+		return doAdd(key, actionGroup, action, defaultTimeSpanMs, identifier);
 	}
 	
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for event group
-	 * @param eventGroup
+	 * @param actionGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - input key for action group
 	 */
-	public static Object add(Object key, ActionGroup eventGroup, Consumer<ActionData> action, Long timeSpanMs, String identifier) {
+	public static Object add(Object key, ActionGroup actionGroup, Consumer<ActionData> action, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
-		return doAdd(key, eventGroup, action, timeSpanMs, identifier);
+		return doAdd(key, actionGroup, action, timeSpanMs, identifier);
 	}
 	
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for event group
-	 * @param eventGroup
+	 * @param actionGroup
 	 * @param action
 	 * @param timeSpanMs
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object doAdd(Object key, ActionGroup eventGroup, Consumer<Event.ActionData> action, Long timeSpanMs, String identifier) {
+	private static Object doAdd(Object key, ActionGroup actionGroup, Consumer<Event.ActionData> action, Long timeSpanMs, String identifier) {
 		
 		// Try to get existing actions or create a new set.
 		synchronized (rules) {
 			
 			// Get actions
-			HashMap<Object, HashSet<ActionHandle>> actionsMap = rules.get(eventGroup);
+			HashMap<Object, HashSet<ActionHandle>> actionsMap = rules.get(actionGroup);
 			if (actionsMap != null) {
-				rules.remove(eventGroup);
+				rules.remove(actionGroup);
 			}
 			else {
 				actionsMap = new HashMap<Object, HashSet<ActionHandle>>();
 			}
 			
-			rules.put(eventGroup, actionsMap);
+			rules.put(actionGroup, actionsMap);
 			
 			// Sort rules depending on its priority, determined by a position in enumeration.
 			rules = Utility.sort(rules, (Object key1, Object key2) -> {
