@@ -99,6 +99,7 @@ public class JettyHttpServer extends ProgramHttpServer {
 		String password = "";
 		SyncMain.setAccessString("http://localhost:" + portNumber, user, password);
 		SyncMain.startService(true);
+		
 		JavaScriptDebugger.setEnabled(true); // Enable debugger.
 		
 		// Start debug client

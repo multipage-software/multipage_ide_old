@@ -102,10 +102,10 @@ public class SlotsTableModel extends AbstractTableModel {
 		// Add highlighted slots to the beginning of the array.
 		slots.addAll(highlightedSlots);
 		
-		// Add other slots.
-		//if (!showOnlyFound) {
+		// If not only found slots should be displayed, add all other slots.
+		if (!showOnlyFound) {
 			slots.addAll(otherSlots);
-		//}
+		}
 	}
 
 	/**

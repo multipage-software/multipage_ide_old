@@ -64,7 +64,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
@@ -495,7 +494,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		Obj<Area> newArea = new Obj<Area>();
 		if (GeneratorMainFrame.getVisibleAreasDiagram().addNewArea(parentArea, this, newArea, false)) {
 		
-			// Select and expand area item.
+			// Select and expand the area.
 			if (newArea.ref != null) {
 				SwingUtilities.invokeLater(() -> {
 					
@@ -843,7 +842,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	onSelectedTreeItem();
 		    	
 		    	// Propagate event.
-		    	Event.propagate(AreasTreeEditorPanel.this, Event.selectTreeArea, selectedTreeAreaIds);
+		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectTreeArea, selectedTreeAreaIds);
 		    }
 		});
 		
@@ -859,43 +858,34 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				onSelectedListItem();
 				
 		    	// Propagate event.
-		    	Event.propagate(AreasTreeEditorPanel.this, Event.selectListArea, selectedListAreaIds);
+		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectListArea, selectedListAreaIds);
 			}
 		});
 
-		// Add area view state event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
+		// Add "select all" event listener.
+		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
-				
-				if (action.foundFor(Event.selectAll)) {
-					
-					setAllSelection(true);
-				}
-				else if (action.foundFor(Event.unselectAll)) {
-					setAllSelection(false);
-				}
+				setAllSelection(true);
 			}
 		});
 		
-		// Add area view event listener.
-		Event.receiver(this, ActionGroup.areaViewChange, action -> {
+		// Add "unselect all" event listener.
+		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
 			
-			reload();
-			
-			// On focus home area
-			if (action.foundFor(Event.focusHomeArea)) {
-				
-				if (isShowing()) {
-					selectHomeArea();
-				}
+			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
+			if (isShowing) {
+				setAllSelection(false);
 			}
 		});
 		
-		// Add GUI change listener.
-		Event.receiver(this, ActionGroup.guiStateChange, action -> {
+		// Add "focus home area" event listener.
+		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
 			
+			if (isShowing()) {
+				selectHomeArea();
+			}
 		});
 	}
 
@@ -905,7 +895,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	private void removeListeners() {
 		
 		// Remove event listener.
-		Event.remove(this);
+		ConditionalEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -1367,8 +1357,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 						Utility.expandTop(tree, true);
 					}
 				});
-				
-				j.log("AREA TREE RELOADED");
 			}
 			else {
 				// Get current selected items.
@@ -1622,7 +1610,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		reload();
 		
 		int index = tabbedPane.getSelectedIndex();
-		Event.propagate(this, Event.subTabChange, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
+		ConditionalEvents.transmit(this, Signal.subTabChange, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
 	}
 
 	/**
@@ -1635,7 +1623,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			return;
 		}
 		
-		Event.propagate(this, Event.mainTabChange);
+		ConditionalEvents.transmit(this, Signal.mainTabChange);
 	}
 	
 	/**

@@ -404,7 +404,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		ConditionalEvents.transmit(this, Signal.monitorHomePage);
 	}
 	
 	/**

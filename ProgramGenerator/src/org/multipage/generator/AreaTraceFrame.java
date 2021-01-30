@@ -1054,7 +1054,7 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onUpdateInformation() {
 		
-		Event.propagate(AreaTraceFrame.this, Event.requestUpdateAll);
+		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.updateAllRequest);
 	}
 	
 	/**
@@ -1072,7 +1072,7 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		ConditionalEvents.transmit(this, Signal.monitorHomePage);
 	}
 	
 	/**

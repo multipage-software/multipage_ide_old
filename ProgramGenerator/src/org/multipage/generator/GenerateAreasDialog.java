@@ -503,7 +503,7 @@ public class GenerateAreasDialog extends JDialog {
 		
 		// Update data.
 		long areaId = containerArea.getId();
-		Event.propagate(GenerateAreasDialog.this, Event.createAreasTree, areaId);
+		ConditionalEvents.transmit(GenerateAreasDialog.this, Signal.createAreasTree, areaId);
 		
 		// Close the window.
 		dispose();

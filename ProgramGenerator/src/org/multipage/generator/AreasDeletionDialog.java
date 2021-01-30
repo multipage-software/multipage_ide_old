@@ -61,7 +61,7 @@ public class AreasDeletionDialog extends JDialog {
 	/**
 	 * Components.
 	 */	
-	private JScrollPane jScrollPane1;
+	private JScrollPane jScrollPane;
     private javax.swing.JButton cancelButton;
     private javax.swing.JButton deleteButton;
     private javax.swing.JCheckBox deleteIntersections;
@@ -74,6 +74,7 @@ public class AreasDeletionDialog extends JDialog {
 	 */
 	public AreasDeletionDialog(Component parentComponent, HashSet<AreaShapes> topAreas, Area parentArea) {
         super(Utility.findWindow(parentComponent), ModalityType.APPLICATION_MODAL);
+        setResizable(false);
 
 
         this.topAreas = topAreas;
@@ -121,16 +122,16 @@ public class AreasDeletionDialog extends JDialog {
 		setTitle("org.multipage.generator.textConfirmAreaDeletion");
     	
         setPreferredSize(new Dimension(400, 220));
-        setSize(new Dimension(400, 210));
         
         deleteIntersections = new javax.swing.JCheckBox();
         deleteButton = new javax.swing.JButton();
+        deleteButton.setPreferredSize(new Dimension(80, 25));
         cancelButton = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        cancelButton.setPreferredSize(new Dimension(80, 25));
+        jScrollPane = new javax.swing.JScrollPane();
         message = new javax.swing.JEditorPane();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setResizable(false);
 
         deleteIntersections.setText("org.multipage.generator.textDeleteIntersections");
         deleteIntersections.addActionListener(new java.awt.event.ActionListener() {
@@ -159,7 +160,7 @@ public class AreasDeletionDialog extends JDialog {
         message.setContentType("text/html");
         message.setEditable(false);
         message.setOpaque(false);
-        jScrollPane1.setViewportView(message);
+        jScrollPane.setViewportView(message);
         
 		// Set buttons.
 		Insets insets = new Insets(0, 0, 0, 0);
@@ -168,23 +169,21 @@ public class AreasDeletionDialog extends JDialog {
 		cancelButton.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
 		cancelButton.setMargin(insets);
 		SpringLayout springLayout = new SpringLayout();
-		springLayout.putConstraint(SpringLayout.NORTH, cancelButton, 6, SpringLayout.SOUTH, deleteIntersections);
-		springLayout.putConstraint(SpringLayout.SOUTH, cancelButton, 31, SpringLayout.SOUTH, deleteIntersections);
+		springLayout.putConstraint(SpringLayout.SOUTH, deleteButton, -10, SpringLayout.SOUTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.SOUTH, cancelButton, -10, SpringLayout.SOUTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, jScrollPane, -10, SpringLayout.EAST, getContentPane());
 		springLayout.putConstraint(SpringLayout.WEST, deleteButton, 212, SpringLayout.WEST, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, deleteButton, -6, SpringLayout.WEST, cancelButton);
-		springLayout.putConstraint(SpringLayout.SOUTH, deleteButton, 31, SpringLayout.SOUTH, deleteIntersections);
-		springLayout.putConstraint(SpringLayout.NORTH, deleteButton, 6, SpringLayout.SOUTH, deleteIntersections);
 		springLayout.putConstraint(SpringLayout.WEST, cancelButton, 301, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, cancelButton, 0, SpringLayout.EAST, jScrollPane1);
-		springLayout.putConstraint(SpringLayout.EAST, jScrollPane1, 384, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, cancelButton, 0, SpringLayout.EAST, jScrollPane);
 		springLayout.putConstraint(SpringLayout.NORTH, deleteIntersections, 120, SpringLayout.NORTH, getContentPane());
 		springLayout.putConstraint(SpringLayout.WEST, deleteIntersections, 10, SpringLayout.WEST, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, deleteIntersections, 390, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.NORTH, jScrollPane1, 11, SpringLayout.NORTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, jScrollPane1, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.SOUTH, jScrollPane1, 113, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.NORTH, jScrollPane, 11, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, jScrollPane, 10, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.SOUTH, jScrollPane, 113, SpringLayout.NORTH, getContentPane());
 		getContentPane().setLayout(springLayout);
-		getContentPane().add(jScrollPane1);
+		getContentPane().add(jScrollPane);
 		getContentPane().add(deleteIntersections);
 		getContentPane().add(deleteButton);
 		getContentPane().add(cancelButton);

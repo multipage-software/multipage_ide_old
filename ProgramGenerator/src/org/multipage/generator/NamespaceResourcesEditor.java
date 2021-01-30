@@ -967,7 +967,7 @@ public abstract class NamespaceResourcesEditor extends JPanel implements Searcha
 	    addResourceToList(resource);
 		// Update information.
 	    long resourceId = resource.getId();
-		Event.propagate(NamespaceResourcesEditor.this, Event.newTextResource, resourceId);
+		ConditionalEvents.transmit(NamespaceResourcesEditor.this, Signal.newTextResource, resourceId);
 	}
 	
 	/**

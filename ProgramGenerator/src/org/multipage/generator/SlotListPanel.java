@@ -219,6 +219,7 @@ public class SlotListPanel extends JPanel {
 	protected JMenuItem menuCopySlots;
 	protected JMenuItem menuFocusArea;
 	protected JMenuItem menuSetDefaultNormal;
+	protected JMenuItem menuClearSearch;
 	
 	/**
 	 * Search dialog object.
@@ -377,7 +378,7 @@ public class SlotListPanel extends JPanel {
 	}
 
 	/**
-	 * Create trayMenu.
+	 * Create popup menu.
 	 */
 	protected void createMenu() {
 		
@@ -424,7 +425,7 @@ public class SlotListPanel extends JPanel {
 		});
 		popupMenu.add(menuFocusArea);
 		
-		// Set default values trayMenu item.
+		// Set default values menu item.
 		menuSetDefaultNormal = new JMenuItem("org.multipage.generator.textSetDefaultNormalSlotValues");
 		menuSetDefaultNormal.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -432,6 +433,15 @@ public class SlotListPanel extends JPanel {
 			}
 		});
 		popupMenu.add(menuSetDefaultNormal);
+		
+		// Clear search results.
+		menuClearSearch = new JMenuItem("org.multipage.generator.textClearAreaSlotSearchResults");
+		menuClearSearch.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				clearSearch();
+			}
+		});
+		popupMenu.add(menuClearSearch);
 	}
 
 	/**
@@ -489,7 +499,19 @@ public class SlotListPanel extends JPanel {
 		}
 		
 		// Update information.
-		Event.propagate(SlotListPanel.this, Event.setSlotsDefaultValues);
+		ConditionalEvents.transmit(SlotListPanel.this, Signal.setSlotsDefaultValues);
+	}
+
+	/**
+	 * Clear search results.
+	 */
+	protected void clearSearch() {
+		
+		// Escape search mode.
+		escapeFoundSlotsMode();
+		
+		// Update panel.
+		updatePanelInformation();
 	}
 
 	/**
@@ -553,22 +575,41 @@ public class SlotListPanel extends JPanel {
 		initColumnListener();
 		// Enable web links in description.
 		Utility.enableWebLinks(this, textDescription);
-		// Init timer
+		// Initialize timer
 		initLoadDescriptionTimer();
 		// Set listener
-		setListener();
+		setListeners();
 	}
 	
 	/**
 	 * Set listener
 	 */
-	private void setListener() {
+	private void setListeners() {
 		
-		// Create event receiver
-		Event.receiver(this, ActionGroup.slotViewChange, action -> {
+		addAncestorListener(new AncestorListener() {
+		
+			// On panel use.
+			public void ancestorAdded(AncestorEvent event) {
+				
+				// Create "update all" request event.
+				ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAllRequest, action -> {
+					
+					// Update slot list
+					update();
+				});
+			}
 			
-			// Update slot list
-			update();
+			// On panel release.
+			public void ancestorRemoved(AncestorEvent event) {
+				
+				// Remove receivers.
+				ConditionalEvents.removeReceivers(SlotListPanel.this);
+			}
+			
+			public void ancestorMoved(AncestorEvent event) {
+				
+				// Nothing to do.
+			}
 		});
 	}
 
@@ -1008,6 +1049,7 @@ public class SlotListPanel extends JPanel {
 		Utility.localize(menuCopySlots);
 		Utility.localize(menuFocusArea);
 		Utility.localize(menuSetDefaultNormal);
+		Utility.localize(menuClearSearch);
 	}
 
 	/**
@@ -1020,6 +1062,7 @@ public class SlotListPanel extends JPanel {
 		menuCopySlots.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
 		menuFocusArea.setIcon(Images.getIcon("org/multipage/gui/images/search_icon.png"));
 		menuSetDefaultNormal.setIcon(Images.getIcon("org/multipage/generator/images/default_value.png"));
+		menuClearSearch.setIcon(Images.getIcon("org/multipage/generator/images/clear_search.png"));
 	}
 
 	/**
@@ -1037,9 +1080,9 @@ public class SlotListPanel extends JPanel {
         ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/update_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdateSlots");
         toolBar.addSeparator();
         ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/search_icon.png", this, "onSearch", "org.multipage.generator.tooltipSearchInSlots");
+        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/display_search.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
         toolBar.addSeparator();
         buttonShowUserSlots = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/preferred.png", this, "onShowUser", "org.multipage.generator.tooltipShowUserSlots");
-        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/selected.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
         toolBar.addSeparator();
         ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/help_small.png", this, "onEditSlotDescription", "org.multipage.generator.tooltipEditUserSlotDescription");
 	}
@@ -1250,7 +1293,7 @@ public class SlotListPanel extends JPanel {
 		onChange();
 		
 		// Update information.
-		Event.propagate(SlotListPanel.this, Event.removeUserSlots);
+		ConditionalEvents.transmit(SlotListPanel.this, Signal.removeUserSlots);
 	}
 
 	/**
@@ -2190,6 +2233,6 @@ public class SlotListPanel extends JPanel {
 		// Update data.
 		onChange();
 		
-		Event.propagate(SlotListPanel.this, Event.moveSlots);
+		ConditionalEvents.transmit(SlotListPanel.this, Signal.moveSlots);
 	}
 }

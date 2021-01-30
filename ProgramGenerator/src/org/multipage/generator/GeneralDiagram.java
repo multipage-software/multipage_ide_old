@@ -127,7 +127,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		tooltipWindow = new ToolTipWindow(GeneratorMainFrame.getFrame());
 		toolTipTimer = new javax.swing.Timer(period, e -> {
 			
-			Event.propagate(GeneralDiagram.class, Event.tooltipTimer);
+			ConditionalEvents.transmit(GeneralDiagram.class, Signal.tooltipTimer);
 		});
 		toolTipTimer.start();
 	}
@@ -154,7 +154,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateVisibleDiagrams() {
 		
-		Event.propagate(GeneralDiagram.class, Event.requestUpdateAll);
+		ConditionalEvents.transmit(GeneralDiagram.class, Signal.updateAllRequest);
 	}
 	
 	/**
@@ -162,7 +162,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateDiagramsControls() {
 		
-		Event.propagate(GeneralDiagram.class, Event.updateControls);
+		ConditionalEvents.transmit(GeneralDiagram.class, Signal.updateControls);
 	}
 
 	/**
@@ -506,16 +506,10 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		});
 		positionSaveTimer.setRepeats(false);
 		
-		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.guiChange, action -> {
+		// Add "load diagrams" event listener.
+		ConditionalEvents.receiver(this, Signal.loadDiagrams, action -> {
 			
-			if (Event.passes(() -> {
-				
-				if (Event.sourceClass(action, Event.loadDiagrams, GeneratorMainFrame.class)) {
-					return true;
-				}
-				return false;
-			})) {
+			if (action.sourceClass(GeneratorMainFrame.class)) {
 				
 				// Initialize tool list.
 				toolList.initialize();
@@ -523,6 +517,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 				// Reset diagram.
 				resetToolTip();
 				
+				// Update GUI.
 				GeneralDiagram.this.setScrollBarsLocation();
 				GeneralDiagram.this.repaint();
 			}
@@ -534,7 +529,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		ConditionalEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -1184,7 +1179,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void removeDiagram() {
 		
-		Event.propagate(this, Event.removeDiagram);
+		ConditionalEvents.transmit(this, Signal.removeDiagram);
 	}
 
 	/**

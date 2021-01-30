@@ -300,7 +300,7 @@ public class CustomizedControls extends JDialog {
 	protected void onReloadButton() {
 
 		// Reload diagrams.
-		Event.propagate(CustomizedControls.this, Event.updateColors);
+		ConditionalEvents.transmit(CustomizedControls.this, Signal.updateColors);
 	}
 
 	/**

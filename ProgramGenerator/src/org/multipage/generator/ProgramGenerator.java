@@ -35,6 +35,8 @@ import com.maclan.Resource;
 import com.maclan.Slot;
 import com.maclan.server.TextRenderer;
 
+import build_number.BuildNumber;
+
 /**
  * @author
  *
@@ -296,6 +298,16 @@ public class ProgramGenerator {
 		PathSelectionDialog.serializeData(outputStream);
 		CreateAreasFromSourceCode.serializeData(outputStream);
 		ClonedDiagramDialog.serializeData(outputStream);
+	}
+	
+	/**
+	 * Get application title.
+	 * @return
+	 */
+	public static String getApplicationTitle() {
+		
+		return String.format(Resources.getString("org.multipage.generator.textMainFrameCaption"), BuildNumber.getVersion(), 
+				ProgramGenerator.class.getSuperclass().getName().equals("GeneratorFullMain") ? "Network" : "Standalone");
 	}
 
 	/**
@@ -673,14 +685,14 @@ public class ProgramGenerator {
 			// LOG
 			long start = new Date().getTime();
 			
-			// Load areas model from datrabase.
+			// Load areas model from database.
 			MiddleResult result = ProgramBasic.getMiddle().loadAreasModel(properties, model, loadHiddenSlots);
 			
 			// LOG
 			System.out.format("RELOAD MODEL: operation time span %sms\n", new Date().getTime() - start);
 			
-			// Propagate event
-			Event.propagate(model, Event.modelUpdated);
+			// Propagate event which informs about model update.
+			ConditionalEvents.transmit(model, Signal.modelUpdated);
 			
 			return result;
 		}
@@ -703,5 +715,28 @@ public class ProgramGenerator {
 			}
 		}
 		return areaIds;
+	}
+	
+	/**
+	 * Return updated list of areas.
+	 * @param areas
+	 * @return
+	 */
+	public static LinkedList<Area> getUpdatedAreas(LinkedList<Area> areas) {
+		
+		LinkedList<Area> updatedAreas = new LinkedList<Area>();
+		
+		// Update each area.
+		if (areas != null) {
+			for (Area area : areas) {
+				
+				long areaId = area.getId();
+				Area updatedArea = getArea(areaId);
+				
+				updatedAreas.add(updatedArea);
+			}
+		}
+		
+		return updatedAreas;
 	}
 }

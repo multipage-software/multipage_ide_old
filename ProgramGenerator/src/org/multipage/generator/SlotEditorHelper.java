@@ -190,7 +190,7 @@ public class SlotEditorHelper {
 
 		// Update information.
 		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.saveSlot, slotId);
+		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.saveSlot, slotId);
 
 		saveDialog();
 	}
@@ -212,7 +212,7 @@ public class SlotEditorHelper {
 		
 		// Update information.
 		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.cancelSlotEditor, slotId);
+		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.cancelSlotEditor, slotId);
 
 		saveDialog();
 	}
@@ -716,7 +716,7 @@ public class SlotEditorHelper {
 		
 		// Update information.
 		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.saveSlot, slotId);
+		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.saveSlot, slotId);
 		
 		System.out.format("SAVE EVENT: %dms updateInformation\n", new Date().getTime() - start);
 		start = new Date().getTime();
@@ -1129,7 +1129,7 @@ public class SlotEditorHelper {
 	 */
 	public void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		ConditionalEvents.transmit(this, Signal.monitorHomePage);
 	}
 
 	/**

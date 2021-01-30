@@ -238,13 +238,6 @@ public class SplitProperties extends JPanel {
 	 */
 	public void maximize() {
 		
-		// TODO: debug
-		SwingUtilities.invokeLater(() -> {
-			GeneratorMainFrame.getFrame().setState(JFrame.ICONIFIED);
-			GeneratorMainFrame.getFrame().setState(JFrame.NORMAL);
-			GeneratorMainFrame.getFrame().toFront();
-		});
-		
 		// Set flag.
 		minimized = false;
 		// Show properties.
@@ -255,12 +248,9 @@ public class SplitProperties extends JPanel {
 		maximizeButton.setVisible(false);
 		// Show minimize button.
 		minimizeButton.setVisible(true);
-		
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				repaint();
-			}
+		// Repaint the panel.
+		SwingUtilities.invokeLater(() -> {
+			repaint();
 		});
 	}
 
@@ -279,8 +269,10 @@ public class SplitProperties extends JPanel {
 		maximizeButton.setVisible(true);
 		// Set main panel.
 		main.setBounds(0, 0, getWidth() - minimizedWidth, getHeight());
-		
-		repaint();
+		// Repaint the panel.
+		SwingUtilities.invokeLater(() -> {
+			repaint();
+		});
 	}
 
 	/**

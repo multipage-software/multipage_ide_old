@@ -8,6 +8,8 @@ package org.multipage.generator;
 
 import java.awt.BorderLayout;
 import java.awt.Panel;
+import java.awt.event.ContainerEvent;
+import java.awt.event.ContainerListener;
 
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -145,16 +147,26 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// GUI change receiver
-		Event.receiver(this, ActionGroup.guiChange, action -> {
+		addContainerListener(new ContainerListener() {
 			
-			// On update
-			if (action.foundFor(Event.requestUpdateAll)) {
+			// On panel added.
+			@Override
+			public void componentAdded(ContainerEvent e) {
 				
-				// Reload content of the monitor
-				if (isShowing()) {
-					reloadContent();
-				}
+				// The "update all" request receiver.
+				ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
+					
+					// Reload content of the monitor.
+					if (isShowing()) {
+						reloadContent();
+					}
+				});
+			}
+			
+			@Override
+			public void componentRemoved(ContainerEvent e) {
+				
+				// Nothing to do.
 			}
 		});
 	}
@@ -197,7 +209,8 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	 */
 	public void dispose() {
 		 
-
+		// Remove receivers for the panel.
+		ConditionalEvents.removeReceivers(this);
 	}
 	
 	/**

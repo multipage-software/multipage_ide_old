@@ -447,7 +447,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.updateAreaResources, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.updateAreaResources, areaId);
 	}
 	
 	/**
@@ -757,7 +757,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.editResource, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.editResource, areaId);
 	}
 	
 	/**
@@ -806,7 +806,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.deleteResources, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.deleteResources, areaId);
 	}
 	
 	/**
@@ -915,7 +915,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 	    
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.createTextResource, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.createTextResource, areaId);
 	}
 
 	/**

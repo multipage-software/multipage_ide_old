@@ -6,14 +6,16 @@
  */
 package org.multipage.generator;
 
+import org.multipage.generator.ConditionalEvents.Message;
+
 /**
  * Groups.
  * @author user
  *
  */
-public enum ActionGroup {
+public enum SignalType implements EventCondition {
 	
-	// Sets prirority of actions. (First groups have higher priority.)
+	// Sets also the priority of signals. (Most top groups have higher priority.)
 	
 	// Change of area model.
 	areaModelChange,
@@ -30,5 +32,14 @@ public enum ActionGroup {
 	// Change of slot view.
 	slotViewChange,
 	// Change of GUI.
-	guiChange
+	guiChange;
+
+	/**
+	 * Returns true if the incoming message matches this signal type.
+	 */
+	@Override
+	public boolean matches(Message incomingMessage) {
+		
+		return incomingMessage.signal.isOfType(this);
+	}
 }

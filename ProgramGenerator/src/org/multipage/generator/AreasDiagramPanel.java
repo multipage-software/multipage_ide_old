@@ -385,7 +385,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(areaId);
 			
-			Event.propagate(AreasDiagramPanel.this, Event.selectDiagramAreas, selectedAreaIds);
+			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.onClickDiagramAreas, selectedAreaIds);
 		}
 	}
 	
@@ -414,6 +414,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	protected void onClickArea() {
 		
+		// Clear selection in favorites.
 		listFavorites.clearSelection();
 		
 		// Set new area selection.
@@ -424,12 +425,8 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(area.getId());
 			
-			Event.propagate(AreasDiagramPanel.this, Event.selectDiagramAreas, selectedAreaIds);
-			
-			// On sub/super areas.
-			if (buttonSubAreas.isSelected() || buttonSuperAreas.isSelected()) {
-				onDoubleClickArea();
-			}
+			// Propagate "on related areas clicked" event.
+			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.onClickRelatedAreas, selectedAreaIds);
 		}
 	}
 	
@@ -572,61 +569,61 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// Listen for area view state change.
-		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
-				
-			if ((Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this.areasDiagram)
-					|| Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this))
-					&& action.relatedInfo instanceof HashSet) {
-				
-				selectedAreaIds = (HashSet) action.relatedInfo;
-			}
-			else if (AreasDiagramPanel.this.isShowing()) {
-				
-				if (action.foundFor(Event.selectAll)) {
-					selectedAreaIds = ProgramGenerator.getAllAreaIds();
-				}
-				else if (action.foundFor(Event.unselectAll)) {
-					selectedAreaIds = new HashSet<Long>();
-				}
-			}
+		// Listen for "related areas' clicked" event.
+		ConditionalEvents.receiver(this, Signal.onClickRelatedAreas, action -> {
+			
+			// Get selected areas.
+			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+			
+			// Propagate "show areas properties" event.
+			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.showAreasProperties, selectedAreaIds);
+			// Propagate "select diagram areas" event.
+			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.selectDiagramAreas, selectedAreaIds);
 		});
 		
-		// Listen for area view change.
-		Event.receiver(this, ActionGroup.areaViewChange, action -> {
-			
-			boolean isShowing = AreasDiagramPanel.this.isShowing();
-			
-			if (isShowing) {
-			
-				if (action.foundFor(Event.selectAll)) {
-					setAllSelection(true);
-				}
-				else if (action.foundFor(Event.unselectAll)) {
-					setAllSelection(false);
-				}
-			}
-			
-			if (Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this.areasDiagram)
-					|| Event.sourceObject(action, Event.selectDiagramAreas, AreasDiagramPanel.this)
-					|| Event.sourceObject(action, Event.mainTabChange, AreasDiagramPanel.this.areasDiagram)
-					|| (isShowing && action.foundFor(Event.selectAll, Event.unselectAll))) {
+		// Listen for "show areas' relations" event.
+		ConditionalEvents.receiver(this, Signal.showAreasRelations, action -> {
 				
-				// Diaplay related areas.
+			if (action.relatedInfo instanceof HashSet<?>) {
+				
+				selectedAreaIds = (HashSet<Long>) action.relatedInfo;
 				displayRelatedAreasForSet(selectedAreaIds);
 			}
 		});
 		
-		// Listen for GUI changes.
-		Event.receiver(this, ActionGroup.guiChange, action -> {
+		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
 			
-			if (action.foundFor(Event.focusTabArea) && AreasDiagramPanel.this.isShowing()) {
+			if (AreasDiagramPanel.this.isShowing()) {
+				
+				selectedAreaIds = ProgramGenerator.getAllAreaIds();
+				setAllSelection(true);
+				displayRelatedAreasForSet(selectedAreaIds);
+			}
+		});
+		
+		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
+			
+			if (AreasDiagramPanel.this.isShowing()) {
+				
+				selectedAreaIds = new HashSet<Long>();
+				setAllSelection(false);
+				displayRelatedAreasForSet(selectedAreaIds);
+			}
+		});
+		
+		// Listen for area focus changes.
+		ConditionalEvents.receiver(this, Signal.focusTabArea, action -> {
+			
+			if (AreasDiagramPanel.this.isShowing()) {
 				
 				Long tabAreaId = action.relatedInfo instanceof Long ? (Long) action.relatedInfo : 0L;
 				focusAreaNear(tabAreaId);
 			}
-			else if (action.foundFor(Event.focusHomeArea) && AreasDiagramPanel.this.isShowing()) {
-				
+		});
+		
+		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
+			
+			if (AreasDiagramPanel.this.isShowing()) {
 				focusHomeArea();
 			}
 		});
@@ -638,7 +635,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		ConditionalEvents.removeReceivers(this);
 	}
 
 	/**
@@ -1405,7 +1402,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		areasDiagram.onTabPanelChange(e, selectedIndex);
 		
 		// Propagate event.
-		Event.propagate(AreasDiagramPanel.this, Event.mainTabChange);
+		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.mainTabChange);
 	}
 	
 	/**

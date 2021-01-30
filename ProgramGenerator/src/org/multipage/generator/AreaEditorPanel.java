@@ -396,7 +396,7 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		ConditionalEvents.transmit(this, Signal.monitorHomePage);
 	}
 	
 	/**

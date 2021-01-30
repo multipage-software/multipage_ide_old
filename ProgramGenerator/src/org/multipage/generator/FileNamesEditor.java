@@ -207,7 +207,7 @@ public class FileNamesEditor extends JDialog {
 		
 		dispose();
 		
-		Event.propagate(FileNamesEditor.this, Event.updateAreaFileNames);
+		ConditionalEvents.transmit(FileNamesEditor.this, Signal.updateAreaFileNames);
 	}
 
 	/**

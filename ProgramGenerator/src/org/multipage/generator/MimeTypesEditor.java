@@ -404,7 +404,7 @@ public class MimeTypesEditor extends JDialog {
 		// Import data.
 		importMimeTypes(file);
 		
-		Event.propagate(MimeTypesEditor.this, Event.importMimeTypes);
+		ConditionalEvents.transmit(MimeTypesEditor.this, Signal.importMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();
@@ -491,7 +491,7 @@ public class MimeTypesEditor extends JDialog {
 		MiddleUtility.importFactoryMimeTypes(ProgramBasic.getMiddle(),
 				ProgramBasic.getLoginProperties(), this);
 		
-		Event.propagate(MimeTypesEditor.this, Event.defaultMimeTypes);
+		ConditionalEvents.transmit(MimeTypesEditor.this, Signal.defaultMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();

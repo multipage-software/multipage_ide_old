@@ -16,6 +16,7 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
+import java.awt.Menu;
 import java.awt.MenuItem;
 import java.awt.Point;
 import java.awt.PopupMenu;
@@ -731,6 +732,39 @@ public class Utility {
 	public static boolean ask2(Component component, String text) {
 
 		return JOptionPane.showConfirmDialog(component, text) == JOptionPane.YES_OPTION;
+	}
+	
+	/**
+	 * Show message and ask user. The dialog window is always on top.
+	 * @param text
+	 * @return
+	 */
+	public static boolean ask2Top(String text) {
+		
+		// Create and initialize panel.
+		JOptionPane optionPane = new JOptionPane();
+		
+		optionPane.setMessage(text);
+		optionPane.setMessageType(JOptionPane.QUESTION_MESSAGE);
+		optionPane.setOptionType(JOptionPane.YES_NO_CANCEL_OPTION);
+		
+		// Create and show dialog. The dialog displayed is on top of the desktop windows.
+		JDialog dialog = optionPane.createDialog(Resources.getString("org.multipage.gui.titlePleaseConfirm"));
+		dialog.setIconImage(Images.getImage("org/multipage/gui/images/main.png"));
+		dialog.setAlwaysOnTop(true);
+		dialog.setVisible(true);
+		
+		// Try to get selected value.
+		Object value = optionPane.getValue();
+		if (value instanceof Integer) {
+			
+			Integer answer = (Integer) value;
+			boolean returnedValue = answer == JOptionPane.YES_OPTION;
+			
+			return returnedValue;
+		}
+		
+		return false;
 	}
 
 	/**
@@ -3945,6 +3979,33 @@ public class Utility {
 		
 		// Attach item to menu.
 		menu.add(item);
+	}
+	
+	/**
+	 * Add sub menu item.
+	 * @param subMenu
+	 * @param textResource
+	 * @param listener
+	 */
+	public static void addSubMenu(Menu subMenu, String textResource, ActionListener listener) {
+		
+		// Load text.
+		String text = "";
+		if (textResource != null && !textResource.isEmpty()) {
+			text = Resources.getString(textResource);
+			if (text == null) {
+				text = "";
+			}
+		}
+		
+		// Create menu item.
+		MenuItem item = new MenuItem(text);
+		
+		// Add action.
+		item.addActionListener(listener);
+		
+		// Attach item to menu.
+		subMenu.add(item);
 	}
 	
 	/**

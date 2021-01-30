@@ -330,63 +330,95 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private void setListeners() {
 		
 		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, action -> {
+		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAllRequest), action -> {
 			
-			// Reload diagram.
-			if (action.foundFor(Event.loadDiagrams) || action.foundFor(Event.requestUpdateAll)) {
-				
-				reload(false, false);
-				setOverview();
-			}
-		});	
+			reload(false, false);
+			setOverview();
+		});
 		
-		// Add area view event listener.
-		Event.receiver(this, ActionGroup.areaViewChange, acion -> {
+		// Add receiver for the "click areas in diagram" event.
+		ConditionalEvents.receiver(this, Signal.onClickDiagramAreas, action -> {
 			
-			if (Event.sourceObject(acion, Event.mainTabChange, AreasDiagram.this.parentEditor)
-					|| Event.sourceObject(acion, Event.selectDiagramAreas, AreasDiagram.this.parentEditor)
-					|| acion.foundFor(Event.requestUpdateAll)
-					|| acion.foundFor(Event.selectAll)) {
+			// Check the source diagram, clicked graph point and if CTRL key has been pressed.
+			if (AreasDiagram.this.equals(action.source) && action.relatedInfo instanceof Point2D && action.isAdditionalInfo(0, Boolean.class)) {
 				
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
+				// Pull graph point and CTRL flag from the event action.
+				Point2D graphPoint = (Point2D) action.relatedInfo;
+				boolean ctrlKeyPressed = action.getAdditionalInfo(0);
+				
+				// Select area and sub areas in this diagram. The diagram must be repainted.
+				select(graphPoint, !ctrlKeyPressed);
+				repaint();
+				
+				// Get selected area IDs.
+				HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+				
+				// Propagate the "show areas' properties" signal.
+				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedAreaIds);
+				// Propagate the "show areas' relations" signal.
+				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedAreaIds);
+			}
+		});
+		
+		// Add receiver for the "drag areas in diagram" event.
+		ConditionalEvents.receiver(this, Signal.onDragDiagramAreas, action -> {
+			
+			// Check the source diagram.
+			if (AreasDiagram.this.equals(action.source)) {
+				
+				// Get selected area IDs.
+				HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+				
+				// Propagate the "show areas' properties" signal.
+				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedAreaIds);
+				// Propagate the "show areas' relations" signal.
+				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedAreaIds);
+			}
+		});
+		
+		// Listen for "select diagram areas" event.
+		ConditionalEvents.receiver(this, Signal.selectDiagramAreas, action -> {
+			
+			if (action.relatedInfo instanceof HashSet<?>) {
+				
+				// Pull set of area IDs.
+				HashSet<Long> selectedAreaIds = (HashSet<Long>) action.relatedInfo;
+				// Remove selection.
+				removeSelection();
+				// Select the areas.
+				selectAreas(selectedAreaIds);
+				repaint();
+			}
+		});
+		
+		// Add area selection receiver.
+		ConditionalEvents.receiver(this, Signal.array(Signal.mainTabChange, Signal.updateAllRequest, Signal.selectAll), acion -> {
+			if (AreasDiagram.this.isShowing()) {
 				
 				HashSet<Long> selectedAreaIds = AreasDiagram.this.parentEditor.getSelectedAreaIds();
 				removeSelection();
 				selectAreas(selectedAreaIds);
 				setOverview();
+				repaint();
 			}
-			if (acion.foundFor(Event.unselectAll)) {
-				
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
-				
+		});
+			
+		// Add unselect all receiver.
+		ConditionalEvents.receiver(this, Signal.unselectAll, acion -> {
+											 
+			if (AreasDiagram.this.isShowing()) {
+			
 				removeSelection();
 				setOverview();
+				repaint();
 			}
 		});
 		
-		// Add GUI event listener.
-		Event.receiver(this, ActionGroup.guiChange, action -> {
-			
-			// Repaint GUI.
-			if (action.foundFor(Event.loadDiagrams, Event.selectDiagramAreas, Event.mainTabChange)
-					|| Event.targetClass(action, AreasDiagram.class)
-					|| action.foundFor(Event.requestUpdateAll, Event.selectAll, Event.unselectAll)) {
-								
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
-				
-				repaint();
-			}
+		// Add focus event receiver.
+		ConditionalEvents.receiver(this, Signal.focusBasicArea, action -> {
 			
 			// Focus currently visible areas diagram on the Basic Area.
-			if (Event.sourceClass(action, Event.focusBasicArea, GeneratorMainFrame.class)
-					&& AreasDiagram.this.isShowing()) {
-				
+			if (action.sourceClass(GeneratorMainFrame.class) && AreasDiagram.this.isShowing()) {
 				center();
 			}
 		});
@@ -397,7 +429,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		ConditionalEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -845,12 +877,17 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 					
 					// Convert mouse position to graph coordinates.
 					Point2D graphPoint = doTransformation(preselected);
-						
-					// Select area and sub areas.
-					select(graphPoint, !e.isControlDown());
 					
-					// Propagate event.
-					Event.propagate(AreasDiagram.this, Event.selectDiagramAreas, AreasDiagram.this.getSelectedAreaIds());
+					// Get CTRL key pressed.
+					boolean ctrlKeyPressed = e.isControlDown();
+					
+					// Propagate "on diagram areas clicked" event.
+					ConditionalEvents.transmit(AreasDiagram.this, Signal.onClickDiagramAreas, graphPoint, ctrlKeyPressed);
+				}
+				else {
+					
+					// Propagate "on diagram areas drag end" event.
+					ConditionalEvents.transmit(AreasDiagram.this, Signal.onDragDiagramAreas);
 				}
 			}
 		}
@@ -877,8 +914,11 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		Point mouse = e.getPoint();
 		int button = e.getButton();
 		
+		// Get selected diagram tool.
+		ToolId selectedToolId = toolList.getSelected();
+		
 		// If cursor tool selected.
-		if (toolList.getSelected() == ToolId.CURSOR) {
+		if (selectedToolId == ToolId.CURSOR) {
 			
 			Area area = getHelpArea(mouse);
 			if (area != null) {
@@ -889,7 +929,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			}
 		}
 		// If area tool selected.
-		else if (toolList.getSelected() == ToolId.AREA) {
+		else if (selectedToolId == ToolId.AREA) {
 			
 			// Hide constructors' names.
 			hideConstructorsDisplay();
@@ -913,7 +953,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			repaint();
 		}
 		// If the remove area tool is selected.
-		else if (toolList.getSelected() == ToolId.REMOVE) {
+		else if (selectedToolId == ToolId.REMOVE) {
 			
 			// Remove area.
 			removeArea();
@@ -924,7 +964,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			repaint();
 		}
 		// If the connector tool is selected.
-		else if (toolList.getSelected() == ToolId.CONNECTOR) {
+		else if (selectedToolId == ToolId.CONNECTOR) {
 			
 			clearAffectedArea = onConnectorSelection(e);
 		}
@@ -1779,7 +1819,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	}
 
 	/**
-	 * Try to select area and its sub areas.
+	 * Try to select area and its sub areas. The method doesn't repaint the GUI.
 	 */
 	public void select(Point2D graphPoint, boolean reset) {
 
@@ -2147,6 +2187,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		boolean addAreaConservatively = true;
+		
+		// Initialize success flag.
+		boolean success = false;
 		
 		// If the constructor group is not empty, run wizard.
 		if (!constructorGroup.isEmpty()) {
@@ -2532,7 +2575,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 						}
 					}
 				}
-
 				
 				// Reload diagram.
 				updateInformation();
@@ -2542,12 +2584,15 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 					selectArea(newAreaAdded.getId(), true);
 				}
 			}
+			
+			// Set success flag.
+			success = true;
 		}
 		
 		// Add new area conservatively.
 		if (addAreaConservatively) {
 		
-			return addNewAreaConservatively(parentArea, newAreaAdded, parentComponent);
+			success = addNewAreaConservatively(parentArea, newAreaAdded, parentComponent);
 		}
 		
 		// Focus parent area.
@@ -2555,7 +2600,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			GeneratorMainFrame.getFrame().getVisibleAreasEditor().focusAreaNear(parentArea.getId());
 		}
 		
-		return true;
+		// Propagate update all event.
+		ConditionalEvents.transmit(this, Signal.updateAllRequest);
+		
+		return success;
 	}
 
 	/**
@@ -2604,6 +2652,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		
 		// Reload area diagram.
 		updateInformation();
+		
+		// Propagate update all event.
+		ConditionalEvents.transmit(this, Signal.updateAllRequest);
 	}
 
 	/**

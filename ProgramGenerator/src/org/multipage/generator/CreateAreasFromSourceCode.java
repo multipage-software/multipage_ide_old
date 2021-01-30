@@ -234,7 +234,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 			ProgramBasic.logoutMiddle();
 		}
 			
-		Event.propagate(CreateAreasFromSourceCode.this, Event.importToArea);
+		ConditionalEvents.transmit(CreateAreasFromSourceCode.this, Signal.importToArea);
 		
 		saveDialog();
 		dispose();

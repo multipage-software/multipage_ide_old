@@ -55,6 +55,7 @@ import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
+import org.multipage.sync.SyncMain;
 import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
@@ -76,8 +77,6 @@ import com.maclan.server.DebugClient;
 import com.maclan.server.DebugViewerCallback;
 import com.maclan.server.ProgramServlet;
 import com.maclan.server.TextRenderer;
-
-import build_number.BuildNumber;
 
 /**
  * 
@@ -353,7 +352,7 @@ public class GeneratorMainFrame extends JFrame {
 		updateWindowSelectionMenu();
 		
 		// Propagate event.
-		Event.propagate(GeneratorMainFrame.this, Event.loadDiagrams);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.loadDiagrams);
 	}
 
 	/**
@@ -435,9 +434,9 @@ public class GeneratorMainFrame extends JFrame {
 	private int watchdogMs = 60000;
 	
 	/**
-	 * Area properties.
+	 * Elements properties container panel.
 	 */
-	private ElementProperties properties;
+	private PropertiesPanel propertiesPanel;
 	
 	/**
 	 * AreasDiagram and properties split panel.
@@ -523,8 +522,7 @@ public class GeneratorMainFrame extends JFrame {
 		// Set close action.
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		// Set window description and icon.
-		setTitle(String.format(Resources.getString("org.multipage.generator.textMainFrameCaption"), BuildNumber.getVersion(), 
-				ProgramGenerator.class.getSuperclass().getName().equals("GeneratorFullMain") ? "Network" : "Standalone"));
+		setTitle(ProgramGenerator.getApplicationTitle());
 		setIconImage(Images.getImage("org/multipage/generator/images/main_icon.png"));
 
 		// Set middle layer login listener.
@@ -539,6 +537,8 @@ public class GeneratorMainFrame extends JFrame {
 		createStatusBar();
 		// Set connection watch dog.
 		createConnectionWatchDog();
+		// Set callback functions.
+		setCallbacks();
 		// Set listeners.
 		setListeners();
 		// Set timers.
@@ -562,6 +562,17 @@ public class GeneratorMainFrame extends JFrame {
 			areaTreeDataToCopy = null;
 		});
 		resetAreaTreeCopyTimer.setRepeats(false);
+	}
+	
+	/**
+	 * Set callback functions.
+	 */
+	private void setCallbacks() {
+		
+		SyncMain.setReactivateGuiCallback(() -> {
+			
+			reactivateGui();
+		});
 	}
 
 	/**
@@ -593,7 +604,7 @@ public class GeneratorMainFrame extends JFrame {
 				init();
 			}
 			public void windowClosing(WindowEvent e) {
-				onWindowClosing();
+				closeWindow();
 			}
 		});
 		
@@ -619,7 +630,7 @@ public class GeneratorMainFrame extends JFrame {
 			
 			if (!slotIds.isEmpty()) {
 				SwingUtilities.invokeLater(() -> {
-					Event.propagate(ProgramServlet.class, Event.updatedSlotsWithServlet, slotIds);
+					ConditionalEvents.transmit(ProgramServlet.class, Signal.updatedSlotsWithServlet, slotIds);
 				});
 			}
 		});
@@ -648,96 +659,59 @@ public class GeneratorMainFrame extends JFrame {
 			});
 		}
 		
-		// Listen for area model changes.
-		Event.receiver(this, ActionGroup.areaModelChange, action -> {
+		// Set Sync lambda functions.
+		SyncMain.setCloseEvent(() -> {
 			
-			// Reload areas model.
-			if (action.source instanceof GeneratorMainFrame
-					|| action.source instanceof Settings
-					|| action.foundFor(Event.requestUpdateAll)) {
-				
-				ProgramGenerator.reloadModel();
-			}
+			closeWindow();
 		});
 		
-		// Listen for slot view changes.
-		Event.receiver(this, ActionGroup.slotViewChange, (action) -> {
+		// Listen for "show areas' properties" event.
+		ConditionalEvents.receiver(this, Signal.showAreasProperties, action -> {
 			
-			// Show slot list the right side of the main frame
-			Obj<HashSet<Long>> selectedAreaIds = new Obj<HashSet<Long>>();
-			
-			if (Event.passes(() -> {
-				
-				if ((Event.sourceClass(action, Event.selectDiagramAreas, AreasDiagram.class)
-						|| Event.sourceClass(action, Event.selectDiagramAreas, AreasDiagramPanel.class)
-						|| Event.sourceClass(action, Event.selectTreeArea, AreasTreeEditorPanel.class)
-						|| Event.sourceClass(action, Event.selectListArea, AreasTreeEditorPanel.class))
-						&& action.relatedInfo instanceof HashSet) {
-						
-						selectedAreaIds.ref = (HashSet<Long>) action.relatedInfo;
-						return true;
-				}
-				
-				if (Event.sourceClass(action, Event.mainTabChange, AreasDiagramPanel.class)) {
+			// Retrieve selected areas' IDs from the event object.
+			if (action.relatedInfo instanceof HashSet<?>) {
 					
-					AreasDiagramPanel areasDiagramEditor = (AreasDiagramPanel) action.source;
-					selectedAreaIds.ref = areasDiagramEditor.getSelectedAreaIds();
-					return true;
-				}
-				
-				if (Event.sourceClass(action, Event.mainTabChange, AreasTreeEditorPanel.class)
-						|| Event.sourceClass(action, Event.subTabChange, AreasTreeEditorPanel.class)) {
-					
-					AreasTreeEditorPanel areasTreeEditorPanel = (AreasTreeEditorPanel) action.source;
-					selectedAreaIds.ref = areasTreeEditorPanel.getSelectedAreaIds();
-					return true;
-				}
-				
-				if (action.foundFor(Event.selectAll)) {
-					selectedAreaIds.ref = ProgramGenerator.getAllAreaIds();
-					return true;
-				}
-				
-				if (action.foundFor(Event.unselectAll)) {
-					selectedAreaIds.ref = new HashSet<Long>();
-					return true;
-				}
-				
-				return false;
-			})) {
-				
-				showProperties(selectedAreaIds.ref);
+				HashSet<Long> selectedAreaIds = (HashSet<Long>) action.relatedInfo;
+				showProperties(selectedAreaIds);
 			}
 		});
 		
-		// Listen for GUI changes.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		// Listen for the Monitor home page event.
+		ConditionalEvents.receiver(this, Signal.monitorHomePage, action -> {
 			
-			if (Event.monitorHomePage.equals(data.event)) {
-				
-				 monitorHomePage();
-			}
+			monitorHomePage();
 		});
 		
-		// Listen for GUI state changes.
-		Event.receiver(this, ActionGroup.guiStateChange, data -> {
+		// Listen for the reactivate GUI event.
+		ConditionalEvents.receiver(this, Signal.reactivateGui, action -> {
 			
-			if (Event.reactivateGui.equals(data.event)) {
-				
-				// Initialize focused component.
-				Component focusedComponent = null;
-				
-				// Try to get focused component from the event information.
-				Object relatedInfo = data.relatedInfo;
-				if (relatedInfo instanceof Component) {
-					focusedComponent = (Component) relatedInfo;
-				}
-				
-				// Do reactivation.
-				invokeReactivationOfGui(focusedComponent);
+			// Initialize focused component.
+			Component focusedComponent = null;
+			
+			// Try to get focused component from the event information.
+			Object relatedInfo = action.relatedInfo;
+			if (relatedInfo instanceof Component) {
+				focusedComponent = (Component) relatedInfo;
 			}
+			
+			// Do reactivation.
+			invokeReactivationOfGui(focusedComponent);
+		});
+		
+		// Listen for the update all request.
+		ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
+			ProgramGenerator.reloadModel();
 		});
  	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	protected void removeListeners() {
+		
+		// Remove event receivers.
+		ConditionalEvents.removeReceivers(this);
+	}
 	
 	/**
 	 * Reactivate GUI.
@@ -748,7 +722,7 @@ public class GeneratorMainFrame extends JFrame {
 		Component focusedControl = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 		
 		// Propagate the event with focused control.
-		Event.propagate(GeneratorMainFrame.class, Event.reactivateGui, focusedControl);
+		ConditionalEvents.transmit(GeneratorMainFrame.class, Signal.reactivateGui, focusedControl);
 	}
 	
 	/**
@@ -767,41 +741,58 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Reactivate GUI.
 		
-		// 1. Set always on top.
+		// 1. Enable the frame window.
+		SwingUtilities.invokeLater(() -> {
+			getFrame().setEnabled(true);
+		});
+		
+		// 2. Set always on top.
 		SwingUtilities.invokeLater(() -> {
 			getFrame().setAlwaysOnTop(true);
 		});
 		
-		// 2. Sleep for a while.
+		// 3. Sleep for a while.
 		SwingUtilities.invokeLater(() -> {
 			try {
-				Thread.sleep(20);
+				Thread.sleep(100);
 			}
 			catch (Exception e) {
 			}
 		});
 		
-		// 3. Reset always on top.
+		// 4. Reset always on top.
 		SwingUtilities.invokeLater(() -> {
 			getFrame().setAlwaysOnTop(false);
 		});
 		
-		// 4. Ensure the frame is visible.
+		// 5. Ensure the frame is visible.
 		SwingUtilities.invokeLater(() -> {
 			getFrame().setVisible(true);
 		});
 		
-		// 5. Bring the frame to front.
+		// 6. Sleep for a while.
+		SwingUtilities.invokeLater(() -> {
+			try {
+				Thread.sleep(100);
+			}
+			catch (Exception e) {
+			}
+		});
+		
+		// 7. Bring the frame to front.
 		SwingUtilities.invokeLater(() -> {
 			getFrame().toFront();
 		});
 		
-		// 6. Restore focus.
+		// 8. Restore focus.
 		SwingUtilities.invokeLater(() -> {
-			focusedComponent.requestFocusInWindow();
+			
+			if (focusedComponent != null) {
+				focusedComponent.requestFocusInWindow();
+			}
 		});
 		
-		// 7. Repaint the frame.
+		// 9. Repaint the frame.
 		SwingUtilities.invokeLater(() -> {
 			getFrame().repaint();
 		});
@@ -866,8 +857,8 @@ public class GeneratorMainFrame extends JFrame {
 		
 		mainAreaDiagramEditor = newAreasDiagramEditor();
 		tabPanel = newTabPanel(mainAreaDiagramEditor);
-		properties = newElementProperties();
-		splitDiagramProperties = new SplitProperties(tabPanel, properties);
+		propertiesPanel = newElementProperties();
+		splitDiagramProperties = new SplitProperties(tabPanel, propertiesPanel);
 		customizeColors = new CustomizedColors(this);
 		cutomizeControls = newCustomizedControls(this);
 		searchDialog = new SearchAreaDialog(this, ProgramGenerator.getAreasModel());
@@ -881,7 +872,11 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	protected AreasDiagramPanel newAreasDiagramEditor() {
 		
-		return new AreasDiagramPanel();
+		// Create new panel and initialize it.
+		AreasDiagramPanel diagramPanel = new AreasDiagramPanel();
+		diagramPanel.init();
+		
+		return diagramPanel;
 	}
 	
 	/**
@@ -908,9 +903,9 @@ public class GeneratorMainFrame extends JFrame {
 	 * Create new element properties object.
 	 * @return
 	 */
-	protected ElementProperties newElementProperties() {
+	protected PropertiesPanel newElementProperties() {
 		
-		return new ElementProperties();
+		return new PropertiesPanel();
 	}
 
 	/**
@@ -928,16 +923,15 @@ public class GeneratorMainFrame extends JFrame {
 	}
 
 	/**
-	 * On window closing.
-	 * @throws IOException 
+	 * Close main frame window.
 	 */
-	private void onWindowClosing() {
+	public void closeWindow() {
 		
 		// Call on close method.
 		onClose();
 		
 		// Close properties.
-		properties.setNoArea();
+		propertiesPanel.setNoProperties();
 		splitDiagramProperties.minimize();
 		
 		// Invoke dialog saving later.
@@ -956,11 +950,12 @@ public class GeneratorMainFrame extends JFrame {
 				// Dispose dialog.
 				customizeColors.disposeDialog();
 				// Dispose properties.
-				properties.dispose();
+				propertiesPanel.dispose();
 				// Run callback.
 				if (closeCallback != null) {
 					closeCallback.run();
 				}
+				removeListeners();
 				// Dispose window.
 				dispose();
 				// Exit application.
@@ -968,7 +963,7 @@ public class GeneratorMainFrame extends JFrame {
 			}
 		});
 	}
-
+	
 	/**
 	 * On change tab.
 	 */
@@ -1187,7 +1182,7 @@ public class GeneratorMainFrame extends JFrame {
 		updateData.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Event.propagate(GeneratorMainFrame.this, Event.updateAreasModel);
+				ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAreasModel);
 			}});
 		closeAllWindows.addActionListener(new ActionListener() {
 			@Override
@@ -1453,7 +1448,7 @@ public class GeneratorMainFrame extends JFrame {
 	public void onFileExitMenu() {
 		
 		// Call events.
-		onWindowClosing();
+		closeWindow();
 	}
 
 	/**
@@ -1471,7 +1466,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onFocusWhole() {
 		
-		Event.propagate(this, AreasDiagram.class, Event.focusBasicArea);
+		ConditionalEvents.transmit(this, AreasDiagram.class, Signal.focusBasicArea);
 	}
 
 	/**
@@ -1491,7 +1486,7 @@ public class GeneratorMainFrame extends JFrame {
 	protected void onClose() {
 		
 		// Stop dispatching events.
-		Event.stopDispatching();
+		ConditionalEvents.stopDispatching();
 		
 		// Cancel watch dog.
 		if (timerWatchDog != null) {
@@ -1532,7 +1527,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		ProgramBasic.showLoginDialog(this, title);
 		statusBar.setLoginProperties(ProgramBasic.getLoginProperties());
-		Event.propagate(GeneratorMainFrame.this, Event.newBasicArea);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.newBasicArea);
 		
 		loginProperties = ProgramBasic.getLoginProperties();
 		String newDatabaseName = loginProperties.getProperty("database");
@@ -1579,7 +1574,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		showIDsExtended(show);
 		
-		Event.propagate(GeneratorMainFrame.this, AreasDiagram.class, Event.showHideIds);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showHideIds);
 	}
 
 	/**
@@ -1636,7 +1631,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onSelectAll() {
 		
-		Event.propagate(this, Event.selectAll);
+		ConditionalEvents.transmit(this, Signal.selectAll);
 	}
 	
 	/**
@@ -1644,7 +1639,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUnselectAll() {
 		
-		Event.propagate(this, Event.unselectAll);
+		ConditionalEvents.transmit(this, Signal.unselectAll);
 	}
 
 	/**
@@ -1690,7 +1685,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUpdate() {
 		
-		Event.propagate(GeneratorMainFrame.this, Event.requestUpdateAll);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAllRequest);
 	}
 
 	/**
@@ -1716,7 +1711,7 @@ public class GeneratorMainFrame extends JFrame {
 	public void onFocusHome() {
 		
 		// Propagate event.
-		Event.propagate(this, Event.focusHomeArea);
+		ConditionalEvents.transmit(this, Signal.focusHomeArea);
 	}
 
 	/**
@@ -1725,7 +1720,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public AreasPropertiesBase getAreasProperties() {
 
-		return properties.getAreaEditor();
+		return propertiesPanel.getPropertiesEditor();
 	}
 
 	/**
@@ -1758,7 +1753,7 @@ public class GeneratorMainFrame extends JFrame {
 	public void onLightReadOnly() {
 		
 		AreaShapes.readOnlyLighter = !lightReadOnly.isSelected();
-		Event.propagate(GeneratorMainFrame.this, AreasDiagram.class, Event.showReadOnlyAreas);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showReadOnlyAreas);
 	}
 
 	/**
@@ -2770,7 +2765,7 @@ public class GeneratorMainFrame extends JFrame {
 		importArea(area, this, false, true, true);
 		
 		long areaId = area.getId();
-		Event.propagate(GeneratorMainFrame.this, Event.importToArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.importToArea, areaId);
 	}
 	
 	/**
@@ -2928,7 +2923,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onMonitorHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		ConditionalEvents.transmit(this, Signal.monitorHomePage);
 	}
 
 	/**
@@ -3037,7 +3032,7 @@ public class GeneratorMainFrame extends JFrame {
 			result.show(parentComponent);
 		}
 		
-		Event.propagate(GeneratorMainFrame.this, Event.updateHomeArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateHomeArea, areaId);
 	}
 	
 	/**
@@ -3048,7 +3043,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		Long tabAreaId = tabPanel.getTopAreaIdOfSelectedTab();
 		
-		Event.propagate(this, Event.focusTabArea, tabAreaId);
+		ConditionalEvents.transmit(this, Signal.focusTabArea, tabAreaId);
 
 	}
 	
@@ -3269,7 +3264,7 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		long areaId = area.getId();
-		Event.propagate(GeneratorMainFrame.this, Event.importToArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.importToArea, areaId);
 	}
 
 	/**
@@ -3457,7 +3452,7 @@ public class GeneratorMainFrame extends JFrame {
 		}
 
 		// Update data.
-		Event.propagate(getFrame(), Event.transferToArea);
+		ConditionalEvents.transmit(getFrame(), Signal.transferToArea);
 	}
 	
 	/**
@@ -3477,7 +3472,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// If there are no areas, do not display panel with properties.
 		if (areaIds == null || areaIds.isEmpty()) {
-			mainFrame.properties.setNoArea();
+			mainFrame.propertiesPanel.setNoProperties();
 			mainFrame.setPropertiesVisible(false);
 			return;
 		}
@@ -3492,12 +3487,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// Display editor.
-		mainFrame.properties.setAreas(areas);
+		mainFrame.propertiesPanel.setAreas(areas);
 		mainFrame.setPropertiesVisible(true);
-	}
-
-	public void updateInformation() {
-		// TODO Auto-generated method stub
-		
 	}
 }

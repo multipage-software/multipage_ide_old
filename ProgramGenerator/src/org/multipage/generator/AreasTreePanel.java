@@ -720,7 +720,7 @@ public class AreasTreePanel extends JPanel {
 		updateData();
 		
 		long areaId = area.getId();
-		Event.propagate(AreasTreePanel.this, Event.addArea, areaId);
+		ConditionalEvents.transmit(AreasTreePanel.this, Signal.addArea, areaId);
 	}
 	
 	/**

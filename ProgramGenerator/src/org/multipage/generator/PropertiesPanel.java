@@ -23,7 +23,7 @@ import com.maclan.*;
  * @author
  *
  */
-public class ElementProperties extends JPanel {
+public class PropertiesPanel extends JPanel {
 
 	/**
 	 * Version.
@@ -43,7 +43,7 @@ public class ElementProperties extends JPanel {
 	}
 
 	/**
-	 * MessagePanel panel.
+	 * Message panel.
 	 */
 	private MessagePanel message = new MessagePanel();
 
@@ -55,14 +55,16 @@ public class ElementProperties extends JPanel {
 	/**
 	 * Constructor.
 	 */
-	public ElementProperties() {
+	public PropertiesPanel() {
 		
+		
+		// Create area editor.
 		areaEditor = newAreasProperties(true);
 		
 		setLayout(new BorderLayout());
 				
 		// Initialize.
-		setNoArea();
+		setNoProperties();
 		
 		// Set listener.
 		addMouseListener(new MouseAdapter() {
@@ -94,9 +96,9 @@ public class ElementProperties extends JPanel {
 	}
 
 	/**
-	 * Set no area.
+	 * Set no properties.
 	 */
-	public void setNoArea() {
+	public void setNoProperties() {
 		
 		// Set message.
 		message.setText(Resources.getString("org.multipage.generator.textNoAreaSelected"));
@@ -116,7 +118,7 @@ public class ElementProperties extends JPanel {
 	}
 
 	/**
-	 * View area editor.
+	 * View area properties editor.
 	 */
 	private void viewAreaEditor() {
 	
@@ -128,9 +130,10 @@ public class ElementProperties extends JPanel {
 	}
 
 	/**
+	 * Get the properties editor.
 	 * @return the areaEditor
 	 */
-	public AreasPropertiesBase getAreaEditor() {
+	public AreasPropertiesBase getPropertiesEditor() {
 		return areaEditor;
 	}
 

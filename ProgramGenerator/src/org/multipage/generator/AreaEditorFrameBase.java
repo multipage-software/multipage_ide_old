@@ -474,7 +474,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.saveArea, areaId);
+		ConditionalEvents.transmit(AreaEditorFrameBase.this, Signal.saveArea, areaId);
 	}
 
 	/**
@@ -510,7 +510,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		saveDialog();
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.saveArea, areaId);
+		ConditionalEvents.transmit(AreaEditorFrameBase.this, Signal.saveArea, areaId);
 		
 		// Close the window.
 		dispose();
@@ -1022,7 +1022,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.updateAreaChanges, areaId);
+		ConditionalEvents.transmit(AreaEditorFrameBase.this, Signal.updateAreaChanges, areaId);
 	}
 
 	/**
@@ -1081,7 +1081,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		getCheckBoxHomeArea().addActionListener(homeAreaListener);
 
 		// Update information.
-		Event.propagate(AreaEditorFrameBase.this, Event.updateHomeArea, areaId);
+		ConditionalEvents.transmit(AreaEditorFrameBase.this, Signal.updateHomeArea, areaId);
 	}
 
 	/**
@@ -1107,7 +1107,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
 
 		// Update information.
-		Event.propagate(AreaEditorFrameBase.this, Event.updateAreaIsDisabled);
+		ConditionalEvents.transmit(AreaEditorFrameBase.this, Signal.updateAreaIsDisabled);
 	}
 
 	/**

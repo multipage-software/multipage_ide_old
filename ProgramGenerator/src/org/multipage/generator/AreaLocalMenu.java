@@ -601,7 +601,7 @@ public class AreaLocalMenu {
 
 		Long tabAreaId = GeneratorMainFrame.getTabAreaId();
 		
-		Event.propagate(this, Event.focusTabArea, tabAreaId);
+		ConditionalEvents.transmit(this, Signal.focusTabArea, tabAreaId);
 	}
 
 	/**
@@ -927,7 +927,7 @@ public class AreaLocalMenu {
 		// Callback method.
 		if (newAreaId != null) {
 			
-			Event.propagate(AreaLocalMenu.this, Event.importToArea, area.getId());
+			ConditionalEvents.transmit(AreaLocalMenu.this, Signal.importToArea, area.getId());
 			
 			SwingUtilities.invokeLater(() -> {
 				listener.onNewArea(newAreaId);

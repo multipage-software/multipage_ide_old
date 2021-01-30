@@ -6,6 +6,7 @@
  */
 package org.multipage.sync;
 
+import java.awt.Menu;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.io.InputStream;
@@ -192,7 +193,7 @@ public class AreaServerClient {
 				if (xml == null) {
 					
 					// Add reload menu item
-					addReloadMenuItem();
+					addefaultMenuItems();
 					return;
 				}
 				
@@ -265,15 +266,15 @@ public class AreaServerClient {
 						MessageDialog.show("org.multipage.sync.messageNoMenuItemsLoaded");
 					}
 					
-					// Add reload menu item
-					addReloadMenuItem();
+					// Add default menu items.
+					addefaultMenuItems();
 				});
 				
 			}
 			catch (Exception e) {
 				
 				// Add reload menu item
-				addReloadMenuItem();
+				addefaultMenuItems();
 				
 				Exception exception = null;
 				String errorMessage = e.getLocalizedMessage();
@@ -300,11 +301,11 @@ public class AreaServerClient {
 		// Start thread
 		thread.start();
 	}
-	
+
 	/**
 	 * Add reload menu item
 	 */
-	private void addReloadMenuItem() {
+	private void addefaultMenuItems() {
 		
 		SwingUtilities.invokeLater(() -> {
 			
@@ -314,21 +315,43 @@ public class AreaServerClient {
 				popupMenu.addSeparator();
 			}
 			
-			// Update menu.
-			MenuItem menuUpdate = new MenuItem(Resources.getString("org.multipage.sync.menuReloadMenu"));
-			popupMenu.add(menuUpdate);
+			// A maintenance sub menu.
+			Menu menuMaintenance = new Menu(Resources.getString("org.multipage.sync.menuMaintenance"));
+			popupMenu.add(menuMaintenance);
 			
-			// Schedule menu reload
-			popupMenu.addActionListener((e) -> {
-					
+			// Update menu.
+			Utility.addSubMenu(menuMaintenance, "org.multipage.sync.menuReloadMenu", e -> {
 				reloadMenuScheduler.start();
-				
 			});
 			
+			// Reactivate GUI.
+			Utility.addSubMenu(menuMaintenance, "org.multipage.sync.menuReactivateGui", e -> {
+				SyncMain.reactivateGui();
+			});
+			
+			// Menu item for program termination.
+			final String confirmationMessage = String.format(
+					Resources.getString("org.multipage.sync.messageConfirmQuit"), SyncMain.getMainApplicationTitle());
+			
+			if (SyncMain.isStandalone) {
+				Utility.addSubMenu(menuMaintenance, "org.multipage.sync.menuQuitApplication", e -> {
+					
+					if (Utility.ask2Top(confirmationMessage)) {
+						SyncMain.stop();
+					}
+				});
+			}
+			else {
+				Utility.addPopupMenuItem(popupMenu, "org.multipage.sync.menuQuitApplication", e -> {
+					
+					if (Utility.ask2Top(confirmationMessage)) {
+						SyncMain.closeMainApplication();
+					}
+				});
+			}
 		});
-	
 	}
-
+	
 	/**
 	 * Send simple area server request.
 	 * @param request

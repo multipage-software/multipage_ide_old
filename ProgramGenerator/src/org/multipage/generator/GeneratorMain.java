@@ -110,6 +110,9 @@ public class GeneratorMain {
 		// Set locale.
 		Locale.setDefault(new Locale(language, country));
 		
+		// Set Sync main application title
+		SyncMain.setMainApplicationTitleCallback(() -> { return ProgramGenerator.getApplicationTitle(); });
+		
 		// Start GUI watch dog.
 		GuiWatchDog.start();
 		

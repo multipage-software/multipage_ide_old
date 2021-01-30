@@ -467,7 +467,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.saveArea, areaId);
+		ConditionalEvents.transmit(AreaEditorPanelBase.this, Signal.saveArea, areaId);
 	}
 
 	/**
@@ -503,7 +503,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		saveDialog();
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.saveArea, areaId);
+		ConditionalEvents.transmit(AreaEditorPanelBase.this, Signal.saveArea, areaId);
 	}
 	
 	/**
@@ -1007,7 +1007,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.updateAreaChanges, areaId);
+		ConditionalEvents.transmit(AreaEditorPanelBase.this, Signal.updateAreaChanges, areaId);
 	}
 
 	/**
@@ -1066,7 +1066,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		getCheckBoxIsStartArea().addActionListener(isStartListener);
 
 		// Update information.
-		Event.propagate(AreaEditorPanelBase.this, Event.updateHomeArea, areaId);
+		ConditionalEvents.transmit(AreaEditorPanelBase.this, Signal.updateHomeArea, areaId);
 	}
 
 	/**
@@ -1092,7 +1092,7 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
 
 		// Update information.
-		Event.propagate(AreaEditorPanelBase.this, Event.updateAreaIsDisabled, areaId);
+		ConditionalEvents.transmit(AreaEditorPanelBase.this, Signal.updateAreaIsDisabled, areaId);
 	}
 
 	/**

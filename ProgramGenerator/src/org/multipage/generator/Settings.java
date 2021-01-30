@@ -341,7 +341,7 @@ public class Settings extends JDialog {
 					
 				if (updateRequired) {
 					ProgramBasic.updateDatabaseAccess(newDirectory);
-					Event.propagate(Settings.this, Event.switchDatabase, newDirectory);
+					ConditionalEvents.transmit(Settings.this, Signal.switchDatabase, newDirectory);
 				}
 				
 				isOk = true;

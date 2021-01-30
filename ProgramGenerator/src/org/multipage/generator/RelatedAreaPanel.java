@@ -228,7 +228,7 @@ public class RelatedAreaPanel extends JPanel {
 		textRelatedArea.setText("");
 		
 		// Update information.
-		Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
+		ConditionalEvents.transmit(RelatedAreaPanel.this, Signal.updateRelatedArea, currentAreaId);
 	}
 
 	/**
@@ -269,6 +269,6 @@ public class RelatedAreaPanel extends JPanel {
 		textRelatedArea.setText(relatedArea != null ? relatedArea.getDescriptionForDiagram() : "");
 		
 		// Update information.
-		Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
+		ConditionalEvents.transmit(RelatedAreaPanel.this, Signal.updateRelatedArea, currentAreaId);
 	}
 }

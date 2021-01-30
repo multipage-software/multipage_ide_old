@@ -10,12 +10,14 @@ import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 
 import org.multipage.gui.Images;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
 /**
  * External source code providers watch service.
@@ -58,6 +60,66 @@ public class SyncMain {
 	 * Area server client with access string and its format.
 	 */
 	private static AreaServerClient areaServerClient;
+
+	/**
+	 * A lambda function which closes main application. The function is set with setCloseEvent().
+	 */
+	private static Runnable closeMainApplicationEvent = null;
+	
+	/**
+	 * Main application title.
+	 */
+	private static Supplier<String> mainApplicationTitleCallback = null;
+	
+	/**
+	 * Reactivate GUI.
+	 */
+	private static Runnable reactivateGuiCallback = null;
+	
+	/**
+	 * Set main application title callback.
+	 * @param callback;
+	 */
+	public static void setMainApplicationTitleCallback(Supplier<String> callback) {
+		
+		mainApplicationTitleCallback = callback;
+	}
+	
+	/**
+	 * Get main application title.
+	 * @return
+	 */
+	public static String getMainApplicationTitle() {
+		
+		// Check callback and possibly return a default value.
+		if (mainApplicationTitleCallback == null) {
+			return Resources.getString("org.multipage.sync.messageApplicationTitle");
+		}
+		
+		return mainApplicationTitleCallback.get();
+	}
+	
+	/**
+	 * Set the reactivate GUI callback.
+	 * @param callback
+	 */
+	public static void setReactivateGuiCallback(Runnable callback) {
+		
+		reactivateGuiCallback = callback;
+	}
+	
+	/**
+	 * Reactivate windows of the main GUI.
+	 */
+	public static void reactivateGui() {
+		
+		// Check the callback.
+		if (reactivateGuiCallback == null) {
+			return;
+		}
+		
+		reactivateGuiCallback.run();
+	}
 	
 	/**
 	 * Initialize module.
@@ -73,7 +135,16 @@ public class SyncMain {
 	}
 	
 	/**
-	 * Unintialize
+	 * Set close application event.
+	 * @param event
+	 */
+	public static void setCloseEvent(Runnable event) {
+		
+		closeMainApplicationEvent = event;
+	}
+	
+	/**
+	 * Uninitialize the application.
 	 */
 	public static void unitialize() {
 		
@@ -86,6 +157,7 @@ public class SyncMain {
 	public static void startService(boolean asynchronous)
 			throws Exception {
 		
+		// Initialization.
 		Obj<Exception> exception = new Obj<Exception>(null);
 		
 		// Create service thread
@@ -145,13 +217,6 @@ public class SyncMain {
 			// Load menu from area server.
 			areaServerClient = AreaServerClient.newInstance(popupMenu);
 			areaServerClient.loadMenu(false);
-			
-			// Menu item for program termination.
-			if (isStandalone) {
-				Utility.addPopupMenuItem(popupMenu, "org.multipage.sync.menuExitApplication", e -> {
-					stop(trayIcon);
-				});
-			}
 		}
 		catch (Exception e) {
 			MessageDialog.showDialog(e.getLocalizedMessage());
@@ -185,6 +250,17 @@ public class SyncMain {
 		}
 		catch (Exception e) {
 			Utility.show2(e.getLocalizedMessage());
+		}
+	}
+	
+	/**
+	 * Close main application.
+	 */
+	public static void closeMainApplication() {
+		
+		// Delegate the call.
+		if (closeMainApplicationEvent != null) {
+			closeMainApplicationEvent.run();
 		}
 	}
 }

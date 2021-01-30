@@ -56,14 +56,20 @@ public class TextFieldAutoSave extends TextFieldEx {
 	private Object userObject = null;
 	
 	/**
+	 * Text string. When displayed, it can be edited by user.
+	 */
+	private String text = null;
+	
+	/**
+	 * Message string. It cannot be edited when displayed in the text box.
+	 */
+	private String message = null;
+
+	
+	/**
 	 * STATES AND TRANSITIONS.
 	 */
 	public class States {
-
-		/**
-		 * Locked flag.
-		 */
-		private boolean locked;
 		
 		/**
 		 * Content save flag.
@@ -83,28 +89,9 @@ public class TextFieldAutoSave extends TextFieldEx {
 		 */
 		public void initialize() {
 			
-			locked = false;
 			saved = true;
 		}
-
-		/**
-		 * Set locked.
-		 * @param locked
-		 */
-		public void setLocked(boolean locked) {
-			
-			this.locked = locked;
-		}
 		
-		/**
-		 * Get locked flag.
-		 * @return
-		 */
-		public boolean isLocked() {
-			
-			return this.locked;
-		}
-
 		/**
 		 * Set saved state.
 		 * @param saved
@@ -135,7 +122,6 @@ public class TextFieldAutoSave extends TextFieldEx {
 	 * Events.
 	 */
 	public Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextEvent = null;
-	public Consumer<Boolean> enableEvent = null;
 	public Supplier<String> getGenuineTextEvent = null;
 	public Runnable focusGainedEvent = null;
 	public Runnable updateEvent = null;
@@ -272,17 +258,18 @@ public class TextFieldAutoSave extends TextFieldEx {
 		saveTimer.setInitialDelay(saveTimerDelay);
 		saveTimer.setRepeats(false);
 	}
-
+	
 	/**
 	 * Set 
 	 * @param text
 	 */
-	public void setTextEx(String text) {
+	public void setText(String text) {
 		
-		// Check lock.
-		if (states.isLocked()) {
-			return;
-		}
+		// First remove message text.
+		this.message = null;
+		
+		// Set text reference.
+		this.text = text;
 		
 		// Save caret.
 		boolean hasFocus = hasFocus();
@@ -313,9 +300,46 @@ public class TextFieldAutoSave extends TextFieldEx {
 	}
 	
 	/**
+	 * Get text string.
+	 */
+	@Override
+	public String getText() {
+		
+		// Check presence of editable text.
+		if (this.text == null) {
+			return null;
+		}
+		
+		// Retrieve current text.
+		this.text = super.getText();
+		return this.text;
+	}
+	
+	/**
+	 * Set message.
+	 * @param message
+	 */
+	public void setMessage(String message) {
+		
+		// First remove editable text.
+		this.text = null;
+		
+		// Save the reference to a message.
+		this.message = message;
+		
+		// Set the text box message.
+		super.setText(message);
+	}
+	
+	/**
 	 * Save text.
 	 */
 	public void saveText() {
+		
+		// Check text presence.
+		if (this.text == null) {
+			return;
+		}
 		
 		// Invoke event.
 		if (saveTextEvent != null) {
@@ -343,11 +367,13 @@ public class TextFieldAutoSave extends TextFieldEx {
 	 */
 	private void saveTextInternal() {
 		
+		// Check text presence.
+		if (this.text == null) {
+			return;
+		}
+		
 		// If the description changes...
 		if (isTextChange()) {
-			
-			// Lock the text box
-			lockInput(true);
 			
 			// Invoke event.
 			if (saveTextEvent != null) {
@@ -360,9 +386,6 @@ public class TextFieldAutoSave extends TextFieldEx {
 						
 						// Set the flag.
 						states.setSaved(true);
-						
-						// Unlock the text box
-						lockInput(false);
 					})
 					
 					// On request update.
@@ -373,10 +396,6 @@ public class TextFieldAutoSave extends TextFieldEx {
 							updateEvent.run();
 						}
 					});
-			}
-			else {
-				// Unlock the text box
-				lockInput(false);
 			}
 		
 			// Remove highlight
@@ -399,7 +418,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 		try {
 			
 			String genuineText = getGenuineTextEvent.get();	
-			String text = getText();
+			String text = super.getText();
 			
 			return text.compareTo(genuineText) != 0;
 		}
@@ -414,19 +433,32 @@ public class TextFieldAutoSave extends TextFieldEx {
 	public void onChangeText() {
 		
 		Color color;
-	
-		// If the current area description is not equal to loaded area
-		// description set red text color.
-		if (isTextChange()) {
-			color = Color.RED;
-			
-			// Start save timer.
-			saveTimer.restart();
+		boolean isMessage = this.message != null;
+		
+		// Enable/disable the text box.
+		setEnabled(!isMessage);
+		
+		// On message.
+		if (isMessage) {
+			color = Color.lightGray;
 		}
+		// On simple text.
 		else {
-			color = Color.black;
+	
+			// If the current text is not equal to loaded area
+			// description set red text color.
+			if (isTextChange()) {
+				color = Color.RED;
+				
+				// Start save timer.
+				saveTimer.restart();
+			}
+			else {
+				color = Color.black;
+			}
 		}
 		
+		// Set the color.
 		setForeground(color);
 	}
 	
@@ -438,36 +470,6 @@ public class TextFieldAutoSave extends TextFieldEx {
 		Object owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 		boolean hasFocus = this.equals(owner);
 		return hasFocus;
-	}
-
-	/**
-	 * Lock text box input
-	 * @param lock
-	 */
-	public void lockInput(boolean lock) {
-		
-		// Save caret on lock.
-		if (lock) {
-			saveCaret();
-		}
-		
-		// Enable/disable the text box
-		setEnabled(!lock);
-		setForeground(lock ? Color.DARK_GRAY : Color.BLACK);
-		setBackground(Color.WHITE);
-		
-		// Set state.
-		states.setLocked(lock);
-		
-		// Invoke enable event.
-		if (enableEvent != null) {
-			enableEvent.accept(lock);
-		}
-		
-		// Restore caret on unlock.
-		if (!lock) {
-			restoreCaret();
-		}
 	}
 	
 	/**

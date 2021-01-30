@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -4283,7 +4282,6 @@ public class AreaServer {
 							textString = response2.postProcessText(textString);
 							
 							// Try to execute Area Server API operation.
-							j.log("(S1) executeApiOperation %s", textString);
 							if (executeApiOperation(processResponse, ApiCallType.apiCallForAreaServerResult, textString)) {
 								
 								// On error
@@ -4558,7 +4556,6 @@ public class AreaServer {
 		// Write the response
 		try {
 			xml = xml.replaceAll("&", "&amp;");
-			j.log("(S2) writeText\n%s", xml);
 			this.state.response.writeText(xml, encoding);
 		}
 		catch (Exception e) {
@@ -4797,7 +4794,6 @@ public class AreaServer {
 		// If not written, write it.
 		if (!isWritten) {
 			try {
-				j.log("(S1) write Area server response\n---\n%s\n---", textString);
 				writer.write(textString);
 			}
 			catch (IOException e) {
