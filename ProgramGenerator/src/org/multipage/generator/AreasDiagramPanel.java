@@ -435,21 +435,25 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	protected void onDoubleClickArea() {
 		
-		if (buttonSiblings.isSelected()) {
-			
-			// Get selected areas.
-			List<Area> selectedAreas = listAreas.getSelectedValuesList();
-			if (selectedAreas.size() != 1) {
-				Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
-				return;
-			}
-			
-			areaSelection = selectedAreas.get(0);
-			long areaId = areaSelection.getId();
-			
-			// Focus area.
-			focusAreaNear(areaId);
+		// Get selected areas.
+		List<Area> selectedAreas = listAreas.getSelectedValuesList();
+		if (selectedAreas.size() != 1) {
+			Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
+			return;
 		}
+		
+		areaSelection = selectedAreas.get(0);
+		long areaId = areaSelection.getId();
+		
+		// Repaint GUI.
+		repaint();
+		
+		// Focus area.
+		focusAreaNear(areaId);
+		
+		// Select siblings.
+		buttonSiblings.setSelected(true);
+		loadAreaSiblings();
 	}
 
 	/**
@@ -596,7 +600,6 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			if (AreasDiagramPanel.this.isShowing()) {
 				
 				selectedAreaIds = ProgramGenerator.getAllAreaIds();
-				setAllSelection(true);
 				displayRelatedAreasForSet(selectedAreaIds);
 			}
 		});
@@ -606,7 +609,6 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			if (AreasDiagramPanel.this.isShowing()) {
 				
 				selectedAreaIds = new HashSet<Long>();
-				setAllSelection(false);
 				displayRelatedAreasForSet(selectedAreaIds);
 			}
 		});
@@ -696,16 +698,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		
 		return areasDiagram;
 	}
-
-	/**
-	 * Set all selection.
-	 * @param select
-	 */
-	public void setAllSelection(boolean select) {
-		
-		areasDiagram.setAllSelection(select);
-	}
-
+	
 	/**
 	 * Get selected areas.
 	 * @return

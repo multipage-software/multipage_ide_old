@@ -59,7 +59,7 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
-	// Select/unselect all areas.
+	// Select all areas.
 	selectAll(
 			SignalType.areaViewStateChange,
 			SignalType.areaViewChange,
@@ -67,7 +67,7 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
-	// Select/unselect all areas.
+	// Unselect all areas.
 	unselectAll(
 			SignalType.areaViewStateChange,
 			SignalType.areaViewChange,
@@ -82,7 +82,7 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
-	// Subpanel tab change.
+	// Sub panel tab change.
 	subTabChange(
 			SignalType.slotViewChange
 			),

@@ -260,6 +260,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	/**
 	 * A reference to parent editor panel.
 	 */
+	@SuppressWarnings("unused")
 	private AreasDiagramPanel parentEditor;
 	
 	/**
@@ -387,17 +388,19 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				removeSelection();
 				// Select the areas.
 				selectAreas(selectedAreaIds);
+				// Set overview and repaint the GUI.
+				setOverview();
 				repaint();
 			}
 		});
 		
 		// Add area selection receiver.
-		ConditionalEvents.receiver(this, Signal.array(Signal.mainTabChange, Signal.updateAllRequest, Signal.selectAll), acion -> {
+		ConditionalEvents.receiver(this, Signal.array( Signal.selectAll), acion -> {
 			if (AreasDiagram.this.isShowing()) {
 				
-				HashSet<Long> selectedAreaIds = AreasDiagram.this.parentEditor.getSelectedAreaIds();
-				removeSelection();
-				selectAreas(selectedAreaIds);
+				// Select all.
+				setAllSelection(true);
+				// Set overview and repaint the GUI.
 				setOverview();
 				repaint();
 			}
@@ -407,8 +410,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		ConditionalEvents.receiver(this, Signal.unselectAll, acion -> {
 											 
 			if (AreasDiagram.this.isShowing()) {
-			
-				removeSelection();
+				
+				// Unselect all.
+				setAllSelection(false);
+				// Set overview and repaint the GUI.
 				setOverview();
 				repaint();
 			}
@@ -417,9 +422,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		// Add focus event receiver.
 		ConditionalEvents.receiver(this, Signal.focusBasicArea, action -> {
 			
-			// Focus currently visible areas diagram on the Basic Area.
+			// Focus currently visible Basic Area.
 			if (action.sourceClass(GeneratorMainFrame.class) && AreasDiagram.this.isShowing()) {
-				center();
+				focusBasicArea();
 			}
 		});
 	}
@@ -2824,7 +2829,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 
 		Area globalArea = ProgramGenerator.getAreasModel().getRootArea();
 		select(globalArea, select, true);
-		repaint();
 	}
 
 	/**

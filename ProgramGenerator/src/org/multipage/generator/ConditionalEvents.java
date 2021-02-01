@@ -148,6 +148,10 @@ public class ConditionalEvents {
 				Class<?> sourceClass = (Class<?>) source;
 				matches = sourceClass.equals(classObject);
 			}
+			// Check source object.
+			else if (source != null) {
+				matches = source.getClass().equals(classObject);
+			}
 			
 			return matches;
 		}
@@ -373,64 +377,77 @@ public class ConditionalEvents {
 	 */
 	static {
 		
-		// Create and enter message dispatch loop running on separate thread.
+		// Create and run dispatch thread.
 		dispatchThread = new Thread(() -> {
-			while (!stopDispatchMessages) {
-				
-				// Try to pull an incoming message.
-				Message incomingMessage = null;
-				synchronized (messageQueue) {
-					
-					if (!messageQueue.isEmpty()) {
-						incomingMessage = messageQueue.removeFirst();
-					}
-				}
-				
-				// Process the message if it exists.
-				if (incomingMessage != null) {
-					
-					Signal signal = incomingMessage.signal;
-					
-					// On special events skip the next complex rules.
-					if (signal.isSpecial()) {
-						invokeSpecialEvents(incomingMessage);
-					}
-					else {
-						
-						// Dispatch message to conditional events processors.
-						synchronized (conditionalEvents) {
-							
-							for (Map.Entry<EventCondition, HashMap<Object, HashSet<EventHandle>>> conditionalEvent : conditionalEvents.entrySet()) {
-								
-								// Check if event condition matches.
-								EventCondition eventCondition = conditionalEvent.getKey();
-								boolean conditionMatches = eventCondition.matches(incomingMessage);
-								if (conditionMatches) {
-									
-									// If so invoke appropriate event.
-									HashMap<Object, HashSet<EventHandle>> eventHandles = conditionalEvent.getValue();
-									invokeEvents(eventHandles, eventCondition, incomingMessage);
-								}
-							}
-						}
-					}
-				}
-				
-				// Check if there are more events in the queue.
-				boolean moreEvents;
-				synchronized (messageQueue) {
-					moreEvents = messageQueue.isEmpty();
-				}
-				
-				// If not, enter the idle state for 250 ms.
-				if (!moreEvents) {
-					Lock.waitFor(dispatchLock, 250);
-				}
-			}
+			
+			dispatchThread();
 			
 		}, "IDE-Events-Dispatcher");
 		
 		dispatchThread.start();
+	}
+	
+	/**
+	 * The message dispatch thread.
+	 */
+	private static void dispatchThread() {
+		
+		// Enter message dispatch loop.
+		while (!stopDispatchMessages) {
+			
+			// Try to pull single incoming message.
+			Message incomingMessage = null;
+			synchronized (messageQueue) {
+				
+				if (!messageQueue.isEmpty()) {
+					incomingMessage = messageQueue.removeFirst();
+				}
+			}
+			
+			// Process the message if it exists.
+			if (incomingMessage != null) {
+				
+				Signal signal = incomingMessage.signal;
+				
+				// On special events skip the next complex rules.
+				if (signal.isSpecial()) {
+					invokeSpecialEvents(incomingMessage);
+				}
+				else {
+					
+					// Dispatch message to conditional events processors.
+					synchronized (conditionalEvents) {
+						
+						for (Map.Entry<EventCondition, HashMap<Object, HashSet<EventHandle>>> conditionalEvent : conditionalEvents.entrySet()) {
+							
+							// Check if event condition matches.
+							EventCondition eventCondition = conditionalEvent.getKey();
+							boolean conditionMatches = eventCondition.matches(incomingMessage);
+							if (conditionMatches) {
+								
+								// If so invoke appropriate event.
+								HashMap<Object, HashSet<EventHandle>> eventHandles = conditionalEvent.getValue();
+								invokeEvents(eventHandles, eventCondition, incomingMessage);
+							}
+						}
+					}
+				}
+			}
+			
+			// Check if there are more events in the queue.
+			boolean moreEvents;
+			synchronized (messageQueue) {
+				moreEvents = messageQueue.isEmpty();
+			}
+			
+			// If not, enter the idle state for 250 ms.
+			if (!moreEvents) {
+				Lock.waitFor(dispatchLock, 250);
+				
+				// Update lock.
+				dispatchLock = new Lock();
+			}
+		}
 	}
 
 	/**

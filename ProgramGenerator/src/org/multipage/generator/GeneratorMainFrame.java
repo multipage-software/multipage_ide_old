@@ -668,12 +668,18 @@ public class GeneratorMainFrame extends JFrame {
 		// Listen for "show areas' properties" event.
 		ConditionalEvents.receiver(this, Signal.showAreasProperties, action -> {
 			
-			// Retrieve selected areas' IDs from the event object.
-			if (action.relatedInfo instanceof HashSet<?>) {
+			HashSet<Long> selectedAreaIds = null;
 					
-				HashSet<Long> selectedAreaIds = (HashSet<Long>) action.relatedInfo;
-				showProperties(selectedAreaIds);
+			// Retrieve selected areas' IDs from the event object or get currently selected areas.
+			if (action.relatedInfo instanceof HashSet<?>) {
+				selectedAreaIds = (HashSet<Long>) action.relatedInfo;
 			}
+			else {
+				selectedAreaIds = getAreaDiagram().getSelectedAreaIds();
+			}
+			
+			// SHow selected areas' properties.
+			showProperties(selectedAreaIds);
 		});
 		
 		// Listen for the Monitor home page event.
@@ -1384,7 +1390,7 @@ public class GeneratorMainFrame extends JFrame {
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdate");
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", this, "onFocusWhole", "org.multipage.generator.tooltipFocusWhole");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", this, "onFocusBasicArea", "org.multipage.generator.tooltipFocusWhole");
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", this, "onFocus", "org.multipage.generator.tooltipFocus");
 		toolBar.addSeparator();
@@ -1464,7 +1470,7 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Focus on the Basic Area.
 	 */
-	public void onFocusWhole() {
+	public void onFocusBasicArea() {
 		
 		ConditionalEvents.transmit(this, AreasDiagram.class, Signal.focusBasicArea);
 	}
@@ -1631,7 +1637,10 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onSelectAll() {
 		
+		// Select all areas.
 		ConditionalEvents.transmit(this, Signal.selectAll);
+		// Show areas' properties.
+		ConditionalEvents.transmit(this, Signal.showAreasProperties);
 	}
 	
 	/**
@@ -1639,7 +1648,10 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUnselectAll() {
 		
+		// Unselect all areas.
 		ConditionalEvents.transmit(this, Signal.unselectAll);
+		// Show areas' properties.
+		ConditionalEvents.transmit(this, Signal.showAreasProperties);
 	}
 
 	/**
