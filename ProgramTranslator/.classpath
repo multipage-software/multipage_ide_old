@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramBasic"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

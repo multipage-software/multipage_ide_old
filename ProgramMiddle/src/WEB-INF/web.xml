@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+<web-app>
+    <!-- support for JEE cluster, remove this line if you want to put non-serializable objects into the java_session() -->
+    <distributable/>
+    
+    <!-- Your system PHP executable. Default is /usr/bin/php-cgi or c:/Program Files/PHP/php-cgi.exe -->  
+    <context-param><param-name>php_exec</param-name><param-value>php-cgi</param-value></context-param>
+    <!-- Prefer a system PHP executable, if available. Otherwise use the PHP from the .war file. On / Default is Off -->
+    <context-param><param-name>prefer_system_php_exec</param-name><param-value>On</param-value></context-param>
+    <!-- This controls how many child processes the PHP process spawns. -->
+    <context-param><param-name>php_fcgi_connection_pool_size</param-name><param-value>20</param-value></context-param>
+    <!-- This controls how many requests each child process will handle before exiting. -->
+    <context-param><param-name>php_fcgi_max_requests</param-name><param-value>5000</param-value></context-param>
+    
+    <!-- Specify index file extensions separated with comma -->
+    <context-param><param-name>index_files</param-name><param-value>index.html, index.htm, index.php</param-value></context-param>
+    
+    <!-- Specify PHP script file extensions separated with comma -->
+    <context-param><param-name>script_extensions</param-name><param-value>php</param-value></context-param>
+	
+	<!-- Filter1: Cache request to get POSTed data more than once. Use filter. -->
+    <!-- Filter2: Handle PHP urls which cannot be expressed using a standard servlet spec 2.2 url-pattern, 
+         e.g.: *.php/delete/from?what=that You may remove this and the filter-mapping below -->
+    <filter><filter-name>CacheRequestFilter</filter-name><filter-class>com.maclan.server.CacheRequestFilter</filter-class></filter>
+    <filter><filter-name>PhpCGIFilter</filter-name><filter-class>php.java.servlet.PhpCGIFilter</filter-class></filter>
+    <!-- Mappings -->
+    <filter-mapping><filter-name>CacheRequestFilter</filter-name><url-pattern>/*</url-pattern></filter-mapping>
+    <filter-mapping><filter-name>PhpCGIFilter</filter-name><url-pattern>/*</url-pattern></filter-mapping>
+	
+    <!-- Attach the JSR223 script factory to the servlet context -->
+    <listener><listener-class>php.java.servlet.ContextLoaderListener</listener-class></listener>
+    
+    <!-- PHP CGI servlet: when IIS or Apache are not available -->
+    <servlet>
+    	<servlet-name>ProgramServlet</servlet-name><servlet-class>com.maclan.server.ProgramServlet</servlet-class>
+    	<init-param><param-name>prefer_system_php_exec</param-name><param-value>On</param-value></init-param>
+    	<init-param><param-name>php_include_java</param-name><param-value>Off</param-value></init-param>
+    </servlet>
+    
+    <!-- PHP Java servlet -->
+    <servlet>
+    	<servlet-name>PhpJavaServlet</servlet-name><servlet-class>php.java.servlet.PhpJavaServlet</servlet-class>
+    </servlet>
+    
+    <!-- PHP CGI Servlet Mapping -->
+    <servlet-mapping><servlet-name>ProgramServlet</servlet-name><url-pattern>/*</url-pattern></servlet-mapping>
+    
+    <!-- PHP Java Servlet Mapping -->
+    <servlet-mapping><servlet-name>PhpJavaServlet</servlet-name><url-pattern>*.phpjavabridge</url-pattern></servlet-mapping>
+
+    <!-- PHP CGI servlet: when IIS or Apache are not available
+    <servlet><servlet-name>FastCGIServlet</servlet-name><servlet-class>php.java.servlet.fastcgi.FastCGIServlet</servlet-class></servlet> -->
+    <!-- PHP CGI Servlet Mapping
+    <servlet-mapping><servlet-name>FastCGIServlet</servlet-name><url-pattern>/*</url-pattern></servlet-mapping> -->
+    
+
+    <!-- Welcome files -->
+    <welcome-file-list>
+        <welcome-file>index.php</welcome-file>
+    </welcome-file-list>
+
+</web-app>

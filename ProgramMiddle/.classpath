@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/GeneralUtil">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.nondependency" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/GeneralGui">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-util-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-server-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-http-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-io-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-servlet-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-security-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-webapp-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/servlet-api-3.1.jar" sourcepath="C:/PhpJavaBridge/src.zip">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-xml-9.4.7.v20170914.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="/JavaBridge"/>
+	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-io-2.6-bin/commons-io-2.6/commons-io-2.6.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
+	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-lang3-3.7-bin/commons-lang3-3.7/commons-lang3-3.7.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/graalvm-ce-java11-20.2.0">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

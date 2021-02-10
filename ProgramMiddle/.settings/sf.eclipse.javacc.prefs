@@ -1,0 +1,12 @@
+#Thu Jan 26 18:16:29 CET 2012
+CLEAR_CONSOLE=false
+JAVACC_OPTIONS=
+JJDOC_OPTIONS=
+JJTREE_OPTIONS=
+JJ_NATURE=true
+JTB_OPTIONS=-p\=com.maclan.expression
+RUNTIME_JAR=C\:/eclipse/plugins/sf.eclipse.javacc_1.5.16/javacc.jar
+RUNTIME_JTBJAR=C\:/eclipse/plugins/sf.eclipse.javacc_1.5.16/jtb132.jar
+SHOW_CONSOLE=true
+SUPPRESS_WARNINGS=true
+eclipse.preferences.version=1

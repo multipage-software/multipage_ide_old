@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>JavaBridge</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>bin</name>
+			<type>2</type>
+			<location>C:/php-java-bridge/php-java-bridge-7.1.3/bin</location>
+		</link>
+		<link>
+			<name>build.xml</name>
+			<type>1</type>
+			<location>C:/php-java-bridge/php-java-bridge-7.1.3/build.xml</location>
+		</link>
+		<link>
+			<name>server</name>
+			<type>2</type>
+			<location>C:/libraries/php-java-bridge/php-java-bridge-7.1.3/server</location>
+		</link>
+	</linkedResources>
+</projectDescription>
