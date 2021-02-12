@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -7,22 +7,63 @@
 
 package org.multipage.basic;
 
-import java.awt.*;
-import java.awt.geom.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.geom.Rectangle2D;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.text.DecimalFormat;
+import java.util.LinkedList;
+import java.util.Properties;
 
-import javax.swing.*;
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.InputVerifier;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JProgressBar;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
-import com.maclan.server.*;
-
-import java.awt.event.*;
-import java.beans.*;
-import java.io.*;
-import java.text.*;
-import java.util.*;
+import com.maclan.MiddleResult;
+import com.maclan.server.ProgramHttpServer;
 
 /**
  * 
@@ -84,9 +125,9 @@ public class LoginDialog extends JDialog {
 	private Component focus;
 
 	/**
-	 * Success flag.
+	 * Result of the login process.
 	 */
-	private boolean success = false;
+	public MiddleResult result = MiddleResult.UNKNOWN_ERROR;
 
 	/**
 	 * Sleep progress bar.
@@ -212,13 +253,21 @@ public class LoginDialog extends JDialog {
 	private JMenu menuDatabase;
 	private JMenuItem menuCreateDatabase;
 	private JMenuItem menuRemoveDatabase;
-
+	
 	/**
 	 * Create the dialog.
 	 */
 	public LoginDialog(Window owner, String title, ModalityType modality) {
 		super(owner, title, modality);
 
+		// Set application main window.
+		if (owner != null) {
+			Utility.setApplicationMainWindow(owner);
+		}
+		else {
+			Utility.setApplicationMainWindow(this);
+		}
+		
 		initComponents();
 		// $hide>>$
 		postCreate();
@@ -398,7 +447,7 @@ public class LoginDialog extends JDialog {
 		buttonLoadDatabaseNames = new JButton("");
 		buttonLoadDatabaseNames.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				updateDatabaseNamesComboBox();
+				onUpdateDatabaseNames();
 			}
 		});
 		buttonLoadDatabaseNames.setMargin(new Insets(0, 0, 0, 0));
@@ -583,7 +632,7 @@ public class LoginDialog extends JDialog {
 	 * Adds database name into combobox if they are not already present
 	 * @param databaseNames
 	 */
-	private void addDatabaseNames(LinkedList<String> databaseNames) {
+	private void addNewDatabaseNames(LinkedList<String> databaseNames) {
 		
 		for (String databaseName : databaseNames) {
 			addDatabaseName(databaseName);
@@ -663,8 +712,11 @@ public class LoginDialog extends JDialog {
 	 */
 	protected void onLogin() {
 		
+		// Initialize.
 		boolean exit = false;
-		Properties properties;
+		
+		// Get HTTP server object.
+		ProgramHttpServer server = ProgramBasic.getHttpServer();
 		
 		// Get focused component.
 		focus = getFocusOwner();
@@ -675,15 +727,36 @@ public class LoginDialog extends JDialog {
 			start_login: while (!exit) {
 			
 				// Check login properties.
-				properties = getLoginPropertiesPrivate();
-				MiddleResult result = ProgramBasic.getMiddle().checkLogin(properties);
+				Properties properties = getLoginPropertiesPrivate();
+				result = ProgramBasic.getMiddle().checkLogin(properties);
 				
 				if (result != MiddleResult.OK) {
 					
 					// Inform user.
 					result.show(this);
 					
-					if (result == MiddleResult.BAD_USERNAME || result == MiddleResult.BAD_PASSWORD) {
+					// On bad database.
+					if (result == MiddleResult.DATABASE_NOT_FOUND) {
+						
+						// Get database name.
+						String databaseName = properties.getProperty("database");
+						
+						// Confirm database.
+						if (Utility.ask("org.multipage.basic.messageCreateNewDatabase", databaseName)) {
+							
+							// create new database.
+							result = createNewDatabase(databaseName);
+							if (result.isNotOK()) {
+								result.show(null);
+							}
+							else {
+								continue;
+							}
+						}
+					}
+					
+					// On bad credentials.
+					else if (result == MiddleResult.BAD_USERNAME || result == MiddleResult.BAD_PASSWORD) {
 						
 						// Decrement attempts counter.
 						attempts--;
@@ -772,17 +845,16 @@ public class LoginDialog extends JDialog {
 					}
 				}
 				else {
-					// If login OK.
+					// If login is OK.
 					progress.setToolTipText("");
 					loginFlag = true;
-					success = true;
+					result = MiddleResult.OK;
 					
 					addComboEditorValueToList();
 					saveDialog();
 					dispose();
 					
 					// Set HTTP server login information.
-					ProgramHttpServer server = ProgramBasic.getHttpServer();
 					if (server != null) {
 						server.setLogin(ProgramBasic.getLoginProperties());
 					}
@@ -858,10 +930,16 @@ public class LoginDialog extends JDialog {
 		
 		Properties properties = new Properties();
 		
-		char [] passwordArea = passwordText.getPassword();
+		StringBuilder password = new StringBuilder();
+		password.append(passwordText.getPassword());
+		
+		// Inform about empty password.
+		if (password.length() <= 0) {
+			Utility.show(this, "org.multipage.basic.messageEmptyPassword");
+		}
 		
 		properties.setProperty("username", usernameText.getText());
-		properties.setProperty("password", String.valueOf(passwordArea));
+		properties.setProperty("password", password.toString());
 		properties.setProperty("server", serverText.getText());
 		properties.setProperty("port", portText.getText());
 		properties.setProperty("ssl", sslCheckBox.isSelected() ? "true" : "false");
@@ -874,9 +952,10 @@ public class LoginDialog extends JDialog {
 		properties.setProperty("database", databaseName);
 		
 		// Remove passwordText.
-		for (int index = 0; index < passwordArea.length; index++) {
-			passwordArea[index] = 0; 
+		for (int index = 0; index < password.length(); index++) {
+			password.setCharAt(index, '\00');
 		}
+		
 		
 		return properties;
 	}
@@ -910,7 +989,7 @@ public class LoginDialog extends JDialog {
 	 * @return the success
 	 */
 	public boolean isSuccess() {
-		return success;
+		return result.isOK();
 	}
 
 	/**
@@ -934,7 +1013,7 @@ public class LoginDialog extends JDialog {
 	}
 	
 	/**
-	 * Removes database name from combobox list.
+	 * Removes database name from combo box list.
 	 */
 	protected void removeDatabaseName(String databaseName) {
 		
@@ -946,7 +1025,7 @@ public class LoginDialog extends JDialog {
 			
 			if (itemValue.contains(databaseName)) {
 				
-				// Remove the item, initialize cmobobox editor and exit the loop.
+				// Remove the item, initialize combo box editor and exit the loop.
 				comboDatabaseNames.removeItemAt(index);
 				updateDatabaseNamesComboBox();
 				break;
@@ -955,24 +1034,40 @@ public class LoginDialog extends JDialog {
 	}
 	
 	/**
-	 * Update database names combobox.
+	 * Get list of available databases.
+	 * @return
+	 */
+	private MiddleResult getAvailableDatabases(LinkedList<String> databaseNames) {
+		
+		// Get available database names.
+		Properties loginProperties = getLoginPropertiesPrivate();
+		
+		MiddleResult result = ProgramBasic.getMiddle().getDatabaseNames(loginProperties, databaseNames);
+		return result;
+	}
+	
+	/**
+	 * Update database names combo box.
 	 */
 	private void updateDatabaseNamesComboBox() {
 		
-		// Load database names from DBMS
+		// Get available databases.
 		LinkedList<String> databaseNames = new LinkedList<String>();
+		MiddleResult result = getAvailableDatabases(databaseNames);
 		
-		Properties login = getLoginPropertiesPrivate();
-		String server = login.getProperty("server");
-		int port = Integer.parseInt(login.getProperty("port"));
-		boolean ssl = Boolean.parseBoolean(login.getProperty("ssl"));
-		String username = login.getProperty("username");
-		String password = login.getProperty("password");
-		
-		MiddleResult result = ProgramBasic.getMiddle().getDatabaseNames(server, port, ssl, username, password, databaseNames);
+		// Delegate the call.
 		if (result.isOK()) {
-			addDatabaseNames(databaseNames);
+			updateDatabaseNamesComboBox(databaseNames);
 		}
+	}
+	
+	/**
+	 * Update database names combo box.
+	 */
+	private void updateDatabaseNamesComboBox(LinkedList<String> databaseNames) {
+		
+		// Add new database names.
+		addNewDatabaseNames(databaseNames);
 		
 		// Set editor text
 		String editorValue = "";
@@ -984,11 +1079,33 @@ public class LoginDialog extends JDialog {
 		
 		// Reset editor value.
 		comboDatabaseNames.getEditor().setItem(editorValue);
-		
 	}
-
+	
 	/**
-	 * Create new database.
+	 * On update database names.
+	 */
+	protected void onUpdateDatabaseNames() {
+		
+		// Get available databases.
+		LinkedList<String> databaseNames = new LinkedList<String>();
+		MiddleResult result = getAvailableDatabases(databaseNames);
+		if (result.isNotOK()) {
+			Utility.show(this, "org.multipage.basic.messageCannotGetAvailableDatabases", result.getMessage());
+			return;
+		}
+		
+		// Let user select current database
+		String currentDatabase = SelectDatabaseDialog.showDialog(this, databaseNames);
+		
+		// Update combo box.
+		updateDatabaseNamesComboBox(databaseNames);
+		
+		// Select current database.
+		comboDatabaseNames.setSelectedItem(currentDatabase);
+	}
+	
+	/**
+	 * On new database.
 	 */
 	protected void onNewDatabase() {
 		
@@ -997,6 +1114,16 @@ public class LoginDialog extends JDialog {
 		if (databaseName == null) {
 			return;
 		}
+		
+		// Create new database.
+		createNewDatabase(databaseName);
+	}
+	
+	/**
+	 * Create new database.
+	 * @param databaseName
+	 */
+	public MiddleResult createNewDatabase(String databaseName) {
 		
 		// Get connection properties.		
 		String userName = usernameText.getText();
@@ -1016,12 +1143,15 @@ public class LoginDialog extends JDialog {
 		if (result.isNotOK()) {
 			result.show(this);
 			
-			return;
+			return result;
 		}
 		
 		// Set new database name.
+		LoginDialog.databaseName = databaseName;
 		addDatabaseName(databaseName);
 		comboDatabaseNames.setSelectedItem(databaseName);
+		
+		return MiddleResult.OK;
 	}
 	
 	/**
@@ -1029,25 +1159,12 @@ public class LoginDialog extends JDialog {
 	 */
 	protected void onRemoveDatabase() {
 		
-		// Get connection properties.		
-		String userName = usernameText.getText();
-		char [] passwordArea = passwordText.getPassword();
-		String password =  String.valueOf(passwordArea);
-		String server = serverText.getText();
-		int port = -1;
-		try {
-			port = Integer.parseInt(portText.getText());
-		}
-		catch (Exception e) {
-		}
-		boolean useSsl = sslCheckBox.isSelected();
-		
 		// Get database names list.
 		LinkedList<String> databaseNames = new LinkedList<String>();
-		MiddleResult result = ProgramBasic.getMiddle().getDatabaseNames(server, port, useSsl, userName, password, databaseNames);
+		MiddleResult result = getAvailableDatabases(databaseNames);
 		
 		if (result.isNotOK()) {
-			result.show(this);
+			Utility.show(this, "org.multipage.basic.messageCannotGetAvailableDatabases", result.getMessage());
 			return;
 		}
 		
@@ -1062,13 +1179,23 @@ public class LoginDialog extends JDialog {
 			return;
 		}
 		
+		// Get connection properties.	
+		Properties loginProperties = getLoginPropertiesPrivate();
+		String userName = loginProperties.getProperty("username");
+		String password =  loginProperties.getProperty("password");
+		String server = loginProperties.getProperty("server");
+		String portString = loginProperties.getProperty("port");
+		int port = Integer.parseInt(portString);
+		String useSslString = loginProperties.getProperty("useSsl");
+		boolean useSsl = Boolean.getBoolean(useSslString);
+		
 		// Try to remove selected database.
 		result = ProgramBasic.getMiddle().dropDatabase(server, port, useSsl, userName, password, databaseName);
 		if (result.isNotOK()) {
 			result.show(this);
 		}
 		
-		// Remove databse name from combobox list
+		// Remove database name from combobox list
 		removeDatabaseName(databaseName);
 	}
 }

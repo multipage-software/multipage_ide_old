@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -7,18 +7,57 @@
 
 package org.multipage.derby;
 
-import java.awt.image.*;
-import java.io.*;
-import java.nio.file.*;
-import java.sql.*;
-import java.util.*;
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.sql.Blob;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Savepoint;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Properties;
+import java.util.function.Function;
 
-import javax.sql.*;
+import javax.sql.DataSource;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Utility;
+import org.multipage.util.ImgUtility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.AreaResource;
+import com.maclan.EnumerationObj;
+import com.maclan.EnumerationValue;
+import com.maclan.Language;
+import com.maclan.LoadSlotHint;
+import com.maclan.MiddleLight;
+import com.maclan.MiddleListener;
+import com.maclan.MiddleResult;
+import com.maclan.MiddleUtility;
+import com.maclan.MimeType;
+import com.maclan.Resource;
+import com.maclan.ServerCache;
+import com.maclan.Slot;
+import com.maclan.StartResource;
+import com.maclan.VersionData;
+import com.maclan.VersionObj;
 
 /**
  * @author
@@ -4315,7 +4354,7 @@ public class MiddleLightImpl implements MiddleLight {
 		MiddleResult result = MiddleResult.OK;
 		
 		try {
-			Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance();
+			Class.forName("org.apache.derby.jdbc.EmbeddedDriver").getDeclaredConstructor().newInstance();
 		} 
 		catch (Exception e) {
 			result = MiddleResult.exceptionToResult(e);
@@ -4339,10 +4378,12 @@ public class MiddleLightImpl implements MiddleLight {
 	
 	/**
 	 * Create database if it doesn't exist.
+	 * @param loginProperties
 	 * @param isNewDatabase
 	 */
 	@Override
-	public MiddleResult attachOrCreateNewDatabase(Obj<Boolean> isNewDatabase) {
+	public MiddleResult attachOrCreateNewBasicArea(Properties loginProperties,
+			Function<LinkedList<String>, String> selectDatabaseCallback, Obj<Boolean> isNewDatabase) {
 		
 		// Initialize variables.
 		isNewDatabase.ref = false;

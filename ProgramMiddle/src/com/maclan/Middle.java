@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -13,6 +13,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Function;
 
 import org.multipage.util.*;
 
@@ -28,6 +29,15 @@ public interface Middle extends MiddleLight {
 	 * @param model
 	 */
 	public void setModel(AreasModel model);
+	
+	/**
+	 * Create database if it doesn't exist.
+	 * @param loginProperties
+	 * @param selectDatabaseCallback = can be null
+	 * @param isNewDatabase
+	 */
+	public MiddleResult attachOrCreateNewBasicArea(Properties loginProperties,
+			Function<LinkedList<String>, String> selectDatabaseCallback, Obj<Boolean> isNewDatabase);
 
 	/**
 	 * Update language text.
@@ -2714,6 +2724,13 @@ public interface Middle extends MiddleLight {
 	 */
 	public MiddleResult getDatabaseNames(String server, int port,
 			boolean useSsl, String userName, String password, LinkedList<String> databaseNames);
+	
+	/**
+	 * Get database names list.
+	 * @param loginProperties
+	 * @param databaseNames
+	 */
+	public MiddleResult getDatabaseNames(Properties loginProperties, LinkedList<String> databaseNames);
 
 	/**
 	 * Drop database.

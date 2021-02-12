@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -31,7 +31,8 @@ import com.maclan.MiddleResult;
 import com.maclan.MiddleUtility;
 import com.maclan.Slot;
 import com.maclan.help.ProgramHelp;
-import com.maclan.server.*;
+import com.maclan.server.JettyHttpServer;
+import com.maclan.server.ProgramHttpServer;
 
 /**
  * @author
@@ -212,7 +213,12 @@ public class ProgramBasic {
 		
 		// Attach existing or create new database.
 		Obj<Boolean> isNewDatabase = new Obj<Boolean>();
-		MiddleResult result = middle.attachOrCreateNewDatabase(isNewDatabase);
+		Properties loginProperties = getLoginProperties();
+		MiddleResult result = middle.attachOrCreateNewBasicArea(loginProperties, foundDatabaseNames -> {
+					
+					return SelectDatabaseDialog.showDialog(null, foundDatabaseNames);
+				},
+				isNewDatabase);
 		
 		if (result.isOK()) {
 			
@@ -256,15 +262,31 @@ public class ProgramBasic {
 
 		return loginDialog.getLoginProperties();
 	}
+	
+	/**
+	 * Get available databases.
+	 */
+	public static MiddleResult loadAvailableDatabases(Properties loginProperties, LinkedList<String> databaseNames) {
+		
+		// Load database names from DBMS
+		String server = loginProperties.getProperty("server");
+		int port = Integer.parseInt(loginProperties.getProperty("port"));
+		boolean ssl = Boolean.parseBoolean(loginProperties.getProperty("ssl"));
+		String username = loginProperties.getProperty("username");
+		String password = loginProperties.getProperty("password");
+		
+		MiddleResult result = ProgramBasic.getMiddle().getDatabaseNames(server, port, ssl, username, password, databaseNames);
+		return result;
+	}
 
 	/**
 	 * Show login dialog.
 	 * @return
 	 */
-	public static boolean showLoginDialog(Window parentWindow, String title) {
+	public static MiddleResult loginDialog(Window parentWindow, String title) {
 		
 		if (!useLogin) {
-			return true;
+			return MiddleResult.OK;
 		}
 
 		if (loginDialog == null ) {
@@ -281,7 +303,18 @@ public class ProgramBasic {
 		// Show login dialog.
 		loginDialog.setVisible(true);
 		loginDialog.dispose();
-		return loginDialog.isSuccess();
+		return loginDialog.result;
+	}
+	
+	/**
+	 * Show login dialog with a possibility to create new database.
+	 * @param confirmDatabaseLambda
+	 * @return
+	 */
+	public static MiddleResult loginDialog() {
+		
+		MiddleResult result = loginDialog(null, "org.multipage.generator.textLoginDialog");
+		return result;
 	}
 
 	/**
@@ -308,7 +341,7 @@ public class ProgramBasic {
 	 * Get is login flag.
 	 * @return
 	 */
-	public static boolean isUseLogin() {
+	public static boolean isUsedLogin() {
 		
 		return useLogin;
 	}

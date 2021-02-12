@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -5365,7 +5365,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	}
 
 	/**
-	 * Set start area.
+	 * Set home area.
 	 * @param areaId
 	 * @return
 	 */
@@ -5398,7 +5398,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	}
 
 	/**
-	 * Set home area.
+	 * Set home area function alias.
 	 * @param login
 	 * @param area
 	 * @return
@@ -10690,48 +10690,38 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				
 			}
 			
-			long areaResourceId;
-			
 			// Get new area ID.
 			Long newAreaID = areaTreeData.getNewAreaId(areaResourceRef.areaId);
 			if (newAreaID == null) {
 				return MiddleResult.UNKNOWN_RESOURCE_AREA;
 			}
-						
-			// When the area tree is copied.
-			if (areaTreeData.isCopied()) {
-				areaResourceId = areaResourceRef.resourceId;
+			
+			// Get resource.
+			ResourceRef resourceRef = areaTreeData.getResourceRef(areaResourceRef.resourceId);
+			if (resourceRef == null) {
+				return MiddleResult.RESOURCE_NOT_FOUND;
 			}
-			else {
-				// Get resource.
-				ResourceRef resourceRef = areaTreeData.getResourceRef(areaResourceRef.resourceId);
-				if (resourceRef == null) {
-					return MiddleResult.RESOURCE_NOT_FOUND;
+			
+			// If the resource is not inserted, insert it.
+			if (resourceRef.newResourceId == null) {
+				
+				Obj<Long> resourceId = new Obj<Long>();
+				result = insertResourceData(resourceRef, areaTreeData, datBlocks, resourceId,
+						swingWorkerHelper);
+				if (result.isNotOK()) {
+					return result;
 				}
 				
-				// If the resource is not inserted, insert it.
-				if (resourceRef.newResourceId == null) {
-					
-					Obj<Long> resourceId = new Obj<Long>();
-					result = insertResourceData(resourceRef, areaTreeData, datBlocks, resourceId,
-							swingWorkerHelper);
-					if (result.isNotOK()) {
-						return result;
-					}
-					
-					resourceRef.newResourceId = resourceId.ref;
-				}
-				
-				areaResourceId = resourceRef.newResourceId;
+				resourceRef.newResourceId = resourceId.ref;
 			}
-		
+			
 			PreparedStatement statement = null;
 			
 			try {
 				// INSERT statement.
 				statement = connection.prepareStatement(insertAreaResource);
 				statement.setLong(1, newAreaID);
-				statement.setLong(2, areaResourceId);
+				statement.setLong(2, resourceRef.newResourceId);
 				if (areaResourceRef.localDescription != null) {
 					statement.setString(3, areaResourceRef.localDescription);
 				}
@@ -18429,6 +18419,16 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	@Override
 	public MiddleResult getDatabaseNames(String server, int port,
 			boolean useSsl, String userName, String password, LinkedList<String> databaseNames) {
+		
+		databaseNames.clear();
+		return MiddleResult.OK;
+	}
+	
+	/**
+	 * Get database names list.
+	 */
+	@Override
+	public MiddleResult getDatabaseNames(Properties loginProperties, LinkedList<String> databaseNames) {
 		
 		databaseNames.clear();
 		return MiddleResult.OK;

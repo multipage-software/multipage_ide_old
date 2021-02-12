@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.sql.Blob;
 import java.util.*;
+import java.util.function.Function;
 
 import javax.sql.DataSource;
 
@@ -668,9 +669,11 @@ public interface MiddleLight {
 
 	/**
 	 * Create database if not exist.
+	 * @param loginProperties 
 	 * @param isNewDatabase
 	 */
-	public MiddleResult attachOrCreateNewDatabase(Obj<Boolean> isNewDatabase);
+	public MiddleResult attachOrCreateNewBasicArea(Properties loginProperties,
+			Function<LinkedList<String>, String> selectDatabaseCallback, Obj<Boolean> isNewDatabase);
 	
 	/**
 	 * Load area source.

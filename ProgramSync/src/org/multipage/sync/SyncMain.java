@@ -216,7 +216,7 @@ public class SyncMain {
 			
 			// Load menu from area server.
 			areaServerClient = AreaServerClient.newInstance(popupMenu);
-			areaServerClient.loadMenu(false);
+			//areaServerClient.loadMenu(false);
 		}
 		catch (Exception e) {
 			MessageDialog.showDialog(e.getLocalizedMessage());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -123,7 +123,9 @@ public class JettyHttpServer extends ProgramHttpServer {
 			result.throwPossibleException();
 			
 			// Stops HTTP server
-			server.stop();
+			if (server != null) {
+				server.stop();
+			}
 			
 			// Unitialize
 			SyncMain.unitialize();

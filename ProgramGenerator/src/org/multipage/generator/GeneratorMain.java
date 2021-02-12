@@ -10,6 +10,7 @@ package org.multipage.generator;
 import java.io.File;
 import java.io.InputStream;
 import java.util.Locale;
+import java.util.Properties;
 
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
@@ -23,8 +24,8 @@ import org.multipage.sync.ProgramSync;
 import org.multipage.sync.SyncMain;
 import org.multipage.translator.ProgramDictionary;
 import org.multipage.util.Obj;
-import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
+import org.multipage.util.j;
 
 import com.maclan.MiddleResult;
 import com.maclan.MiddleUtility;
@@ -195,25 +196,30 @@ public class GeneratorMain {
 		// Load serialized data.
 		serializer.startLoadingSerializedStates();
 		
-		// Database login.
-		boolean useLogin = ProgramBasic.isUseLogin();
-		
 		// Enable/disable CSS editors in text popup trayMenu.
 		TextPopupMenu.enableCss = true;
 		
-		if (useLogin && ProgramBasic.showLoginDialog(null, 
-				Resources.getString("org.multipage.generator.textLoginDialog")) || !useLogin) {
+		// Database login.
+		MiddleResult loginResult = MiddleResult.OK;
+		boolean useLogin = ProgramBasic.isUsedLogin();
+		if (useLogin) {
+			loginResult = ProgramBasic.loginDialog();
+		}
+		
+		if (loginResult.isOK()) {
 			
-			// Create database if it doesn't exist.
-			Obj<Boolean> isNewDatabase = new Obj<Boolean>();
-			MiddleResult result = ProgramBasic.getMiddle().attachOrCreateNewDatabase(isNewDatabase);
+			// Create basic area if it doesn't exist.
+			Obj<Boolean> newBasicArea = new Obj<Boolean>();
+			Properties loginProperties = ProgramBasic.getLoginProperties();
 			
+			MiddleResult result = ProgramBasic.getMiddle().attachOrCreateNewBasicArea(loginProperties, null, newBasicArea);
 			if (result.isOK()) {
 				
+				
 				// Import help.
-				if (isNewDatabase.ref) {
+				if (newBasicArea.ref) {
 					
-					System.err.println("Importing Maclan reference into Basic Area.");
+					j.log("Importing Maclan reference into Basic Area.");
 					
 					InputStream maclanHelpXml = ProgramHelp.openMaclanReferenceXml();
 					InputStream maclanHelpDat = ProgramHelp.openMaclanReferenceDat();
@@ -234,7 +240,7 @@ public class GeneratorMain {
 			}
 			
 			// Start HTTP server.
-			ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUseLogin());
+			ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUsedLogin());
 			
 			// Initialize main frame class. Create and show main frame.
 			GeneratorMainFrame mainFrame = new GeneratorMainFrame();

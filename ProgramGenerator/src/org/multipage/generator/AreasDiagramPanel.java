@@ -425,7 +425,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(area.getId());
 			
-			// Propagate "on related areas clicked" event.
+			// Transmit "on related areas clicked" signal.
 			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.onClickRelatedAreas, selectedAreaIds);
 		}
 	}
@@ -451,9 +451,8 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		// Focus area.
 		focusAreaNear(areaId);
 		
-		// Select siblings.
-		buttonSiblings.setSelected(true);
-		loadAreaSiblings();
+		// Transmit "update areas" signal.
+		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.displayRelatedAreas, areaId);
 	}
 
 	/**
@@ -573,7 +572,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// Listen for "related areas' clicked" event.
+		// Add receiver for "click related areas" event.
 		ConditionalEvents.receiver(this, Signal.onClickRelatedAreas, action -> {
 			
 			// Get selected areas.
@@ -585,7 +584,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.selectDiagramAreas, selectedAreaIds);
 		});
 		
-		// Listen for "show areas' relations" event.
+		// Add receiver for "show areas' relations" event.
 		ConditionalEvents.receiver(this, Signal.showAreasRelations, action -> {
 				
 			if (action.relatedInfo instanceof HashSet<?>) {
@@ -595,6 +594,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
+		// Add receiver for "select all" event.
 		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -604,6 +604,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
+		// Add receiver for "unselect all" event.
 		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -613,7 +614,15 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Listen for area focus changes.
+		// Add receiver for "focus home area" event.
+		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
+			
+			if (AreasDiagramPanel.this.isShowing()) {
+				focusHomeArea();
+			}
+		});
+		
+		// Add receiver for "focus tab area" event.
 		ConditionalEvents.receiver(this, Signal.focusTabArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -623,10 +632,15 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
+		// Add receiver for "display related areas" event.
+		ConditionalEvents.receiver(this, Signal.displayRelatedAreas, action -> {
 			
-			if (AreasDiagramPanel.this.isShowing()) {
-				focusHomeArea();
+			if (AreasDiagramPanel.this.isShowing() && action.relatedInfo instanceof Long) {
+				
+				// Pull area ID.
+				long areaId = (Long) action.relatedInfo;
+				// Display related areas.
+				displayRelatedAreas(areaId);
 			}
 		});
 	}
@@ -1053,6 +1067,20 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		
 		areasDiagram.removeSelection();
 		areasDiagram.select(areaId, selected, affectSubareas);
+	}
+	
+	/**
+	 * Select siblings button.
+	 */
+	private void select(JToggleButton button) {
+		
+		final JToggleButton [] buttonList = { buttonSiblings, buttonSubAreas, buttonSuperAreas };
+		
+		// Select the input button and unselect the others.
+		for (JToggleButton existingButton : buttonList) {
+			
+			existingButton.setSelected(existingButton.equals(button));
+		}
 	}
 	
 	/**

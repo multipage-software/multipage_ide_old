@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -172,6 +172,11 @@ public class Utility {
 	public static String currentPathName = "";
 	
 	/**
+	 * Application main window.
+	 */
+	private static Window applicationMainWindow = null;
+	
+	/**
 	 * Separators.
 	 */
 	public static final char pathSeparatorCharacter = '/';
@@ -242,6 +247,33 @@ public class Utility {
 	public static void setCurrentPathName(String currentPathName) {
 		
 		Utility.currentPathName = currentPathName;
+	}
+	
+	/**
+	 * Set application main window.
+	 * @param window
+	 */
+	public static void setApplicationMainWindow(Window window) {
+		
+		Utility.applicationMainWindow = window;
+	}
+	
+	/**
+	 * Set application main window.
+	 * @param component
+	 */
+	public static void setApplicationMainWindow(Component component) {
+		
+		Utility.applicationMainWindow = findWindowRecursively(component);
+	}
+	
+	/**
+	 * Get application main window.
+	 * @param component
+	 */
+	public static Window getApplicationMainWindow() {
+		
+		return Utility.applicationMainWindow;
 	}
 
 	/**
@@ -594,7 +626,7 @@ public class Utility {
 	 * Show message and ask user.
 	 * @param message
 	 */
-	public static boolean ask(String message, Object ... parameters) {
+	public static boolean ask2(String message, Object ... parameters) {
 
 		message = String.format(message, parameters);
 		return JOptionPane.showConfirmDialog(null, message) == JOptionPane.YES_OPTION;
@@ -681,7 +713,20 @@ public class Utility {
 		return JOptionPane.showConfirmDialog(parent, message)
 				== JOptionPane.YES_OPTION;
 	}
-
+	
+	/**
+	 * Show localized message and ask user.
+	 * @param parent
+	 * @param textName
+	 */
+	public static boolean ask(String textName, Object ... parameters) {
+		
+		String message = String.format(Resources.getString(textName), parameters);
+		
+		return JOptionPane.showConfirmDialog(applicationMainWindow, message)
+				== JOptionPane.YES_OPTION;
+	}
+	
 	/**
 	 * Ask user to insert text.
 	 * @param parent
@@ -693,6 +738,30 @@ public class Utility {
 		return JOptionPane.showInputDialog(parent, Resources.getString(textName),
 				defaulString);
 	}
+
+	/**
+	 * Ask user to insert text.
+	 * @param textName
+	 * @param defaulString
+	 * @return
+	 */
+	public static String input(String textName, String defaulString) {
+		
+		return JOptionPane.showInputDialog(applicationMainWindow, Resources.getString(textName),
+				defaulString);
+	}
+
+	/**
+	 * Ask user to insert text.
+	 * @param textName
+	 * @return
+	 */
+	public static String input(String textName) {
+		
+		return JOptionPane.showInputDialog(applicationMainWindow, Resources.getString(textName),
+				"");
+	}
+	
 	/**
 	 * Ask user to insert text.
 	 * @param parent
@@ -1719,8 +1788,26 @@ public class Utility {
 	 * Find component window.
 	 * @param component
 	 * @return
+	 * @throws Exception 
 	 */
-	  public static Window findWindow(Component component) {
+	public static Window findWindow(Component component) {
+		
+		// Check the component.
+		if (component == null) {
+			return getApplicationMainWindow();
+		}
+		
+		// Find window recursively.
+		Window window = findWindowRecursively(component);
+		return window;
+	}
+	  
+	/**
+	 * Find component window recursively.
+	 * @param component
+	 * @return
+	 */
+	 private static Window findWindowRecursively(Component component) {
 		  
 		if (component == null) {
 		    return JOptionPane.getRootFrame();
@@ -1729,7 +1816,7 @@ public class Utility {
 		    return (Window) component;
 		}
 		else {
-		    return findWindow(component.getParent());
+		    return findWindowRecursively(component.getParent());
 		}
 	}
 

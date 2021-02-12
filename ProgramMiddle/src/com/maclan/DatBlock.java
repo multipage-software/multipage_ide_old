@@ -33,12 +33,12 @@ public class DatBlock {
 	/**
 	 * Block start offset.
 	 */
-	public long dataStart;
+	public Long dataStart;
 	
 	/**
 	 * Block end offset.
 	 */
-	public long dataEnd;
+	public Long dataEnd;
 	
 	/**
 	 * Create new language icon block.
@@ -66,7 +66,7 @@ public class DatBlock {
 	 * @param dataEnd
 	 * @return
 	 */
-	public static DatBlock newResoureBlob(long recordId, long dataStart, long dataEnd) {
+	public static DatBlock newResoureBlob(long recordId, Long dataStart, Long dataEnd) {
 		
 		DatBlock block = new DatBlock();
 		

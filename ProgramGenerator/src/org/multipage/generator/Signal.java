@@ -52,6 +52,13 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
+	// Display related areas.
+	displayRelatedAreas(
+			SignalType.areaViewChange,
+			SignalType.areaViewStateChange,
+			SignalType.guiChange
+			),
+	
 	// Select areas in the diagram. The set of areas' IDs is sent in related info of the message.
 	selectDiagramAreas(
 			SignalType.areaViewChange,
@@ -103,7 +110,7 @@ public enum Signal implements EventCondition {
 			),
 	
 	// Show read only areas in areas diagram.
-	showReadOnlyAreas(
+	exposeReadOnlyAreas(
 			SignalType.guiChange
 			),
 	

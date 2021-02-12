@@ -375,7 +375,7 @@ public class GeneratorMainFrame extends JFrame {
 		showIdButton.setSelected(showIdButtonState);
 		onShowHideIds();
 		// Lighten read only elements state.
-		lightReadOnly.setSelected(!AreaShapes.readOnlyLighter);
+		exposeReadOnly.setSelected(!AreaShapes.readOnlyLighter);
 		// Create cloned diagrams.
 		loadTabPanels();
 	}
@@ -471,7 +471,7 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Light read only elements.
 	 */
-	private JToggleButton lightReadOnly;
+	private JToggleButton exposeReadOnly;
 	
 	/**
 	 * Search dialog.
@@ -707,6 +707,11 @@ public class GeneratorMainFrame extends JFrame {
 		// Listen for the update all request.
 		ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
 			ProgramGenerator.reloadModel();
+		});
+		
+		// Add receiver for the "expose read only areas" event.
+		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, action -> {
+			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
 		});
  	}
 	
@@ -1044,7 +1049,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Conditionally created login trayMenu item.
 		JMenuItem loginDialog = null;
-		if (ProgramBasic.isUseLogin()) {
+		if (ProgramBasic.isUsedLogin()) {
 			loginDialog = new JMenuItem(Resources.getString("org.multipage.generator.menuLoginDialog"));
 				loginDialog.setAccelerator(KeyStroke.getKeyStroke("control L"));
 				loginDialog.setIcon(Images.getIcon("org/multipage/generator/images/login_small.png"));
@@ -1379,14 +1384,14 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Add buttons. 24 x 24 icons
 		toolBar.addSeparator();
-		if (ProgramBasic.isUseLogin()) {
+		if (ProgramBasic.isUsedLogin()) {
 			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", this, "onLoginProperties", "org.multipage.generator.tooltipLoginWindow");
 			toolBar.addSeparator();
 		}
 		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", this, "onShowHideIds", "org.multipage.generator.tooltipShowHideIds");
 		addHideSlotsButton(toolBar);
 		toolBar.addSeparator();
-		lightReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onLightReadOnly", "org.multipage.generator.tooltipLightReadOnly");
+		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onExposeReadOnly", "org.multipage.generator.tooltipExposeReadOnly");
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdate");
 		toolBar.addSeparator();
@@ -1531,7 +1536,7 @@ public class GeneratorMainFrame extends JFrame {
 				ProgramGenerator.isExtensionToBuilder() ? "builder.textLoginDialog" :
 					"org.multipage.generator.textLoginDialog");
 		
-		ProgramBasic.showLoginDialog(this, title);
+		ProgramBasic.loginDialog(this, title);
 		statusBar.setLoginProperties(ProgramBasic.getLoginProperties());
 		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.newBasicArea);
 		
@@ -1760,12 +1765,12 @@ public class GeneratorMainFrame extends JFrame {
 	}
 	
 	/**
-	 * On light read only areas.
+	 * On expose read only areas.
 	 */
-	public void onLightReadOnly() {
+	public void onExposeReadOnly() {
 		
-		AreaShapes.readOnlyLighter = !lightReadOnly.isSelected();
-		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showReadOnlyAreas);
+		// Transmit "expose read only areas" signal.
+		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.exposeReadOnlyAreas);
 	}
 
 	/**
@@ -1774,7 +1779,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public static boolean areasLocked() {
 		
-		return !mainFrame.lightReadOnly.isSelected();
+		return !mainFrame.exposeReadOnly.isSelected();
 	}
 	
 	/**

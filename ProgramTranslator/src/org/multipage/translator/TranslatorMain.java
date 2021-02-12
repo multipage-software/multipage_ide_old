@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -13,6 +13,7 @@ import org.multipage.basic.*;
 import org.multipage.gui.*;
 import org.multipage.util.Resources;
 
+import com.maclan.MiddleResult;
 import com.maclan.MiddleUtility;
 
 /**
@@ -118,7 +119,8 @@ public class TranslatorMain {
 		serializer.startLoadingSerializedStates();
 		
 		// Database login.
-		if (ProgramBasic.showLoginDialog(null, Resources.getString("org.multipage.translator.textLoginDialog"))) {
+		MiddleResult loginResult = ProgramBasic.loginDialog(null, Resources.getString("org.multipage.translator.textLoginDialog"));
+		if (loginResult.isOK()) {
 			
 			// Show dictionary dialog.
 			TranslatorDialog.showDialog(null);

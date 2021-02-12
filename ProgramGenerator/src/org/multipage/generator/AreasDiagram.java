@@ -427,6 +427,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				focusBasicArea();
 			}
 		});
+		
+		// Add receiver for the "expose read only areas" event.
+		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, action -> {
+			
+			// Set overview and repaint the GUI.
+			setOverview();
+			repaint();
+		});
 	}
 	
 	/**

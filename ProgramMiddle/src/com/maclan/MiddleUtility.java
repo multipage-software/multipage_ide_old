@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -7,32 +7,54 @@
 
 package com.maclan;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.UUID;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.swing.*;
-import javax.xml.*;
-import javax.xml.parsers.*;
-import javax.xml.transform.dom.*;
-import javax.xml.transform.stream.*;
-import javax.xml.validation.*;
+import javax.swing.JOptionPane;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 
 import org.apache.commons.io.FileUtils;
-import org.multipage.gui.*;
-import org.multipage.util.*;
-import org.w3c.dom.*;
-import org.xml.sax.*;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import com.maclan.server.AreaServer;
 import com.maclan.server.Request;
@@ -172,7 +194,7 @@ public class MiddleUtility {
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
 			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleImpl");
-			return (Middle) objectClass.newInstance();
+			return (Middle) objectClass.getDeclaredConstructor().newInstance();
 		}
 		catch (Exception e) {
 			
@@ -191,7 +213,7 @@ public class MiddleUtility {
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
 			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
-			return (MiddleLight) objectClass.newInstance();
+			return (MiddleLight) objectClass.getDeclaredConstructor().newInstance();
 		}
 		catch (Exception e) {
 			
@@ -207,6 +229,15 @@ public class MiddleUtility {
 	public static void setPathToMiddle(String pathToMiddleObjects) {
 		
 		pathToMiddle = pathToMiddleObjects;
+	}
+	
+	/**
+	 * Get current path to middle objects.
+	 * @return
+	 */
+	public static String getPathToMiddle() {
+		
+		return pathToMiddle;
 	}
 
 	/**

@@ -12,9 +12,12 @@ import java.awt.*;
 import javax.swing.*;
 
 import org.multipage.basic.ProgramBasic;
+import org.multipage.basic.SelectDatabaseDialog;
 import org.multipage.gui.*;
 import org.multipage.util.*;
 
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 import com.maclan.MiddleUtility;
 import com.maclan.server.DebugClient;
 
@@ -23,6 +26,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.Properties;
 
 /**
  * 
@@ -680,12 +685,22 @@ public class Settings extends JDialog {
 	 */
 	protected void onDatabaseAccess() {
 		
-		String databaseDirectory = Utility.chooseDirectory2(this, "org.multipage.generator.titleDatabaseDirectory");
-		if (databaseDirectory == null) {
-			return;
+		// On Derby database.
+		if ("org.multipage.derby".equals(MiddleUtility.getPathToMiddle())) {
+			
+			// Select directory.
+			String databaseDirectory = Utility.chooseDirectory2(this, "org.multipage.generator.titleDatabaseDirectory");
+			if (databaseDirectory == null) {
+				return;
+			}
+			
+			textDatabaseAccess.setText(databaseDirectory);
 		}
-		
-		textDatabaseAccess.setText(databaseDirectory);
+		// On PostgreSQL database.
+		else if ("com.maclan.postgresql".equals(MiddleUtility.getPathToMiddle())) {
+			
+			
+		}
 	}
 	
 	/**

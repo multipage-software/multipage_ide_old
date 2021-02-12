@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) sechance
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -26,6 +26,7 @@ public class MiddleResult {
 	public static final MiddleResult OK = new MiddleResult("middle.resultOk", null);
 	public static final MiddleResult UNKNOWN_ERROR = new MiddleResult("middle.resultUnknownError", null);
 	public static final MiddleResult NULL_POINTER = new MiddleResult("middle.resultNullPointer", null);
+	public static final MiddleResult DATABASE_NOT_FOUND = new MiddleResult("middle.resultNoDatabase", null);
 	public static final MiddleResult DB_CLOSE_ERROR = new MiddleResult("middle.resultDbCloseError", null);
 	public static final MiddleResult BAD_USERNAME = new MiddleResult("middle.resultBadDbUserName", null);
 	public static final MiddleResult BAD_PASSWORD = new MiddleResult("middle.resultBadDbPassword", null);
@@ -178,6 +179,10 @@ public class MiddleResult {
 		
 		// Set result.
 		if (code != null) {
+			// Database not found.
+			if (code.compareTo("3D000") == 0) {
+				return DATABASE_NOT_FOUND;
+			}			
 			// Bad user name.
 			if (code.compareTo("28000") == 0) {
 				return BAD_USERNAME;
