@@ -861,7 +861,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectListArea, selectedListAreaIds);
 			}
 		});
-
+		
 		// Add "select all" event listener.
 		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
 			
@@ -871,7 +871,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
-		// Add "unselect all" event listener.
+		// Add "unselect all" event receiver.
 		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
@@ -880,7 +880,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
-		// Add "focus home area" event listener.
+		// Add "focus home area" event receiver.
 		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
 			
 			if (isShowing()) {

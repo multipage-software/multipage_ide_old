@@ -10,6 +10,7 @@ package org.multipage.generator;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -203,6 +204,7 @@ public class AreasPropertiesBase extends JPanel {
 	
 	/**
 	 * Get areas.
+	 * @param areaIds 
 	 * @return
 	 */
 	private LinkedList<Area> getAreas() {
@@ -558,6 +560,34 @@ public class AreasPropertiesBase extends JPanel {
 			public void ancestorMoved(AncestorEvent event) {
 				
 				// Nothing to do.
+			}
+		});
+		
+		// Add the "select list area" event receiver.
+		ConditionalEvents.receiver(this, Signal.selectTreeArea, action -> {
+			
+			if (action.relatedInfo instanceof HashSet<?>) {
+				
+				// Get areas.
+				HashSet<Long> areaIds = (HashSet<Long>) action.relatedInfo;
+				LinkedList<Area> areas = ProgramGenerator.getAreas(areaIds);
+				
+				// Set the areas.
+				setAreas(areas);
+			}
+		});
+		
+		// Add the "select list area" event receiver.
+		ConditionalEvents.receiver(this, Signal.selectListArea, action -> {
+			
+			if (action.relatedInfo instanceof HashSet<?>) {
+				
+				// Get areas.
+				HashSet<Long> areaIds = (HashSet<Long>) action.relatedInfo;
+				LinkedList<Area> areas = ProgramGenerator.getAreas(areaIds);
+				
+				// Set the areas.
+				setAreas(areas);
 			}
 		});
 	}

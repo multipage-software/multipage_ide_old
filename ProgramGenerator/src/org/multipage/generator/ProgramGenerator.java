@@ -739,4 +739,24 @@ public class ProgramGenerator {
 		
 		return updatedAreas;
 	}
+	
+	/**
+	 * Get areas with given IDs.
+	 * @param areaIds
+	 * @return
+	 */
+	public static LinkedList<Area> getAreas(HashSet<Long> areaIds) {
+		
+		LinkedList<Area> areas = new LinkedList<Area>();
+		
+		// Get list of areas with given ID.
+		for (Long areaId : areaIds) {
+			if (areaId != null) {
+				
+				Area area = getArea(areaId);
+				areas.add(area);
+			}
+		}
+		return areas;
+	}
 }
