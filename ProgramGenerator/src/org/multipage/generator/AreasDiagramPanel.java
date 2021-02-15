@@ -572,8 +572,8 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// Add receiver for "click related areas" event.
-		ConditionalEvents.receiver(this, Signal.onClickRelatedAreas, action -> {
+		// "On click related areas" event receiver.
+		ConditionalEvents.receiver(this, Signal.onClickRelatedAreas, message -> {
 			
 			// Get selected areas.
 			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
@@ -584,7 +584,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.selectDiagramAreas, selectedAreaIds);
 		});
 		
-		// Add receiver for "show areas' relations" event.
+		// "Show areas' relations" event receiver.
 		ConditionalEvents.receiver(this, Signal.showAreasRelations, action -> {
 				
 			if (action.relatedInfo instanceof HashSet<?>) {
@@ -594,7 +594,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Add receiver for "select all" event.
+		// "Select all" event receiver.
 		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -604,7 +604,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Add receiver for "unselect all" event.
+		// "Unselect all" event receiver.
 		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -614,7 +614,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Add receiver for "focus home area" event.
+		// "Focus home area" event receiver.
 		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -622,7 +622,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Add receiver for "focus tab area" event.
+		// "Focus tab area" event receiver.
 		ConditionalEvents.receiver(this, Signal.focusTabArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
@@ -632,7 +632,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			}
 		});
 		
-		// Add receiver for "display related areas" event.
+		// "Display related areas" event receiver.
 		ConditionalEvents.receiver(this, Signal.displayRelatedAreas, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing() && action.relatedInfo instanceof Long) {

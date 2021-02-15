@@ -154,7 +154,7 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 			public void componentAdded(ContainerEvent e) {
 				
 				// The "update all" request receiver.
-				ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
+				ConditionalEvents.receiver(this, Signal.updateAllRequest, message -> {
 					
 					// Reload content of the monitor.
 					if (isShowing()) {

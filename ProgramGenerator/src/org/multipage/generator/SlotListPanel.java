@@ -592,7 +592,7 @@ public class SlotListPanel extends JPanel {
 			public void ancestorAdded(AncestorEvent event) {
 				
 				// Create "update all" request event.
-				ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAllRequest, action -> {
+				ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAllRequest, message -> {
 					
 					// Update slot list
 					update();

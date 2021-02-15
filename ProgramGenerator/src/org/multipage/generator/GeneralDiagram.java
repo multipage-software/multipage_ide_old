@@ -506,10 +506,10 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		});
 		positionSaveTimer.setRepeats(false);
 		
-		// Add "load diagrams" event listener.
-		ConditionalEvents.receiver(this, Signal.loadDiagrams, action -> {
+		// "Load diagrams' properties" event receiver.
+		ConditionalEvents.receiver(this, Signal.loadDiagrams, message -> {
 			
-			if (action.sourceClass(GeneratorMainFrame.class)) {
+			if (message.sourceClass(GeneratorMainFrame.class)) {
 				
 				// Initialize tool list.
 				toolList.initialize();

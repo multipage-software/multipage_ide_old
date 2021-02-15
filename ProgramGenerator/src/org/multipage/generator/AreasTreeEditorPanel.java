@@ -351,7 +351,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		
 		panelList = new JPanel();
 		panelList.setBackground(Color.WHITE);
-		tabbedPane.addTab("org.multipage.generator.textListAreas", null, panelList, null);
+		tabbedPane.addTab("org.multipage.generator.textSearchAreas", null, panelList, null);
 		SpringLayout sl_panelList = new SpringLayout();
 		panelList.setLayout(sl_panelList);
 		
@@ -835,7 +835,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		tree.addTreeSelectionListener(new TreeSelectionListener() {
 		    public void valueChanged(TreeSelectionEvent e) {
 		    	
-		    	if (!isVisible()) {
+		    	if (!AreasTreeEditorPanel.this.isVisible()) {
 		    		return;
 		    	}
 		    	
@@ -853,7 +853,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
 		    	
-				if (!isVisible()) {
+				if (!AreasTreeEditorPanel.this.isVisible()) {
 		    		return;
 		    	}
 				
@@ -862,12 +862,12 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	// Propagate the "select list area" event.
 		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectListArea, selectedListAreaIds);
 		    	// Propagate the "show areas' properties" event.
-		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedTreeAreaIds);
+		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedListAreaIds);
 			}
 		});
 		
-		// Add "select all" event listener.
-		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
+		// "Select all' properties" event receiver.
+		ConditionalEvents.receiver(this, Signal.selectAll, message -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
@@ -875,7 +875,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
-		// Add "unselect all" event receiver.
+		// "Unselect all' properties" event receiver.
 		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
@@ -884,7 +884,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
-		// Add "focus home area" event receiver.
+		// "Focus home area' properties" event receiver.
 		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
 			
 			if (isShowing()) {

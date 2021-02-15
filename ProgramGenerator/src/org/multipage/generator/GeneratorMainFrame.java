@@ -665,14 +665,14 @@ public class GeneratorMainFrame extends JFrame {
 			closeWindow();
 		});
 		
-		// Listen for "show areas' properties" event.
-		ConditionalEvents.receiver(this, Signal.showAreasProperties, action -> {
+		// "Show areas' properties" event receiver.
+		ConditionalEvents.receiver(this, Signal.showAreasProperties, message -> {
 			
 			HashSet<Long> selectedAreaIds = null;
 					
 			// Retrieve selected areas' IDs from the event object or get currently selected areas.
-			if (action.relatedInfo instanceof HashSet<?>) {
-				selectedAreaIds = (HashSet<Long>) action.relatedInfo;
+			if (message.relatedInfo instanceof HashSet<?>) {
+				selectedAreaIds = (HashSet<Long>) message.relatedInfo;
 			}
 			else {
 				selectedAreaIds = getAreaDiagram().getSelectedAreaIds();
@@ -682,13 +682,13 @@ public class GeneratorMainFrame extends JFrame {
 			showProperties(selectedAreaIds);
 		});
 		
-		// Listen for the Monitor home page event.
+		// "Monitor home page" event receiver.
 		ConditionalEvents.receiver(this, Signal.monitorHomePage, action -> {
 			
 			monitorHomePage();
 		});
 		
-		// Listen for the reactivate GUI event.
+		// "Reactivate GUI" event receiver.
 		ConditionalEvents.receiver(this, Signal.reactivateGui, action -> {
 			
 			// Initialize focused component.
@@ -704,12 +704,12 @@ public class GeneratorMainFrame extends JFrame {
 			invokeReactivationOfGui(focusedComponent);
 		});
 		
-		// Listen for the update all request.
+		// "Update all request" event receiver.
 		ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
 			ProgramGenerator.reloadModel();
 		});
 		
-		// Add receiver for the "expose read only areas" event.
+		// "Expose read onlz areas" event receiver.
 		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, action -> {
 			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
 		});

@@ -338,14 +338,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Add receiver for the "click areas in diagram" event.
-		ConditionalEvents.receiver(this, Signal.onClickDiagramAreas, action -> {
+		ConditionalEvents.receiver(this, Signal.onClickDiagramAreas, message -> {
 			
 			// Check the source diagram, clicked graph point and if CTRL key has been pressed.
-			if (AreasDiagram.this.equals(action.source) && action.relatedInfo instanceof Point2D && action.isAdditionalInfo(0, Boolean.class)) {
+			if (AreasDiagram.this.equals(message.source) && message.relatedInfo instanceof Point2D && message.isAdditionalInfo(0, Boolean.class)) {
 				
 				// Pull graph point and CTRL flag from the event action.
-				Point2D graphPoint = (Point2D) action.relatedInfo;
-				boolean ctrlKeyPressed = action.getAdditionalInfo(0);
+				Point2D graphPoint = (Point2D) message.relatedInfo;
+				boolean ctrlKeyPressed = message.getAdditionalInfo(0);
 				
 				// Select area and sub areas in this diagram. The diagram must be repainted.
 				select(graphPoint, !ctrlKeyPressed);

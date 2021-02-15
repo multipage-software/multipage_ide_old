@@ -6,20 +6,23 @@
  */
 package org.multipage.generator;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.swing.SwingUtilities;
 
-import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -44,7 +47,7 @@ public class ConditionalEvents {
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
-	private static boolean enableMessageLog = true;
+	private static boolean enableMessageLog = false;
 	
 	/**
 	 * Default message coalesce time span in milliseconds.
@@ -352,9 +355,9 @@ public class ConditionalEvents {
 	public static LinkedList<Message> messageQueue = new LinkedList<Message>();
 	
 	/**
-	 * All conditional event processors in the application (with event conditions as keys and event handlers as values in the map)
+	 * All conditional event processors in the application.
 	 */
-	public static LinkedHashMap<EventCondition, HashMap<Object, HashSet<EventHandle>>> conditionalEvents = new LinkedHashMap<EventCondition, HashMap<Object, HashSet<EventHandle>>>();
+	public static LinkedHashMap<Object, LinkedHashMap<EventCondition, HashSet<EventHandle>>> conditionalEvents = new LinkedHashMap<Object, LinkedHashMap<EventCondition, HashSet<EventHandle>>>();
 	
 	/**
 	 * Main message dispatch thread.
@@ -418,16 +421,18 @@ public class ConditionalEvents {
 					// Dispatch message to conditional events processors.
 					synchronized (conditionalEvents) {
 						
-						for (Map.Entry<EventCondition, HashMap<Object, HashSet<EventHandle>>> conditionalEvent : conditionalEvents.entrySet()) {
-							
-							// Check if event condition matches.
-							EventCondition eventCondition = conditionalEvent.getKey();
-							boolean conditionMatches = eventCondition.matches(incomingMessage);
-							if (conditionMatches) {
+						for (LinkedHashMap<EventCondition, HashSet<EventHandle>> conditionalEventsForKey : conditionalEvents.values()) {
+							for (Map.Entry<EventCondition, HashSet<EventHandle>> mapEntry : conditionalEventsForKey.entrySet()) {
 								
-								// If so invoke appropriate event.
-								HashMap<Object, HashSet<EventHandle>> eventHandles = conditionalEvent.getValue();
-								invokeEvents(eventHandles, eventCondition, incomingMessage);
+								// Check if event condition matches.
+								EventCondition eventCondition = mapEntry.getKey();
+								HashSet<EventHandle> eventHandles = mapEntry.getValue();
+								boolean conditionMatches = eventCondition.matches(incomingMessage);
+								if (conditionMatches) {
+									
+									// If so invoke appropriate event.
+									invokeEvents(eventHandles, eventCondition, incomingMessage);
+								}
 							}
 						}
 					}
@@ -505,42 +510,34 @@ public class ConditionalEvents {
 	 * @param eventCondition
 	 * @param message
 	 */
-	public static void invokeEvents(HashMap<Object, HashSet<EventHandle>> eventHandles, EventCondition eventCondition, Message message) {
+	public static void invokeEvents(HashSet<EventHandle> eventHandles, EventCondition eventCondition, Message message) {
 		
 		// Check input.
 		if (eventHandles == null) {
 			return;
 		}
 		
-		// Do it for all actions in the map.
-		for (Map.Entry<Object, HashSet<EventHandle>> targetEventHandles : eventHandles.entrySet()) {
+		// Invoke actions on the Swing thread.
+		for (EventHandle eventHandle : eventHandles) {
+			
+			SwingUtilities.invokeLater(() -> {
 				
-			HashSet<EventHandle> foundEventHandles = targetEventHandles.getValue();
-			if (foundEventHandles != null) {
-				
-				// Invoke actions on the Swing thread.
-				for (EventHandle foundEventHandle : foundEventHandles) {
-					
-					SwingUtilities.invokeLater(() -> {
-						
-						// Log event.
-						if (enableMessageLog) {
-							j.log("-----------------------------------------------------------------");
-							j.log("Event: %s [Source: %s, OID %d]\t\traised    in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), message.reflection);
-							j.log("\t-> Action rule: matches %s %s\t\t\tprocessed in %s", eventCondition.getClass().getSimpleName(), eventCondition.name(), foundEventHandle.reflection);
-							j.log("\tDelay: handle \"%s\" [%d]", foundEventHandle.identifier(), System.identityHashCode(foundEventHandle));
-						}
-						
-						// Coalesce same events within given time span.
-						if (ConditionalEvents.coalesceMessage(foundEventHandle, message)) {
-							return;
-						}
-						
-						// Invoke the event action.
-						foundEventHandle.action.accept(message);
-					});
+				// Log event.
+				if (enableMessageLog) {
+					j.log("-----------------------------------------------------------------");
+					j.log("Event: %s [Source: %s, OID %d]\t\traised    in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), message.reflection);
+					j.log("\t-> Action rule: matches %s %s\t\t\tprocessed in %s", eventCondition.getClass().getSimpleName(), eventCondition.name(), eventHandle.reflection);
+					j.log("\tDelay: handle \"%s\" [%d]", eventHandle.identifier(), System.identityHashCode(eventHandle));
 				}
-			}
+				
+				// Coalesce same events within given time span.
+				if (ConditionalEvents.coalesceMessage(eventHandle, message)) {
+					return;
+				}
+				
+				// Invoke the event action.
+				eventHandle.action.accept(message);
+			});
 		}
 	}
 	
@@ -585,28 +582,28 @@ public class ConditionalEvents {
 		// Add new message to the message queue and unlock the message dispatch thread.
 		synchronized (messageQueue) {
 			
-			Message data = new Message();
+			Message message = new Message();
 			
-			data.source = source;
-			data.target = target;
-			data.signal = signal;
+			message.source = source;
+			message.target = target;
+			message.signal = signal;
 			
 			if (info instanceof Object []) {
 				int count = info.length;
 				if (count >= 1) {
-					data.relatedInfo = info[0];
+					message.relatedInfo = info[0];
 				}
 				if (count >= 2) {
-					data.additionalInfos = Arrays.copyOfRange(info, 1, count);
+					message.additionalInfos = Arrays.copyOfRange(info, 1, count);
 				}
 			}
 			
 			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 			if (stackElements.length >= 4) {
-				data.reflection = stackElements[3];
+				message.reflection = stackElements[3];
 			}
 			
-			messageQueue.add(data);
+			messageQueue.add(message);
 			
 			Lock.notify(dispatchLock);
 		}
@@ -733,36 +730,35 @@ public class ConditionalEvents {
 		synchronized (conditionalEvents) {
 			
 			// Get event handles.
-			HashMap<Object, HashSet<EventHandle>> eventHandlesForCondition = conditionalEvents.get(eventCondition);
-			if (eventHandlesForCondition != null) {
+			LinkedHashMap<EventCondition, HashSet<EventHandle>> conditionalEventsForKey = conditionalEvents.get(key);
+			if (conditionalEventsForKey != null) {
 				conditionalEvents.remove(eventCondition);
 			}
 			else {
-				eventHandlesForCondition = new HashMap<Object, HashSet<EventHandle>>();
+				conditionalEventsForKey = new LinkedHashMap<EventCondition, HashSet<EventHandle>>();
 			}
 			
 			// Set the conditional event.
-			conditionalEvents.put(eventCondition, eventHandlesForCondition);
+			conditionalEvents.put(key, conditionalEventsForKey);
 			
-			// Sort conditional event depending on the priority of events' conditions Priorities are determined by ordinal().
-			conditionalEvents = Utility.sort(conditionalEvents, (Object key1, Object key2) -> {
-				
-				// Compare event conditions' priorities.
-				EventCondition eventCondition1 = (EventCondition) key1;
-				EventCondition eventCondition2 = (EventCondition) key2;
-				
-				int delta = eventCondition1.ordinal() - eventCondition2.ordinal();
-				return delta;
-			});
-			
-			// Get conditional events depending on the input key.
-			HashSet<EventHandle> eventHandles = eventHandlesForCondition.get(key);
+			// Get conditional events depending on the event condition.
+			HashSet<EventHandle> eventHandles = conditionalEventsForKey.get(eventCondition);
 			if (eventHandles == null) {
+				
+				// Create new handles if they do not exist.
 				eventHandles = new HashSet<EventHandle>();
-				eventHandlesForCondition.put(key, eventHandles);
+				conditionalEventsForKey.put(eventCondition, eventHandles);
+				
+				// Sort conditional event depending on the priority of events' conditions Priorities are determined by ordinal().
+				conditionalEventsForKey = sort(conditionalEventsForKey, (EventCondition eventCondition1, EventCondition eventCondition2) -> {
+					
+					// Compare event conditions' priorities.
+					int delta = eventCondition1.ordinal() - eventCondition2.ordinal();
+					return delta;
+				});
 			}
 			
-			// Add new conditional event.
+			// Add new conditional event into the list depending on the priority of condition.
 			StackTraceElement reflection = null;
 			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 			if (stackElements.length >= 4) {
@@ -770,9 +766,36 @@ public class ConditionalEvents {
 			}
 			EventHandle eventHandle = new EventHandle(message, timeSpanMs, reflection, identifier);
 			eventHandles.add(eventHandle);
+			
 			return key;
 		}
 	}
+	
+	/**
+	 * Sort collection.
+	 * @param collection
+	 * @param comparator
+	 */
+	private static LinkedHashMap sort(LinkedHashMap<EventCondition, HashSet<EventHandle>> collection,
+			BiFunction<EventCondition, EventCondition, Integer> comparator) {
+		
+		List<Map.Entry<EventCondition, HashSet<EventHandle>>> entries = new ArrayList(collection.entrySet());
+		
+		Collections.sort(entries, new Comparator<Map.Entry<EventCondition, HashSet<EventHandle>>>() {
+		    @Override
+		    public int compare(Map.Entry<EventCondition, HashSet<EventHandle>> left, Map.Entry<EventCondition, HashSet<EventHandle>> right) {
+		        return left.getKey().ordinal() - right.getKey().ordinal();
+		    }
+		});
+		
+		LinkedHashMap resultCollection = new LinkedHashMap();
+		for (Map.Entry entry : entries) {
+			resultCollection.put(entry.getKey(), entry.getValue());
+		}
+		
+		return resultCollection;
+	}
+	
 	
 	/**
 	 * Unregister receivers for conditional events for given key object.
@@ -780,27 +803,8 @@ public class ConditionalEvents {
 	 */
 	public static void removeReceivers(Object key) {
 		
-		// Initialization.
-		HashSet<EventCondition> conditionalEventsToRemove = new HashSet<EventCondition>();
-		
-		// Remove conditional events for all conditions.
-		for (Map.Entry<EventCondition, HashMap<Object, HashSet<EventHandle>>> conditionalEvent : conditionalEvents.entrySet()) {
-			
-			HashMap<Object, HashSet<EventHandle>> eventHandles = conditionalEvent.getValue();
-			
-			// Remove event handles for given key.
-			eventHandles.remove(key);
-			
-			// If the event handles are empty, remove the conditional event.
-			if (eventHandles.isEmpty()) {
-				conditionalEventsToRemove.add(conditionalEvent.getKey());
-			}
-		}
-		
-		// Remove empty conditional events.
-		for (EventCondition eventCondition : conditionalEventsToRemove) {
-			conditionalEvents.remove(eventCondition);
-		}
+		// Remove conditional events for key.
+		conditionalEvents.remove(key);
 	}
 	
 	/**

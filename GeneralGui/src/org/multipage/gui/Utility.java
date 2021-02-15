@@ -71,14 +71,11 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -4340,27 +4337,6 @@ public class Utility {
 		if (exception != null) {
 			throw exception;
 		}
-	}
-	
-	/**
-	 * Sort collection.
-	 * @param collection
-	 * @param comparator
-	 */
-	public static LinkedHashMap sort(LinkedHashMap collection, BiFunction<Object, Object, Integer> comparator) {
-		
-		List<Map.Entry> entries = new ArrayList(collection.entrySet());
-		
-		Collections.sort(entries, (entry1, entry2) -> {
-			return comparator.apply(entry1.getKey(),entry2.getKey());
-		});
-		
-		LinkedHashMap resultCollection = new LinkedHashMap();
-		for (Map.Entry entry : entries) {
-			resultCollection.put(entry.getKey(), entry.getValue());
-		}
-		
-		return resultCollection;
 	}
 	
 	/**
