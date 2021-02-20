@@ -1,23 +1,16 @@
 /*
- * Copyright 2010-2020 (C) vakol
+ * Copyright 2010-2021 (C) vakol
  * 
  * Created on : 18-06-2017
  *
  */
 package org.multipage.generator;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -43,6 +36,11 @@ public class ConditionalEvents {
 		gui,
 		notGui
 	}
+	
+	/**
+	 * Coalesce time span.
+	 */
+	private static final long timeSpanMs = 500;
 
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
@@ -246,108 +244,7 @@ public class ConditionalEvents {
 		}
 	}
 	
-	/**
-	 * Event handle.
-	 */
-	private static class EventHandle {
-		
-		/**
-		 * An action is a lambda function. It consumes the message if it is not coalesced in a time span.
-		 */
-		Consumer<Message> action;
-		
-		/**
-		 * Time span in milliseconds for coalescing the same messages. They do not trigger the action.
-		 */
-		Long timeSpanMs;
-		
-		/**
-		 * Table of messages' receive moments.
-		 */
-		Hashtable<Object, Obj<Long>> messagesReceiveMoments;
-		
-		/**
-		 * Reflection of the signal receiver.
-		 */
-		StackTraceElement reflection;
-		
-		/**
-		 *  Identifier of this event handle (only for debugging purposes; this property can be removed from
-		 *  the class code along with the debugging code).
-		 */
-		String identifier;
-		
-		/**
-		 * Constructor.
-		 * @param action
-		 * @param timeSpanMs
-		 * @param reflection
-		 * @param identifier
-		 */
-		EventHandle(Consumer<Message> action, Long timeSpanMs, StackTraceElement reflection, String identifier) {
-			
-			this.action = action;
-			this.timeSpanMs = timeSpanMs;
-			this.messagesReceiveMoments = new Hashtable<Object, Obj<Long>>();
-			this.reflection = reflection;
-			this.identifier = identifier;
-		}
-		
-		/**
-		 * Trim the identifier string.
-		 * @return
-		 */
-		String identifier() {
-			return identifier != null ? identifier : "";
-		}
-		
-		/**
-		 * Get stored receive moment for the input message.
-		 * @param message
-		 * @return
-		 */
-		public Long getStoredReceiveMoment(Message message) {
-			
-			// Get signal associated with the message and retrieve appropriate receive moment.
-			Signal signal = message.signal;
-			Obj<Long> receiveMoment = messagesReceiveMoments.get(signal);
-			
-			// Return value.
-			if (receiveMoment == null) {
-				return null;
-			}
-			
-			return receiveMoment.ref;
-		}
-		
-		/**
-		 * Store new receive moment for the input message.
-		 * @param message
-		 * @param receiveMoment 
-		 */
-		public void storeNewReceiveMoment(Message message, long receiveMoment) {
-			
-			// Get message signal and wrap receive moment with an object.
-			Signal signal = message.signal;
-			Obj<Long> receiveMomentObject = new Obj<Long>(receiveMoment);
-			
-			// Save the receive moment.
-			messagesReceiveMoments.put(signal, receiveMomentObject);
-		}
-		
-		/**
-		 * Remove stored receive moment for the input message.
-		 * @param message
-		 */
-		public void removeStoredReceiveMoment(Message message) {
-			
-			// Get message signal.
-			Signal signal = message.signal;
-			
-			// Remove assigned message receive moment.
-			messagesReceiveMoments.remove(signal);
-		}
-	}
+	
 	
 	/**
 	 * Message queue.
@@ -357,7 +254,9 @@ public class ConditionalEvents {
 	/**
 	 * All conditional event processors in the application.
 	 */
-	public static LinkedHashMap<Object, LinkedHashMap<EventCondition, HashSet<EventHandle>>> conditionalEvents = new LinkedHashMap<Object, LinkedHashMap<EventCondition, HashSet<EventHandle>>>();
+	public static LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
+					LinkedHashMap<Object, HashSet<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
+																							LinkedHashMap<Object, HashSet<EventHandle>>>>();
 	
 	/**
 	 * Main message dispatch thread.
@@ -399,42 +298,35 @@ public class ConditionalEvents {
 		while (!stopDispatchMessages) {
 			
 			// Try to pull single incoming message.
-			Message incomingMessage = null;
+			Obj<Message> incomingMessage = new Obj<Message>(null);
 			synchronized (messageQueue) {
 				
 				if (!messageQueue.isEmpty()) {
-					incomingMessage = messageQueue.removeFirst();
+					incomingMessage.ref = messageQueue.removeFirst();
 				}
 			}
 			
 			// Process the message if it exists.
-			if (incomingMessage != null) {
+			if (incomingMessage.ref != null) {
 				
-				Signal signal = incomingMessage.signal;
+				Signal signal = incomingMessage.ref.signal;
 				
 				// On special events skip the next complex rules.
 				if (signal.isSpecial()) {
-					invokeSpecialEvents(incomingMessage);
+					invokeSpecialEvents(incomingMessage.ref);
 				}
 				else {
 					
 					// Dispatch message to conditional events processors.
 					synchronized (conditionalEvents) {
 						
-						for (LinkedHashMap<EventCondition, HashSet<EventHandle>> conditionalEventsForKey : conditionalEvents.values()) {
-							for (Map.Entry<EventCondition, HashSet<EventHandle>> mapEntry : conditionalEventsForKey.entrySet()) {
+						LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, HashSet<EventHandle>>> map1 = conditionalEvents.get(signal);
+						map1.forEach((priority, map2) -> {
+							map2.forEach((key, eventHandles) -> {
 								
-								// Check if event condition matches.
-								EventCondition eventCondition = mapEntry.getKey();
-								HashSet<EventHandle> eventHandles = mapEntry.getValue();
-								boolean conditionMatches = eventCondition.matches(incomingMessage);
-								if (conditionMatches) {
-									
-									// If so invoke appropriate event.
-									invokeEvents(eventHandles, eventCondition, incomingMessage);
-								}
-							}
-						}
+								invokeEvents(eventHandles, signal, incomingMessage.ref);
+							});
+						});
 					}
 				}
 			}
@@ -631,30 +523,42 @@ public class ConditionalEvents {
 			Lock.notify(dispatchLock);
 		}
 	}
-	
+
 	/**
 	 * Register new conditional event, the receiver of messages.
 	 * @param key - a key for conditional event
 	 * @param eventCondition - either Signal or SignalType
-	 * @param action
+	 * @param messageLambda
 	 * @return - input key for action group
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> action) {
-		
-		final long timeSpanMs = 500;
+	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, action, timeSpanMs, null);
+		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
+	}
+		
+	/**
+	 * Register new action for an event group.
+	 * @param key
+	 * @param eventCondition
+	 * @param priority
+	 * @param messageLambda
+	 */
+	public static Object receiver(Object key, EventCondition eventCondition, EventConditionPriority priority, Consumer<Message> messageLambda) {
+		
+		// Delegate the call.
+		eventCondition.setPriority(priority);
+		return registerConditionalEvent(key, eventCondition, priority, messageLambda, timeSpanMs, null);
 	}
 	
 	/**
 	 * Register new conditional event, the receiver of messages.
 	 * @param key - a key for conditional event
 	 * @param eventConditions
-	 * @param action
+	 * @param messageLambda
 	 * @return - keys for action condition
 	 */
-	public static Object [] receiver(Object key, EventCondition [] eventConditions, Consumer<Message> action) {
+	public static Object [] receiver(Object key, EventCondition [] eventConditions, Consumer<Message> messageLambda) {
 		
 		final long timeSpanMs = 500;
 		
@@ -665,8 +569,8 @@ public class ConditionalEvents {
 		// Add action rules.
 		for (int index = 0; index < count; index++) {
 			
-			EventCondition actionCondition = eventConditions[index];
-			outputKeys[index] = registerConditionalEvent(key, actionCondition, action, timeSpanMs, null);
+			EventCondition eventCondition = eventConditions[index];
+			outputKeys[index] = registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
 		}
 		
 		return outputKeys;
@@ -676,126 +580,80 @@ public class ConditionalEvents {
 	 * 
 	 * @param key - a key for conditional event
 	 * @param eventCondition
-	 * @param action
+	 * @param messageLambda
 	 * @param timeSpanMs
 	 * @return - a key for action condition
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> action, Long timeSpanMs) {
+	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, action, timeSpanMs, null);
+		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
 	}
 
 	/**
 	 * Register new conditional event, the receiver of messages.
 	 * @param key - a key for conditional event
 	 * @param eventCondition
-	 * @param action
+	 * @param messageLambda
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - a key for action condition
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> action, String identifier) {
+	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, action, defaultMessageCoalesceMs, identifier);
+		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, defaultMessageCoalesceMs, identifier);
 	}
 	
 	/**
 	 * Register new action for an event group.
 	 * @param key - a key for conditional event
 	 * @param eventCondition
-	 * @param action
+	 * @param messageLambda
 	 * @param timeSpanMs
 	 * @param identifier
 	 * @return - a key for action condition
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> action, Long timeSpanMs, String identifier) {
+	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, action, timeSpanMs, identifier);
+		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, identifier);
 	}
 	
 	/**
 	 * Register new conditional event for given condition.
 	 * @param key - a key for conditional event
 	 * @param eventCondition
+	 * @param priority 
 	 * @param message
 	 * @param timeSpanMs
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, Consumer<Message> message, Long timeSpanMs, String identifier) {
+	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, EventConditionPriority priority,
+			Consumer<Message> message, Long timeSpanMs, String identifier) {
 		
 		synchronized (conditionalEvents) {
 			
-			// Get event handles.
-			LinkedHashMap<EventCondition, HashSet<EventHandle>> conditionalEventsForKey = conditionalEvents.get(key);
-			if (conditionalEventsForKey != null) {
-				conditionalEvents.remove(eventCondition);
-			}
-			else {
-				conditionalEventsForKey = new LinkedHashMap<EventCondition, HashSet<EventHandle>>();
-			}
+			// Create auxiliary table from the map.
+			ConditionalEventsTable auxiliaryTable = ConditionalEventsTable.createFrom(conditionalEvents);
 			
-			// Set the conditional event.
-			conditionalEvents.put(key, conditionalEventsForKey);
-			
-			// Get conditional events depending on the event condition.
-			HashSet<EventHandle> eventHandles = conditionalEventsForKey.get(eventCondition);
-			if (eventHandles == null) {
-				
-				// Create new handles if they do not exist.
-				eventHandles = new HashSet<EventHandle>();
-				conditionalEventsForKey.put(eventCondition, eventHandles);
-				
-				// Sort conditional event depending on the priority of events' conditions Priorities are determined by ordinal().
-				conditionalEventsForKey = sort(conditionalEventsForKey, (EventCondition eventCondition1, EventCondition eventCondition2) -> {
-					
-					// Compare event conditions' priorities.
-					int delta = eventCondition1.ordinal() - eventCondition2.ordinal();
-					return delta;
-				});
-			}
-			
-			// Add new conditional event into the list depending on the priority of condition.
+			// Create new event handle, add new table record.
 			StackTraceElement reflection = null;
 			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 			if (stackElements.length >= 4) {
 				reflection = stackElements[3];
 			}
-			EventHandle eventHandle = new EventHandle(message, timeSpanMs, reflection, identifier);
-			eventHandles.add(eventHandle);
+			EventHandle handle = new EventHandle(message, timeSpanMs, reflection, identifier);
+			auxiliaryTable.addRecord(key, eventCondition, priority, handle);
 			
+			// Retrieve sorted conditional events.
+			conditionalEvents = auxiliaryTable.retrieveSorted();
+			
+			// Return key.
 			return key;
 		}
 	}
-	
-	/**
-	 * Sort collection.
-	 * @param collection
-	 * @param comparator
-	 */
-	private static LinkedHashMap sort(LinkedHashMap<EventCondition, HashSet<EventHandle>> collection,
-			BiFunction<EventCondition, EventCondition, Integer> comparator) {
-		
-		List<Map.Entry<EventCondition, HashSet<EventHandle>>> entries = new ArrayList(collection.entrySet());
-		
-		Collections.sort(entries, new Comparator<Map.Entry<EventCondition, HashSet<EventHandle>>>() {
-		    @Override
-		    public int compare(Map.Entry<EventCondition, HashSet<EventHandle>> left, Map.Entry<EventCondition, HashSet<EventHandle>> right) {
-		        return left.getKey().ordinal() - right.getKey().ordinal();
-		    }
-		});
-		
-		LinkedHashMap resultCollection = new LinkedHashMap();
-		for (Map.Entry entry : entries) {
-			resultCollection.put(entry.getKey(), entry.getValue());
-		}
-		
-		return resultCollection;
-	}
-	
 	
 	/**
 	 * Unregister receivers for conditional events for given key object.

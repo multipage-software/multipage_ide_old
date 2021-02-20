@@ -33,4 +33,13 @@ public interface EventCondition {
 	 */
 	boolean matches(Message incomingMessage);
 
+	/**
+	 * Set priority.
+	 */
+	public void setPriority(EventConditionPriority priority);
+	
+	/**
+	 * Get priority.
+	 */
+	public int getPriority() ;
 }

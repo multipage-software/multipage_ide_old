@@ -1,3 +1,9 @@
+/*
+ * Copyright 2010-2021 (C) vakol
+ * 
+ * Created on : 19-02-2021
+ *
+ */
 package org.multipage.generator;
 
 import java.util.HashSet;
@@ -115,7 +121,7 @@ public enum Signal implements EventCondition {
 			),
 	
 	// Request update of all information.
-	updateAllRequest(
+	requestUpdateAll(
 			SignalType.areaModelChange,
 			SignalType.slotModelChange,
 			SignalType.areaViewStateChange,
@@ -284,6 +290,11 @@ public enum Signal implements EventCondition {
 	private HashSet<SignalType> includedInTypes = new HashSet<SignalType>();
 	
 	/**
+	 * Priority of the signal.
+	 */
+	private EventConditionPriority priority = EventConditionPriority.middle;
+	
+	/**
 	 * Constructor of the a signal.
 	 * @param signalTypes
 	 */
@@ -342,5 +353,23 @@ public enum Signal implements EventCondition {
 		Signal signal = incomingMessage.signal;
 		boolean matches = this.equals(signal);
 		return matches;
+	}
+	
+	/**
+	 * Set priority.
+	 */
+	@Override
+	public void setPriority(EventConditionPriority priority) {
+		
+		this.priority = priority;
+	}
+	
+	/**
+	 * Get priority.
+	 */
+	@Override
+	public int getPriority() {
+		
+		return priority.ordinal();
 	}
 }

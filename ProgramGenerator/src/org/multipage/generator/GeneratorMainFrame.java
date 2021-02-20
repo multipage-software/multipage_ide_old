@@ -683,19 +683,19 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// "Monitor home page" event receiver.
-		ConditionalEvents.receiver(this, Signal.monitorHomePage, action -> {
+		ConditionalEvents.receiver(this, Signal.monitorHomePage, message -> {
 			
 			monitorHomePage();
 		});
 		
 		// "Reactivate GUI" event receiver.
-		ConditionalEvents.receiver(this, Signal.reactivateGui, action -> {
+		ConditionalEvents.receiver(this, Signal.reactivateGui, message -> {
 			
 			// Initialize focused component.
 			Component focusedComponent = null;
 			
 			// Try to get focused component from the event information.
-			Object relatedInfo = action.relatedInfo;
+			Object relatedInfo = message.relatedInfo;
 			if (relatedInfo instanceof Component) {
 				focusedComponent = (Component) relatedInfo;
 			}
@@ -705,12 +705,14 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAllRequest, action -> {
+		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.low, message -> {
+			
+			// Reload areas model.
 			ProgramGenerator.reloadModel();
 		});
 		
-		// "Expose read onlz areas" event receiver.
-		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, action -> {
+		// "Expose read only areas" event receiver.
+		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, message -> {
 			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
 		});
  	}
@@ -1702,7 +1704,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUpdate() {
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAllRequest);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.requestUpdateAll);
 	}
 
 	/**

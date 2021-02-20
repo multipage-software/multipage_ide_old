@@ -474,7 +474,7 @@ public class AreasPropertiesBase extends JPanel {
 			enableEditing(false);
 			
 			// Propagate update event
-			ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAllRequest);
+			ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.requestUpdateAll);
 		};
 		
 		textDescription.updateEvent = updateEvent;

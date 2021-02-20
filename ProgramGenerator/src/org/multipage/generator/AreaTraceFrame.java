@@ -1054,7 +1054,7 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onUpdateInformation() {
 		
-		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.updateAllRequest);
+		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.requestUpdateAll);
 	}
 	
 	/**

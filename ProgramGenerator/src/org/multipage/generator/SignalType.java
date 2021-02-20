@@ -33,7 +33,12 @@ public enum SignalType implements EventCondition {
 	slotViewChange,
 	// Change of GUI.
 	guiChange;
-
+	
+	/**
+	 * Priority of the signal.
+	 */
+	private EventConditionPriority priority = EventConditionPriority.middle;
+	
 	/**
 	 * Returns true if the incoming message matches this signal type.
 	 */
@@ -41,5 +46,21 @@ public enum SignalType implements EventCondition {
 	public boolean matches(Message incomingMessage) {
 		
 		return incomingMessage.signal.isOfType(this);
+	}
+
+	/**
+	 * Set priority.
+	 */
+	public void setPriority(EventConditionPriority priority) {
+		
+		this.priority = priority;
+	}
+	
+	/**
+	 * Get priority.
+	 */
+	public int getPriority() {
+		
+		return this.priority.ordinal();
 	}
 }

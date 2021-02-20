@@ -49,6 +49,7 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaResource;
@@ -331,7 +332,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private void setListeners() {
 		
 		// Add redraw event listener.
-		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAllRequest), action -> {
+		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.requestUpdateAll), message -> {
 			
 			reload(false, false);
 			setOverview();
@@ -362,10 +363,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Add receiver for the "drag areas in diagram" event.
-		ConditionalEvents.receiver(this, Signal.onDragDiagramAreas, action -> {
+		ConditionalEvents.receiver(this, Signal.onDragDiagramAreas, message -> {
 			
 			// Check the source diagram.
-			if (AreasDiagram.this.equals(action.source)) {
+			if (AreasDiagram.this.equals(message.source)) {
 				
 				// Get selected area IDs.
 				HashSet<Long> selectedAreaIds = getSelectedAreaIds();
@@ -378,12 +379,12 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Listen for "select diagram areas" event.
-		ConditionalEvents.receiver(this, Signal.selectDiagramAreas, action -> {
+		ConditionalEvents.receiver(this, Signal.selectDiagramAreas, message -> {
 			
-			if (action.relatedInfo instanceof HashSet<?>) {
+			if (message.relatedInfo instanceof HashSet<?>) {
 				
 				// Pull set of area IDs.
-				HashSet<Long> selectedAreaIds = (HashSet<Long>) action.relatedInfo;
+				HashSet<Long> selectedAreaIds = (HashSet<Long>) message.relatedInfo;
 				// Remove selection.
 				removeSelection();
 				// Select the areas.
@@ -395,7 +396,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// Add area selection receiver.
-		ConditionalEvents.receiver(this, Signal.array( Signal.selectAll), acion -> {
+		ConditionalEvents.receiver(this, Signal.array(Signal.selectAll), message -> {
 			if (AreasDiagram.this.isShowing()) {
 				
 				// Select all.
@@ -407,7 +408,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 			
 		// Add unselect all receiver.
-		ConditionalEvents.receiver(this, Signal.unselectAll, acion -> {
+		ConditionalEvents.receiver(this, Signal.unselectAll, message -> {
 											 
 			if (AreasDiagram.this.isShowing()) {
 				
@@ -419,17 +420,26 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			}
 		});
 		
+		// "Update all request" event receiver.
+		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.middle, message -> {
+			
+			j.log("render diagram");
+			
+			// Render the areas diagram.
+			renderDiagram();
+		});
+		
 		// Add focus event receiver.
-		ConditionalEvents.receiver(this, Signal.focusBasicArea, action -> {
+		ConditionalEvents.receiver(this, Signal.focusBasicArea, message -> {
 			
 			// Focus currently visible Basic Area.
-			if (action.sourceClass(GeneratorMainFrame.class) && AreasDiagram.this.isShowing()) {
+			if (message.sourceClass(GeneratorMainFrame.class) && AreasDiagram.this.isShowing()) {
 				focusBasicArea();
 			}
 		});
 		
 		// Add receiver for the "expose read only areas" event.
-		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, action -> {
+		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, message -> {
 			
 			// Set overview and repaint the GUI.
 			setOverview();
@@ -2614,7 +2624,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.updateAllRequest);
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 		
 		return success;
 	}
@@ -2667,7 +2677,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		updateInformation();
 		
 		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.updateAllRequest);
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 	}
 
 	/**
