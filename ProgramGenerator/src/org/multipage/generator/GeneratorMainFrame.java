@@ -705,7 +705,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.low, message -> {
+		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.high, message -> {
 			
 			// Reload areas model.
 			ProgramGenerator.reloadModel();

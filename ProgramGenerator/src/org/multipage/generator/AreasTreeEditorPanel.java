@@ -866,6 +866,20 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
+		// "Update all request" event receiver.
+		ConditionalEvents.receiver(this, Signal.requestUpdateAll, message -> {
+			
+			// Reload editor.
+			reload();
+			
+			// If the editor is visible.
+			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
+			if (isShowing) {
+				// Unselect all items.
+				setAllSelection(false);
+			}
+		});
+		
 		// "Select all' properties" event receiver.
 		ConditionalEvents.receiver(this, Signal.selectAll, message -> {
 			

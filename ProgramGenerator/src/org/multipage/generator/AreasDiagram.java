@@ -49,7 +49,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaResource;
@@ -432,8 +431,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		
 		// "Update all request" event receiver.
 		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.middle, message -> {
-			
-			j.log("render diagram");
 			
 			// Render the areas diagram.
 			renderDiagram();
