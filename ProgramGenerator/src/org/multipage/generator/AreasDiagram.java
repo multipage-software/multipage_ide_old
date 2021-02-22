@@ -334,8 +334,18 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		// Add redraw event listener.
 		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.requestUpdateAll), message -> {
 			
+			// Reload and repaint the diagram.
 			reload(false, false);
 			setOverview();
+			repaint();
+			
+			// Get selected area IDs.
+			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+			
+			// Propagate the "show areas' properties" signal.
+			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedAreaIds);
+			// Propagate the "show areas' relations" signal.
+			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedAreaIds);
 		});
 		
 		// Add receiver for the "click areas in diagram" event.

@@ -321,12 +321,18 @@ public class ConditionalEvents {
 					synchronized (conditionalEvents) {
 						
 						LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, HashSet<EventHandle>>> map1 = conditionalEvents.get(signal);
-						map1.forEach((priority, map2) -> {
-							map2.forEach((key, eventHandles) -> {
+						
+						if (map1 != null) {
+							map1.forEach((priority, map2) -> {
 								
-								invokeEvents(eventHandles, signal, incomingMessage.ref);
+								if (map2 != null) {
+									map2.forEach((key, eventHandles) -> {
+										
+										invokeEvents(eventHandles, signal, incomingMessage.ref);
+									});
+								}
 							});
-						});
+						}
 					}
 				}
 			}
