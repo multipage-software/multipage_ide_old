@@ -16,6 +16,7 @@ import java.util.function.Function;
 
 import javax.swing.SwingUtilities;
 
+import org.multipage.generator.EventHandle.CoalesceState;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -59,7 +60,7 @@ public class ConditionalEvents {
 		
 		// A signal for the message.
 		Signal signal;
-		
+
 		// Source of the message.
 		Object source;
 		
@@ -74,6 +75,14 @@ public class ConditionalEvents {
 		
 		// Message source reflection.
 		StackTraceElement reflection;
+		
+		/**
+		 * Dump message.
+		 */
+		@Override
+		public String toString() {
+			return "Message [signal=" + signal.name() + "]";
+		}
 		
 		/**
 		 * Check if the current message is triggered by some of input messages.
@@ -349,10 +358,45 @@ public class ConditionalEvents {
 				
 				// Update lock.
 				dispatchLock = new Lock();
+				
+				// Invoke remaining events.
+				invokeRemainingEvents();
 			}
 		}
 	}
-
+	
+	/**
+	 * 
+	 * @param eventHandles
+	 */
+	private static void invokeRemainingEvents() {
+		
+		conditionalEvents.forEach((signal, map1) -> {
+			
+			if (map1 != null) {
+				map1.forEach((priority, map2) -> {
+					
+					if (map2 != null) {
+						map2.forEach((key, eventHandles) -> {
+							
+							
+							
+						});
+					}
+				});
+			}
+		});
+	}
+	
+	/**
+	 * 
+	 * @param eventHandles
+	 */
+	private static void invokeRemainingEvents(LinkedList<EventHandle> eventHandles) {
+		// TODO Auto-generated method stub
+		
+	}
+	
 	/**
 	 * Invoke special event.
 	 * @param message
@@ -415,10 +459,19 @@ public class ConditionalEvents {
 			return;
 		}
 		
+		// Initialize.
+		final LinkedList<Message> messages = new LinkedList<Message>();
+		
 		// Invoke actions on the Swing thread.
 		for (EventHandle eventHandle : eventHandles) {
 			
 			SwingUtilities.invokeLater(() -> {
+				
+				// Get current time.
+				final long currentTime = new Date().getTime();
+				
+				// Dump all overaged messages.
+				eventHandle.popOveragedMessages(currentTime, messages);
 				
 				// Log event.
 				if (enableMessageLog) {
@@ -429,12 +482,23 @@ public class ConditionalEvents {
 				}
 				
 				// Coalesce same events within given time span.
-				if (ConditionalEvents.coalesceMessage(eventHandle, message)) {
-					return;
+				CoalesceState state = eventHandle.getMessageCoalesceState(currentTime, message);
+				
+				// Check state.
+				if (!CoalesceState.unknown.equals(state)) {
+				
+					// On coalesce start and progress.
+					if (CoalesceState.start.equals(state) || CoalesceState.progress.equals(state)) {
+						
+						// Create new reception time.
+						eventHandle.createNewReceptionRecord(currentTime, message);
+					}
 				}
 				
-				// Invoke the event action.
-				eventHandle.action.accept(message);
+				// Accept event message (invoke corresponding lambda function).
+				messages.forEach(messageToUse -> {
+					eventHandle.action.accept(messageToUse);
+				});
 			});
 		}
 	}
@@ -601,7 +665,7 @@ public class ConditionalEvents {
 	 * @param key - a key for conditional event
 	 * @param eventCondition
 	 * @param messageLambda
-	 * @param timeSpanMs
+	 * @param coalesceTimeSpanMs
 	 * @param identifier
 	 * @return - a key for action condition
 	 */
@@ -642,7 +706,7 @@ public class ConditionalEvents {
 		synchronized (conditionalEvents) {
 			
 			// Create auxiliary table from the map.
-			ConditionalEventsTable auxiliaryTable = ConditionalEventsTable.createFrom(conditionalEvents);
+			ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
 			
 			// Create new event handle, add new table record.
 			StackTraceElement reflection = null;
@@ -669,45 +733,5 @@ public class ConditionalEvents {
 		
 		// Remove conditional events for key.
 		conditionalEvents.remove(key);
-	}
-	
-	/**
-	 * Coalesce multiple incoming messages with the same signal. The time span is defined by the event handle.
-	 * Some events thus can be skipped with no action.
-	 * @param eventHandle
-	 * @param message
-	 * @return - if the message has to be skipped, returns true value
-	 */
-	public static boolean coalesceMessage(EventHandle eventHandle, Message message) {
-		
-		// Get coalescing time span in milliseconds.
-		Long timeSpanMs = eventHandle.timeSpanMs;
-		
-		// Check and trim the value of time span.
-		if (timeSpanMs == null || timeSpanMs < 100 || timeSpanMs > 10000) {
-			return true;
-		}
-		
-		// Get current receive moment.
-		long currentTime = new Date().getTime();
-		
-		// Get stared receive moment for the input message or store new one for it in the event handle.
-		Long messageReceiveMoment = eventHandle.getStoredReceiveMoment(message);
-		if (messageReceiveMoment == null) {
-			eventHandle.storeNewReceiveMoment(message, currentTime);
-		}
-		
-		// Try to compute current delay between this message and first received message both associated with the same signal.
-		Long delay = messageReceiveMoment != null ? currentTime - messageReceiveMoment : null;
-		
-		// Check if the coalescing of the messages is in progress.
-		boolean coalescingInProgress = delay == null ? false : delay < timeSpanMs;
-		
-		// Remove unused message receive moment.
-		if (!coalescingInProgress && messageReceiveMoment != null) {
-			eventHandle.removeStoredReceiveMoment(message);
-		}
-		
-		return coalescingInProgress;
 	}
 }
