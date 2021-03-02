@@ -8,7 +8,6 @@ package org.multipage.generator;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -17,6 +16,7 @@ import java.util.function.Function;
 import javax.swing.SwingUtilities;
 
 import org.multipage.generator.EventHandle.CoalesceState;
+import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -41,7 +41,7 @@ public class ConditionalEvents {
 	/**
 	 * Coalesce time span.
 	 */
-	private static final long timeSpanMs = 500;
+	private static final long timeSpanMs = 100;
 
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
@@ -51,7 +51,12 @@ public class ConditionalEvents {
 	/**
 	 * Default message coalesce time span in milliseconds.
 	 */
-	private final static long defaultMessageCoalesceMs = 250;
+	private final static long minDelayMessageCoalesceMs = 25;
+	
+	/**
+	 * Dispatch lock timeout in milliseconds. Must be greater then above coalesce time span.
+	 */
+	private final static long dispatchLockTimeoutMs = 250;
 	
 	/**
 	 * Message object.
@@ -251,6 +256,7 @@ public class ConditionalEvents {
 				return null;
 			}
 		}
+		
 	}
 	
 	
@@ -258,14 +264,19 @@ public class ConditionalEvents {
 	/**
 	 * Message queue.
 	 */
-	public static LinkedList<Message> messageQueue = new LinkedList<Message>();
+	private static LinkedList<Message> messageQueue = new LinkedList<Message>();
 	
 	/**
 	 * All conditional event processors in the application.
 	 */
-	public static LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
-					LinkedHashMap<Object, HashSet<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
-																							LinkedHashMap<Object, HashSet<EventHandle>>>>();
+	private static LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
+					LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
+																							LinkedHashMap<Object, LinkedList<EventHandle>>>>();
+	
+	/**
+	 * Scheduled events.
+	 */
+	private static LinkedList<ScheduledEvent> scheduledEvents = new LinkedList<ScheduledEvent>();
 	
 	/**
 	 * Main message dispatch thread.
@@ -315,6 +326,13 @@ public class ConditionalEvents {
 				}
 			}
 			
+			// Get current time.
+			final Long currentTime = new Date().getTime();
+			// TODO: debug current time
+			final String currentTimeString = Utility.formatTime(currentTime);
+			j.log("CURRENT TIME %s", currentTimeString);
+			
+			
 			// Process the message if it exists.
 			if (incomingMessage.ref != null) {
 				
@@ -326,18 +344,17 @@ public class ConditionalEvents {
 				}
 				else {
 					
-					// Dispatch message to conditional events processors.
+					// For all mappings...
 					synchronized (conditionalEvents) {
 						
-						LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, HashSet<EventHandle>>> map1 = conditionalEvents.get(signal);
-						
-						if (map1 != null) {
-							map1.forEach((priority, map2) -> {
-								
-								if (map2 != null) {
-									map2.forEach((key, eventHandles) -> {
+						LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
+						if (priorities != null) {
+							priorities.forEach((priority, keys) -> {
+								if (keys != null) {
+									keys.forEach((key, eventHandles) -> {
 										
-										invokeEvents(eventHandles, signal, incomingMessage.ref);
+										// Schedule events.
+										scheduleEvents(currentTime, eventHandles, signal, incomingMessage.ref);
 									});
 								}
 							});
@@ -346,55 +363,31 @@ public class ConditionalEvents {
 				}
 			}
 			
-			// Check if there are more events in the queue.
-			boolean moreEvents;
-			synchronized (messageQueue) {
-				moreEvents = messageQueue.isEmpty();
-			}
-			
-			// If not, enter the idle state for 250 ms.
-			if (!moreEvents) {
-				Lock.waitFor(dispatchLock, 250);
+			// Invoke events scheduled within defined time span.
+			long cycles = dispatchLockTimeoutMs / minDelayMessageCoalesceMs;
+			cycles = cycles > 1 ? cycles : 1;
+			while (--cycles > 0) {
 				
-				// Update lock.
+				// Lock thread for "coalesce delay" milliseconds.
+				boolean noMessage = Lock.waitFor(dispatchLock, minDelayMessageCoalesceMs);
+			
+				// Create new lock.
 				dispatchLock = new Lock();
 				
-				// Invoke remaining events.
-				invokeRemainingEvents();
+				// If they are scheduled events...
+				if (!scheduledEvents.isEmpty()) {
+					// Update current time value.
+					long updatedCurrentTime = new Date().getTime();
+					// Invoke them.
+					invokeScheduledEvents(updatedCurrentTime);
+				}
+				
+				// When a new message is ready, do loop no longer and process it.
+				if (!noMessage) {
+					break;
+				}
 			}
 		}
-	}
-	
-	/**
-	 * 
-	 * @param eventHandles
-	 */
-	private static void invokeRemainingEvents() {
-		
-		conditionalEvents.forEach((signal, map1) -> {
-			
-			if (map1 != null) {
-				map1.forEach((priority, map2) -> {
-					
-					if (map2 != null) {
-						map2.forEach((key, eventHandles) -> {
-							
-							
-							
-						});
-					}
-				});
-			}
-		});
-	}
-	
-	/**
-	 * 
-	 * @param eventHandles
-	 */
-	private static void invokeRemainingEvents(LinkedList<EventHandle> eventHandles) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	/**
@@ -429,6 +422,98 @@ public class ConditionalEvents {
 	}
 
 	/**
+	 * Invoke events. Pass the reference to incoming message to the event lambda function.
+	 * @param eventHandles
+	 * @param eventCondition
+	 * @param message
+	 */
+	public static void scheduleEvents(long currentTime, LinkedList<EventHandle> eventHandles, EventCondition eventCondition, Message message) {
+		
+		// Check input.
+		if (eventHandles == null) {
+			return;
+		}
+		
+		// Schedule actions on the Swing thread.
+		for (EventHandle eventHandle : eventHandles) {
+			SwingUtilities.invokeLater(() -> {
+				
+				// Coalesce same events within given time span.
+				CoalesceState state = eventHandle.getMessageCoalesceState(currentTime, message);
+				
+				// Check state.
+				if (!CoalesceState.unknown.equals(state)) {
+				
+					// On coalesce start and progress.
+					if (CoalesceState.start.equals(state) || CoalesceState.progress.equals(state)) {
+						
+						// Create new scheduled event.
+						ScheduledEvent scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
+						
+						// Remember the event handle.
+						scheduledEvents.add(scheduledEvent);
+						
+						j.log("SCHEDULED %s", scheduledEvent.toString());
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 * Invoke remaining events.
+	 * @param eventHandles
+	 */
+	private static void invokeScheduledEvents(long currentTime) {
+		
+		// Initialize.
+		final LinkedList<ScheduledEvent> processedEvents = new LinkedList<ScheduledEvent>();
+							
+		// Invoke actions on the Swing thread.
+		for (ScheduledEvent scheduledEvent : scheduledEvents) {
+			
+			// Check if the event timeout has elapsed.
+			if (currentTime < scheduledEvent.executionTime) {
+				return;
+			}
+			
+			j.log("ACCEPTING %s", scheduledEvent);
+			
+			// Invoke the scheduled event action.
+			SwingUtilities.invokeLater(() -> {
+				scheduledEvent.eventHandle.action.accept(scheduledEvent.message);
+				
+				// Log the event.
+				if (enableMessageLog) {
+					logEvent(scheduledEvent.message, scheduledEvent.message.signal, scheduledEvent.eventHandle);
+				}
+			});
+			
+			// Remember processed events.
+			processedEvents.add(scheduledEvent);
+		}
+		
+		// Clear schedule.
+		scheduledEvents.removeAll(processedEvents);
+		j.log("CLEARED %s", processedEvents);
+		j.log("STILL SCHEDULED %s", scheduledEvents);
+	}
+	
+	/**
+	 * Log event.
+	 * @param message
+	 * @param eventCondition
+	 * @param eventHandle
+	 */
+	private static void logEvent(Message message, EventCondition eventCondition, EventHandle eventHandle) {
+		
+		j.log("-----------------------------------------------------------------");
+		j.log("Event: %s [Source: %s, OID %d]\t\traised    in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), message.reflection);
+		j.log("\t-> Action rule: matches %s %s\t\t\tprocessed in %s", eventCondition.getClass().getSimpleName(), eventCondition.name(), eventHandle.reflection);
+		j.log("\tDelay: handle \"%s\" [%d]", eventHandle.identifier(), System.identityHashCode(eventHandle));
+	}
+	
+	/**
 	 * Stop the main thread.
 	 */
 	public static void stopDispatching() {
@@ -445,64 +530,7 @@ public class ConditionalEvents {
 			stopDispatchMessages = true;
 		}
 	}
-	
-	/**
-	 * Invoke events. Pass the reference to incoming message to the event lambda function.
-	 * @param eventHandles
-	 * @param eventCondition
-	 * @param message
-	 */
-	public static void invokeEvents(HashSet<EventHandle> eventHandles, EventCondition eventCondition, Message message) {
-		
-		// Check input.
-		if (eventHandles == null) {
-			return;
-		}
-		
-		// Initialize.
-		final LinkedList<Message> messages = new LinkedList<Message>();
-		
-		// Invoke actions on the Swing thread.
-		for (EventHandle eventHandle : eventHandles) {
-			
-			SwingUtilities.invokeLater(() -> {
-				
-				// Get current time.
-				final long currentTime = new Date().getTime();
-				
-				// Dump all overaged messages.
-				eventHandle.popOveragedMessages(currentTime, messages);
-				
-				// Log event.
-				if (enableMessageLog) {
-					j.log("-----------------------------------------------------------------");
-					j.log("Event: %s [Source: %s, OID %d]\t\traised    in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), message.reflection);
-					j.log("\t-> Action rule: matches %s %s\t\t\tprocessed in %s", eventCondition.getClass().getSimpleName(), eventCondition.name(), eventHandle.reflection);
-					j.log("\tDelay: handle \"%s\" [%d]", eventHandle.identifier(), System.identityHashCode(eventHandle));
-				}
-				
-				// Coalesce same events within given time span.
-				CoalesceState state = eventHandle.getMessageCoalesceState(currentTime, message);
-				
-				// Check state.
-				if (!CoalesceState.unknown.equals(state)) {
-				
-					// On coalesce start and progress.
-					if (CoalesceState.start.equals(state) || CoalesceState.progress.equals(state)) {
-						
-						// Create new reception time.
-						eventHandle.createNewReceptionRecord(currentTime, message);
-					}
-				}
-				
-				// Accept event message (invoke corresponding lambda function).
-				messages.forEach(messageToUse -> {
-					eventHandle.action.accept(messageToUse);
-				});
-			});
-		}
-	}
-	
+
 	/**
 	 * Transmit signal.
 	 * @param source - the source is mostly an object that calls transmit(...) method
@@ -566,6 +594,8 @@ public class ConditionalEvents {
 			}
 			
 			messageQueue.add(message);
+			
+			j.log("RECEIVED %s", message);
 			
 			Lock.notify(dispatchLock);
 		}
@@ -672,7 +702,7 @@ public class ConditionalEvents {
 	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, defaultMessageCoalesceMs, identifier);
+		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, minDelayMessageCoalesceMs, identifier);
 	}
 	
 	/**

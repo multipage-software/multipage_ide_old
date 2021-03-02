@@ -61,6 +61,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -3822,6 +3823,18 @@ public class Utility {
 	public static void out(Object input) {
 		
 		System.err.println(input.toString());
+	}
+	
+	/**
+	 * Format time.
+	 * @param time
+	 * @return
+	 */
+	public static String formatTime(long time) {
+		
+		Timestamp timeStamp = new Timestamp(time);
+		String timeString = timeStamp.toString();
+		return timeString;
 	}
 
 	/**
