@@ -10,13 +10,13 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
-import org.multipage.generator.EventHandle.CoalesceState;
-import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -328,10 +328,6 @@ public class ConditionalEvents {
 			
 			// Get current time.
 			final Long currentTime = new Date().getTime();
-			// TODO: debug current time
-			final String currentTimeString = Utility.formatTime(currentTime);
-			j.log("CURRENT TIME %s", currentTimeString);
-			
 			
 			// Process the message if it exists.
 			if (incomingMessage.ref != null) {
@@ -434,30 +430,55 @@ public class ConditionalEvents {
 			return;
 		}
 		
-		// Schedule actions on the Swing thread.
+		// Schedule events.
 		for (EventHandle eventHandle : eventHandles) {
 			SwingUtilities.invokeLater(() -> {
 				
-				// Coalesce same events within given time span.
-				CoalesceState state = eventHandle.getMessageCoalesceState(currentTime, message);
-				
-				// Check state.
-				if (!CoalesceState.unknown.equals(state)) {
-				
-					// On coalesce start and progress.
-					if (CoalesceState.start.equals(state) || CoalesceState.progress.equals(state)) {
-						
-						// Create new scheduled event.
-						ScheduledEvent scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
-						
-						// Remember the event handle.
-						scheduledEvents.add(scheduledEvent);
-						
-						j.log("SCHEDULED %s", scheduledEvent.toString());
-					}
+				// Try to get already scheduled and updated event for an event handle and input message.
+				ScheduledEvent scheduledEvent = getUpdatedScheduledEvent(eventHandle, message);
+				if (scheduledEvent == null) {
+					
+					// Schedule new event.
+					scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
+					scheduledEvents.add(scheduledEvent);
 				}
 			});
 		}
+	}
+
+	/**
+	 * Returns coalesced scheduled event for a handle signaled by input signal.
+	 * @param eventHandle
+	 * @param message
+	 * @return 
+	 */
+	private static ScheduledEvent getUpdatedScheduledEvent(EventHandle eventHandle, Message message) {
+		
+		// Get events for same a signaled handle.
+		List<ScheduledEvent> similarEvents = scheduledEvents
+												.stream()
+												.filter(scheduledEvent ->
+													// Filtered by input handle and input signal.
+													scheduledEvent.eventHandle.equals(eventHandle)
+													&& scheduledEvent.message.signal.equals(message.signal))
+												.collect(Collectors.toList());
+		
+		// Check the resulting list.
+		if (similarEvents.isEmpty()) {
+			return null;
+		}
+		
+		// Get first scheduled event and set new message reference.
+		ScheduledEvent scheduledEvent = similarEvents.get(0);
+		scheduledEvent.message = message;
+		
+		// Remove subsequent events from the list of scheduled events
+		// (not the first event, which has been updated above).
+		similarEvents.remove(0);
+		scheduledEvents.removeAll(similarEvents);
+		
+		// Return updated event.
+		return scheduledEvent;
 	}
 
 	/**
@@ -477,8 +498,6 @@ public class ConditionalEvents {
 				return;
 			}
 			
-			j.log("ACCEPTING %s", scheduledEvent);
-			
 			// Invoke the scheduled event action.
 			SwingUtilities.invokeLater(() -> {
 				scheduledEvent.eventHandle.action.accept(scheduledEvent.message);
@@ -495,8 +514,6 @@ public class ConditionalEvents {
 		
 		// Clear schedule.
 		scheduledEvents.removeAll(processedEvents);
-		j.log("CLEARED %s", processedEvents);
-		j.log("STILL SCHEDULED %s", scheduledEvents);
 	}
 	
 	/**
@@ -594,8 +611,6 @@ public class ConditionalEvents {
 			}
 			
 			messageQueue.add(message);
-			
-			j.log("RECEIVED %s", message);
 			
 			Lock.notify(dispatchLock);
 		}
