@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
+import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -81,28 +82,16 @@ public class ConditionalEvents {
 		// Message source reflection.
 		StackTraceElement reflection;
 		
+		// Receive time.
+		Long receiveTime;
+		
 		/**
 		 * Dump message.
 		 */
 		@Override
 		public String toString() {
-			return "Message [signal=" + signal.name() + "]";
-		}
-		
-		/**
-		 * Check if the current message is triggered by some of input messages.
-		 * @param messages
-		 * @return
-		 */
-		// TODO
-		public boolean triggeredBy(ConditionalEvents ... messages) {
-			
-			for (ConditionalEvents message : messages) {
-				if (this.signal.equals(message)) {
-					return true;
-				}
-			}
-			return false;
+			String timeStamp = receiveTime != null ? Utility.formatTime(receiveTime) : "null";
+			return String.format("Message 0x%08x [signal=%s, received=%s]", this.hashCode(), signal.name(), timeStamp);
 		}
 		
 		/**
@@ -115,6 +104,7 @@ public class ConditionalEvents {
 			result = prime * result + ((signal == null) ? 0 : signal.hashCode());
 			result = prime * result + ((reflection == null) ? 0 : reflection.hashCode());
 			result = prime * result + ((source == null) ? 0 : source.hashCode());
+			result = prime * result + ((receiveTime == null) ? 0 : receiveTime.hashCode());
 			return result;
 		}
 		
@@ -332,7 +322,11 @@ public class ConditionalEvents {
 			// Process the message if it exists.
 			if (incomingMessage.ref != null) {
 				
+				// Read signal associated with the message.
 				Signal signal = incomingMessage.ref.signal;
+				
+				// Set message receive time.
+				incomingMessage.ref.receiveTime = currentTime;
 				
 				// On special events skip the next complex rules.
 				if (signal.isSpecial()) {
@@ -350,7 +344,7 @@ public class ConditionalEvents {
 									keys.forEach((key, eventHandles) -> {
 										
 										// Schedule events.
-										scheduleEvents(currentTime, eventHandles, signal, incomingMessage.ref);
+										scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
 									});
 								}
 							});
@@ -420,10 +414,9 @@ public class ConditionalEvents {
 	/**
 	 * Invoke events. Pass the reference to incoming message to the event lambda function.
 	 * @param eventHandles
-	 * @param eventCondition
 	 * @param message
 	 */
-	public static void scheduleEvents(long currentTime, LinkedList<EventHandle> eventHandles, EventCondition eventCondition, Message message) {
+	public static void scheduleEvents(long currentTime, LinkedList<EventHandle> eventHandles, Message message) {
 		
 		// Check input.
 		if (eventHandles == null) {
@@ -454,6 +447,12 @@ public class ConditionalEvents {
 	 */
 	private static ScheduledEvent getUpdatedScheduledEvent(EventHandle eventHandle, Message message) {
 		
+		// If the event handle doesn't coalesce messages, return null.
+		// TODO: Write receiver without coalescing for messages like "toolTipTimer" with eventHandle.coalesceTimeSpanMs set to null.
+		if (eventHandle.coalesceTimeSpanMs == null) {
+			return null;
+		}
+		
 		// Get events for same a signaled handle.
 		List<ScheduledEvent> similarEvents = scheduledEvents
 												.stream()
@@ -468,9 +467,10 @@ public class ConditionalEvents {
 			return null;
 		}
 		
-		// Get first scheduled event and set new message reference.
+		// Get first similar scheduled event and rewrite it with new message.
 		ScheduledEvent scheduledEvent = similarEvents.get(0);
 		scheduledEvent.message = message;
+		scheduledEvent.executionTime = message.receiveTime + eventHandle.coalesceTimeSpanMs;
 		
 		// Remove subsequent events from the list of scheduled events
 		// (not the first event, which has been updated above).
@@ -501,7 +501,8 @@ public class ConditionalEvents {
 			// Invoke the scheduled event action.
 			SwingUtilities.invokeLater(() -> {
 				scheduledEvent.eventHandle.action.accept(scheduledEvent.message);
-				
+				j.enableTimeDelta(true);
+				j.log("ACTION %s", scheduledEvent.message);
 				// Log the event.
 				if (enableMessageLog) {
 					logEvent(scheduledEvent.message, scheduledEvent.message.signal, scheduledEvent.eventHandle);

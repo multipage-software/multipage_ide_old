@@ -127,7 +127,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		tooltipWindow = new ToolTipWindow(GeneratorMainFrame.getFrame());
 		toolTipTimer = new javax.swing.Timer(period, e -> {
 			
-			ConditionalEvents.transmit(GeneralDiagram.class, Signal.tooltipTimer);
+			ConditionalEvents.transmit(GeneralDiagram.class, Signal.toolTipTimer);
 		});
 		toolTipTimer.start();
 	}

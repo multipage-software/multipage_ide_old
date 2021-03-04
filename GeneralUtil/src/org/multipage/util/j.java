@@ -22,24 +22,45 @@ public class j {
 	private static final boolean displayTimespan = true;
 	
 	/**
+	 * Last time stamp.
+	 */
+	private static long lastTimeStampMs = System.currentTimeMillis();
+
+	/**
+	 * Enable logging time delta.
+	 */
+	private static boolean logTimeDelta = false;
+	
+	/**
 	 * Lock object for log
 	 */
 	private static final Object synclog = new Object();
 	
 	/**
 	 * Log formatted message on stdout or stderr or on "test"
+	 * displayDelta - if is true, the delta time between time stamps is displayed
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
 	 */
 	@SuppressWarnings("resource")
-	synchronized public static void log(Object parameter, Object ...strings) {
+	synchronized public static void log(boolean displayDelta, Object parameter, Object ...strings) {
 		
 		synchronized (synclog) {
 			
 			String type = "";
 			String indentation = "";
-			Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
+			
+			long currentTimeMs = System.currentTimeMillis();
+			long timeDeltaMs = currentTimeMs - lastTimeStampMs;
+			
+			Timestamp timeStamp = new Timestamp(lastTimeStampMs);
 			String timestamp = displayTimespan ? timeStamp.toString() + ": " : "";
+			lastTimeStampMs = currentTimeMs;
+			
+			if (displayDelta) {
+				System.err.format("delta %dms ", timeDeltaMs);
+			}
+			
 			if (parameter instanceof LogParameter) {
 				LogParameter logparam = (LogParameter) parameter;
 				indentation = logparam.getIndentation();
@@ -48,7 +69,9 @@ public class j {
 			else if (parameter instanceof String) {
 				type = (String) parameter;
 			}
+			
 			if (!type.isEmpty()) {
+				
 				PrintStream os = "out".equals(type) || "test".equals(type) ? System.out : ("err".equals(type) ? System.err : null);
 				if (strings.length > 0) {
 					if (os != null) {
@@ -58,6 +81,7 @@ public class j {
 					else {
 						System.err.format(indentation + timestamp + type + '\n', strings);
 					}
+					
 				}
 				else {
 					if (os != null) {
@@ -74,6 +98,25 @@ public class j {
 		}
 	}
 	
+	/**
+	 * Log formatted message on stdout or stderr or on "test"
+	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
+	 * @param strings
+	 */
+	synchronized public static void log(Object parameter, Object ...strings) {
+		
+		// Delegate the call.
+		log(logTimeDelta , parameter, strings);
+	}
+
+	/**
+	 * Log time delta next time the message is displayed.
+	 */
+	public static void enableTimeDelta(boolean enable) {
+		
+		logTimeDelta = enable;
+	}
+
 	/**
 	 * Log message.
 	 * @param stringResource - identifier of a message

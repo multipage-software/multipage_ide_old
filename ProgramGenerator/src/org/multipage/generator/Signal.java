@@ -275,8 +275,8 @@ public enum Signal implements EventCondition {
 	removeSlots,
 	// Set slots properties.
 	setSlotsProperties,
-	// Tooltip timer.
-	tooltipTimer,
+	// Tool tip timer.
+	toolTipTimer,
 	// Remove diagram.
 	removeDiagram,
 	// Update controls.
