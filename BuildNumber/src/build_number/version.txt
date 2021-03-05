@@ -1,1 +1,1 @@
-with Maclan
+Standalone
