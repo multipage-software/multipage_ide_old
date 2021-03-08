@@ -343,8 +343,10 @@ public class ConditionalEvents {
 								if (keys != null) {
 									keys.forEach((key, eventHandles) -> {
 										
-										// Schedule events.
-										scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
+										synchronized (scheduledEvents) {
+											// Schedule events.
+											scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
+										}
 									});
 								}
 							});
@@ -364,12 +366,14 @@ public class ConditionalEvents {
 				// Create new lock.
 				dispatchLock = new Lock();
 				
-				// If they are scheduled events...
-				if (!scheduledEvents.isEmpty()) {
-					// Update current time value.
-					long updatedCurrentTime = new Date().getTime();
-					// Invoke them.
-					invokeScheduledEvents(updatedCurrentTime);
+				synchronized (scheduledEvents) {
+					// If they are scheduled events...
+					if (!scheduledEvents.isEmpty()) {
+						// Update current time value.
+						long updatedCurrentTime = new Date().getTime();
+						// Invoke them.
+						invokeScheduledEvents(updatedCurrentTime);
+					}
 				}
 				
 				// When a new message is ready, do loop no longer and process it.
@@ -448,8 +452,7 @@ public class ConditionalEvents {
 	private static ScheduledEvent getUpdatedScheduledEvent(EventHandle eventHandle, Message message) {
 		
 		// If the event handle doesn't coalesce messages, return null.
-		// TODO: Write receiver without coalescing for messages like "toolTipTimer" with eventHandle.coalesceTimeSpanMs set to null.
-		if (eventHandle.coalesceTimeSpanMs == null) {
+		if (eventHandle.coalesceTimeSpanMs == null || eventHandle.coalesceTimeSpanMs <= 0L) {
 			return null;
 		}
 		
@@ -489,7 +492,7 @@ public class ConditionalEvents {
 		
 		// Initialize.
 		final LinkedList<ScheduledEvent> processedEvents = new LinkedList<ScheduledEvent>();
-							
+		
 		// Invoke actions on the Swing thread.
 		for (ScheduledEvent scheduledEvent : scheduledEvents) {
 			

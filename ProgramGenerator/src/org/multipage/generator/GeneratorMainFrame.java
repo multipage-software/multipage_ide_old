@@ -1506,9 +1506,6 @@ public class GeneratorMainFrame extends JFrame {
 			timerWatchDog.stop();
 		}
 		
-		// Cancel tool tip timer.
-		GeneralDiagram.stopToolTips();
-		
 		// Save windows data.
 		customizeColors.saveIfDirty(false);
 	}

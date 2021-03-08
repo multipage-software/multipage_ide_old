@@ -1664,11 +1664,11 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 							
 							while (set.next()) {
 								if (index >= maximumNames) {
-									area.addConstructorHolderName("...");
+									area.addConstructorListEllipsis();
 									break;
 								}
 								
-								area.addConstructorHolderName(set.getString("name"));
+								area.addConstructorListRow(set.getString("name"));
 								index++;
 							}
 							
@@ -1685,7 +1685,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 							if (set.next()) {
 								if (set.getObject("extension_area_id") != null) {
 									
-									area.addConstructorExtensionName();
+									area.addConstructorListExtensionExists();
 								}
 							}
 							
@@ -1696,7 +1696,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 						
 						// Add link to groups.
 						if (constructorGroupAlias != null) {
-							area.addConstructorLinkToGroups();
+							area.addConstructorListMoreGroups();
 						}
 					}
 				}

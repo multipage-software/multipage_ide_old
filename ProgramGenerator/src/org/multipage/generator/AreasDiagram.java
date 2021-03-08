@@ -452,6 +452,27 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			setOverview();
 			repaint();
 		});
+		
+		// Add non-coalescing receiver (with time span equal to 0L) for the "display or redraw tool tip" event.
+		ConditionalEvents.receiver(this, Signal.displayOrRedrawToolTip, message -> {
+			
+			if (message.sourceObject(this)) {
+				// Display appropriate tool tip only if constructor window is hidden.
+				boolean isSet = displayConstructorsWindow.isVisible() ? false : onToolTip();
+				// or hide the tool tip window.
+				if (!isSet) {
+					tooltipWindow.hidew();
+				}
+			}
+		},
+		0L);
+		
+		// Add receiver for the "remove toll tip" event. Event priority is decreased with relation to "display or redraw tool tip" event.
+		ConditionalEvents.receiver(this, Signal.removeToolTip, EventConditionPriority.low, message -> {
+			
+			// Hide tool tip window.
+			tooltipWindow.hidew();
+		});
 	}
 	
 	/**
@@ -579,6 +600,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			
 			setNewAreaVisible(true);
 		}
+		
+		// Transmit "display or redraw tool tip" signal.
+		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -600,6 +624,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		
 		// Hide constructors' names.
 		hideConstructorsDisplay();
+		
+		// Transmit "remove tool tip" signal.
+		ConditionalEvents.transmit(this, Signal.removeToolTip);
 	}
 
 	/**
@@ -698,6 +725,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		if (!constructorsMustBeDisplayed) {
 			hideConstructorsDisplay();
 		}
+		
+		// Transmit "display or redraw tool tip" signal.
+		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -2097,20 +2127,20 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		
 		boolean isSet = false;
 		
-		// Get mouse position and convert it to window coordinates.
+		// Get mouse position and convert it to current window coordinates.
 		Point screenMouse = MouseInfo.getPointerInfo().getLocation();
 		Point windowMouse = (Point) screenMouse.clone();
 		SwingUtilities.convertPointFromScreen(windowMouse, this);
 		
 		Rectangle window = getRectangle();
 
-		// If the mouse is not in window, exit this method.
+		// If the mouse is not in the window, exit this method.
 		if (!window.contains(windowMouse)) {
 			return false;
 		}
 		
 		// If the mouse is in vertical or horizontal scroll bar
-		// or overview or zoom, exit this method.
+		// or overview or the zoom, exit this method.
 		if (horizontalScroll.contains(windowMouse)
 			|| verticalScroll.contains(windowMouse)
 			|| overview.contains(windowMouse)

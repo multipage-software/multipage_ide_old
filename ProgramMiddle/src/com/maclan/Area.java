@@ -297,9 +297,9 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	private Long constructorGroupId;
 	
 	/**
-	 * Constructor holders' names.
+	 * A descriptive list of constructors .
 	 */
-	private LinkedList<String> constructorHoldersNames = new LinkedList<String>();
+	private LinkedList<String> constructorListRows = new LinkedList<String>();
 
 	/**
 	 * Is constructor area flag.
@@ -387,7 +387,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		folder = null;
 		versionId = 0L;
 		constructorGroupId = null;
-		constructorHoldersNames.clear();
+		constructorListRows.clear();
 		isConstructorArea = false;
 		relatedArea = null;
 		constructorHolderId = null;
@@ -963,7 +963,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		area.folder = folder;
 		area.versionId = versionId;
 		area.constructorGroupId = constructorGroupId;
-		area.constructorHoldersNames.addAll(constructorHoldersNames);
+		area.constructorListRows.addAll(constructorListRows);
 		area.isConstructorArea = isConstructorArea;
 		area.relatedArea = relatedArea;
 		area.constructorHolderId = constructorHolderId;
@@ -1908,36 +1908,51 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 */
 	public boolean isAreaConstructor() {
 		
-		return !constructorHoldersNames.isEmpty() || constructorGroupId != null;
+		return !constructorListRows.isEmpty() || constructorGroupId != null;
 	}
 
 	/**
-	 * 
-	 * @param constructorHolderName
+	 * Add new row into the constructor list.
+	 * @param row
 	 */
-	public void addConstructorHolderName(String constructorHolderName) {
+	public void addConstructorListRow(String row) {
 		
-		if (constructorHolderName != null && !constructorHolderName.isEmpty()) {
-			
-			constructorHoldersNames.add(constructorHolderName);
+		if (row != null && !row.isEmpty()) {
+			constructorListRows.add('+' + row);
 		}
 	}
+	
+	/**
+	 * Add ellipsis to the constructor list.
+	 */
+	public void addConstructorListEllipsis() {
+		
+		constructorListRows.add("...");
+	}
 
 	/**
-	 * Add constructor extension name.
+	 * Add "more constructors exist" row.
 	 */
-	public void addConstructorExtensionName() {
+	public void addConstructorListMoreGroups() {
 		
-		constructorHoldersNames.add(Resources.getString("org.multipage.generator.textConstructorExtensionExists"));
+		constructorListRows.add(Resources.getString("org.multipage.generator.textConstructorListMoreGroups"));
+	}
+
+	/**
+	 * Add "constructor extension exists" row.
+	 */
+	public void addConstructorListExtensionExists() {
+		
+		constructorListRows.add(Resources.getString("org.multipage.generator.textConstructorExtensionExists"));
 	}
 	
 	/**
 	 * Get constructor holders' names.
 	 * @return
 	 */
-	public LinkedList<String> getConstructorHoldersNames() {
+	public LinkedList<String> getConstructorNameList() {
 		
-		return constructorHoldersNames;
+		return constructorListRows;
 	}
 
 	/**
@@ -1946,7 +1961,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 */
 	public int getConstructorHoldersCount() {
 		
-		return constructorHoldersNames.size();
+		return constructorListRows.size();
 	}
 
 	/**
@@ -2131,15 +2146,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		
 		return subareas;
 	}
-
-	/**
-	 * Add "a link to groups" exists.
-	 */
-	public void addConstructorLinkToGroups() {
-		
-		constructorHoldersNames.add(Resources.getString("org.multipage.generator.textConstructorLinkToGroupsExists"));
-	}
-
+	
 	/**
 	 * Get can import flag.
 	 * @return

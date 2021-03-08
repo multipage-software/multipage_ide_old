@@ -30,7 +30,7 @@ public class ConstructorsDisplayWindow extends JWindow {
 	/**
 	 * Content panel.
 	 */
-	private DisplayPanel contentPanel;
+	private DisplayPanel displayPanel;
 	
 	/**
 	 * Area reference.
@@ -45,11 +45,17 @@ public class ConstructorsDisplayWindow extends JWindow {
 		
 		super(Utility.findWindow(parent));
 		
-		contentPanel = new DisplayPanel();
-		contentPanel.setBackground(UIManager.getColor("Panel.background"));
-		setContentPane(contentPanel);
+		JPanel displayPanelWrapper = new JPanel();
+		displayPanelWrapper.setBorder(new LineBorder(Color.BLACK));
 		
-		contentPanel.setBorder(new LineBorder(new Color(0, 0, 0)));
+		setContentPane(displayPanelWrapper);
+		
+		displayPanel = new DisplayPanel();
+		displayPanel.setBackground(UIManager.getColor("Panel.background"));
+		displayPanel.setBorder(new EmptyBorder(1, 3, 1, 3));	// Label padding: top, left, bottom, right.
+		
+		displayPanelWrapper.setLayout(new BorderLayout());
+		displayPanelWrapper.add(displayPanel, BorderLayout.CENTER);
 	}
 
 	/**
@@ -59,7 +65,7 @@ public class ConstructorsDisplayWindow extends JWindow {
 	private void setArea(Area area) {
 		
 		this.area = area;
-		contentPanel.area = area;
+		displayPanel.area = area;
 	}
 
 	/**
@@ -81,7 +87,7 @@ public class ConstructorsDisplayWindow extends JWindow {
 		setArea(area);
 		
 		// Set window dimension.
-		Dimension size = contentPanel.computeSize();
+		Dimension size = displayPanel.computeSize();
 		setSize(size);	
 	}
 
@@ -107,7 +113,7 @@ class DisplayPanel extends JPanel {
 	public Area area;
 
 	/**
-	 * Font.
+	 * Fonts.
 	 */
 	private Font font = new Font(Font.DIALOG, Font.PLAIN, 10);
 	
@@ -135,17 +141,28 @@ class DisplayPanel extends JPanel {
 		
 		if (area != null) {
 			
-			// Get line height.
-			FontMetrics metrics = g.getFontMetrics(font);
+			// Get line height of the caption.
+			FontMetrics metrics = g.getFontMetrics(ToolTipWindow.font);
 			int lineHeight = metrics.getHeight();
 			
-			// Paint constructor names.
+			// Paint area description and alias and constructor names.
 			int lineYPosition = lineHeight;
 			
-			for (String constructorName : area.getConstructorHoldersNames()) {
+			// Draw area name.
+			g.setFont(ToolTipWindow.font);
+			g.drawString(area.getDescription(), 3, lineYPosition);
+			
+			// Get common line height of the item.
+			metrics = g.getFontMetrics(font);
+			lineHeight = metrics.getHeight();
+			
+			lineYPosition += lineHeight;
+			
+			for (String listItem : area.getConstructorNameList()) {
 				
 				// Draw name.
-				g.drawString(constructorName, 3, lineYPosition);
+				g.setFont(font);
+				g.drawString(listItem, 3, lineYPosition);
 				
 				lineYPosition += lineHeight;
 			}
@@ -162,30 +179,39 @@ class DisplayPanel extends JPanel {
 			return new Dimension();
 		}
 		
-		int linesCount = area.getConstructorHoldersCount();
-		if (linesCount == 0) {
+		int itemCount = area.getConstructorHoldersCount() + 1;
+		if (itemCount == 0) {
 			return new Dimension();
 		}
 		
-		Graphics graphics = getGraphics();
-		FontMetrics metrics = graphics.getFontMetrics(font);
-		
-		// Get text height.
-		int height = metrics.getHeight() * linesCount + 6;
-		
-		// Get maximum line size.
-		int maximumLineWidth = 0;
+		Graphics g = getGraphics();
 
+		// Get line height of the caption.
+		FontMetrics metrics = g.getFontMetrics(ToolTipWindow.font);
+		
+		// Initialize maximum line width with caption width.
+		int maximumLineWidth = metrics.stringWidth(area.getDescription());
+		
+		// Get caption height.
+		int listHeight = metrics.getHeight();
+		
+		// Get line height of the texts.
+		metrics = g.getFontMetrics(font);
+		int itemHeight = metrics.getHeight();
+		
+		// Add text heights.
+		listHeight += itemHeight * itemCount;
+		
 		// Do loop for all names.
-		for (String constructorHolderName : area.getConstructorHoldersNames()) {
+		for (String listItem : area.getConstructorNameList()) {
 			
-			int width = metrics.stringWidth(constructorHolderName);
+			int width = metrics.stringWidth(listItem);
 			
 			if (width > maximumLineWidth) {
 				maximumLineWidth = width;
 			}
 		}
 		
-		return new Dimension(maximumLineWidth + 10, height);
+		return new Dimension(maximumLineWidth + 10, listHeight);
 	}
 }

@@ -1,5 +1,4 @@
-IDE: Eclipse Java EE IDE for Web Developers.
-Version: Eclipse IDE for Java Developers Version 2019-06 (4.12.0)
+IDE Version: Eclipse IDE for Java Developers Version 2019-06 (4.12.0)
 Operating System: Windows 10
 Embedded Database: db-derby-10.14.2.0
 Shared database: postgresql-13.1-1-windows-x64

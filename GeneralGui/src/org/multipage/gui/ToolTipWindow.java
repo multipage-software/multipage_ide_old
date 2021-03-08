@@ -24,6 +24,11 @@ public class ToolTipWindow extends JWindow {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * Font for displayed text.
+	 */
+	public static Font font = new Font(Font.DIALOG, Font.BOLD, 11);
+	
+	/**
 	 * Label.
 	 */
 	private JLabel label = new JLabel();
@@ -36,8 +41,13 @@ public class ToolTipWindow extends JWindow {
 		
 		// Add label to the window.
 		setLayout(new BorderLayout());
-		label.setBorder(new LineBorder(Color.BLACK));
-		add(label, BorderLayout.CENTER);
+		JPanel labelWrapper = new JPanel();
+		labelWrapper.setBorder(new LineBorder(Color.BLACK));
+		label.setBorder(new EmptyBorder(1, 3, 1, 3));	// Label padding: top, left, bottom, right
+		label.setFont(font);
+		labelWrapper.setLayout(new BorderLayout());
+		labelWrapper.add(label, BorderLayout.CENTER);
+		add(labelWrapper, BorderLayout.CENTER);
 	}
 
 	/**

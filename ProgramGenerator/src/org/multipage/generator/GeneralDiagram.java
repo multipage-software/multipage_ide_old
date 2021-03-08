@@ -109,44 +109,12 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	private boolean isLoaded;
 	
 	/**
-	 * Timer period.
-	 */
-	private static final int period = 500;
-
-	/**
-	 * Tool tip timer.
-	 */
-	private static javax.swing.Timer toolTipTimer;
-	
-	/**
 	 * Static constructor.
 	 */
 	static {
 
-		// Create tool tip window and timer.
+		// Create tool tip window.
 		tooltipWindow = new ToolTipWindow(GeneratorMainFrame.getFrame());
-		toolTipTimer = new javax.swing.Timer(period, e -> {
-			
-			ConditionalEvents.transmit(GeneralDiagram.class, Signal.toolTipTimer);
-		});
-		toolTipTimer.start();
-	}
-	
-	/**
-	 * Starts tool tip timer.
-	 */
-	public static void startToolTips() {
-		
-		toolTipTimer.start();
-	}
-	
-	/**
-	 * Stops tool tip timer.
-	 */
-	public static void stopToolTips() {
-		
-		closeToolTip();
-		toolTipTimer.stop();
 	}
 	
 	/**
@@ -591,7 +559,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void onFocusGained() {
 		
-		startToolTips();
 	}
 
 	/**
@@ -599,7 +566,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void onFocusLost() {
 
-		stopToolTips();
 	}
 
 	/**
@@ -857,12 +823,12 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 
 	/**
 	 * On mouse pressed.
-	 * @param e
+	 * @param mouseEvent
 	 */
-	private void onMousePressedEvent(MouseEvent e) {
+	private void onMousePressedEvent(MouseEvent mouseEvent) {
 
-		int button = e.getButton();
-		Point mouse = e.getPoint();
+		int button = mouseEvent.getButton();
+		Point mouse = mouseEvent.getPoint();
 		
 		// Set focus.
 		requestFocusInWindow();
