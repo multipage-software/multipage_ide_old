@@ -360,21 +360,25 @@ public class TabPanel extends DnDTabbedPane {
 		
 		// Get tab component.
 		Component component = getTabComponentAt(index);
-		if (!(component instanceof TabItemInterface)) {
-			
+		if (!(component instanceof TabLabel)) {
+			return null;
+		}
+		TabLabel tabLabel = (TabLabel) component;
+		Component tabPanelComponent = tabLabel.getPanelComponent();
+		if (!(tabPanelComponent instanceof TabItemInterface)) {
 			return null;
 		}
 		
 		// Get tab state
-		TabItemInterface tabInterface = (TabItemInterface) component;
-		tabInterface.getTabState();
+		TabItemInterface tabInterface = (TabItemInterface) tabPanelComponent;
+		TabState tabState = tabInterface.getTabState();
 		
-		if (!(tabInterface instanceof AreasTabState)) {
+		if (!(tabState instanceof AreasTabState)) {
 			return null;
 		}
 		
 		// Get the area ID and return it
-		AreasTabState areasTabState = (AreasTabState) tabInterface;
+		AreasTabState areasTabState = (AreasTabState) tabState;
 		long topAreaId = areasTabState.areaId;
 		
 		// Return top area ID.

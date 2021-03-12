@@ -1393,13 +1393,13 @@ public class GeneratorMainFrame extends JFrame {
 		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", this, "onShowHideIds", "org.multipage.generator.tooltipShowHideIds");
 		addHideSlotsButton(toolBar);
 		toolBar.addSeparator();
-		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onExposeReadOnly", "org.multipage.generator.tooltipExposeReadOnly");
+		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onExposeReadOnly", "org.multipage.generator.tooltipAreasUnprotected");
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdate");
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", this, "onFocusBasicArea", "org.multipage.generator.tooltipFocusWhole");
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", this, "onFocus", "org.multipage.generator.tooltipFocus");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", this, "onFocusTabArea", "org.multipage.generator.tooltipFocus");
 		toolBar.addSeparator();
 		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", this, "onFocusHome", "org.multipage.generator.tooltipFocusHome");
 		toolBar.addSeparator();
@@ -1584,7 +1584,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		showIDsExtended(show);
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showOrHideIds);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showOrHideIds, show);
 	}
 
 	/**
@@ -3055,7 +3055,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Focus on the tab area.
 	 */
 	@SuppressWarnings("unused")
-	private void onFocus() {
+	private void onFocusTabArea() {
 		
 		Long tabAreaId = tabPanel.getTopAreaIdOfSelectedTab();
 		

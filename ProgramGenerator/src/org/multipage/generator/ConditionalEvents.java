@@ -10,10 +10,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.swing.SwingUtilities;
 
@@ -48,6 +46,11 @@ public class ConditionalEvents {
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
 	private static boolean enableMessageLog = false;
+	
+	/**
+	 * Stop receiving unnecessary events. (Only for debugging purposes).
+	 */
+	private static boolean stopReceivingUnnecessary = false;
 	
 	/**
 	 * Default message coalesce time span in milliseconds.
@@ -325,29 +328,33 @@ public class ConditionalEvents {
 				// Read signal associated with the message.
 				Signal signal = incomingMessage.ref.signal;
 				
-				// Set message receive time.
-				incomingMessage.ref.receiveTime = currentTime;
+				// For debug purposes: stop receiving unnecessary events.
+				if (!(stopReceivingUnnecessary && signal.isUnnecessary())) {
 				
-				// On special events skip the next complex rules.
-				if (signal.isSpecial()) {
-					invokeSpecialEvents(incomingMessage.ref);
-				}
-				else {
+					// Set message receive time.
+					incomingMessage.ref.receiveTime = currentTime;
 					
-					// For all mappings...
-					synchronized (conditionalEvents) {
+					// On special events skip the next complex rules.
+					if (signal.isSpecial()) {
+						invokeSpecialEvents(incomingMessage.ref);
+					}
+					else {
 						
-						LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
-						if (priorities != null) {
-							priorities.forEach((priority, keys) -> {
-								if (keys != null) {
-									keys.forEach((key, eventHandles) -> {
-										
-										// Schedule events.
-										scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
-									});
-								}
-							});
+						// For all mappings...
+						synchronized (conditionalEvents) {
+							
+							LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
+							if (priorities != null) {
+								priorities.forEach((priority, keys) -> {
+									if (keys != null) {
+										keys.forEach((key, eventHandles) -> {
+											
+											// Schedule events.
+											scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
+										});
+									}
+								});
+							}
 						}
 					}
 				}
@@ -425,17 +432,15 @@ public class ConditionalEvents {
 		
 		// Schedule events.
 		for (EventHandle eventHandle : eventHandles) {
-			SwingUtilities.invokeLater(() -> {
+			
+			// Try to get already scheduled and updated event for an event handle and input message.
+			ScheduledEvent scheduledEvent = getUpdatedScheduledEvent(eventHandle, message);
+			if (scheduledEvent == null) {
 				
-				// Try to get already scheduled and updated event for an event handle and input message.
-				ScheduledEvent scheduledEvent = getUpdatedScheduledEvent(eventHandle, message);
-				if (scheduledEvent == null) {
-					
-					// Schedule new event.
-					scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
-					scheduledEvents.add(scheduledEvent);
-				}
-			});
+				// Schedule new event.
+				scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
+				scheduledEvents.add(scheduledEvent);
+			}
 		}
 	}
 
@@ -453,13 +458,13 @@ public class ConditionalEvents {
 		}
 		
 		// Get events for same a signaled handle.
-		List<ScheduledEvent> similarEvents = scheduledEvents
-												.stream()
-												.filter(scheduledEvent ->
-													// Filtered by input handle and input signal.
-													scheduledEvent.eventHandle.equals(eventHandle)
-													&& scheduledEvent.message.signal.equals(message.signal))
-												.collect(Collectors.toList());
+		LinkedList<ScheduledEvent> similarEvents = new LinkedList<ScheduledEvent>();
+		for (ScheduledEvent scheduledEvent : scheduledEvents) {
+			
+			if (scheduledEvent.eventHandle.equals(eventHandle) && scheduledEvent.message.signal.equals(message.signal)) {
+				similarEvents.add(scheduledEvent);
+			}
+		}
 		
 		// Check the resulting list.
 		if (similarEvents.isEmpty()) {
@@ -475,7 +480,7 @@ public class ConditionalEvents {
 		// (not the first event, which has been updated above).
 		similarEvents.remove(0);
 		scheduledEvents.removeAll(similarEvents);
-		
+			
 		// Return updated event.
 		return scheduledEvent;
 	}
@@ -524,6 +529,12 @@ public class ConditionalEvents {
 	private static void logEvent(ScheduledEvent scheduledEvent) {
 		
 		Message message = scheduledEvent.message;
+		
+		if (Signal.displayOrRedrawToolTip.equals(message.signal)
+				|| Signal.removeToolTip.equals(message.signal)) {
+			return;
+		}
+		
 		EventHandle eventHandle = scheduledEvent.eventHandle;
 		String receivedTimeString = Utility.formatTime(message.receiveTime);
 		String scheduledTimeString = Utility.formatTime(scheduledEvent.executionTime);
@@ -541,7 +552,10 @@ public class ConditionalEvents {
 		// Release objects.
 		synchronized (messageQueue) {
 			messageQueue.clear();
-			conditionalEvents.clear();
+			
+			synchronized (conditionalEvents) {
+				conditionalEvents.clear();
+			}
 		}
 		
 		// Stop main thread.
@@ -766,9 +780,7 @@ public class ConditionalEvents {
 			auxiliaryTable.addRecord(key, eventCondition, priority, handle);
 			
 			// Retrieve sorted conditional events.
-			synchronized (conditionalEvents) {
-				conditionalEvents = auxiliaryTable.retrieveSorted();
-			}
+			conditionalEvents = auxiliaryTable.retrieveSorted();
 			
 			// Return key.
 			return key;
@@ -781,7 +793,10 @@ public class ConditionalEvents {
 	 */
 	public static void removeReceivers(Object key) {
 		
-		// Remove conditional events for key.
-		conditionalEvents.remove(key);
+		synchronized (conditionalEvents) {
+			
+			// Remove conditional events for key.
+			conditionalEvents.remove(key);
+		}
 	}
 }

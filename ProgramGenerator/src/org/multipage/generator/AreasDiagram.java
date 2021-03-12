@@ -269,7 +269,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 */
 	public AreasDiagram(AreasDiagramPanel parentEditor) {
 		
-		// Remeber reference to the parent editor.
+		// Remember reference to the parent editor.
 		this.parentEditor = parentEditor;
 		
 		// Create components.
@@ -473,6 +473,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			// Hide tool tip window.
 			tooltipWindow.hidew();
 		});
+		
+		// Add receiver for the "show or hide" event.
+		ConditionalEvents.receiver(this, Signal.showOrHideIds, message -> {
+			
+			// Set overview and repaint the GUI.
+			setOverview();
+			repaint();
+		});
 	}
 	
 	/**
@@ -602,7 +610,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		//ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -626,7 +634,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		hideConstructorsDisplay();
 		
 		// Transmit "remove tool tip" signal.
-		//ConditionalEvents.transmit(this, Signal.removeToolTip);
+		ConditionalEvents.transmit(this, Signal.removeToolTip);
 	}
 
 	/**
@@ -727,7 +735,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		//ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**

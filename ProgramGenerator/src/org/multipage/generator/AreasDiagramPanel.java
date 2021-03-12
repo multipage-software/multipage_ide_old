@@ -643,6 +643,14 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 				displayRelatedAreas(areaId);
 			}
 		});
+		
+		// Add receiver for the "show or hide" event.
+		ConditionalEvents.receiver(this, Signal.showOrHideIds, message -> {
+			
+			// Reload and repaint the GUI.
+			reload();
+			repaint();
+		});
 	}
 	
 	/**
