@@ -602,7 +602,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		//ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -626,7 +626,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		hideConstructorsDisplay();
 		
 		// Transmit "remove tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.removeToolTip);
+		//ConditionalEvents.transmit(this, Signal.removeToolTip);
 	}
 
 	/**
@@ -727,7 +727,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		//ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
 	}
 
 	/**

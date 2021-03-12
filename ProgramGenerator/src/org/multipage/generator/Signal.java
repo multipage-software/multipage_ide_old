@@ -111,7 +111,7 @@ public enum Signal implements EventCondition {
 			),
 	
 	// On show/hide IDs in areas diagram..
-	showHideIds(
+	showOrHideIds(
 			SignalType.guiChange
 			),
 	

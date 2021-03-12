@@ -1584,7 +1584,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		showIDsExtended(show);
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showHideIds);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.showOrHideIds);
 	}
 
 	/**
