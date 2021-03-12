@@ -1,24 +1,48 @@
 package program.localizer;
 
-import javax.swing.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.swing.DefaultRowSorter;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableColumnModelListener;
-import javax.swing.table.*;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableColumnModel;
 
-import org.multipage.gui.*;
-import org.multipage.gui.SearchTextDialog.Parameters;
-import org.multipage.util.*;
-
-import java.awt.*;
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+import org.multipage.gui.SearchTextDialog;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
 /**
  * 
@@ -704,6 +728,11 @@ public class EditorPanel extends JPanel {
 	 * Editor name
 	 */
 	private String name = "";
+	
+	/**
+	 * The last row found by user.
+	 */
+	private Integer lastFoundRow = null;
 
 	// $hide<<$
 	/**
@@ -1374,41 +1403,63 @@ public class EditorPanel extends JPanel {
 	protected void onFindProperty() {
 		
 		// Open search dialog.
-		Parameters parameters = SearchTextDialog.showDialog(this, "localizer.textSearchPropertyDialog");
-		if (parameters == null) {
-			return;
-		}
-		
-		// Start from selected property or from the beginning.
-		int startRow = table.getSelectedRow();
-		if (startRow == -1) {
-			startRow = 0;
-		}
-		
-		// Search in table.
-		boolean forward = parameters.isForward();
-		int rows = table.getRowCount();
-		int columns = table.getColumnCount();
-		
-		// Do loop forward or backward.
-		for (int row = startRow; forward ? row < rows : row >= 0; row = forward ? row + 1 : row - 1) {
-			
-			// Get row text.
-			String rowText = "";
-			for (int column = 0; column < columns; column++) {
-				rowText += (column > 0 ? " " : "")  + table.getValueAt(row, column).toString();
-			}
-			
-			// If a text is found, select the row and exit method.
-			if (Utility.find(rowText, parameters)) {
+		final Obj<SearchTextDialog> searchTextDialog = new Obj<SearchTextDialog>();
+		searchTextDialog.ref = SearchTextDialog.showDialog(this, "localizer.textSearchPropertyDialog", true,
 				
-				selectTableRow(row);
-				return;
-			}
-		}
-		
-		// If not found, inform user about it.
-		Utility.show(this, "localizer.messageNoMatchingPropertyFound");
+				// On OK.
+				parameters -> {
+					
+					// Start from selected property or from the beginning.
+					Integer startRow = table.getSelectedRow();
+					if (startRow == -1) {
+						startRow = 0;
+						lastFoundRow = null;
+					}
+					if (startRow.equals(lastFoundRow)) {
+						
+						if (parameters.isForward()) {
+							startRow++;
+						}
+						else {
+							startRow--;
+						}
+					}
+					
+					// Search in table.
+					boolean forward = parameters.isForward();
+					int rows = table.getRowCount();
+					int columns = table.getColumnCount();
+					
+					// Do loop forward or backward.
+					for (int row = startRow; forward ? row < rows : row >= 0; row = forward ? row + 1 : row - 1) {
+						
+						// Get row text.
+						String rowText = "";
+						for (int column = 0; column < columns; column++) {
+							rowText += (column > 0 ? " " : "")  + table.getValueAt(row, column).toString();
+						}
+						
+						// If a text is found, select the row and exit method.
+						if (Utility.find(rowText, parameters)) {
+							
+							selectTableRow(row);
+							
+							lastFoundRow = row;
+							return;
+						}
+					}
+					
+					// If not found, inform user about it.
+					Utility.show(this, "localizer.messageNoMatchingPropertyFound");
+				},
+				
+				// On Cancel
+				() -> {
+					
+					// Realease dialog object.
+					searchTextDialog.ref.dispose();
+					searchTextDialog.ref = null;
+				});
 	}
 	
 	/**

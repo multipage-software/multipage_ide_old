@@ -14,6 +14,7 @@ import javax.swing.*;
 import org.multipage.util.*;
 
 import java.awt.event.*;
+import java.util.function.Consumer;
 
 /**
  * 
@@ -75,7 +76,21 @@ public class SearchTextDialog extends JDialog {
 	 * Parameters.
 	 */
 	private Parameters parameters;
-
+	
+	/**
+	 * Optional lambda function called when the dialog OK is clicked.
+	 */
+	private Consumer<Parameters> closeLambda;
+	
+	/**
+	 * Optional lambda function called when the dialog Cancel is clicked.
+	 */
+	private Runnable cancelLambda;
+	
+	/**
+	 * Is true when the dialog is modeless.
+	 */
+	private boolean isModeless = false;
 
 	// $hide<<$
 	/**
@@ -98,7 +113,7 @@ public class SearchTextDialog extends JDialog {
 	 */
 	public static Parameters showDialog(Component parentComponent, String titleId) {
 		
-		SearchTextDialog dialog = new SearchTextDialog(parentComponent);
+		SearchTextDialog dialog = new SearchTextDialog(parentComponent, false);
 		dialog.setTitle(Resources.getString(titleId));
 		dialog.setVisible(true);
 		
@@ -106,13 +121,35 @@ public class SearchTextDialog extends JDialog {
 	}
 	
 	/**
+	 * Show dialog.
+	 * @param isModeless - true if the dialog is modeless or false if it is modal
+	 * @param okLambda - can be null or a lambda function that is invoked on OK button.
+	 * @param cancelLambda = can be null or a lambda function that is invoked on Cancel button.
+	 * @return
+	 */
+	public static SearchTextDialog showDialog(Component parentComponent, String titleId, boolean isModeless,
+			Consumer<Parameters> okLambda, Runnable cancelLambda) {
+		
+		// Create new dialog window.
+		SearchTextDialog dialog = new SearchTextDialog(parentComponent, isModeless);
+		dialog.setTitle(Resources.getString(titleId));
+		dialog.closeLambda = okLambda;
+		dialog.cancelLambda = cancelLambda;
+		dialog.setVisible(true);
+		
+		return dialog;
+	}
+	
+	/**
 	 * Create the dialog.
 	 * @param title 
 	 * @param component 
 	 */
-	public SearchTextDialog(Component component) {
-		super(Utility.findWindow(component), ModalityType.DOCUMENT_MODAL);
-
+	public SearchTextDialog(Component component, boolean isModeless) {
+		super(Utility.findWindow(component), isModeless ? ModalityType.MODELESS : ModalityType.DOCUMENT_MODAL);
+		
+		this.isModeless = isModeless;
+		
 		// Initialize components.
 		initComponents();
 		// $hide>>$
@@ -195,7 +232,13 @@ public class SearchTextDialog extends JDialog {
 	protected void onCancel() {
 		
 		saveDialog();
-		dispose();
+		
+		if (cancelLambda != null) {
+			cancelLambda.run();
+		}
+		if (!isModeless) {
+			dispose();
+		}
 	}
 
 	/**
@@ -211,7 +254,13 @@ public class SearchTextDialog extends JDialog {
 		parameters.wholeWords = checkWholeWords.isSelected();
 		
 		saveDialog();
-		dispose();		
+		
+		if (closeLambda != null) {
+			closeLambda.accept(parameters);
+		}
+		if (!isModeless) {
+			dispose();
+		}
 	}
 
 	/**
