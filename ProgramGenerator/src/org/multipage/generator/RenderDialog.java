@@ -307,19 +307,18 @@ public class RenderDialog extends JDialog {
 		
 		labelTarget = new JLabel("org.multipage.generator.textRenderingTarget");
 		springLayout.putConstraint(SpringLayout.WEST, labelTarget, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, labelTarget, -314, SpringLayout.EAST, getContentPane());
 		getContentPane().add(labelTarget);
 		
 		textTarget = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textTarget, 10, SpringLayout.SOUTH, labelTarget);
+		springLayout.putConstraint(SpringLayout.NORTH, textTarget, 6, SpringLayout.SOUTH, labelTarget);
 		springLayout.putConstraint(SpringLayout.WEST, textTarget, 10, SpringLayout.WEST, getContentPane());
 		textTarget.setEditable(false);
 		getContentPane().add(textTarget);
 		textTarget.setColumns(10);
 		
 		buttonTarget = new JButton("");
-		springLayout.putConstraint(SpringLayout.WEST, buttonTarget, 431, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, textTarget, -6, SpringLayout.WEST, buttonTarget);
+		springLayout.putConstraint(SpringLayout.EAST, textTarget, -3, SpringLayout.WEST, buttonTarget);
+		buttonTarget.setPreferredSize(new Dimension(20, 9));
 		springLayout.putConstraint(SpringLayout.NORTH, buttonTarget, 0, SpringLayout.NORTH, textTarget);
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonTarget, 0, SpringLayout.SOUTH, textTarget);
 		springLayout.putConstraint(SpringLayout.EAST, buttonTarget, -10, SpringLayout.EAST, getContentPane());

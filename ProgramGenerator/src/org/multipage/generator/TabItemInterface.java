@@ -7,6 +7,8 @@
 
 package org.multipage.generator;
 
+import java.util.HashSet;
+
 import javax.swing.event.ChangeEvent;
 
 /**
@@ -55,4 +57,9 @@ public interface TabItemInterface {
 	 * @param topAreaId
 	 */
 	void setAreaId(Long topAreaId);
+	
+	/**
+	 * Get selected areas.
+	 */
+	HashSet<Long> getSelectedAreaIds();
 }

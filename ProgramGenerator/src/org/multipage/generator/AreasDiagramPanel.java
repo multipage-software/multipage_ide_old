@@ -384,8 +384,6 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			
 			selectedAreaIds.clear();
 			selectedAreaIds.add(areaId);
-			
-			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.onClickDiagramAreas, selectedAreaIds);
 		}
 	}
 	
@@ -1431,7 +1429,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		areasDiagram.onTabPanelChange(e, selectedIndex);
 		
 		// Propagate event.
-		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.mainTabChange);
+		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.mainTabChange, selectedIndex);
 	}
 	
 	/**

@@ -1641,7 +1641,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			return;
 		}
 		
-		ConditionalEvents.transmit(this, Signal.mainTabChange);
+		ConditionalEvents.transmit(this, Signal.mainTabChange, selectedIndex);
 	}
 	
 	/**

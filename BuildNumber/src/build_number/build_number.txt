@@ -1,1 +1,1 @@
-Version 1.1.1 (build YYYY.MM.DD HH:MM)
+build YYYY.MM.DD HH:MM

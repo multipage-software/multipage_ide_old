@@ -1,6 +1,14 @@
-IDE Version: Eclipse IDE for Java Developers Version 2019-06 (4.12.0)
-Operating System: Windows 10
-Embedded Database: db-derby-10.14.2.0
-Shared database: postgresql-13.1-1-windows-x64
-Embedded WWW sever: jetty-distribution-9.4.7.v20170914
-Templates: Basic Template 1.1.29.14.xml
+Minimum Operating System:
+	- Windows 10
+Integrated Development Environment:
+	- Eclipse IDE for Java Developers Version 2019-06 (4.12.0)
+Java Runtime:
+	- Java 11 based GraalVM, Community Edition 21.0.0.2
+Area Templates:
+	- Basic Template 1.1.29.14
+Embedded Web Sever:
+	- Eclipse Jetty 9.4.7.v20170914
+Embedded Database:
+	- Apache Derby 10.14.2.0 Release
+Shared Database:
+	- PostgreSQL 13.1

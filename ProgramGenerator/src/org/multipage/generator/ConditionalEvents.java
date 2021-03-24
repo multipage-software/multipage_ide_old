@@ -45,12 +45,12 @@ public class ConditionalEvents {
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
-	private static boolean enableMessageLog = false;
+	private static boolean enableMessageLog = true;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).
 	 */
-	private static boolean stopReceivingUnnecessary = false;
+	private static boolean stopReceivingUnnecessary = true;
 	
 	/**
 	 * Default message coalesce time span in milliseconds.
@@ -367,6 +367,8 @@ public class ConditionalEvents {
 				
 				// Lock thread for "coalesce delay" milliseconds.
 				boolean noMessage = Lock.waitFor(dispatchLock, minDelayMessageCoalesceMs);
+				
+				LoggingDialog.log(String.format("SIGNAL UNLOCKED %d", cycles));
 			
 				// Create new lock.
 				dispatchLock = new Lock();
@@ -603,6 +605,11 @@ public class ConditionalEvents {
 	 */
 	private static void propagateMessage(Object source, Object target, Signal signal, Object ... info) {
 		
+		// Filter unnecessary signals (only for debugging purposes)
+		if (stopReceivingUnnecessary && signal.isUnnecessary()) {
+			return;
+		}
+		
 		// Add new message to the message queue and unlock the message dispatch thread.
 		synchronized (messageQueue) {
 			
@@ -630,6 +637,8 @@ public class ConditionalEvents {
 			messageQueue.add(message);
 			
 			Lock.notify(dispatchLock);
+			
+			j.log("MESSAGE RECEIVED %s", message);
 		}
 	}
 

@@ -10,6 +10,7 @@ import java.awt.BorderLayout;
 import java.awt.Panel;
 import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
+import java.util.HashSet;
 
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -279,5 +280,14 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	@Override
 	public void setAreaId(Long topAreaId) {
 		
+	}
+	
+	/**
+	 * Get selected area IDs.
+	 */
+	@Override
+	public HashSet<Long> getSelectedAreaIds() {
+		
+		return null;
 	}
 }

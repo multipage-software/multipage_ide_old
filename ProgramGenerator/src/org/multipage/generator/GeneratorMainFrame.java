@@ -61,6 +61,7 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -678,8 +679,9 @@ public class GeneratorMainFrame extends JFrame {
 				selectedAreaIds = getAreaDiagram().getSelectedAreaIds();
 			}
 			
-			// SHow selected areas' properties.
+			// Show selected areas' properties.
 			showProperties(selectedAreaIds);
+			j.log("SELECTED IDs %s", selectedAreaIds);
 		});
 		
 		// "Monitor home page" event receiver.
@@ -990,6 +992,23 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Update window selection trayMenu.
 		updateWindowSelectionMenu();
+		
+		// Get current tab panel.
+		int tabIndex = tabPanel.getSelectedIndex();
+		if (tabIndex >= 0) {
+			
+			Component tabComponent = tabPanel.getComponentAt(tabIndex);
+			if (tabComponent instanceof TabItemInterface) {
+				
+				TabItemInterface tabItem = (TabItemInterface) tabComponent;
+				HashSet<Long> selectedAreaIds = tabItem.getSelectedAreaIds();
+				
+				// Transmit event.
+				if (selectedAreaIds != null) {
+					ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showAreasProperties, selectedAreaIds);
+				}
+			}
+		}
 	}
 
 	/**
@@ -1032,9 +1051,11 @@ public class GeneratorMainFrame extends JFrame {
 			
 			JMenuItem test = new JMenuItem(Resources.getString("org.multipage.generator.menuTest"));
 			JMenuItem setUserValue = new JMenuItem(Resources.getString("org.multipage.generator.menuSetUserValue"));
+			JMenuItem loggingDialog = new JMenuItem(Resources.getString("org.multipage.generator.menuLoggingDialog"));
 			
 			debugMenu.add(setUserValue);
 			debugMenu.add(test);
+			debugMenu.add(loggingDialog);
 			
 			setUserValue.addActionListener(new ActionListener() {
 				@Override
@@ -1045,8 +1066,12 @@ public class GeneratorMainFrame extends JFrame {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					onTest();
-				}
-			});
+				}});
+			loggingDialog.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					onLogging();
+				}});
 		}
 		
 		// Conditionally created login trayMenu item.
@@ -1294,6 +1319,14 @@ public class GeneratorMainFrame extends JFrame {
 		});
 	}
 	
+	/**
+	 * On logging dialog.
+	 */
+	protected void onLogging() {
+		
+		LoggingDialog.showDialog(GeneratorMainFrame.getFrame());
+	}
+
 	/**
 	 * Add search in text resources trayMenu item.
 	 * @param trayMenu
