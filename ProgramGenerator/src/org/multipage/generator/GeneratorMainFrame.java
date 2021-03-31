@@ -681,7 +681,6 @@ public class GeneratorMainFrame extends JFrame {
 			
 			// Show selected areas' properties.
 			showProperties(selectedAreaIds);
-			j.log("SELECTED IDs %s", selectedAreaIds);
 		});
 		
 		// "Monitor home page" event receiver.

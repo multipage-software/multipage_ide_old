@@ -45,12 +45,12 @@ public class ConditionalEvents {
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
-	private static boolean enableMessageLog = true;
+	private static boolean enableMessageLog = false;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).
 	 */
-	private static boolean stopReceivingUnnecessary = true;
+	private static boolean stopReceivingUnnecessary = false;
 	
 	/**
 	 * Default message coalesce time span in milliseconds.
@@ -637,8 +637,6 @@ public class ConditionalEvents {
 			messageQueue.add(message);
 			
 			Lock.notify(dispatchLock);
-			
-			j.log("MESSAGE RECEIVED %s", message);
 		}
 	}
 

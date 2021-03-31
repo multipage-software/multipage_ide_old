@@ -880,6 +880,13 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			}
 		});
 		
+		// "Update GUI" event receiver.
+		ConditionalEvents.receiver(this, Signal.updateGui, message -> {
+			
+			// Reload editor.
+			reload();
+		});
+		
 		// "Select all' properties" event receiver.
 		ConditionalEvents.receiver(this, Signal.selectAll, message -> {
 			

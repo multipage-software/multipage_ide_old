@@ -447,6 +447,9 @@ public class AreaLocalMenu {
 		
 		Area area = listener.getCurrentArea();
 		CreateAreasFromSourceCode.showDialog(parentComponent, area);
+		
+		// Transmit "request update all" signal.
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 	}
 
 	/**
@@ -789,6 +792,9 @@ public class AreaLocalMenu {
 		}
 		
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), true);
+		
+		// Transmit "update GUI" signal.
+		ConditionalEvents.transmit(this, Signal.updateGui);
 	}
 
 	/**
@@ -803,6 +809,9 @@ public class AreaLocalMenu {
 		}
 		
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), false);
+		
+		// Transmit "update GUI" signal.
+		ConditionalEvents.transmit(this, Signal.updateGui);
 	}
 
 	/**
@@ -817,6 +826,9 @@ public class AreaLocalMenu {
 		}
 		
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), true);
+		
+		// Transmit "update GUI" signal.
+		ConditionalEvents.transmit(this, Signal.updateGui);
 	}
 	
 	/**
@@ -831,6 +843,9 @@ public class AreaLocalMenu {
 		}
 		
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), false);
+		
+		// Transmit "update GUI" signal.
+		ConditionalEvents.transmit(this, Signal.updateGui);
 	}
 
 	/**
@@ -864,6 +879,9 @@ public class AreaLocalMenu {
 		}
 		
 		GeneratorMainFrame.getFrame().setHomeArea(parentComponent, area);
+		
+		// Transmit "request update all" signal.
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 	}
 
 	/**
@@ -876,6 +894,9 @@ public class AreaLocalMenu {
 		Area parentArea = listener.getCurrentParentArea();
 		
 		GeneratorMainFrame.getFrame().copyAreaTree(area, parentArea);
+		
+		// Transmit "request update all" signal.
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 	}
 
 	/**
@@ -887,6 +908,9 @@ public class AreaLocalMenu {
 		Area area = listener.getCurrentArea();
 		
 		GeneratorMainFrame.getFrame().pasteAreaTree(area);
+		
+		// Transmit "request update all" signal.
+		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
 	}
 
 	/**

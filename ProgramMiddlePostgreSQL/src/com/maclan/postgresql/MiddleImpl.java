@@ -19070,8 +19070,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		}
 		catch (SQLException e) {
 			
-			j.log("PostgreSQL login failed due to '%s'", e.getMessage());
-			
 			// Set result.
 			result = MiddleResult.sqlToResult(e);
 		}

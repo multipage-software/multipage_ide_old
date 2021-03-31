@@ -49,7 +49,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaResource;
@@ -493,12 +492,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			
 			if (AreasDiagram.this.isShowing()) {
 				
-				j.log("MAIN TAB CHANGE %s, %s", message.relatedInfo.toString(), message.source.getClass().getSimpleName());
-				
 				// Get selected area IDs.
 				HashSet<Long> selectedIds = getSelectedAreaIds();
-				
-				j.log("SELECTED TAB %s", selectedIds);
 				
 				// Remove selection.
 				removeSelection();
@@ -1996,7 +1991,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		selectRecursive(area, selected, affectSubareas);
 		
 		this.selectedAreaIds = getSelectedAreaIds();
-		j.log("SELECTED STATE %s", selectedAreaIds);
 	}
 	
 	/**

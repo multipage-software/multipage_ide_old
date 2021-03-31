@@ -133,6 +133,12 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
+	// Redraw GUI.
+	updateGui(
+			SignalType.areaViewStateChange,
+			SignalType.guiChange
+			),
+	
 	// Focus on the Basic Area.
 	focusBasicArea(
 			SignalType.guiChange
