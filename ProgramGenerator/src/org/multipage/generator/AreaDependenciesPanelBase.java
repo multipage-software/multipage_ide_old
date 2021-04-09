@@ -23,6 +23,8 @@ import com.maclan.*;
  *
  */
 public class AreaDependenciesPanelBase extends JPanel implements EditorTabActions {
+	public AreaDependenciesPanelBase() {
+	}
 
 	/**
 	 * Version.

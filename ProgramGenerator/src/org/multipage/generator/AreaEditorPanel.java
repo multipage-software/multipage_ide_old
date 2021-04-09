@@ -29,11 +29,6 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 
 	// $hide>>$
 	/**
-	 * Version.
-	 */
-	private static final long serialVersionUID = 1L;
-
-	/**
 	 * Tab identifiers.
 	 */
 	public static final int NOT_SPECIFIED = -1;
@@ -560,5 +555,11 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 	@Override
 	protected JCheckBox getCheckBoxIsDisabled() {
 		return checkBoxIsDisabled;
+	}
+
+	@Override
+	protected JCheckBox getCheckBoxHomeArea() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

@@ -28,10 +28,6 @@ import java.awt.event.*;
 public class AreaEditor extends AreaEditorFrameBase {
 
 	// $hide>>$
-	/**
-	 * Version.
-	 */
-	private static final long serialVersionUID = 1L;
 
 	/**
 	 * Tab identifiers.
@@ -39,6 +35,8 @@ public class AreaEditor extends AreaEditorFrameBase {
 	public static final int NOT_SPECIFIED = -1;
 	public static final int RESOURCES = 0;
 	public static final int DEPENDENCIES = 1;
+
+	private static AreaEditorFrameBase dialog;
 
 	// $hide<<$
 	/**
@@ -368,7 +366,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		buttonDisplay.setMargin(new Insets(0, 0, 0, 0));
 		panel.add(buttonDisplay);
 	}
-
+	
 	/**
 	 * Insert tabs' contents.
 	 */

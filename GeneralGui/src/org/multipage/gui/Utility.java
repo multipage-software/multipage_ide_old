@@ -343,6 +343,17 @@ public class Utility {
 	}
 
 	/**
+	 * Center window on the screen.
+	 * @param component
+	 */
+	public static void centerOnScreen(Component component) {
+		
+		// Delegate the call.
+		Window window = findWindow(component);
+		centerOnScreen(window);
+	}
+	
+	/**
 	 * Returns true if the text matches the search text.
 	 * @param meansText
 	 * @param searchText 
