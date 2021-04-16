@@ -442,7 +442,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		menuAreaEdit = new JMenuItem("org.multipage.generator.menuAreaEdit");
 		menuAreaEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				helper.onEditArea(AreaEditor.NOT_SPECIFIED);
+				helper.onEditArea(AreaEditorFrame.NOT_SPECIFIED);
 			}
 		});
 		menuArea.add(menuAreaEdit);
@@ -452,7 +452,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		menuEditResources = new JMenuItem("org.multipage.generator.menuAreaEditResources");
 		menuEditResources.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				helper.onEditArea(AreaEditor.RESOURCES);
+				helper.onEditArea(AreaEditorFrame.RESOURCES);
 			}
 		});
 		menuArea.add(menuEditResources);
@@ -460,7 +460,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		menuEditDependencies = new JMenuItem("org.multipage.generator.menuAreaEditDependencies");
 		menuEditDependencies.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				helper.onEditArea(AreaEditor.DEPENDENCIES);
+				helper.onEditArea(AreaEditorFrame.DEPENDENCIES);
 			}
 		});
 		menuArea.add(menuEditDependencies);

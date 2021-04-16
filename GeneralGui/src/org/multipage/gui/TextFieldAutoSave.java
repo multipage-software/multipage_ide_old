@@ -119,12 +119,12 @@ public class TextFieldAutoSave extends TextFieldEx {
 	private Timer saveTimer;
 	
 	/**
-	 * Events.
+	 * Lambda functions.
 	 */
-	public Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextEvent = null;
-	public Supplier<String> getGenuineTextEvent = null;
-	public Runnable focusGainedEvent = null;
-	public Runnable updateEvent = null;
+	public Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextLambda = null;
+	public Supplier<String> getGenuineTextLambda = null;
+	public Runnable focusGainedLambda = null;
+	public Runnable updateLambda = null;
 	
 	/**
 	 * Constructor which takes this text field identifier of any type.
@@ -197,8 +197,8 @@ public class TextFieldAutoSave extends TextFieldEx {
 				}
 				
 				// Invoke input listener.
-				if (focusGainedEvent != null) {
-					focusGainedEvent.run();
+				if (focusGainedLambda != null) {
+					focusGainedLambda.run();
 				}
 			}
 			
@@ -265,11 +265,16 @@ public class TextFieldAutoSave extends TextFieldEx {
 	 */
 	public void setText(String text) {
 		
-		// First remove message text.
-		this.message = null;
+		// Trim text.
+		if (text == null) {
+			text = "";
+		}
 		
 		// Set text reference.
 		this.text = text;
+		
+		// Remove message text.
+		this.message = null;
 		
 		// Save caret.
 		boolean hasFocus = hasFocus();
@@ -281,7 +286,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 		String genuineText = getText();
 		
 		// Delegate the call.
-		if (!genuineText.equals(text)) {
+		if (genuineText != null && !genuineText.equals(text)) {
 			
 			super.setText(text);
 			
@@ -342,10 +347,10 @@ public class TextFieldAutoSave extends TextFieldEx {
 		}
 		
 		// Invoke event.
-		if (saveTextEvent != null) {
+		if (saveTextLambda != null) {
 			
 			// Save text with on finished callback.
-			saveTextEvent.apply(this)
+			saveTextLambda.apply(this)
 				
 				// On save finished.
 				.apply(() -> {
@@ -376,10 +381,10 @@ public class TextFieldAutoSave extends TextFieldEx {
 		if (isTextChange()) {
 			
 			// Invoke event.
-			if (saveTextEvent != null) {
+			if (saveTextLambda != null) {
 				
 				// Save text with on finished callback.
-				saveTextEvent.apply(this)
+				saveTextLambda.apply(this)
 					
 					// On save finished.
 					.apply(() -> {
@@ -392,8 +397,8 @@ public class TextFieldAutoSave extends TextFieldEx {
 					.accept(() -> {
 						
 						// Call update event.
-						if (updateEvent != null) {
-							updateEvent.run();
+						if (updateLambda != null) {
+							updateLambda.run();
 						}
 					});
 			}
@@ -410,15 +415,19 @@ public class TextFieldAutoSave extends TextFieldEx {
 	public boolean isTextChange() {
 		
 		// Check the callback.
-		if (getGenuineTextEvent == null) {
+		if (getGenuineTextLambda == null) {
 			return false;
 		}
 		
 		// Find out description changes
 		try {
 			
-			String genuineText = getGenuineTextEvent.get();	
+			String genuineText = getGenuineTextLambda.get();	
 			String text = super.getText();
+			
+			if (text == null || genuineText == null) {
+				return false;
+			}
 			
 			return text.compareTo(genuineText) != 0;
 		}

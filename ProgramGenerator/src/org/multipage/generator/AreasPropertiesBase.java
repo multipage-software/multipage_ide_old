@@ -462,8 +462,8 @@ public class AreasPropertiesBase extends JPanel {
 			}
 		};
 		
-		textDescription.saveTextEvent = saveTextEvent;
-		textAlias.saveTextEvent = saveTextEvent;
+		textDescription.saveTextLambda = saveTextEvent;
+		textAlias.saveTextLambda = saveTextEvent;
 		
 		/**
 		 * Request update.
@@ -477,13 +477,13 @@ public class AreasPropertiesBase extends JPanel {
 			ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.requestUpdateAll);
 		};
 		
-		textDescription.updateEvent = updateEvent;
-		textAlias.updateEvent = updateEvent;
+		textDescription.updateLambda = updateEvent;
+		textAlias.updateLambda = updateEvent;
 		
 		/**
 		 * Get genuine text callback event.
 		 */
-		textDescription.getGenuineTextEvent = () -> {
+		textDescription.getGenuineTextLambda = () -> {
 			
 			// Get current areas.
 			LinkedList<Area> areas = getAreas();
@@ -494,7 +494,7 @@ public class AreasPropertiesBase extends JPanel {
 			return text;
 		};
 		
-		textAlias.getGenuineTextEvent = () -> {
+		textAlias.getGenuineTextLambda = () -> {
 			
 			// Get current areas.
 			LinkedList<Area> areas = getAreas();
@@ -514,8 +514,8 @@ public class AreasPropertiesBase extends JPanel {
 			GeneratorMainFrame.reactivateGui();
 		};
 		
-		textDescription.focusGainedEvent = reactivateGUI;
-		textAlias.focusGainedEvent = reactivateGUI;
+		textDescription.focusGainedLambda = reactivateGUI;
+		textAlias.focusGainedLambda = reactivateGUI;
 	}
 	
 	/**
@@ -577,7 +577,7 @@ public class AreasPropertiesBase extends JPanel {
 		}
 		
 		// Execute area editor.
-		AreaEditor.showDialog(null, areas.getFirst(), tabIdentifier);
+		AreaEditorFrame.showDialog(null, areas.getFirst(), tabIdentifier);
 	}
 
 	/**

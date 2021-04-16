@@ -875,7 +875,7 @@ public class SlotEditorHelper {
 		}
 		
 		// Execute area editor.
-		AreaEditor.showDialog(null, area, tabIdentifier);
+		AreaEditorFrame.showDialog(null, area, tabIdentifier);
 	}
 	
 	/**

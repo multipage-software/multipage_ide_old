@@ -737,7 +737,7 @@ public class AreasTreePanel extends JPanel {
 		}
 		
 		// Execute area editor.
-		AreaEditor.showDialog(null, area);
+		AreaEditorFrame.showDialog(null, area);
 	}
 	
 	/**

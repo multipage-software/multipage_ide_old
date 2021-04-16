@@ -25,7 +25,7 @@ import java.awt.event.*;
  * @author
  *
  */
-public class AreaEditor extends AreaEditorFrameBase {
+public class AreaEditorFrame extends AreaEditorFrameBase {
 
 	// $hide>>$
 
@@ -48,30 +48,28 @@ public class AreaEditor extends AreaEditorFrameBase {
 	private Component horizontalGlue;
 	private JPanel panel;
 	private JLabel labelAreaDescription;
-	private JTextField textDescription;
+	private TextFieldAutoSave textDescription;
 	private JLabel labelIdentifier;
 	private JTextField textIdentifier;
 	private JTabbedPane tabbedPane;
 	private JButton buttonSaveDescription;
 	private JCheckBox checkBoxIsStartArea;
 	private JLabel labelAreaAlias;
-	private JTextField textAlias;
+	private TextFieldAutoSave textAlias;
 	private JButton buttonSaveAlias;
-
 	private JPanel panelDependenciesAux;
-
 	private JPanel panelResourcesAux;
 	private JButton buttonSave;
 	private Component horizontalStrut;
 	private JLabel labelFileName;
-	private TextFieldEx textFileName;
+	private TextFieldAutoSave textFileName;
 	private JButton buttonSaveFileName;
-	private TextFieldEx textFolder;
+	private TextFieldAutoSave textFolder;
 	private JLabel labelFolder;
 	private JButton buttonSaveFolder;
 	private Component horizontalStrut_1;
 	private JButton buttonUpdate;
-	private TextFieldEx textFileExtension;
+	private TextFieldAutoSave textFileExtension;
 	private JLabel labelFileExtension;
 	private JCheckBox checkBoxIsDisabled;
 	private JButton buttonDisplay;
@@ -115,13 +113,12 @@ public class AreaEditor extends AreaEditorFrameBase {
 	 * @param parentComponent
 	 * @param area 
 	 */
-	public AreaEditor(Component parentComponent, Area area) {
-
+	public AreaEditorFrame(Component parentComponent, Area area) {
+		super(parentComponent, area);
+		
 		// Initialize components.
 		initComponents();
 		// $hide>>$
-		this.area = area;
-		this.parentComponent = parentComponent;
 		// Post creation.
 		postCreate();
 		// $hide<<$
@@ -138,7 +135,6 @@ public class AreaEditor extends AreaEditorFrameBase {
 				onClose();
 			}
 		});
-		setTitle("org.multipage.generator.textAreaEditor");
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 764, 622);
 		resourcesPane = new JPanel();
@@ -199,7 +195,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		sl_panel.putConstraint(SpringLayout.WEST, labelAreaDescription, 0, SpringLayout.WEST, panel);
 		panel.add(labelAreaDescription);
 		
-		textDescription = new TextFieldEx();
+		textDescription = new TextFieldAutoSave(AreaEditorCommonBase.description);
 		sl_panel.putConstraint(SpringLayout.NORTH, labelAreaDescription, 0, SpringLayout.NORTH, textDescription);
 		textDescription.addKeyListener(new KeyAdapter() {
 			@Override
@@ -271,7 +267,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		labelAreaAlias = new JLabel("org.multipage.generator.textAreaAlias");
 		panel.add(labelAreaAlias);
 		
-		textAlias = new TextFieldEx();
+		textAlias = new TextFieldAutoSave(AreaEditorCommonBase.alias);
 		sl_panel.putConstraint(SpringLayout.WEST, textAlias, 6, SpringLayout.EAST, labelAreaDescription);
 		sl_panel.putConstraint(SpringLayout.NORTH, labelAreaAlias, 0, SpringLayout.NORTH, textAlias);
 		sl_panel.putConstraint(SpringLayout.NORTH, textAlias, 66, SpringLayout.NORTH, panel);
@@ -300,7 +296,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		sl_panel.putConstraint(SpringLayout.EAST, labelFileName, 0, SpringLayout.EAST, labelAreaDescription);
 		panel.add(labelFileName);
 		
-		textFileName = new TextFieldEx();
+		textFileName = new TextFieldAutoSave(AreaEditorCommonBase.fileName);
 		sl_panel.putConstraint(SpringLayout.WEST, textFileName, 0, SpringLayout.WEST, textDescription);
 		textFileName.setColumns(10);
 		panel.add(textFileName);
@@ -308,7 +304,8 @@ public class AreaEditor extends AreaEditorFrameBase {
 		buttonSaveFileName = new JButton("");
 		buttonSaveFileName.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				saveFileNameExtension();
+				saveFileName();
+				saveFileExtension();
 			}
 		});
 		sl_panel.putConstraint(SpringLayout.WEST, buttonSaveFileName, 0, SpringLayout.WEST, buttonSaveDescription);
@@ -317,7 +314,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		buttonSaveFileName.setIconTextGap(0);
 		panel.add(buttonSaveFileName);
 		
-		textFolder = new TextFieldEx();
+		textFolder = new TextFieldAutoSave(AreaEditorCommonBase.folder);
 		sl_panel.putConstraint(SpringLayout.NORTH, textFileName, 3, SpringLayout.SOUTH, textFolder);
 		sl_panel.putConstraint(SpringLayout.NORTH, textFolder, 3, SpringLayout.SOUTH, textAlias);
 		textFolder.setColumns(10);
@@ -342,7 +339,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		buttonSaveFolder.setIconTextGap(0);
 		panel.add(buttonSaveFolder);
 		
-		textFileExtension = new TextFieldEx();
+		textFileExtension = new TextFieldAutoSave(AreaEditorCommonBase.fileExtension);
 		sl_panel.putConstraint(SpringLayout.NORTH, textFileExtension, 0, SpringLayout.NORTH, labelFileName);
 		sl_panel.putConstraint(SpringLayout.EAST, textFileExtension, 0, SpringLayout.EAST, textDescription);
 		textFileExtension.setColumns(10);
@@ -410,8 +407,10 @@ public class AreaEditor extends AreaEditorFrameBase {
 	 */
 	@Override
 	protected void postCreate() {
-
-		prePostCreate();
+		
+		// Set title.
+		String title = String.format(Resources.getString("org.multipage.generator.textAreaEditor"), area.getDescriptionForced());
+		setTitle(title);
 		
 		// Call super class method.
 		super.postCreate();
@@ -423,6 +422,8 @@ public class AreaEditor extends AreaEditorFrameBase {
 		
 		// Initialize display button.
 		initDisplayButton();
+		// Update dialog controls.
+		updateAreaDialog();
 	}
 
 	/**
@@ -433,40 +434,61 @@ public class AreaEditor extends AreaEditorFrameBase {
 		
 		return tabbedPane;
 	}
-
+	
 	/**
-	 * Get text description.
+	 * Get text of the area identifier.
 	 */
-	@Override
-	protected JTextField getTextDescription() {
-		
-		return textDescription;
-	}
-
-	@Override
-	protected JTextField getTextAlias() {
-		
-		return textAlias;
-	}
-
-	@Override
-	protected JTextField getTextFileName() {
-		
-		return textFileName;
-	}
-
-	@Override
-	protected JTextField getTextFolder() {
-		
-		return textFolder;
-	}
-
 	@Override
 	protected JTextField getTextIdentifier() {
 		
 		return textIdentifier;
 	}
+	
+	/**
+	 * Get text of the area description.
+	 */
+	@Override
+	protected TextFieldAutoSave getTextDescription() {
+		
+		return textDescription;
+	}
+	
+	/**
+	 * Get text of the area alias.
+	 */
+	@Override
+	protected TextFieldAutoSave getTextAlias() {
+		
+		return textAlias;
+	}
+	
+	/**
+	 * Get text of the area folder.
+	 */
+	@Override
+	protected TextFieldAutoSave getTextFolder() {
+		
+		return textFolder;
+	}
 
+	/**
+	 * Get text of the area file name.
+	 */
+	@Override
+	protected TextFieldAutoSave getTextFileName() {
+		
+		return textFileName;
+	}
+
+	/**
+	 * Get text of the area file extension.
+	 */
+	@Override
+	protected TextFieldAutoSave getTextFileExtension() {
+		
+		return textFileExtension;
+	}
+	
 	@Override
 	protected JButton getButtonSaveFileName() {
 		
@@ -550,13 +572,7 @@ public class AreaEditor extends AreaEditorFrameBase {
 		
 		return labelFolder;
 	}
-
-	@Override
-	protected JTextField getTextFileExtension() {
-		
-		return textFileExtension;
-	}
-
+	
 	@Override
 	protected JLabel getLabelFileExtension() {
 		

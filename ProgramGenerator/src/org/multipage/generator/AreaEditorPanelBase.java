@@ -12,6 +12,10 @@ import java.awt.LayoutManager;
 
 import javax.swing.JPanel;
 
+import org.multipage.gui.Utility;
+
+import com.maclan.Area;
+
 /**
  * @author
  *
@@ -22,6 +26,36 @@ public abstract class AreaEditorPanelBase extends AreaEditorCommonBase {
 	 * Panel object.
 	 */
 	private JPanel panel = new JPanel();
+	
+	/**
+	 * Constructor.
+	 * @param parentComponent
+	 * @param area
+	 */
+	public AreaEditorPanelBase(Component parentComponent, Area area) {
+		super(parentComponent, area);
+		
+		// Set lambda functions that are used in the base class methods.
+		getWindowLambda = () -> {
+			return Utility.findWindow(panel);
+		};
+		
+		getTitleLambda = null;
+		
+		setTitleLambda = null;
+		
+		setIconImageLambda = null;
+		
+		getBoundsLambda = () -> {
+			return panel.getBounds();
+		};
+		
+		setBoundsLambda = bounds -> {
+			panel.setBounds(bounds);
+		};
+		
+		disposeLambda = null;
+	}
 	
 	/**
 	 * Set the panel visible.

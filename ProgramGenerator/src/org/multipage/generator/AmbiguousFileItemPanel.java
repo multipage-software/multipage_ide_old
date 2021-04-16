@@ -164,7 +164,7 @@ public class AmbiguousFileItemPanel extends JPanel {
 	protected void onEditArea() {
 		
 		// Execute area editor.
-		AreaEditor.showDialog(null, item.area);
+		AreaEditorFrame.showDialog(null, item.area);
 	}
 
 	/**

@@ -15,7 +15,7 @@ public enum LoadSlotHint {
 	
 	area(1),			// Inherits from single area.
 	superAreas(2),		// Inherits from super areas.
-	subAreas(4);
+	subAreas(4);		// Inherits from sub areas.
 	
 	/**
 	 * Hint code.

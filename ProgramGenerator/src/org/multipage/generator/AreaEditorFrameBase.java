@@ -7,11 +7,16 @@
 
 package org.multipage.generator;
 
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 
 import javax.swing.JFrame;
+
+import org.multipage.gui.Utility;
+
+import com.maclan.Area;
 
 /**
  * @author
@@ -28,6 +33,44 @@ public abstract class AreaEditorFrameBase extends AreaEditorCommonBase {
 	 * Frame object.
 	 */
 	private JFrame frame = new JFrame();
+		
+	/**
+	 * Constructor.
+	 * @param parentComponent
+	 * @param area
+	 */
+	public AreaEditorFrameBase(Component parentComponent, Area area) {
+		super(parentComponent, area);
+		
+		// Set lambda functions that are used in the base class methods.
+		getWindowLambda = () -> {
+			return Utility.findWindow(frame);
+		};
+		
+		getTitleLambda = () -> {
+			return frame.getTitle();
+		};
+		
+		setTitleLambda = title -> {
+			frame.setTitle(title);
+		};
+		
+		setIconImageLambda = icon -> {
+			frame.setIconImage(icon);
+		};
+		
+		getBoundsLambda = () -> {
+			return frame.getBounds();
+		};
+		
+		setBoundsLambda = bounds -> {
+			frame.setBounds(bounds);
+		};
+		
+		disposeLambda = () -> {
+			frame.dispose();
+		};
+	}
 	
 	/**
 	 * Set the frame visible.

@@ -137,14 +137,14 @@ public class AreasProperties extends AreasPropertiesBase {
 		menuEditResources = new JMenuItem("org.multipage.generator.menuAreaEditResources");
 		menuEditResources.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.RESOURCES); //$hide$
+				onEditArea(AreaEditorFrame.RESOURCES); //$hide$
 			}
 		});
 		
 		menuAreaEdit = new JMenuItem("org.multipage.generator.menuAreaEdit");
 		menuAreaEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.NOT_SPECIFIED); //$hide$
+				onEditArea(AreaEditorFrame.NOT_SPECIFIED); //$hide$
 			}
 		});
 		menuArea.add(menuAreaEdit);
@@ -154,7 +154,7 @@ public class AreasProperties extends AreasPropertiesBase {
 		menuEditDependencies = new JMenuItem("org.multipage.generator.menuAreaEditDependencies");
 		menuEditDependencies.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditor.DEPENDENCIES); //$hide$
+				onEditArea(AreaEditorFrame.DEPENDENCIES); //$hide$
 			}
 		});
 		menuArea.add(menuEditDependencies);

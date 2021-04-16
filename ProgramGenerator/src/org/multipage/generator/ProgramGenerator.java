@@ -378,7 +378,7 @@ public class ProgramGenerator {
 			return extensionToBuilder.newAreaEditor(parentComponent, area);
 		}
 		
-		return new AreaEditor(parentComponent, area);
+		return new AreaEditorFrame(parentComponent, area);
 	}
 	
 	/**
