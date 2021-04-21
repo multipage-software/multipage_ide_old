@@ -45,7 +45,7 @@ public class ConditionalEvents {
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
-	private static boolean enableMessageLog = false;
+	private static boolean enableMessageLog = true;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).
@@ -542,7 +542,7 @@ public class ConditionalEvents {
 		String scheduledTimeString = Utility.formatTime(scheduledEvent.executionTime);
 		
 		j.log("-----------------------------------------------------------------");
-		j.log("Event: %s [Source: %s, OID %d]\t\treveived at %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
+		j.log("Event: %s [Source: %s, OID %d]\t\ttransmitted with %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
 		j.log("\t-> Action was scheduled for %s and processed in %s", scheduledTimeString, eventHandle.reflection);
 	}
 	

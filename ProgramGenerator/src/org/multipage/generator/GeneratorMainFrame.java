@@ -61,7 +61,6 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
