@@ -45,7 +45,7 @@ public class ConditionalEvents {
 	/**
 	 * If you want to enable message LOG on STD ERR, set this flag to true.
 	 */
-	private static boolean enableMessageLog = true;
+	private static boolean enableMessageLog = false;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).

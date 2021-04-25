@@ -42,7 +42,7 @@ public class DefaultMutableTreeNodeDnD extends DefaultMutableTreeNode implements
 	 */
 	public DefaultMutableTreeNodeDnD(Object userObject) {
 		
-		super(userObject);
+		this.setUserObject(userObject);
 	}
 
 	/**

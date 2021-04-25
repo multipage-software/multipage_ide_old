@@ -32,6 +32,7 @@ import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.Middle;
@@ -295,6 +296,9 @@ public class AreasPropertiesBase extends JPanel {
 			// Remember the selected areas.
 			this.areas = selectedAreas;
 			
+			Area areaDebug = ProgramGenerator.getArea(710L);
+			j.log("AREA DESCRIPTION BEFORE SLOTS DISPLAYED %s, model %s", areaDebug.getDescriptionForced(true), ProgramGenerator.getModelIdentifier());
+			
 			// Try to save unsaved changes in description and/or alias.
 			if (!textDescription.states.isSaved()) {
 				
@@ -537,6 +541,9 @@ public class AreasPropertiesBase extends JPanel {
 					if (areas == null) {
 						return;
 					}
+					
+					Area area = ProgramGenerator.getArea(710L);
+					j.log("AREAS PROPERTIES %s", area.getDescriptionForced(true));
 					areas = ProgramGenerator.getUpdatedAreas(areas);
 					
 					// Set the areas.

@@ -197,14 +197,14 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		
 		textDescription = new TextFieldAutoSave(AreaEditorCommonBase.description);
 		sl_panel.putConstraint(SpringLayout.NORTH, labelAreaDescription, 0, SpringLayout.NORTH, textDescription);
-		textDescription.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					onDescriptionEnter();
-				}
-			}
-		});
+//		textDescription.addKeyListener(new KeyAdapter() {
+//			@Override
+//			public void keyPressed(KeyEvent e) {
+//				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+//					onDescriptionEnter();
+//				}
+//			}
+//		});
 		sl_panel.putConstraint(SpringLayout.WEST, textDescription, 6, SpringLayout.EAST, labelAreaDescription);
 		panel.add(textDescription);
 		textDescription.setColumns(10);
@@ -244,11 +244,11 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		sl_panel.putConstraint(SpringLayout.EAST, textDescription, -3, SpringLayout.WEST, buttonSaveDescription);
 		sl_panel.putConstraint(SpringLayout.NORTH, buttonSaveDescription, 0, SpringLayout.NORTH, textDescription);
 		sl_panel.putConstraint(SpringLayout.EAST, buttonSaveDescription, -10, SpringLayout.EAST, panel);
-		buttonSaveDescription.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				saveDescription();
-			}
-		});
+//		buttonSaveDescription.addActionListener(new ActionListener() {
+//			public void actionPerformed(ActionEvent e) {
+//				saveDescription();
+//			}
+//		});
 		buttonSaveDescription.setIconTextGap(0);
 		buttonSaveDescription.setMargin(new Insets(0, 0, 0, 0));
 		buttonSaveDescription.setPreferredSize(new Dimension(20, 20));

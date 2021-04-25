@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import org.multipage.gui.IdentifiedTreeNode;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * Graph node.
@@ -913,6 +914,11 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 			description = "";
 		}
 		this.description = description;
+		
+		// TODO: debug
+		if (this.id == 710L) {
+			j.log("AREA DESRIPTION HAS BEEN SET TO %s", description);
+		}
 	}
 
 	/**

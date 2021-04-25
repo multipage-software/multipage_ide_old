@@ -64,6 +64,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
@@ -867,7 +868,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.requestUpdateAll, message -> {
+		ConditionalEvents.receiver(this, Signal.modelUpdated, message -> {
 			
 			// Reload editor.
 			reload();
@@ -1371,6 +1372,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				
 				// Load tree.
 				updateTreeModel(treeModel, areaId, isSubareas, inheritance);
+				
+				// Update the tree control.
+				tree.setModel(treeModel);
+				treeModel.reload();
 							
 				// Apply tree state.
 				AreaTreeState.applyTreeState(treeState, tree);
@@ -1469,7 +1474,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			return;
 		}
 		
-		// Get root area.
+		// Check root area.
 		Area rootArea = ProgramGenerator.getArea(rootAreaId);
 		if (rootArea == null) {
 			treeModel.setRoot(null);
@@ -1477,7 +1482,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		}
 		
 		// Create root node.
-		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNodeDnD(rootArea);
+		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNodeDnD(rootAreaId);
 		
 		// Create nodes.
 		createNodes(rootNode, isSubareas, inheritance);
@@ -1494,11 +1499,17 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	private void createNodes(DefaultMutableTreeNode parentNode, boolean isSubareas, boolean inheritance) {
 		
 		Object userObject = parentNode.getUserObject();
-		if (!(userObject instanceof Area)) {
+		if (!(userObject instanceof Long)) {
 			return;
 		}
 		
-		Area area = (Area) userObject;
+		long areaId = (Long) userObject;
+		Area area = ProgramGenerator.getArea(areaId);
+		
+		// TODO: debug
+		if (((Long)710L).equals(area.getId())) {
+			j.log("AREA DESCRIPTION BEFORE TREE MODEL UPDATE '%s'", area.getDescriptionForced(true));
+		}
 		
 		// Do loop for all sub or super areas.
 		LinkedList<Area> areas = null;
@@ -1523,8 +1534,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		
 		for (Area areaItem : areas) {
 			
+			// Get area ID.
+			areaId = areaItem.getId();
 			// Create new node.
-			DefaultMutableTreeNode childNode = new DefaultMutableTreeNodeDnD(areaItem);
+			DefaultMutableTreeNode childNode = new DefaultMutableTreeNodeDnD(areaId);
 			// Add it to the parent node.
 			parentNode.add(childNode);
 
@@ -1539,7 +1552,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			createNodes(childNode, isSubareas, inheritance);
 		}
 	}
-
+	
 	/**
 	 * Set all selection.
 	 * @param select

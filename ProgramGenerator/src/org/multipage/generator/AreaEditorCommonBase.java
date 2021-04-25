@@ -718,6 +718,8 @@ public abstract class AreaEditorCommonBase {
 			getTextDescription().setText("");
 			return;
 		}
+		
+		j.log("SAVED DESCRIPTION %s", description);
 	}
 	
 	/**
@@ -953,9 +955,6 @@ public abstract class AreaEditorCommonBase {
 			
 			// Propagate update event
 			ConditionalEvents.transmit(AreaEditorCommonBase.this, Signal.requestUpdateAll);
-			
-			// TODO: debug
-			j.log("REQUESTED UPDATE ALL AGAIN");
 		};
 		
 		// Set lambda functions.

@@ -10,6 +10,8 @@ package com.maclan;
 import java.io.File;
 import java.util.*;
 
+import org.multipage.gui.Utility;
+
 /**
  * @author
  *
@@ -20,6 +22,11 @@ public class AreasModel {
 	 * Areas.
 	 */
 	protected LinkedList<Area> areas = new LinkedList<Area>();
+	
+	/**
+	 * A lookup table that maps Area IDs to Area objects.
+	 */
+	private HashMap<Long, Area> areasLookup = new HashMap<Long, Area>();
 	
 	/**
 	 * Start area ID.
@@ -40,13 +47,33 @@ public class AreasModel {
 	 * MIME types.
 	 */
 	private ArrayList<MimeType> mimeTypes = new ArrayList<MimeType>();
-
+	
+	/**
+	 * Time stamp for debugging.
+	 */
+	private String timeStamp;
+	
+	/**
+	 * COnstructor.
+	 */
+	public AreasModel() {
+		
+		// Remember time stamp for debugging.
+		long currentTimeMs = System.currentTimeMillis();
+		this.timeStamp = Utility.formatTime(currentTimeMs);
+	}
+	
 	/**
 	 * Add new area.
 	 */
 	public void addNewArea(Area area) {
 
+		// Add new item.
 		areas.add(area);
+		
+		// Set lookup table.
+		long areaId = area.getId();
+		areasLookup.put(areaId, area);
 	}
 	
 	/**
@@ -77,12 +104,8 @@ public class AreasModel {
 	public Area getArea(long id) {
 		
 		// Find area.
-		for (Area area : areas) {
-			if (area.getId() == id) {
-				return area;
-			}
-		}
-		return null;
+		Area area = areasLookup.get(id);
+		return area;
 	}
 
 	/**
@@ -118,6 +141,7 @@ public class AreasModel {
 	public void removeAllAreas() {
 	
 		this.areas.clear();
+		this.areasLookup.clear();
 	}
 
 	/**
@@ -211,7 +235,12 @@ public class AreasModel {
 	 */
 	public void removeArea(Area area) {
 
+		// Remove area from list.
 		areas.remove(area);
+		
+		// Remove it from lookup table.
+		Long areaId = area.getId();
+		areasLookup.remove(areaId);
 	}
 
 	/**
@@ -235,7 +264,11 @@ public class AreasModel {
 			area.removeMarkedSuperAreas(Flag.SET);
 			area.removeMarkedSubAreas(Flag.SET);
 			if (area.isFlag(Flag.SET)) {
+				
+				// Remove area from list and from the lookup table.
 				areas.remove(area);
+				Long areaId = area.getId();
+				areasLookup.remove(areaId);
 			}
 		}
 	}
@@ -627,6 +660,7 @@ public class AreasModel {
 		homeAreaId = 0L;
 		
 		areas.clear();
+		areasLookup.clear();
 	}
 	
 	// Queue item.
@@ -918,11 +952,10 @@ public class AreasModel {
 		
 		LinkedList<Area> areasResult = new LinkedList<Area>();
 		
-		for (Area area : this.areas) {
+		for (long areaId : areasIds) {
 			
-			if (areasIds.contains(area.getId())) {
-				areasResult.add(area);
-			}
+			Area area = areasLookup.get(areaId);
+			areasResult.add(area);
 		}
 		
 		return areasResult;
@@ -1204,5 +1237,14 @@ public class AreasModel {
 				queue.addLast(subarea);
 			}
 		}
+	}
+	
+	/**
+	 * Gets time stamp.
+	 * @return
+	 */
+	public String getTimeStamp() {
+		
+		return this.timeStamp;
 	}
 }

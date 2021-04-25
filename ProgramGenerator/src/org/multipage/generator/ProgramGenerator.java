@@ -26,6 +26,7 @@ import org.multipage.gui.SerializeStateAdapter;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreasModel;
@@ -570,6 +571,17 @@ public class ProgramGenerator {
 		
 		return areasModel.getArea(id);
 	}
+	
+	/**
+	 * Update ara.
+	 * @param area
+	 * @return
+	 */
+	public static Area updateArea(Area area) {
+		
+		long id = area.getId();
+		return areasModel.getArea(id);
+	}
 
 	/**
 	 * Get home area.
@@ -691,8 +703,11 @@ public class ProgramGenerator {
 			// LOG
 			System.out.format("RELOAD MODEL: operation time span %sms\n", new Date().getTime() - start);
 			
+			Area area = model.getArea(710L);
+			j.log("DESCRIPTION AFTER AREA MODEL UPDATE %s", area.getDescriptionForced(true));
+			
 			// Propagate event which informs about model update.
-			ConditionalEvents.transmit(model, Signal.modelUpdated);
+			ConditionalEvents.transmit(ProgramGenerator.class, Signal.modelUpdated);
 			
 			return result;
 		}
@@ -758,5 +773,17 @@ public class ProgramGenerator {
 			}
 		}
 		return areas;
+	}
+	
+	/**
+	 * Get model identifier for debugging purposes.
+	 * @return
+	 */
+	public static String getModelIdentifier() {
+		
+		if (areasModel == null) {
+			return "unknown";
+		}
+		return areasModel.getTimeStamp();
 	}
 }
