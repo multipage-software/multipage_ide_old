@@ -352,7 +352,9 @@ public class GeneratorMainFrame extends JFrame {
 		updateWindowSelectionMenu();
 		
 		// Propagate event.
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.loadDiagrams);
+		SwingUtilities.invokeLater(() -> {
+			ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.loadDiagrams);
+		});
 	}
 
 	/**
@@ -543,6 +545,8 @@ public class GeneratorMainFrame extends JFrame {
 		setListeners();
 		// Set timers.
 		setTimers();
+		// Initialize log window.
+		LoggingDialog.initialize();
 		// Load dialog.
 		loadDialog();
 		
@@ -705,10 +709,18 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.high, message -> {
+		ConditionalEvents.receiver(this, Signal.updateAll, EventConditionPriority.high, message -> {
+			
+			// Disable the signal temporarily.
+			Signal.updateAll.disable();
 			
 			// Reload areas model.
 			ProgramGenerator.reloadModel();
+			
+			// Enable the signal.
+			SwingUtilities.invokeLater(() -> {
+				Signal.updateAll.enable();
+			});
 		});
 		
 		// "Expose read only areas" event receiver.
@@ -1373,8 +1385,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		userValue = text;
 		
-		// Reload diagrams.
-		GeneralDiagram.updateVisibleDiagrams();
+		// Repaint diagram.
 		repaint();
 	}
 
@@ -1732,7 +1743,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUpdate() {
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAll);
 	}
 
 	/**

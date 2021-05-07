@@ -118,14 +118,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	}
 	
 	/**
-	 * Update visible diagrams..
-	 */
-	public static void updateVisibleDiagrams() {
-		
-		ConditionalEvents.transmit(GeneralDiagram.class, Signal.requestUpdateAll);
-	}
-	
-	/**
 	 * Update diagrams controls.
 	 */
 	public static void updateDiagramsControls() {

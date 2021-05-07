@@ -5,12 +5,14 @@
  *
  */
 
-package com.maclan;
+package org.multipage.generator;
 
 import java.util.*;
 
 import javax.swing.*;
 import javax.swing.tree.*;
+
+import com.maclan.Area;
 
 /**
  * Class for tree state.
@@ -61,7 +63,8 @@ public class AreaTreeState {
 		
 		long areaId = areaIdPath[index];
 		
-		Area currentArea = (Area) node.getUserObject();
+		Long currentAreaId = (Long) node.getUserObject();
+		Area currentArea = ProgramGenerator.getArea(currentAreaId);
 		
 		// If current area ID doesn't match, exit with false.
 		if (currentArea.getId() != areaId) {
@@ -217,9 +220,9 @@ public class AreaTreeState {
 		for (int index = 0; index < count; index++) {
 			
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getPathComponent(index);
-			Area area = (Area) node.getUserObject();
+			Long areaId = (Long) node.getUserObject();
 			
-			idPath[index] = area.getId();
+			idPath[index] = areaId;
 		}
 		
 		return idPath;

@@ -12,8 +12,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
+import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 
 import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
@@ -22,7 +26,7 @@ import org.multipage.util.j;
 
 /**
  * 
- * @author user
+ * @author vakol
  *
  */
 public class ConditionalEvents {
@@ -38,14 +42,25 @@ public class ConditionalEvents {
 	}
 	
 	/**
+	 * Log parameters.
+	 */
+	public static class LogParameters {
+		
+		// If you want to enable message LOG on STD ERR, set this flag to true.
+		public boolean enable = true;
+		
+		// To display full log information, set this flag to true.
+		public boolean full = false;
+		
+		// Concrete signals.
+		public Signal [] concereteSignals = { Signal.updateAll };
+	}
+	public static LogParameters logParameters = new LogParameters();
+	
+	/**
 	 * Coalesce time span.
 	 */
 	private static final long timeSpanMs = 100;
-
-	/**
-	 * If you want to enable message LOG on STD ERR, set this flag to true.
-	 */
-	private static boolean enableMessageLog = false;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).
@@ -87,6 +102,9 @@ public class ConditionalEvents {
 		
 		// Receive time.
 		Long receiveTime;
+		
+		// Event handler key.
+		public Object key;
 		
 		/**
 		 * Dump message.
@@ -303,88 +321,108 @@ public class ConditionalEvents {
 	}
 	
 	/**
+	 * Pop message from the queue.
+	 * @return
+	 */
+	private static Message popMessage() {
+		
+		synchronized (messageQueue) {
+			
+			if (!messageQueue.isEmpty()) {
+				
+				// Pop message.
+				Message message = messageQueue.removeFirst();
+				return message;
+			}
+			return null;
+		}
+	}
+	
+	/**
 	 * The message dispatch thread.
 	 */
 	private static void dispatchThread() {
 		
+		Obj<Message> incomingMessage = new Obj<Message>(null);
+		
 		// Enter message dispatch loop.
 		while (!stopDispatchMessages) {
 			
-			// Try to pull single incoming message.
-			Obj<Message> incomingMessage = new Obj<Message>(null);
-			synchronized (messageQueue) {
+			// Try to pop single incoming message or wait.
+			Boolean newMessage = null;
+			do {
 				
-				if (!messageQueue.isEmpty()) {
-					incomingMessage.ref = messageQueue.removeFirst();
+				// Pop message.
+				incomingMessage.ref = popMessage();
+				if (incomingMessage.ref != null) {
+					break;
+				}
+	
+				// Wait for a new message.
+				newMessage = !Lock.waitFor(dispatchLock, dispatchLockTimeoutMs);
+				dispatchLock = new Lock();
+				
+				// Pop new message.
+				if (newMessage) {
+					incomingMessage.ref = popMessage();
+				}
+				// Invoke old scheduled events.
+				else {
+					invokeScheduledEvents();
 				}
 			}
+			while (incomingMessage.ref == null);
 			
 			// Get current time.
 			final Long currentTime = new Date().getTime();
+			incomingMessage.ref.receiveTime = currentTime;
 			
-			// Process the message if it exists.
-			if (incomingMessage.ref != null) {
+			// Log incoming message.
+			LoggingDialog.log(incomingMessage.ref);
 				
-				// Read signal associated with the message.
-				Signal signal = incomingMessage.ref.signal;
+			// Get signal.
+			Signal signal = incomingMessage.ref.signal;
+			
+			// On special events skip the next complex rules.
+			if (signal.isSpecial()) {
+				invokeSpecialEvents(incomingMessage.ref);
+			}
+			// For all matching events...
+			else {
 				
-				// For debug purposes: stop receiving unnecessary events.
-				if (!(stopReceivingUnnecessary && signal.isUnnecessary())) {
-				
-					// Set message receive time.
-					incomingMessage.ref.receiveTime = currentTime;
+				synchronized (conditionalEvents) {
 					
-					// On special events skip the next complex rules.
-					if (signal.isSpecial()) {
-						invokeSpecialEvents(incomingMessage.ref);
-					}
-					else {
-						
-						// For all mappings...
-						synchronized (conditionalEvents) {
-							
-							LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
-							if (priorities != null) {
-								priorities.forEach((priority, keys) -> {
-									if (keys != null) {
-										keys.forEach((key, eventHandles) -> {
-											
-											// Schedule events.
-											scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
-										});
+					LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
+					
+					if (priorities != null) {
+						priorities.forEach((priority, keys) -> {
+							if (keys != null) {
+								keys.forEach((key, eventHandles) -> {
+									
+									// For debug purposes: stop receiving unnecessary events.
+									if (signal.isUnnecessary() && stopReceivingUnnecessary) {
+										
+										// Do nothing.
+									}
+									else {
+										
+										// Save key for debugging purposes.
+										incomingMessage.ref.key = key;
+										
+										// Schedule events.
+										scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
 									}
 								});
 							}
-						}
+						});
 					}
 				}
 			}
 			
-			// Invoke events scheduled within defined time span.
-			long cycles = dispatchLockTimeoutMs / minDelayMessageCoalesceMs;
-			cycles = cycles > 1 ? cycles : 1;
-			while (--cycles > 0) {
+			if (!scheduledEvents.isEmpty()) {
 				
-				// Lock thread for "coalesce delay" milliseconds.
-				boolean noMessage = Lock.waitFor(dispatchLock, minDelayMessageCoalesceMs);
-				
-				LoggingDialog.log(String.format("SIGNAL UNLOCKED %d", cycles));
-			
-				// Create new lock.
-				dispatchLock = new Lock();
-				
-				// If they are scheduled events...
-				if (!scheduledEvents.isEmpty()) {
-					// Update current time value.
-					long updatedCurrentTime = new Date().getTime();
-					// Invoke them.
-					invokeScheduledEvents(updatedCurrentTime);
-				}
-				
-				// When a new message is ready, do loop no longer and process it.
-				if (!noMessage) {
-					break;
-				}
+				// Invoke events.
+				invokeScheduledEvents();
 			}
 		}
 	}
@@ -410,6 +448,14 @@ public class ConditionalEvents {
 					if (exception != null) {
 						throw exception;
 					}
+				}
+				// Check the "enable target signal" and enable the target signal.
+				else if (Signal._enableTargetSignal.equals(message.signal) && message.target instanceof Signal) {
+					
+					// Retrieve the signal that should be enabled.
+					Signal signalToEnable = (Signal) message.target;
+					// Enable the signal.
+					signalToEnable.enable();
 				}
 			}
 			catch (Exception e) {
@@ -442,6 +488,9 @@ public class ConditionalEvents {
 				// Schedule new event.
 				scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
 				scheduledEvents.add(scheduledEvent);
+				
+				// Log scheduled event.
+				LoggingDialog.log(scheduledEvent, false);
 			}
 		}
 	}
@@ -489,9 +538,11 @@ public class ConditionalEvents {
 
 	/**
 	 * Invoke remaining events.
-	 * @param eventHandles
 	 */
-	private static void invokeScheduledEvents(long currentTime) {
+	private static void invokeScheduledEvents() {
+		
+		// Get current time.
+		final long currentTime = new Date().getTime();
 		
 		// Initialize.
 		final LinkedList<ScheduledEvent> processedEvents = new LinkedList<ScheduledEvent>();
@@ -509,9 +560,8 @@ public class ConditionalEvents {
 				scheduledEvent.eventHandle.action.accept(scheduledEvent.message);
 				
 				// Log the event.
-				if (enableMessageLog) {
-					logEvent(scheduledEvent);
-				}
+				logEvent(scheduledEvent);
+				LoggingDialog.log(scheduledEvent, true);
 			});
 			
 			// Remember processed events.
@@ -530,6 +580,10 @@ public class ConditionalEvents {
 	 */
 	private static void logEvent(ScheduledEvent scheduledEvent) {
 		
+		if (!logParameters.enable) {
+			return;
+		}
+		
 		Message message = scheduledEvent.message;
 		
 		if (Signal.displayOrRedrawToolTip.equals(message.signal)
@@ -537,13 +591,43 @@ public class ConditionalEvents {
 			return;
 		}
 		
-		EventHandle eventHandle = scheduledEvent.eventHandle;
-		String receivedTimeString = Utility.formatTime(message.receiveTime);
-		String scheduledTimeString = Utility.formatTime(scheduledEvent.executionTime);
+		Signal signal = message.signal;
 		
-		j.log("-----------------------------------------------------------------");
-		j.log("Event: %s [Source: %s, OID %d]\t\ttransmitted with %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
-		j.log("\t-> Action was scheduled for %s and processed in %s", scheduledTimeString, eventHandle.reflection);
+		int concereteSignalsCount = logParameters.concereteSignals.length;
+		boolean logThisSignal = concereteSignalsCount == 0;
+		if (concereteSignalsCount > 0) {
+			
+			for (Signal concreteSignal : logParameters.concereteSignals) {
+				if (signal.equals(concreteSignal)) {
+					
+					logThisSignal = true;
+					break;
+				}
+			}
+		}
+		
+		if (!logThisSignal) {
+			return;
+		}
+		
+		EventHandle eventHandle = scheduledEvent.eventHandle;
+		
+		// Full log information.
+		if (logParameters.full) {
+			
+			String receivedTimeString = Utility.formatTime(message.receiveTime);
+			String scheduledTimeString = Utility.formatTime(scheduledEvent.executionTime);
+			
+			j.log("-----------------------------------------------------------------");
+			j.log("Event: %s [Source: %s, OID %d]\t\ttransmitted with %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
+			j.log("\t-> Action was scheduled for %s and processed in %s", scheduledTimeString, eventHandle.reflection);
+		}
+		// Simplified log information.
+		else {
+			j.log("-----------------------------------------------------------------");
+			//j.log("%s\t\t\t%s\t%s", message.signal, message.reflection, eventHandle.reflection);
+			j.log("%s[0x%08x]\t\t\t%s", message.signal, message.key.hashCode(), eventHandle.reflection);
+		}
 	}
 	
 	/**
@@ -605,6 +689,11 @@ public class ConditionalEvents {
 	 */
 	private static void propagateMessage(Object source, Object target, Signal signal, Object ... info) {
 		
+		// Check if the signal is enabled.
+		if (!signal.isEnabled()) {
+			return;
+		}
+		
 		// Filter unnecessary signals (only for debugging purposes)
 		if (stopReceivingUnnecessary && signal.isUnnecessary()) {
 			return;
@@ -656,6 +745,37 @@ public class ConditionalEvents {
 			message.source = ConditionalEvents.class;
 			message.target = lambdaFunction;
 			message.signal = Signal._invokeLater;
+			
+			messageQueue.add(message);
+			
+			Lock.notify(dispatchLock);
+		}
+	}
+	
+	/**
+	 * Disable signal.
+	 * @param signal
+	 */
+	public static void disableSignal(Signal signal) {
+		
+		signal.disable();
+	}
+	
+	/**
+	 * Enable "enable signal" message.
+	 * @param signalToEnable
+	 */
+	public static void enableSignal(Signal signalToEnable) {
+		
+		// Create special message with _enableSelectedSignal and put it into the message queue.
+		// Then unlock the message dispatch thread.
+		synchronized (messageQueue) {
+			
+			ConditionalEvents.Message message = new ConditionalEvents.Message();
+			
+			message.source = ConditionalEvents.class;
+			message.target = signalToEnable;
+			message.signal = Signal._enableTargetSignal;
 			
 			messageQueue.add(message);
 			
@@ -772,25 +892,59 @@ public class ConditionalEvents {
 	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, EventConditionPriority priority,
 			Consumer<Message> message, Long timeSpanMs, String identifier) {
 		
-		synchronized (conditionalEvents) {
+		// Get reflection info.
+		Obj<StackTraceElement> reflection = new Obj<StackTraceElement>(null);
+		StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
+		if (stackElements.length >= 4) {
+			reflection.ref = stackElements[3];
+		}
+		
+		// Lambda function that can register the conditional event.
+		Supplier<Object> registerLambda = () -> {
+			synchronized (conditionalEvents) {
 			
-			// Create auxiliary table from the map.
-			ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
-			
-			// Create new event handle, add new table record.
-			StackTraceElement reflection = null;
-			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
-			if (stackElements.length >= 4) {
-				reflection = stackElements[3];
+				// Create auxiliary table from the map.
+				ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
+				
+				// Create new event handle, add new table record.
+				EventHandle handle = new EventHandle(message, timeSpanMs, reflection.ref, identifier);
+				auxiliaryTable.addRecord(key, eventCondition, priority, handle);
+				
+				// Retrieve sorted conditional events.
+				conditionalEvents = auxiliaryTable.retrieveSorted();
+				
+				// Return key.
+				return key;
 			}
-			EventHandle handle = new EventHandle(message, timeSpanMs, reflection, identifier);
-			auxiliaryTable.addRecord(key, eventCondition, priority, handle);
+		};
+		
+		// If the key is a Swing component, use automatic release.
+		if (key instanceof JComponent) {
+			JComponent component = (JComponent) key;
 			
-			// Retrieve sorted conditional events.
-			conditionalEvents = auxiliaryTable.retrieveSorted();
-			
-			// Return key.
+			component.addAncestorListener(new AncestorListener() {
+				
+				// Register conditional event listener.
+				@Override
+				public void ancestorAdded(AncestorEvent event) {
+					registerLambda.get();
+				}
+				
+				// Release all the listeners.
+				@Override
+				public void ancestorRemoved(AncestorEvent event) {
+					ConditionalEvents.removeReceivers(key);
+				}
+
+				@Override
+				public void ancestorMoved(AncestorEvent event) {
+					// Nothing to do when the component is moved.
+				}
+			});
 			return key;
+		}
+		else {
+			return registerLambda.get();
 		}
 	}
 	

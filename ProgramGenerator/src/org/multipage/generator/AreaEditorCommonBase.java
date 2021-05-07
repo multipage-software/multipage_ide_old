@@ -477,7 +477,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Transmit "update all" request.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**
@@ -489,7 +489,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Transmit "update all" request.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 
 		// Save dialog.
 		saveDialog();
@@ -954,7 +954,7 @@ public abstract class AreaEditorCommonBase {
 			enableEditing(false);
 			
 			// Propagate update event
-			ConditionalEvents.transmit(AreaEditorCommonBase.this, Signal.requestUpdateAll);
+			//ConditionalEvents.transmit(AreaEditorCommonBase.this, Signal.updateAll);
 		};
 		
 		// Set lambda functions.

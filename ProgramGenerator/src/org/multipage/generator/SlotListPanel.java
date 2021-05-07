@@ -510,8 +510,8 @@ public class SlotListPanel extends JPanel {
 		// Escape search mode.
 		escapeFoundSlotsMode();
 		
-		// Update panel.
-		updatePanelInformation();
+		// Load slots.
+		loadSlots();
 	}
 
 	/**
@@ -586,30 +586,19 @@ public class SlotListPanel extends JPanel {
 	 */
 	private void setListeners() {
 		
-		addAncestorListener(new AncestorListener() {
-		
-			// On panel use.
-			public void ancestorAdded(AncestorEvent event) {
-				
-				// Create "update all" request event.
-				ConditionalEvents.receiver(SlotListPanel.this, Signal.requestUpdateAll, message -> {
-					
-					// Update slot list
-					update();
-				});
-			}
+		// Create "update all" request event.
+		ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAll, message -> {
 			
-			// On panel release.
-			public void ancestorRemoved(AncestorEvent event) {
-				
-				// Remove receivers.
-				ConditionalEvents.removeReceivers(SlotListPanel.this);
-			}
+			// Disable the signal temporarily.
+			Signal.updateAll.disable();
 			
-			public void ancestorMoved(AncestorEvent event) {
-				
-				// Nothing to do.
-			}
+			// Update slot list
+			update();
+			
+			// Enable the signal.
+			SwingUtilities.invokeLater(() -> {
+				Signal.updateAll.enable();
+			});
 		});
 	}
 
@@ -820,8 +809,8 @@ public class SlotListPanel extends JPanel {
 
 				escapeFoundSlotsMode();
 				
-				// Update information.
-				updatePanelInformation();
+				// Load slots.
+				loadSlots();
 			}}
 		);
 		
@@ -1121,8 +1110,8 @@ public class SlotListPanel extends JPanel {
 		// Edit slot description.
 		SlotDescriptionDialog.showDialog(this, slot);
 		
-		// Update information.
-		updatePanelInformation();
+		// Load slots.
+		loadSlots();
 	}
 	
 	/**
@@ -1579,8 +1568,8 @@ public class SlotListPanel extends JPanel {
 		// Reset found slots.
 		escapeFoundSlotsMode();
 		
-		// Update information.
-		updatePanelInformation();
+		// Load slots.
+		loadSlots();
 	}	
 
 	/**
@@ -1589,7 +1578,9 @@ public class SlotListPanel extends JPanel {
 	public void onShowFound() {
 
 		tableModel.setList(areas, foundSlots, buttonShowOnlyFound.isSelected(), buttonShowUserSlots.isSelected());
-		updatePanelInformation();
+		
+		// Load slots.
+		loadSlots();
 	}
 	
 	/**
@@ -1599,7 +1590,8 @@ public class SlotListPanel extends JPanel {
 		
 		showUserSlots = buttonShowUserSlots.isSelected();
 		
-		updatePanelInformation();
+		// Load slots.
+		loadSlots();
 		
 		// Ensure selected slot visibility.
 		SwingUtilities.invokeLater(() -> {
@@ -1752,15 +1744,6 @@ public class SlotListPanel extends JPanel {
 	}
 	
 	/**
-	 * Update information.
-	 */
-	public void updatePanelInformation() {
-		
-		// Load slots.
-		loadSlots();
-	}
-	
-	/**
 	 * Set areas.
 	 * @param areas
 	 */
@@ -1768,7 +1751,8 @@ public class SlotListPanel extends JPanel {
 
 		this.areas = areas;
 		
-		updatePanelInformation();
+		// Load slots.
+		loadSlots();
 		
 		// Try to update slot search info.
 		updateSearch();

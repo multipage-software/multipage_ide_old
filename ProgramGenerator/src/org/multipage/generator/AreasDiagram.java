@@ -336,7 +336,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private void setListeners() {
 		
 		// Add redraw event listener.
-		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.requestUpdateAll), message -> {
+		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAll), message -> {
+			
+			// Disable the signal temporarily.
+			Signal.updateAll.disable();
 			
 			// Reload and repaint the diagram.
 			reload(false, false);
@@ -350,6 +353,11 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 			// Propagate the "show areas' relations" signal.
 			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedIds);
+			
+			// Enable the signal.
+			SwingUtilities.invokeLater(() -> {
+				Signal.updateAll.enable();
+			});
 		});
 		
 		// Add receiver for the "click areas in diagram" event.
@@ -435,7 +443,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.requestUpdateAll, EventConditionPriority.middle, message -> {
+		ConditionalEvents.receiver(this, Signal.updateAll, EventConditionPriority.middle, message -> {
 			
 			// Render the areas diagram.
 			renderDiagram();
@@ -2701,7 +2709,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		}
 		
 		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 		
 		return success;
 	}
@@ -2754,7 +2762,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		updateInformation();
 		
 		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**

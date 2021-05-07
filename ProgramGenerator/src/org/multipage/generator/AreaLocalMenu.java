@@ -449,7 +449,7 @@ public class AreaLocalMenu {
 		CreateAreasFromSourceCode.showDialog(parentComponent, area);
 		
 		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**
@@ -881,7 +881,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().setHomeArea(parentComponent, area);
 		
 		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**
@@ -896,7 +896,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().copyAreaTree(area, parentArea);
 		
 		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**
@@ -910,7 +910,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().pasteAreaTree(area);
 		
 		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**

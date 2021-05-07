@@ -15,6 +15,9 @@ public enum Signal implements EventCondition {
 	// Special signal that runs user lambda function placed in a message on the message thread.
 	_invokeLater,
 	
+	// Enables target signal.
+	_enableTargetSignal,
+	
 	// Load diagrams on application start up.
 	loadDiagrams(
 			SignalType.areaViewStateChange,
@@ -121,7 +124,7 @@ public enum Signal implements EventCondition {
 			),
 	
 	// Request update of all information.
-	requestUpdateAll(
+	updateAll(
 			SignalType.areaModelChange,
 			SignalType.slotModelChange,
 			SignalType.areaViewStateChange,
@@ -149,6 +152,7 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
+	
 	// Focus on the home area.
 	focusHomeArea(
 			SignalType.areaViewChange,
@@ -168,10 +172,6 @@ public enum Signal implements EventCondition {
 	saveSlot(
 			SignalType.slotModelChange,
 			SignalType.slotViewChange
-			),
-	// Indicates updates areas model
-	modelUpdated(
-			SignalType.areaModelChange
 			),
 	// Reactivate GUI
 	reactivateGui(
@@ -312,6 +312,11 @@ public enum Signal implements EventCondition {
 	private EventConditionPriority priority = EventConditionPriority.middle;
 	
 	/**
+	 * Enable or disable this signal.
+	 */
+	private boolean enabled = true;
+	
+	/**
 	 * Constructor of the a signal.
 	 * @param signalTypes
 	 */
@@ -323,13 +328,38 @@ public enum Signal implements EventCondition {
 	}
 	
 	/**
+	 * Enable this signal.
+	 */
+	public synchronized void enable() {
+		
+		this.enabled = true;
+	}
+	
+	/**
+	 * Disable this signal.
+	 */
+	public synchronized void disable() {
+		
+		this.enabled = false;
+	}
+	
+	/**
+	 * Check if this signal is enabled.
+	 * @return
+	 */
+	public boolean isEnabled() {
+		
+		return this.enabled;
+	}
+	
+	/**
 	 * Check for a special signals.
 	 * @param event
 	 * @return
 	 */
 	public boolean isSpecial() {
 		
-		return _invokeLater.equals(this);
+		return _invokeLater.equals(this) || _enableTargetSignal.equals(this);
 	}
 	
 	/**

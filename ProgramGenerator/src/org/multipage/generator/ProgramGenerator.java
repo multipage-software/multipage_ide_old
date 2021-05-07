@@ -26,7 +26,6 @@ import org.multipage.gui.SerializeStateAdapter;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreasModel;
@@ -180,6 +179,7 @@ public class ProgramGenerator {
 		PathSelectionDialog.setDefaultData();
 		CreateAreasFromSourceCode.setDefaultData();
 		ClonedDiagramDialog.setDefaultData();
+		LoggingDialog.setDefaultData();
 	}
 	
 	/**
@@ -240,6 +240,7 @@ public class ProgramGenerator {
 		PathSelectionDialog.serializeData(inputStream);
 		CreateAreasFromSourceCode.serializeData(inputStream);
 		ClonedDiagramDialog.serializeData(inputStream);
+		LoggingDialog.serializeData(inputStream);
 	}
 	
 	/**
@@ -299,6 +300,7 @@ public class ProgramGenerator {
 		PathSelectionDialog.serializeData(outputStream);
 		CreateAreasFromSourceCode.serializeData(outputStream);
 		ClonedDiagramDialog.serializeData(outputStream);
+		LoggingDialog.serializeData(outputStream);
 	}
 	
 	/**
@@ -699,15 +701,6 @@ public class ProgramGenerator {
 			
 			// Load areas model from database.
 			MiddleResult result = ProgramBasic.getMiddle().loadAreasModel(properties, model, loadHiddenSlots);
-			
-			// LOG
-			System.out.format("RELOAD MODEL: operation time span %sms\n", new Date().getTime() - start);
-			
-			Area area = model.getArea(710L);
-			j.log("DESCRIPTION AFTER AREA MODEL UPDATE %s", area.getDescriptionForced(true));
-			
-			// Propagate event which informs about model update.
-			ConditionalEvents.transmit(ProgramGenerator.class, Signal.modelUpdated);
 			
 			return result;
 		}

@@ -8,8 +8,6 @@ package org.multipage.generator;
 
 import java.awt.BorderLayout;
 import java.awt.Panel;
-import java.awt.event.ContainerEvent;
-import java.awt.event.ContainerListener;
 import java.util.HashSet;
 
 import javax.swing.SwingUtilities;
@@ -148,26 +146,22 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		addContainerListener(new ContainerListener() {
+		// The "update all" request receiver.
+		ConditionalEvents.receiver(this, Signal.updateAll, message -> {
 			
-			// On panel added.
-			@Override
-			public void componentAdded(ContainerEvent e) {
+			// Reload content of the monitor.
+			if (isShowing()) {
 				
-				// The "update all" request receiver.
-				ConditionalEvents.receiver(this, Signal.requestUpdateAll, message -> {
-					
-					// Reload content of the monitor.
-					if (isShowing()) {
-						reloadContent();
-					}
+				// Disable the signal temporarily.
+				Signal.updateAll.disable();
+				
+				// Reload the content.
+				reloadContent();
+				
+				// Enable the signal.
+				SwingUtilities.invokeLater(() -> {
+					Signal.updateAll.enable();
 				});
-			}
-			
-			@Override
-			public void componentRemoved(ContainerEvent e) {
-				
-				// Nothing to do.
 			}
 		});
 	}

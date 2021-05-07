@@ -79,7 +79,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;
-import com.maclan.AreaTreeState;
 import com.maclan.AreasModel;
 
 /**
@@ -1037,7 +1036,7 @@ public class AreaTraceFrame extends JFrame {
 		
 		// Main tool bar.
 		toggleDebug = ToolBarKit.addToggleButton(toolBarMain,  "org/multipage/generator/images/debug.png", this, "onToggleDebug", "org.multipage.generator.tooltipEnableDisplaySourceCode");
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", this, "onUpdateInformation", "org.multipage.generator.tooltipUpdateData");
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdateData");
 		toolBarMain.addSeparator();
 		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/render.png", this, "onRender", "org.multipage.generator.tooltipRenderHtmlPages");
 		toolBarMain.addSeparator();
@@ -1052,9 +1051,9 @@ public class AreaTraceFrame extends JFrame {
 	 * On update data.
 	 */
 	@SuppressWarnings("unused")
-	private void onUpdateInformation() {
+	private void onUpdate() {
 		
-		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.requestUpdateAll);
+		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.updateAll);
 	}
 	
 	/**

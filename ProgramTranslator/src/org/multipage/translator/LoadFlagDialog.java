@@ -273,7 +273,7 @@ public class LoadFlagDialog extends JDialog {
 		list.setCellRenderer(new ListCellRenderer() {
 			// Renderer.
 			private JFlagLabel renderer = new JFlagLabel();
-			// Return renederer.
+			// Return renderer.
 			@Override
 			public Component getListCellRendererComponent(JList list, Object value,
 					int index, boolean isSelected, boolean cellHasFocus) {
