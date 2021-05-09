@@ -546,7 +546,7 @@ public class GeneratorMainFrame extends JFrame {
 		// Set timers.
 		setTimers();
 		// Initialize log window.
-		LoggingDialog.initialize();
+		LoggingDialog.initialize(this);
 		// Load dialog.
 		loadDialog();
 		

@@ -434,4 +434,12 @@ public enum Signal implements EventCondition {
 		
 		return priority.ordinal();
 	}
+	
+	/**
+	 * Get types.
+	 */
+	public HashSet<SignalType> getTypes() {
+		
+		return includedInTypes;
+	}
 }
