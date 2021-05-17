@@ -54,6 +54,14 @@ import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
+
+import javax.swing.JPanel;
+import javax.swing.JCheckBox;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 /**
  * 
@@ -75,17 +83,17 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Bounds.
 	 */
-	private static Rectangle bounds = null;
+	private static Rectangle bounds;
 	
 	/**
 	 * Splitter position.
 	 */
-	private static Integer eventsWindowSplitter = null;
+	private static Integer eventsWindowSplitter;
 	
 	/**
 	 * Dark green color constant.
 	 */
-	private static final Color darkGreen = new Color(0, 128, 0);
+	private static final Color DARK_GREEN = new Color(0, 128, 0);
 
 	/**
 	 * Set default state.
@@ -93,6 +101,7 @@ public class LoggingDialog extends JDialog {
 	public static void setDefaultData() {
 		
 		bounds = new Rectangle();
+		eventsWindowSplitter = -1;
 	}
 
 	/**
@@ -105,7 +114,7 @@ public class LoggingDialog extends JDialog {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
-		omittedSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
+		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
 	}
 
@@ -118,7 +127,7 @@ public class LoggingDialog extends JDialog {
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
-		outputStream.writeObject(omittedSignals);
+		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
 	}
 	
@@ -204,7 +213,7 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Omitted signals.
 	 */
-	private static HashSet<Signal> omittedSignals = new HashSet<Signal>();
+	private static HashSet<Signal> omittedOrChosenSignals = new HashSet<Signal>();
 	
 	// $hide>>$
 	/**
@@ -257,6 +266,7 @@ public class LoggingDialog extends JDialog {
 	private DefaultListModel<Signal> listModelOmittedSignals;
 	private JEditorPane editorPaneDescription;
 	private JSplitPane splitPaneEvents;
+	private JCheckBox checkOmitOrChooseSignals;
 	
 	/**
 	 * Show dialog.
@@ -345,10 +355,23 @@ public class LoggingDialog extends JDialog {
 		listOmittedSignals.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onOmittedSignalClick(e);
+				onOmittedOrChosenSignalClick(e);
 			}
 		});
 		scrollPaneOmittedSignals.setViewportView(listOmittedSignals);
+		
+		JPanel panel = new JPanel();
+		scrollPaneOmittedSignals.setColumnHeaderView(panel);
+		
+		checkOmitOrChooseSignals = new JCheckBox("org.multipage.generator.textOmitSignals");
+		checkOmitOrChooseSignals.setSelected(true);
+		checkOmitOrChooseSignals.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) 
+			{
+				onOmitChooseSignals();
+			}
+		});
+		panel.add(checkOmitOrChooseSignals);
 	}
 	
 	/**
@@ -369,6 +392,7 @@ public class LoggingDialog extends JDialog {
 	private void localize() {
 		
 		Utility.localize(tabbedPane);
+		Utility.localize(checkOmitOrChooseSignals);
 	}
 	
 	/**
@@ -397,7 +421,7 @@ public class LoggingDialog extends JDialog {
 		else {
 			setBounds(bounds);
 		}
-		if (eventsWindowSplitter != null) {
+		if (eventsWindowSplitter != -1) {
 			splitPaneEvents.setDividerLocation(eventsWindowSplitter);
 		}
 		else {
@@ -473,7 +497,7 @@ public class LoggingDialog extends JDialog {
 					else if (eventObject instanceof Message) {
 						Message message = (Message) eventObject;
 						renderer.setText(String.format("[0x%08X] %s", message.hashCode(), Utility.formatTime(message.receiveTime)));
-						nodeColor = darkGreen;
+						nodeColor = DARK_GREEN;
 					}
 					else if (eventObject instanceof ScheduledEvent) {
 						ScheduledEvent scheduledEvent = (ScheduledEvent) eventObject;
@@ -547,8 +571,9 @@ public class LoggingDialog extends JDialog {
 				renderer.set(isSelected, cellHasFocus, index);
 				
 				// If it is omitted, colorize it with red.
-				if (omittedSignals.contains(signal)) {
-					renderer.setForeground(Color.RED);
+				if (omittedOrChosenSignals.contains(signal)) {
+					boolean omitted = checkOmitOrChooseSignals.isSelected();
+					renderer.setForeground(omitted ? Color.RED : DARK_GREEN);
 				}
 				else {
 					renderer.setForeground(Color.GRAY);
@@ -560,26 +585,36 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * On omitted signals click.
+	 * On omitted/chosen check box click.
+	 */
+	protected void onOmitChooseSignals() {
+		
+		// Redraw the window.
+		repaint();
+	}
+
+	
+	/**
+	 * On omitted/chosen signal click.
 	 * @param event 
 	 */
-	protected void onOmittedSignalClick(MouseEvent event) {
+	protected void onOmittedOrChosenSignalClick(MouseEvent event) {
 		
 		// Check double click.
 		if (event.getClickCount() != 2) {
 			return;
 		}
 		
-		synchronized (omittedSignals) {
+		synchronized (omittedOrChosenSignals) {
 			
 			// Add/remove omitted signal.
 			Signal signal = listOmittedSignals.getSelectedValue();
 			
-			if (!omittedSignals.contains(signal)) {
-				omittedSignals.add(signal);
+			if (!omittedOrChosenSignals.contains(signal)) {
+				omittedOrChosenSignals.add(signal);
 			}
 			else {
-				omittedSignals.remove(signal);
+				omittedOrChosenSignals.remove(signal);
 			}
 			
 			// Redraw list of signals.
@@ -756,7 +791,6 @@ public class LoggingDialog extends JDialog {
 					"<html>"
 					+ "<b>signal</b>: %s<br>"
 					+ "<b>[hashcode] execution time</b>: [0x%08X] %s<br>"
-					+ "<b>key</b>: %s<br>"
 					+ "<b>source</b>: %s<br>"
 					+ "<b>target</b>: %s<br>"
 					+ "<b>info</b>: %s<br>"
@@ -765,7 +799,6 @@ public class LoggingDialog extends JDialog {
 					+ "</html>",
 					message.signal.name(),
 					message.hashCode(), Utility.formatTime(message.receiveTime),
-					getObjectDescription(message.key),
 					getObjectDescription(message.source),
 					getObjectDescription(message.target),
 					getDataDescription(message.relatedInfo),
@@ -1025,9 +1058,12 @@ public class LoggingDialog extends JDialog {
 			// Add events.
 			events.forEach((signal, loggedEvents) -> {
 				
+				// Get flag.
+				boolean omitted = checkOmitOrChooseSignals.isSelected();
+				
 				// Check if the signal is omitted.
-				synchronized (omittedSignals) {
-					if (omittedSignals.contains(signal)) {
+				synchronized (omittedOrChosenSignals) {
+					if (omitted omittedOrChosenSignals.contains(signal)) {
 						return;
 					}
 				}

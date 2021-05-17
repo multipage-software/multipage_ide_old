@@ -360,7 +360,6 @@ public class ConditionalEvents {
 	
 				// Wait for a new message.
 				newMessage = !Lock.waitFor(dispatchLock, dispatchLockTimeoutMs);
-				dispatchLock = new Lock();
 				
 				// Pop new message.
 				if (newMessage) {

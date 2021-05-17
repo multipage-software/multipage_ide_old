@@ -125,6 +125,37 @@ public class Lock {
 		
 		notify(lock, null);
 	}
+
+	/**
+	 * Notify lock and write a message to log
+	 * @param lock
+	 * @param logMessage
+	 */
+	public static void notifyAll(Lock lock, String logMessage) {
+		
+		synchronized (lock) {
+			lock.notifyAll();
+			lock.notified = true;
+			//j.log("err", "NTF " + lock.id);
+			if (logMessage != null)
+				j.log(logMessage);
+		}
+		// Switch to another thread
+		try {
+			Thread.sleep(0);
+		}
+		catch (InterruptedException e) {
+		}
+	}
+	
+	/**
+	 * Notify lock
+	 * @param lock
+	 */
+	public static void notifyAll(Lock lock) {
+		
+		notifyAll(lock, null);
+	}
 	
 	/**
 	 * Get text representation of the lock state
