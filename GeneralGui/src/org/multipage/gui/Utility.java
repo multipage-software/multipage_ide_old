@@ -4572,4 +4572,21 @@ public class Utility {
 		byte[] decodedBytes = Base64.getDecoder().decode(base64String);
 		return decodedBytes;
 	}
+	
+	/**
+	 * Helper function that creates a hash set from variable arguments.
+	 * @param setItems
+	 * @return
+	 */
+	public static<T> HashSet<T> makeSet(T ... setItems) {
+		
+		HashSet<T> theSet = new HashSet<T>();
+		
+		// Fill the set with input items.
+		for (T item : setItems) {
+			theSet.add(item);
+		}
+		
+		return theSet;
+	}
 }

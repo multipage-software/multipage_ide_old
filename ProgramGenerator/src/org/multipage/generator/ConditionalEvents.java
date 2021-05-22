@@ -422,6 +422,9 @@ public class ConditionalEvents {
 			// Get message signal.
 			Signal signal = incomingMessage.ref.signal;
 			
+			// Break point managed by log.
+			LoggingDialog.breakPoint(signal);
+			
 			// On special signals skip use special event invocation.
 			if (signal.isSpecial()) {
 				invokeSpecialEvents(incomingMessage.ref);
@@ -519,6 +522,9 @@ public class ConditionalEvents {
 			
 			// Let the incoming message survive till expiration time. When it survives invoke the event action.
 			boolean messageSurvived = letSurviveMessage(message, currentTime, expirationTime);
+			
+			// Break point managed by log.
+			LoggingDialog.breakPoint(message.signal);
 			
 			// If the message survived, invoke the event on Swing thread and write log.
 			if (messageSurvived) {

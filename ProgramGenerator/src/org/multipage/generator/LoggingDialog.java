@@ -6,14 +6,11 @@
  */
 package org.multipage.generator;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Rectangle;
 import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -59,6 +56,13 @@ import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
+import org.multipage.util.j;
+import javax.swing.JPopupMenu;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JMenuItem;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 /**
  * 
@@ -71,6 +75,8 @@ public class LoggingDialog extends JDialog {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	//$hide>>$
 	
 	/**
 	 * Events tree update interval in milliseconds.
@@ -96,6 +102,11 @@ public class LoggingDialog extends JDialog {
 	 * Dark green color constant.
 	 */
 	private static final Color DARK_GREEN = new Color(0, 128, 0);
+	
+	/**
+	 * A set of available break point classes.
+	 */
+	private static final HashSet<Class<?>> availableBreakPointClasses = Utility.makeSet(Signal.class, Message.class, LoggedEvent.class);
 
 	/**
 	 * Set default state.
@@ -209,7 +220,6 @@ public class LoggingDialog extends JDialog {
 	 */
 	private static HashSet<Signal> omittedOrChosenSignals = new HashSet<Signal>();
 	
-	// $hide>>$
 	/**
 	 * Singleton dialog object.
 	 */
@@ -221,6 +231,11 @@ public class LoggingDialog extends JDialog {
 	private static final int messageLimit = 20;
 	
 	/**
+	 * Break point matching object.
+	 */
+	private static HashSet<Object> breakPointMatchObjects = new HashSet<Object>();
+	
+	/**
 	 * Initialize this dialog.
 	 */
 	public static void initialize(Component parent) {
@@ -230,24 +245,24 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Tree view for logged events.
-	 */
-	private JTree tree;
-	
-	/**
 	 * Tree model for displaying logged events.
 	 */
-	private DefaultTreeModel treeModel;
+	private DefaultTreeModel eventTreeModel = null;
+	
+	/**
+	 * List model of break points set.
+	 */
+	private DefaultListModel listBreakPointsModel = null;
 	
 	/**
 	 * Root node of the events tree.
 	 */
-	private DefaultMutableTreeNode treeRootNode;
+	private DefaultMutableTreeNode treeRootNode = null;
 	
 	/**
 	 * Update tree timer.
 	 */
-	private Timer updateTimer;
+	private Timer updateTimer = null;
 
 	//$hide<<$
 	
@@ -256,12 +271,23 @@ public class LoggingDialog extends JDialog {
 	 */
 	protected JTextArea textAreaDescription;
 	private JTabbedPane tabbedPane;
-	private JList<Signal> listOmittedSignals;
 	private DefaultListModel<Signal> listModelOmittedSignals;
-	private JEditorPane editorPaneDescription;
+	private JPanel panelBreakPoints;
+	private JList listBreakPoints;
+	private JToolBar toolBarBreakPoints;
+	private JPanel panelEvents;
+	private JToolBar toolBarEvents;
 	private JSplitPane splitPaneEvents;
+	private JEditorPane editorPaneDescription;
+	private JScrollPane scrollPaneEvents;
+	private JTree treeEvents;
+	private JPanel panelOmitOrChooseSignals;
 	private JCheckBox checkOmitOrChooseSignals;
-	private JToolBar toolBar;
+	private JScrollPane scrollPaneOmitOrChoose;
+	private JList<Signal> listOmittedOrChosenSignals;
+	private JPanel panelMessages;
+	private JPopupMenu popupMenu;
+	private JMenuItem menuAddBreakPoint;
 	
 	/**
 	 * Show dialog.
@@ -304,73 +330,106 @@ public class LoggingDialog extends JDialog {
 		springLayout.putConstraint(SpringLayout.EAST, tabbedPane, -3, SpringLayout.EAST, getContentPane());
 		getContentPane().add(tabbedPane);
 		
-		textAreaDescription = new JTextArea();
-		
-		JScrollPane scrollPaneMessages = new JScrollPane();
-		scrollPaneMessages.setBorder(null);
-		tabbedPane.addTab("org.multipage.generator.textLoggedMessages", null, scrollPaneMessages, null);
-		springLayout.putConstraint(SpringLayout.NORTH, scrollPaneMessages, 332, SpringLayout.NORTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, scrollPaneMessages, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.SOUTH, scrollPaneMessages, -10, SpringLayout.SOUTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, scrollPaneMessages, -10, SpringLayout.EAST, getContentPane());
-		scrollPaneMessages.setViewportView(textAreaDescription);
-		
-		splitPaneEvents = new JSplitPane();
-		splitPaneEvents.setResizeWeight(0.8);
-		splitPaneEvents.setOrientation(JSplitPane.VERTICAL_SPLIT);
-		tabbedPane.addTab("org.multipage.generator.textLoggedConditionalEvents", null, splitPaneEvents, null);
-		
-		JScrollPane scrollPaneEvents = new JScrollPane();
-		splitPaneEvents.setLeftComponent(scrollPaneEvents);
-		
-		tree = new JTree();
+		treeEvents = new JTree();
 		DefaultTreeSelectionModel selectionModel = new DefaultTreeSelectionModel();
 		selectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-		tree.setSelectionModel(selectionModel);
-		tree.addTreeSelectionListener(new TreeSelectionListener() {
+		treeEvents.setSelectionModel(selectionModel);
+		treeEvents.addTreeSelectionListener(new TreeSelectionListener() {
 			public void valueChanged(TreeSelectionEvent e) {
 				onEventSelection();
 			}
 		});
-		scrollPaneEvents.setViewportView(tree);
 		
-		toolBar = new JToolBar();
-		toolBar.setFloatable(false);
-		scrollPaneEvents.setColumnHeaderView(toolBar);
+		panelMessages = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textLoggedMessages", null, panelMessages, null);
+		panelMessages.setLayout(new BorderLayout(0, 0));
 		
-		JScrollPane scrollPaneDescription = new JScrollPane();
-		splitPaneEvents.setRightComponent(scrollPaneDescription);
+		JScrollPane scrollPaneMessages = new JScrollPane();
+		panelMessages.add(scrollPaneMessages, BorderLayout.CENTER);
+		
+		JTextArea textAreaDescription1 = new JTextArea();
+		scrollPaneMessages.setViewportView(textAreaDescription1);
+		
+		panelEvents = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textLoggedConditionalEvents", null, panelEvents, null);
+		panelEvents.setLayout(new BorderLayout(0, 0));
+		
+		toolBarEvents = new JToolBar();
+		toolBarEvents.setFloatable(false);
+		panelEvents.add(toolBarEvents, BorderLayout.NORTH);
+		
+		splitPaneEvents = new JSplitPane();
+		splitPaneEvents.setResizeWeight(0.7);
+		splitPaneEvents.setOrientation(JSplitPane.VERTICAL_SPLIT);
+		panelEvents.add(splitPaneEvents, BorderLayout.CENTER);
 		
 		editorPaneDescription = new JEditorPane();
 		editorPaneDescription.setContentType("text/html");
-		editorPaneDescription.setEditable(false);
-		scrollPaneDescription.setViewportView(editorPaneDescription);
+		splitPaneEvents.setRightComponent(editorPaneDescription);
 		
-		JScrollPane scrollPaneOmittedSignals = new JScrollPane();
-		scrollPaneOmittedSignals.setBorder(null);
-		tabbedPane.addTab("org.multipage.generator.textOmittedSignals", null, scrollPaneOmittedSignals, null);
+		scrollPaneEvents = new JScrollPane();
+		splitPaneEvents.setLeftComponent(scrollPaneEvents);
 		
-		listOmittedSignals = new JList();
-		listOmittedSignals.addMouseListener(new MouseAdapter() {
+		treeEvents = new JTree();
+		treeEvents.addTreeSelectionListener(new TreeSelectionListener() {
+			public void valueChanged(TreeSelectionEvent e) {
+				onEventSelection();
+			}
+		});
+		scrollPaneEvents.setViewportView(treeEvents);
+		
+		popupMenu = new JPopupMenu();
+		addPopup(treeEvents, popupMenu);
+		
+		menuAddBreakPoint = new JMenuItem("org.multipage.generator.menuAddLogBreakPoint");
+		menuAddBreakPoint.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onAddBreakPoint();
+			}
+		});
+		popupMenu.add(menuAddBreakPoint);
+		
+		panelOmitOrChooseSignals = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textOmitOrChooseSignals", null, panelOmitOrChooseSignals, null);
+		panelOmitOrChooseSignals.setLayout(new BorderLayout(0, 0));
+		
+		JPanel panelTopOmitOrChoose = new JPanel();
+		panelOmitOrChooseSignals.add(panelTopOmitOrChoose, BorderLayout.NORTH);
+		
+		checkOmitOrChooseSignals = new JCheckBox("org.multipage.generator.textOmitOrChoose");
+		checkOmitOrChooseSignals.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onOmitChooseSignals();
+			}
+		});
+		panelTopOmitOrChoose.add(checkOmitOrChooseSignals);
+		
+		scrollPaneOmitOrChoose = new JScrollPane();
+		panelOmitOrChooseSignals.add(scrollPaneOmitOrChoose, BorderLayout.CENTER);
+		
+		listOmittedOrChosenSignals = new JList();
+		listOmittedOrChosenSignals.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				onOmittedOrChosenSignalClick(e);
 			}
 		});
-		scrollPaneOmittedSignals.setViewportView(listOmittedSignals);
+		scrollPaneOmitOrChoose.setViewportView(listOmittedOrChosenSignals);
 		
-		JPanel panel = new JPanel();
-		scrollPaneOmittedSignals.setColumnHeaderView(panel);
+		panelBreakPoints = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textBreakPointsInLogWindow", null, panelBreakPoints, null);
+		panelBreakPoints.setLayout(new BorderLayout(0, 0));
 		
-		checkOmitOrChooseSignals = new JCheckBox("org.multipage.generator.textOmitSignals");
-		checkOmitOrChooseSignals.setSelected(true);
-		checkOmitOrChooseSignals.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) 
-			{
-				onOmitChooseSignals();
-			}
-		});
-		panel.add(checkOmitOrChooseSignals);
+		toolBarBreakPoints = new JToolBar();
+		toolBarBreakPoints.setFloatable(false);
+		panelBreakPoints.add(toolBarBreakPoints, BorderLayout.NORTH);
+		
+		JScrollPane scrollPaneBreakPoints = new JScrollPane();
+		scrollPaneBreakPoints.setBorder(null);
+		panelBreakPoints.add(scrollPaneBreakPoints, BorderLayout.CENTER);
+		
+		listBreakPoints = new JList();
+		scrollPaneBreakPoints.setViewportView(listBreakPoints);
 	}
 	
 	/**
@@ -378,20 +437,25 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void postCreate() {
 		
-		createEventToolBar();
+		createToolBars();
 		localize();
 		setIcons();
 		loadDialog();
 		createEventTree();
 		createOmittedSignalList();
+		createBreakPointsList();
 	}
 	
 	/**
-	 * Creates a tool bar with buttons that run actions on logged events tree.
+	 * Creates tool bars with buttons that enable user to run actions for logged items.
 	 */
-	private void createEventToolBar() {
+	private void createToolBars() {
 		
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
+		// A tool bar for logged events.
+		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
+
+		// A tool bar for break points.
+		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
 	}
 	
 	/**
@@ -401,6 +465,7 @@ public class LoggingDialog extends JDialog {
 		
 		Utility.localize(tabbedPane);
 		Utility.localize(checkOmitOrChooseSignals);
+		Utility.localize(menuAddBreakPoint);
 	}
 	
 	/**
@@ -409,9 +474,10 @@ public class LoggingDialog extends JDialog {
 	private void setIcons() {
 		
 		setIconImage(Images.getImage("org/multipage/generator/images/main_icon.png"));
+		menuAddBreakPoint.setIcon(Images.getIcon("org/multipage/generator/images/breakpoint.png"));
 		
 		// Set tree icons.
-		DefaultTreeCellRenderer renderer = (DefaultTreeCellRenderer) tree.getCellRenderer();
+		DefaultTreeCellRenderer renderer = (DefaultTreeCellRenderer) treeEvents.getCellRenderer();
 		renderer.setOpenIcon(null);
 		renderer.setClosedIcon(null);
 		renderer.setLeafIcon(null);
@@ -449,12 +515,26 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * On close dialog.
+	 * Add popup menu.
+	 * @param component
+	 * @param popup
 	 */
-	protected void onClose() {
-		
-		// Save dialog state.
-		saveDialog();
+	private static void addPopup(Component component, final JPopupMenu popup) {
+		component.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
 	}
 	
 	/**
@@ -464,11 +544,11 @@ public class LoggingDialog extends JDialog {
 		
 		// Create and set tree model.
 		treeRootNode = new DefaultMutableTreeNode();
-		treeModel = new DefaultTreeModel(treeRootNode);
-		tree.setModel(treeModel);
+		eventTreeModel = new DefaultTreeModel(treeRootNode);
+		treeEvents.setModel(eventTreeModel);
 		
 		// Set tree node renderer.
-		tree.setCellRenderer(new TreeCellRenderer() {
+		treeEvents.setCellRenderer(new TreeCellRenderer() {
 			
 			// Renderer.
 			RendererJLabel renderer = new RendererJLabel();
@@ -556,7 +636,7 @@ public class LoggingDialog extends JDialog {
 				listModelOmittedSignals.addElement(signal);
 			});
 		
-		listOmittedSignals.setModel(listModelOmittedSignals);
+		listOmittedOrChosenSignals.setModel(listModelOmittedSignals);
 		
 		// Create list items renderer.
 		ListCellRenderer<Signal> renderer = new ListCellRenderer<Signal>() {
@@ -586,45 +666,43 @@ public class LoggingDialog extends JDialog {
 				return renderer;
 			}
 		};
-		listOmittedSignals.setCellRenderer(renderer);
+		listOmittedOrChosenSignals.setCellRenderer(renderer);
 	}
 	
 	/**
-	 * On omitted/chosen check box click.
+	 * Create list of break points.
 	 */
-	protected void onOmitChooseSignals() {
+	private void createBreakPointsList() {
 		
-		// Redraw the window.
-		repaint();
-	}
-
-	
-	/**
-	 * On omitted/chosen signal click.
-	 * @param event 
-	 */
-	protected void onOmittedOrChosenSignalClick(MouseEvent event) {
+		// Create and assign list model.
+		listBreakPointsModel = new DefaultListModel();
+		listBreakPoints.setModel(listBreakPointsModel);
 		
-		// Check double click.
-		if (event.getClickCount() != 2) {
-			return;
-		}
-		
-		synchronized (omittedOrChosenSignals) {
+		// Create items renderer.
+		listBreakPoints.setCellRenderer(new ListCellRenderer() {
 			
-			// Add/remove omitted signal.
-			Signal signal = listOmittedSignals.getSelectedValue();
+			// Rendered label.
+			private RendererJLabel renderer = new RendererJLabel();
 			
-			if (!omittedOrChosenSignals.contains(signal)) {
-				omittedOrChosenSignals.add(signal);
+			// Constructor.
+			{
+				// Set icon.
+				renderer.setIcon(Images.getIcon("org/multipage/generator/images/breakpoint.png"));
+			};
+			
+			// Callback method.
+			@Override
+			public Component getListCellRendererComponent(JList list, Object breakPointObject, int index, boolean isSelected,
+					boolean cellHasFocus) {
+				
+				// Set break point caption.
+				renderer.setText(breakPointObject.toString());
+				
+				// Set renderer.
+				renderer.set(isSelected, cellHasFocus, index);
+				return renderer;
 			}
-			else {
-				omittedOrChosenSignals.remove(signal);
-			}
-			
-			// Redraw list of signals.
-			listOmittedSignals.updateUI();
-		}
+		});
 	}
 	
 	/**
@@ -633,10 +711,10 @@ public class LoggingDialog extends JDialog {
 	 */
 	protected void onEventSelection() {
 		
-		synchronized (tree) {
+		synchronized (treeEvents) {
 			
 			// Get selected tree item.
-			DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) treeEvents.getLastSelectedPathComponent();
 			if (node == null) {
 				return;
 			}
@@ -976,7 +1054,7 @@ public class LoggingDialog extends JDialog {
 					
 					// Set selection path.
 					TreePath treePath = new TreePath(treeNodes);
-					tree.setSelectionPath(treePath);
+					treeEvents.setSelectionPath(treePath);
 					
 					return;
 				}
@@ -985,7 +1063,7 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Check if the vents object area equal.
+	 * Check if the events object area equal.
 	 * @param eventObject1
 	 * @param eventObject2
 	 * @return
@@ -995,6 +1073,9 @@ public class LoggingDialog extends JDialog {
 		// Check null objects.
 		if (eventObject1 == null) {
 			return eventObject2 == null;
+		}
+		else if (eventObject2 == null) {
+			return false;
 		}
 		
 		// Check objects types.
@@ -1012,18 +1093,29 @@ public class LoggingDialog extends JDialog {
 		// Perform standard check.
 		return eventObject1.equals(eventObject2);
 	}
-
+	
+	/**
+	 * Add break point object.
+	 * @param breakPointObject
+	 */
+	private void addBreakPoint(Object breakPointObject) {
+		
+		// Add the input object into breakpoints set and update GUI list that displays the break points.
+		breakPointMatchObjects.add(breakPointObject);
+		updateBreakPointsList(breakPointMatchObjects);
+	}
+	
 	/**
 	 * Reload event tree.
 	 * @param events
 	 */
 	private void updateEventTree(LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>> events) {
 		
-		synchronized (tree) {
+		synchronized (treeEvents) {
 			
 			// Save current selection.
 			DefaultMutableTreeNode selectedNode = null;
-			TreePath selectedPath = tree.getSelectionPath();
+			TreePath selectedPath = treeEvents.getSelectionPath();
 			
 			if (selectedPath != null) {
 				selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
@@ -1094,12 +1186,28 @@ public class LoggingDialog extends JDialog {
 			});
 			
 			// Reload the tree model.
-			treeModel.reload(treeRootNode);
+			eventTreeModel.reload(treeRootNode);
 			// Expand all nodes.
-			Utility.expandAll(tree, true);
+			Utility.expandAll(treeEvents, true);
 			// Restore selection.
 			restoreEventSelection(selectedNode);
 		}
+	}
+	
+	/**
+	 * Update the list of break points.
+	 * @param breakPointObjects
+	 */
+	private void updateBreakPointsList(HashSet<Object> breakPointObjects) {
+		
+		// Clear the model.
+		listBreakPointsModel.clear();
+		
+		// Add break points.
+		listBreakPointsModel.addAll(breakPointObjects);
+		
+		// Repaint GUI.
+		listBreakPoints.updateUI();
 	}
 	
 	/**
@@ -1117,9 +1225,121 @@ public class LoggingDialog extends JDialog {
 			events.clear();
 		}
 		
-		synchronized (tree) {
+		synchronized (treeEvents) {
 			// Update the events tree.
 			updateEventTree(events);
+		}
+	}
+	
+	/**
+	 * On omitted/chosen signal click.
+	 * @param event 
+	 */
+	protected void onOmittedOrChosenSignalClick(MouseEvent event) {
+		
+		// Check double click.
+		if (event.getClickCount() != 2) {
+			return;
+		}
+		
+		synchronized (omittedOrChosenSignals) {
+			
+			// Add/remove omitted signal.
+			Signal signal = listOmittedOrChosenSignals.getSelectedValue();
+			
+			if (!omittedOrChosenSignals.contains(signal)) {
+				omittedOrChosenSignals.add(signal);
+			}
+			else {
+				omittedOrChosenSignals.remove(signal);
+			}
+			
+			// Redraw list of signals.
+			listOmittedOrChosenSignals.updateUI();
+		}
+	}
+	
+	/**
+	 * On omitted/chosen check box click.
+	 */
+	protected void onOmitChooseSignals() {
+		
+		// Redraw the window.
+		repaint();
+	}
+	
+	/**
+	 * Add break point.
+	 */
+	protected void onAddBreakPoint() {
+		// TODO Auto-generated method stub
+		
+		// Get selected event object.
+		TreePath selectedPath = treeEvents.getSelectionPath();
+		if (selectedPath == null) {
+			return;
+		}
+		
+		// Get tree node break point object.
+		DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+		Object breakPointObject = treeNode.getUserObject();
+		
+		if (breakPointObject == null) {
+			breakPointObject = "";
+		}
+		
+		Class<?> breakPointClass = breakPointObject.getClass();
+		String breakPointClassName = breakPointClass.getSimpleName();
+		
+		// Check available break point type.
+		if (!availableBreakPointClasses.contains(breakPointClass)) {
+			Utility.show(this, "org.multipage.generator.textCannotAddLogBreakPointClass", breakPointClassName);
+			return;
+		}
+		
+		// Ask user.
+		if (!Utility.askParam(this, "org.multipage.generator.textShallAddLogBreakPoint", breakPointClassName)) {
+			return;
+		}
+		
+		// Add the break point to the list.
+		addBreakPoint(breakPointObject);
+	}
+	
+	/**
+	 * Clear break points.
+	 */
+	private void onClearBreakPoints() {
+		// TODO Auto-generated method stub
+	}
+	
+	/**
+	 * On close dialog.
+	 */
+	protected void onClose() {
+		
+		// Save dialog state.
+		saveDialog();
+	}
+	
+	/**
+	 * Breakpoint managed by this log window.
+	 * @param breakPointObject
+	 */
+	public static void breakPoint(Object breakPointObject) {
+		
+		synchronized (breakPointMatchObjects) {
+				
+			// Check the break point object.
+			for (Object breakPointMatch : breakPointMatchObjects) {
+			
+				if (!breakPointObject.equals(breakPointMatch)) {
+					return;
+				}
+				
+				// TODO: place a new breakpoint at the following line.
+				j.log("BREAK POINT");
+			}
 		}
 	}
 }
