@@ -7,6 +7,8 @@
 
 package org.multipage.gui;
 
+import java.awt.event.ActionEvent;
+
 import javax.swing.*;
 
 import org.multipage.util.Resources;
@@ -27,6 +29,38 @@ public class ToolBarKit {
 		// Add StatusBar Button and set action adapter.
 		JButton toolBarButton;
 		toolBarButton = toolBarObject.add(new ActionAdapter(notifyObject, methodToInvoke, (Class<?>[])null));
+		toolBarButton.setToolTipText(Resources.getString(toolTipResoure));
+		
+		ImageIcon icon = Images.getIcon(iconPictureName);
+		if (icon != null) {
+			toolBarButton.setIcon(icon);
+		}
+		else {
+			String format = Resources.getString("org.multipage.gui.errorCannotLoadToolbarIcon");
+			String message = String.format(format, iconPictureName);
+			JOptionPane.showMessageDialog(null, message);
+		}
+		
+		return toolBarButton;
+	}
+	
+	/**
+	 * Adds StatusBar button
+	 */
+	@SuppressWarnings("serial")
+	public static JButton addToolBarButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure, Runnable actionLambda) {
+	
+		// Add StatusBar Button and set action adapter.
+		JButton toolBarButton;
+		toolBarButton = toolBarObject.add(new AbstractAction() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				// Invoke lambda function.
+				actionLambda.run();
+			}
+		});
 		toolBarButton.setToolTipText(Resources.getString(toolTipResoure));
 		
 		ImageIcon icon = Images.getIcon(iconPictureName);

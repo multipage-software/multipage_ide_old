@@ -10,6 +10,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -25,13 +27,16 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
@@ -51,17 +56,9 @@ import javax.swing.tree.TreeSelectionModel;
 import org.multipage.generator.ConditionalEvents.Message;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-import org.multipage.util.Resources;
-import org.multipage.util.j;
-
-import javax.swing.JPanel;
-import javax.swing.JCheckBox;
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
 /**
  * 
@@ -91,6 +88,11 @@ public class LoggingDialog extends JDialog {
 	private static Integer eventsWindowSplitter;
 	
 	/**
+	 * Selected tab.
+	 */
+	private static Integer selectedTab;
+	
+	/**
 	 * Dark green color constant.
 	 */
 	private static final Color DARK_GREEN = new Color(0, 128, 0);
@@ -102,6 +104,7 @@ public class LoggingDialog extends JDialog {
 		
 		bounds = new Rectangle();
 		eventsWindowSplitter = -1;
+		selectedTab = 0;
 	}
 
 	/**
@@ -116,6 +119,7 @@ public class LoggingDialog extends JDialog {
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
 		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
+		selectedTab = inputStream.readInt();
 	}
 
 	/**
@@ -129,13 +133,8 @@ public class LoggingDialog extends JDialog {
 		outputStream.writeObject(bounds);
 		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
+		outputStream.writeInt(selectedTab);
 	}
-	
-	/**
-	 * String constants.
-	 */
-	private static String scheduledNodesCaption = null;
-	private static String invokedNodesCaption = null;
 	
 	/**
 	 * Logged message class.
@@ -179,25 +178,19 @@ public class LoggingDialog extends JDialog {
 	private static class LoggedEvent {
 		
 		/**
+		 * Invoked event handle.
+		 */
+		public EventHandle eventHandle = null;
+		
+		/**
 		 * Incoming message.
 		 */
-		public Message incomingMessage = null;
-		
-		/**
-		 * Scheduled event variants. 
-		 */
-		public LinkedList<ScheduledEvent> scheduledEventVariants = null;
-		
-		/**
-		 * Invoked event variants.
-		 */
-		public LinkedList<ScheduledEvent> invokedEventVariants = null;
+		public Message message = null;
 		
 		/**
 		 * Error flags.
 		 */
-		public boolean missingIncomingMessage = false;
-		public boolean missingScheduledEvent = false;
+		public Long executionTime = null;
 	}
 	
 	/**
@@ -207,8 +200,9 @@ public class LoggingDialog extends JDialog {
 	
 	/**
 	 * Logged events.
+	 * Maps: Signal -> Message -> Execution time -> Event
 	 */
-	private static LinkedHashMap<Signal, LinkedList<LoggedEvent>> events = new LinkedHashMap<Signal, LinkedList<LoggedEvent>>();
+	private static LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>> events = new LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>>();
 	
 	/**
 	 * Omitted signals.
@@ -267,6 +261,7 @@ public class LoggingDialog extends JDialog {
 	private JEditorPane editorPaneDescription;
 	private JSplitPane splitPaneEvents;
 	private JCheckBox checkOmitOrChooseSignals;
+	private JToolBar toolBar;
 	
 	/**
 	 * Show dialog.
@@ -339,6 +334,10 @@ public class LoggingDialog extends JDialog {
 		});
 		scrollPaneEvents.setViewportView(tree);
 		
+		toolBar = new JToolBar();
+		toolBar.setFloatable(false);
+		scrollPaneEvents.setColumnHeaderView(toolBar);
+		
 		JScrollPane scrollPaneDescription = new JScrollPane();
 		splitPaneEvents.setRightComponent(scrollPaneDescription);
 		
@@ -379,11 +378,20 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void postCreate() {
 		
+		createEventToolBar();
 		localize();
 		setIcons();
 		loadDialog();
-		createTree();
+		createEventTree();
 		createOmittedSignalList();
+	}
+	
+	/**
+	 * Creates a tool bar with buttons that run actions on logged events tree.
+	 */
+	private void createEventToolBar() {
+		
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
 	}
 	
 	/**
@@ -427,6 +435,7 @@ public class LoggingDialog extends JDialog {
 		else {
 			splitPaneEvents.setDividerLocation(0.8);
 		}
+		tabbedPane.setSelectedIndex(selectedTab);
 	}
 	
 	/**
@@ -436,6 +445,7 @@ public class LoggingDialog extends JDialog {
 		
 		bounds = getBounds();
 		eventsWindowSplitter = splitPaneEvents.getDividerLocation();
+		selectedTab = tabbedPane.getSelectedIndex();
 	}
 	
 	/**
@@ -450,22 +460,14 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Create a tree with categorized events.
 	 */
-	private void createTree() {
-		
-		// Set string constants.
-		if (scheduledNodesCaption == null) {
-			scheduledNodesCaption = Resources.getString("org.multipage.generator.textLoggedScheduledEvents");
-		}
-		if (invokedNodesCaption == null) {
-			invokedNodesCaption = Resources.getString("org.multipage.generator.textLoggedInvokedEvents");
-		}
+	private void createEventTree() {
 		
 		// Create and set tree model.
 		treeRootNode = new DefaultMutableTreeNode();
 		treeModel = new DefaultTreeModel(treeRootNode);
 		tree.setModel(treeModel);
 		
-		// Set tree node renederer.
+		// Set tree node renderer.
 		tree.setCellRenderer(new TreeCellRenderer() {
 			
 			// Renderer.
@@ -488,20 +490,23 @@ public class LoggingDialog extends JDialog {
 					Color nodeColor = Color.BLACK;
 					
 					// Set node text.
+					// On the signal.
 					if (eventObject instanceof Signal) {
 						
 						Signal signal = (Signal) eventObject;
 						renderer.setText(signal.name());
 						nodeColor = Color.RED;
 					}
+					// On the message.
 					else if (eventObject instanceof Message) {
 						Message message = (Message) eventObject;
-						renderer.setText(String.format("[0x%08X] %s", message.hashCode(), Utility.formatTime(message.receiveTime)));
+						renderer.setText(String.format("[0x%08X] %s message", message.hashCode(), Utility.formatTime(message.receiveTime)));
 						nodeColor = DARK_GREEN;
 					}
-					else if (eventObject instanceof ScheduledEvent) {
-						ScheduledEvent scheduledEvent = (ScheduledEvent) eventObject;
-						renderer.setText(String.format("[0x%08X] %s", scheduledEvent.hashCode(), Utility.formatTime(scheduledEvent.executionTime)));
+					// On the logged event.
+					else if (eventObject instanceof LoggedEvent) {
+						LoggedEvent event = (LoggedEvent) eventObject;
+						renderer.setText(String.format("[0x%08X] event", event.hashCode()));
 						nodeColor = Color.BLUE;
 					}
 					// Otherwise...
@@ -529,7 +534,7 @@ public class LoggingDialog extends JDialog {
 			
 			SwingUtilities.invokeLater(() -> {
 				synchronized (events) {
-					updateTree(events);
+					updateEventTree(events);
 				}
 			});
 		});
@@ -633,14 +638,6 @@ public class LoggingDialog extends JDialog {
 			// Get selected tree item.
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
 			if (node == null) {
-				return;
-			}
-			
-			// Get node object.
-			Object userObject = node.getUserObject();
-			if (userObject instanceof String) {
-				
-				tree.clearSelection();
 				return;
 			}
 			
@@ -767,7 +764,7 @@ public class LoggingDialog extends JDialog {
 	 */
 	private String getEventPartDescription(Object eventPart) {
 		
-		String description = null;
+		String description = "";
 		
 		// Get signal description.
 		if (eventPart instanceof Signal) {
@@ -806,23 +803,23 @@ public class LoggingDialog extends JDialog {
 					getReflectionDescription(message.reflection)
 					);
 		}
-		else if (eventPart instanceof ScheduledEvent) {
+		else if (eventPart instanceof LoggedEvent) {
 			
-			ScheduledEvent scheduledEvent = (ScheduledEvent) eventPart;
+			LoggedEvent loggedEvent = (LoggedEvent) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<b>[hashcode] receive time</b>: [0x%08X] %s<br>"
+					+ "<b>[hashcode] event"
 					+ "<b>handle ID</b>: %s<br>"
 					+ "<b>coalesce</b>: %d ms<br>"
 					+ "<b>code</b>: %s<br>"
 					+ "</html>",
-					scheduledEvent.hashCode(), Utility.formatTime(scheduledEvent.executionTime),
-					scheduledEvent.eventHandle.identifier,
-					scheduledEvent.eventHandle.coalesceTimeSpanMs,
-					getReflectionDescription(scheduledEvent.eventHandle.reflection)
+					loggedEvent.hashCode(),
+					loggedEvent.eventHandle.identifier,
+					loggedEvent.eventHandle.coalesceTimeSpanMs,
+					getReflectionDescription(loggedEvent.eventHandle.reflection)
 					);
 		}
-		else {
+		else if (eventPart != null)  {
 			description = eventPart.toString();
 		}
 		return description;
@@ -864,92 +861,72 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Add incoming message and return logged event object.
-	 * @param incommingMessage
+	 * Log event.
+	 * @param message
+	 * @param eventHandle
+	 * @param executionTime
 	 */
-	public static LoggedEvent addMessage(Message incomingMessage) {
+	public static void log(Message message, EventHandle eventHandle, long executionTime) {
+		
+		// Get message signal.
+		Signal signal = message.signal;
+		
+		// Get message map.
+		LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> messageMap = events.get(signal);
+		
+		// Check if the incoming message is missing.
+		boolean missingMessage = messageMap.containsKey(message);
+		message.userObject = new Object [] { "missingMessage", true };
+		
+		// Add missing incoming message
+		if (missingMessage) {
+			messageMap = addMessage(message);
+		}
+		
+		// Try to get execution time map.
+		LinkedHashMap<Long, LinkedList<LoggedEvent>> timeMap = messageMap.get(messageMap);
+		if (timeMap == null) {
+			timeMap = new LinkedHashMap<Long, LinkedList<LoggedEvent>>();
+			messageMap.put(message, timeMap);
+		}
+		
+		// Try to get events list.
+		LinkedList<LoggedEvent> events = timeMap.get(executionTime);
+		if (events == null) {
+			events = new LinkedList<LoggedEvent>();
+			timeMap.put(executionTime, events);
+		}
+		
+		// Append new event.
+		LoggedEvent event = new LoggedEvent();
+		event.message = message;
+		event.eventHandle = eventHandle;
+		event.executionTime = executionTime;
+		
+		events.add(event);
+	}
+	
+	/**
+	 * Add incoming message and return logged event object.
+	 * @param incomingMessage
+	 */
+	public static LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> addMessage(Message incomingMessage) {
 		
 		// Get message signal.
 		Signal signal = incomingMessage.signal;
 		
-		// Create new logged event.
-		LoggedEvent loggedEvent = new LoggedEvent();
-		loggedEvent.incomingMessage = incomingMessage;
-		
-		// Get events mapped to this signal and append a new item.
-		LinkedList<LoggedEvent> loggedEvents = events.get(signal);
-		if (loggedEvents == null) {
-			loggedEvents = new LinkedList<LoggedEvent>();
-			events.put(signal, loggedEvents);
+		// Get messages mapped to this signal and append the incoming message.
+		LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> messageMap = events.get(signal);
+		if (messageMap == null) {
+			messageMap = new LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>();
+			events.put(signal, messageMap);
 		}
 		
-		loggedEvents.add(loggedEvent);
-		return loggedEvent;
-	}
-	
-	/**
-	 * Log scheduled event.
-	 * @param incommingMessage
-	 * @param isInvoked
-	 */
-	public static void log(ScheduledEvent scheduledEvent, boolean isInvoked) {
+		messageMap.put(incomingMessage, null);
 		
-		synchronized (events) {
-			
-			// Get incoming message.
-			Message incomingMessage = scheduledEvent.message;
-			
-			// Get message signal.
-			Signal signal = incomingMessage.signal;
-			
-			// Get events mapped to this signal.
-			LinkedList<LoggedEvent> loggedEvents = events.get(signal);
-			if (loggedEvents == null) {
-				loggedEvents = new LinkedList<LoggedEvent>();
-				events.put(signal, loggedEvents);
-			}
-			
-			// Initialize flags.
-			Obj<Boolean> missingIncommingMessage = new Obj<Boolean>(true);
-			Obj<Boolean> missingScheduledEvent = new Obj<Boolean>(true);
-			
-			// Try to find incoming message between logged events and append new event.
-			loggedEvents.stream().parallel()
-				.filter(event -> event.incomingMessage.equals(incomingMessage))
-				.forEach(foundLoggedEvent -> {
-					
-					// Add this event variant.
-					if (!isInvoked) {
-						if (foundLoggedEvent.scheduledEventVariants == null) {
-							foundLoggedEvent.scheduledEventVariants = new LinkedList<ScheduledEvent>();
-						}
-						foundLoggedEvent.scheduledEventVariants.add(scheduledEvent);
-						
-						// Reset the flags.
-						missingIncommingMessage.ref = false;
-						missingScheduledEvent.ref = false;
-					}
-					else {
-						if (foundLoggedEvent.invokedEventVariants == null) {
-							foundLoggedEvent.invokedEventVariants = new LinkedList<ScheduledEvent>();
-						}
-						foundLoggedEvent.invokedEventVariants.add(scheduledEvent);
-						
-						// Reset the flag.
-						missingIncommingMessage.ref = false;
-					}
-				});
-			
-			// If the incoming message was not found, add new message.
-			if (missingIncommingMessage.ref) {
-				LoggedEvent loggedEvent = addMessage(incomingMessage);
-				
-				loggedEvent.missingIncomingMessage = true;
-				loggedEvent.missingScheduledEvent = missingScheduledEvent.ref;
-			}
-		}
+		return messageMap;
 	}
-	
+		
 	/**
 	 * Compile messages.
 	 */
@@ -1037,10 +1014,10 @@ public class LoggingDialog extends JDialog {
 	}
 
 	/**
-	 * Reload events tree.
+	 * Reload event tree.
 	 * @param events
 	 */
-	private void updateTree(LinkedHashMap<Signal, LinkedList<LoggedEvent>> events) {
+	private void updateEventTree(LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>> events) {
 		
 		synchronized (tree) {
 			
@@ -1056,54 +1033,64 @@ public class LoggingDialog extends JDialog {
 			treeRootNode.removeAllChildren();
 			
 			// Add events.
-			events.forEach((signal, loggedEvents) -> {
+			events.forEach((signal, messageMap) -> {
 				
-				// Get flag.
-				boolean omitted = checkOmitOrChooseSignals.isSelected();
+				// Get signal omitted flag.
+				boolean omitSignal = checkOmitOrChooseSignals.isSelected();
 				
-				// Check if the signal is omitted.
+				// Check if the signal is omitted/chosen.
 				synchronized (omittedOrChosenSignals) {
-					if (omitted omittedOrChosenSignals.contains(signal)) {
-						return;
+					
+					// Check if the signal is omitted.
+					if (omitSignal) {
+						if (omittedOrChosenSignals.contains(signal)) {
+							return;
+						}
+					}
+					// Check if the signal is chosen.
+					else {
+						if (!omittedOrChosenSignals.contains(signal)) {
+							return;
+						}
 					}
 				}
 				
-				// Create signal node and insert it into the root node.
+				// Create signal.
 				DefaultMutableTreeNode signalNode = new DefaultMutableTreeNode(signal);
 				treeRootNode.add(signalNode);
 				
-				// Create message and event nodes in the signal node.
-				loggedEvents.forEach(loggedEvent -> {
-					
-					// Add message node.
-					Message incommingMessage = loggedEvent.incomingMessage;
-					DefaultMutableTreeNode messageNode = new DefaultMutableTreeNode(incommingMessage);
-					signalNode.add(messageNode);
-					
-					// Add scheduled event variants.
-					DefaultMutableTreeNode scheduledNodes = new DefaultMutableTreeNode(scheduledNodesCaption);
-					messageNode.add(scheduledNodes);
-					if (loggedEvent.scheduledEventVariants != null) {
-						loggedEvent.scheduledEventVariants.forEach(event -> {
-							
-							// Create event node and insert it into the message node.
-							DefaultMutableTreeNode eventNode = new DefaultMutableTreeNode(event);
-							scheduledNodes.add(eventNode);
-						});
-					}
-					
-					// Add invoked event variants.
-					DefaultMutableTreeNode invokedNodes = new DefaultMutableTreeNode(invokedNodesCaption);
-					messageNode.add(invokedNodes);
-					if (loggedEvent.invokedEventVariants != null) {
-						loggedEvent.invokedEventVariants.forEach(event -> {
-							
-							// Create event node and insert it into the message node.
-							DefaultMutableTreeNode eventNode = new DefaultMutableTreeNode(event);
-							invokedNodes.add(eventNode);
-						});
-					}
-				});
+				// Create message nodes.
+				if (messageMap != null) {
+					messageMap.forEach((message, executionTimeMap) -> {
+						
+						// Add message node.
+						DefaultMutableTreeNode messageNode = new DefaultMutableTreeNode(message);
+						signalNode.add(messageNode);
+						
+						// Create execution time nodes.
+						if (executionTimeMap != null) {
+							executionTimeMap.forEach((executionTime, eventList) -> {
+								
+								// Get execution time string representation.
+								String executionTimeText = Utility.formatTime(executionTime);
+								
+								// Add time node.
+								DefaultMutableTreeNode timeNode = new DefaultMutableTreeNode(executionTimeText);
+								messageNode.add(timeNode);
+								
+								// Create event nodes.
+								if (eventList != null) {
+									eventList.forEach(event -> {
+										
+										// Add event node.
+										DefaultMutableTreeNode eventNode = new DefaultMutableTreeNode(event);
+										timeNode.add(eventNode);
+									});
+								}
+							});
+						}
+					});
+				}
 			});
 			
 			// Reload the tree model.
@@ -1112,6 +1099,27 @@ public class LoggingDialog extends JDialog {
 			Utility.expandAll(tree, true);
 			// Restore selection.
 			restoreEventSelection(selectedNode);
+		}
+	}
+	
+	/**
+	 * Clear logged events.
+	 */
+	private void onClearEvents() {
+		
+		// Ask user.
+		if (!Utility.ask(this, "org.multipage.generator.tooltipShallClearLoggedEvents")) {
+			return;
+		}
+		
+		synchronized (events) {
+			// Clear events.
+			events.clear();
+		}
+		
+		synchronized (tree) {
+			// Update the events tree.
+			updateEventTree(events);
 		}
 	}
 }

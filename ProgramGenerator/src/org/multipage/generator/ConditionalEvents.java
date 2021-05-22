@@ -8,11 +8,15 @@ package org.multipage.generator;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
@@ -83,28 +87,31 @@ public class ConditionalEvents {
 	public static class Message {
 		
 		// A signal for the message.
-		Signal signal;
+		public Signal signal;
 
 		// Source of the message.
-		Object source;
+		public Object source;
 		
 		// Target of the message.
-		Object target;
+		public Object target;
 		
 		// Related information sent with the message.
-		Object relatedInfo;
+		public Object relatedInfo;
 		
 		// Additional information added to the above related information. 
-		Object [] additionalInfos;
+		public Object [] additionalInfos;
 		
 		// Message source reflection.
-		StackTraceElement reflection;
+		public StackTraceElement reflection;
 		
 		// Receive time.
-		Long receiveTime;
+		public Long receiveTime;
 		
 		// Event handler key.
 		public Object key;
+		
+		// User object.
+		public Object userObject;
 		
 		/**
 		 * Dump message.
@@ -134,27 +141,63 @@ public class ConditionalEvents {
 		 */
 		@Override
 		public boolean equals(Object obj) {
+			
+			// Check references.
 			if (this == obj)
 				return true;
+			
+			// Check missing value.
 			if (obj == null)
 				return false;
+			
+			// Check object types.
 			if (getClass() != obj.getClass())
 				return false;
+			
+			// Get message.
 			Message other = (Message) obj;
+			
+			// Check signal.
 			if (signal != other.signal)
 				return false;
-			if (reflection == null) {
-				if (other.reflection != null)
-					return false;
-			} else if (!reflection.getFileName().equals(other.reflection.getFileName()))
-				return false;
-			 else if (reflection.getLineNumber() != other.reflection.getLineNumber())
-					return false;
+			
+			// Check source.
 			if (source == null) {
 				if (other.source != null)
 					return false;
 			} else if (!source.equals(other.source))
 				return false;
+			
+			// Check target.
+			if (target == null) {
+				if (other.target != null)
+					return false;
+			} else if (!target.equals(other.target))
+				return false;
+			
+			// Check relatedInfo.
+			if (relatedInfo == null) {
+				if (other.relatedInfo != null)
+					return false;
+			} else if (!relatedInfo.equals(other.relatedInfo))
+				return false;
+			
+			// Check additionalInfos.
+			if (additionalInfos == null) {
+				if (other.additionalInfos != null)
+					return false;
+			} else {
+				int count = additionalInfos.length;
+				int otherCount = other.additionalInfos.length;
+				
+				if (otherCount != count)
+					return false;
+				
+				// Perform deep check.
+				while(--count >= 0)
+					if (!additionalInfos[count].equals(other.additionalInfos[count]))
+						return false;
+			}
 			return true;
 		}
 		
@@ -285,11 +328,6 @@ public class ConditionalEvents {
 																							LinkedHashMap<Object, LinkedList<EventHandle>>>>();
 	
 	/**
-	 * Scheduled events.
-	 */
-	private static LinkedList<ScheduledEvent> scheduledEvents = new LinkedList<ScheduledEvent>();
-	
-	/**
 	 * Main message dispatch thread.
 	 */
 	private static Thread dispatchThread;
@@ -304,6 +342,12 @@ public class ConditionalEvents {
 	 * and unlocked when the new message arrives.
 	 */
 	private static Lock dispatchLock = new Lock();
+	
+	/**
+	 * Surviving messages needed for coalesce of the same messages in given time span.
+	 * ( Expiration time -> Message )
+	 */
+	private static LinkedHashMap<Long, Message> survivingMessages = new LinkedHashMap<Long, Message>();
 	
 	/**
 	 * Static constructor which runs the message dispatch thread.
@@ -345,14 +389,14 @@ public class ConditionalEvents {
 		
 		Obj<Message> incomingMessage = new Obj<Message>(null);
 		
-		// Enter message dispatch loop.
+		// Enter incoming message dispatch loop.
 		while (!stopDispatchMessages) {
 			
-			// Try to pop single incoming message or wait.
+			// Try to pop single incoming message from the message queue or wait for a new incoming message.
 			Boolean newMessage = null;
 			do {
 				
-				// Pop message.
+				// Pop the message and exit the loop.
 				incomingMessage.ref = popMessage();
 				if (incomingMessage.ref != null) {
 					break;
@@ -361,32 +405,28 @@ public class ConditionalEvents {
 				// Wait for a new message.
 				newMessage = !Lock.waitFor(dispatchLock, dispatchLockTimeoutMs);
 				
-				// Pop new message.
+				// Pop the new message.
 				if (newMessage) {
 					incomingMessage.ref = popMessage();
-				}
-				// Invoke old scheduled events.
-				else {
-					invokeScheduledEvents();
 				}
 			}
 			while (incomingMessage.ref == null);
 			
-			// Get current time.
+			// Get current time and save it in the incoming message.
 			final Long currentTime = new Date().getTime();
 			incomingMessage.ref.receiveTime = currentTime;
 			
 			// Log incoming message.
 			LoggingDialog.log(incomingMessage.ref);
 				
-			// Get signal.
+			// Get message signal.
 			Signal signal = incomingMessage.ref.signal;
 			
-			// On special events skip the next complex rules.
+			// On special signals skip use special event invocation.
 			if (signal.isSpecial()) {
 				invokeSpecialEvents(incomingMessage.ref);
 			}
-			// For all matching events...
+			// For all other matching events do ...
 			else {
 				
 				synchronized (conditionalEvents) {
@@ -398,30 +438,24 @@ public class ConditionalEvents {
 							if (keys != null) {
 								keys.forEach((key, eventHandles) -> {
 									
-									// For debug purposes: stop receiving unnecessary events.
-									if (signal.isUnnecessary() && stopReceivingUnnecessary) {
+									if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... a switch for debugging purposes; a condition stops receiving unnecessary events
 										
-										// Do nothing.
+										// Save the message key for debugging purposes.
+										incomingMessage.ref.key = key;
+										
+										// Invoke events associated with the incoming message.
+										// Coalesce same events that arise in given time span.
+										invokeEvents(currentTime, eventHandles, incomingMessage.ref);
 									}
 									else {
 										
-										// Save key for debugging purposes.
-										incomingMessage.ref.key = key;
-										
-										// Schedule events.
-										scheduleEvents(currentTime, eventHandles, incomingMessage.ref);
+										// Do nothing.
 									}
 								});
 							}
 						});
 					}
 				}
-			}
-			
-			if (!scheduledEvents.isEmpty()) {
-				
-				// Invoke events.
-				invokeScheduledEvents();
 			}
 		}
 	}
@@ -466,124 +500,88 @@ public class ConditionalEvents {
 	}
 
 	/**
-	 * Invoke events. Pass the reference to incoming message to the event lambda function.
+	 * Invoke events. Pass a reference to the incoming message to input lambda function.
 	 * @param eventHandles
 	 * @param message
 	 */
-	public static void scheduleEvents(long currentTime, LinkedList<EventHandle> eventHandles, Message message) {
+	public static void invokeEvents(long currentTime, LinkedList<EventHandle> eventHandles, Message message) {
 		
 		// Check input.
-		if (eventHandles == null) {
+		if (eventHandles == null || message == null) {
 			return;
 		}
 		
-		// Schedule events.
+		// Go through input event handles and if the message survives, invoke appropriate action on the Swing thread.
 		for (EventHandle eventHandle : eventHandles) {
 			
-			// Try to get already scheduled and updated event for an event handle and input message.
-			ScheduledEvent scheduledEvent = getUpdatedScheduledEvent(eventHandle, message);
-			if (scheduledEvent == null) {
-				
-				// Schedule new event.
-				scheduledEvent = new ScheduledEvent(currentTime, message, eventHandle);
-				scheduledEvents.add(scheduledEvent);
-				
-				// Log scheduled event.
-				LoggingDialog.log(scheduledEvent, false);
+			// Compute expiration time.
+			long expirationTime = currentTime + eventHandle.coalesceTimeSpanMs;
+			
+			// Let the incoming message survive till expiration time. When it survives invoke the event action.
+			boolean messageSurvived = letSurviveMessage(message, currentTime, expirationTime);
+			
+			// If the message survived, invoke the event on Swing thread and write log.
+			if (messageSurvived) {
+				SwingUtilities.invokeLater(() -> {
+					
+					// Invoke action.
+					eventHandle.action.accept(message);
+					long executionTime = new Date().getTime();
+							
+					// Log the event.
+					logEvent(message, eventHandle, executionTime);
+					LoggingDialog.log(message, eventHandle, executionTime);
+				});
+			}
+			else {
+				j.log("MESSAGE %s HAS BEEN COALESCED", message.signal);
 			}
 		}
-	}
-
-	/**
-	 * Returns coalesced scheduled event for a handle signaled by input signal.
-	 * @param eventHandle
-	 * @param message
-	 * @return 
-	 */
-	private static ScheduledEvent getUpdatedScheduledEvent(EventHandle eventHandle, Message message) {
-		
-		// If the event handle doesn't coalesce messages, return null.
-		if (eventHandle.coalesceTimeSpanMs == null || eventHandle.coalesceTimeSpanMs <= 0L) {
-			return null;
-		}
-		
-		// Get events for same a signaled handle.
-		LinkedList<ScheduledEvent> similarEvents = new LinkedList<ScheduledEvent>();
-		for (ScheduledEvent scheduledEvent : scheduledEvents) {
-			
-			if (scheduledEvent.eventHandle.equals(eventHandle) && scheduledEvent.message.signal.equals(message.signal)) {
-				similarEvents.add(scheduledEvent);
-			}
-		}
-		
-		// Check the resulting list.
-		if (similarEvents.isEmpty()) {
-			return null;
-		}
-		
-		// Get first similar scheduled event and rewrite it with new message.
-		ScheduledEvent scheduledEvent = similarEvents.get(0);
-		scheduledEvent.message = message;
-		scheduledEvent.executionTime = message.receiveTime + eventHandle.coalesceTimeSpanMs;
-		
-		// Remove subsequent events from the list of scheduled events
-		// (not the first event, which has been updated above).
-		similarEvents.remove(0);
-		scheduledEvents.removeAll(similarEvents);
-			
-		// Return updated event.
-		return scheduledEvent;
-	}
-
-	/**
-	 * Invoke remaining events.
-	 */
-	private static void invokeScheduledEvents() {
-		
-		// Get current time.
-		final long currentTime = new Date().getTime();
-		
-		// Initialize.
-		final LinkedList<ScheduledEvent> processedEvents = new LinkedList<ScheduledEvent>();
-		
-		// Invoke actions on the Swing thread.
-		for (ScheduledEvent scheduledEvent : scheduledEvents) {
-			
-			// Check if the event timeout has elapsed.
-			if (currentTime < scheduledEvent.executionTime) {
-				break;
-			}
-			
-			// Invoke the scheduled event action.
-			SwingUtilities.invokeLater(() -> {
-				scheduledEvent.eventHandle.action.accept(scheduledEvent.message);
-				
-				// Log the event.
-				logEvent(scheduledEvent);
-				LoggingDialog.log(scheduledEvent, true);
-			});
-			
-			// Remember processed events.
-			processedEvents.add(scheduledEvent);
-		}
-		
-		// Clear schedule.
-		scheduledEvents.removeAll(processedEvents);
 	}
 	
 	/**
+	 * Let survive the input message till expiration time.
+	 * @param message
+	 * @param currentTime
+	 * @param expirationTime
+	 */
+	private static boolean letSurviveMessage(Message message, long currentTime, long expirationTime) {
+		
+		// Clear expired messages.
+		HashSet<Long> expirationsToRemove = new HashSet<Long>();
+		
+		survivingMessages.entrySet().stream()
+			.filter(item -> item.getKey() < currentTime)
+			.forEach(item -> expirationsToRemove.add(item.getKey()));
+		
+		expirationsToRemove.stream().forEach(exprationTime -> survivingMessages.remove(exprationTime));
+		
+		// Try to find message that equal the input message.
+		List<Entry<Long, Message>> foundEqualMessages = survivingMessages.entrySet().stream()
+			.filter(item -> message.equals(item.getValue()))
+			.collect(Collectors.toList());
+		
+		// If the input message survives, put it to the surviving messages list.
+		boolean messageSurvived = foundEqualMessages.isEmpty();
+		if (messageSurvived) {
+			
+			survivingMessages.put(expirationTime, message);
+		}
+		
+		return messageSurvived;
+	}
+
+	/**
 	 * Log event.
 	 * @param message
-	 * @param eventCondition
 	 * @param eventHandle
+	 * @param executionTime
 	 */
-	private static void logEvent(ScheduledEvent scheduledEvent) {
+	private static void logEvent(Message message, EventHandle eventHandle, long executionTime) {
 		
 		if (!logParameters.enable) {
 			return;
 		}
-		
-		Message message = scheduledEvent.message;
 		
 		if (Signal.displayOrRedrawToolTip.equals(message.signal)
 				|| Signal.removeToolTip.equals(message.signal)) {
@@ -609,13 +607,11 @@ public class ConditionalEvents {
 			return;
 		}
 		
-		EventHandle eventHandle = scheduledEvent.eventHandle;
-		
 		// Full log information.
 		if (logParameters.full) {
 			
 			String receivedTimeString = Utility.formatTime(message.receiveTime);
-			String scheduledTimeString = Utility.formatTime(scheduledEvent.executionTime);
+			String scheduledTimeString = Utility.formatTime(executionTime);
 			
 			j.log("-----------------------------------------------------------------");
 			j.log("Event: %s [Source: %s, OID %d]\t\ttransmitted with %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
@@ -898,8 +894,8 @@ public class ConditionalEvents {
 			reflection.ref = stackElements[3];
 		}
 		
-		// Lambda function that can register the conditional event.
-		Supplier<Object> registerLambda = () -> {
+		// A lambda function that can register conditional event.
+		Supplier<Object> registerEventLambda = () -> {
 			synchronized (conditionalEvents) {
 			
 				// Create auxiliary table from the map.
@@ -917,7 +913,7 @@ public class ConditionalEvents {
 			}
 		};
 		
-		// If the key is a Swing component, use automatic release.
+		// If the key is a Swing component, use automatic registering/release of the event receiver on component creation/disposal.
 		if (key instanceof JComponent) {
 			JComponent component = (JComponent) key;
 			
@@ -926,10 +922,10 @@ public class ConditionalEvents {
 				// Register conditional event listener.
 				@Override
 				public void ancestorAdded(AncestorEvent event) {
-					registerLambda.get();
+					registerEventLambda.get();
 				}
 				
-				// Release all the listeners.
+				// Release all listeners associated with the key.
 				@Override
 				public void ancestorRemoved(AncestorEvent event) {
 					ConditionalEvents.removeReceivers(key);
@@ -943,7 +939,7 @@ public class ConditionalEvents {
 			return key;
 		}
 		else {
-			return registerLambda.get();
+			return registerEventLambda.get();
 		}
 	}
 	
