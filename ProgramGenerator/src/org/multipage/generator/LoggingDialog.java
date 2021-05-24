@@ -11,6 +11,10 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -26,13 +30,15 @@ import java.util.LinkedList;
 import javax.swing.DefaultListModel;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
-import javax.swing.JEditorPane;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
@@ -57,12 +63,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
-import javax.swing.JPopupMenu;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import javax.swing.JMenuItem;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
 /**
  * 
@@ -81,7 +81,12 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Events tree update interval in milliseconds.
 	 */
-	private static final int treeUpdateIntervalMs = 3000;
+	private static Integer treeUpdateIntervalMs = null;
+	
+	/**
+	 * Limit of logged events.
+	 */
+	private static final int eventLimit = 30;
 	
 	/**
 	 * Bounds.
@@ -116,6 +121,7 @@ public class LoggingDialog extends JDialog {
 		bounds = new Rectangle();
 		eventsWindowSplitter = -1;
 		selectedTab = 0;
+		treeUpdateIntervalMs = 1000;
 	}
 
 	/**
@@ -131,6 +137,7 @@ public class LoggingDialog extends JDialog {
 		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
 		selectedTab = inputStream.readInt();
+		treeUpdateIntervalMs = inputStream.readInt();
 	}
 
 	/**
@@ -145,6 +152,7 @@ public class LoggingDialog extends JDialog {
 		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
 		outputStream.writeInt(selectedTab);
+		outputStream.writeInt(treeUpdateIntervalMs);
 	}
 	
 	/**
@@ -278,7 +286,6 @@ public class LoggingDialog extends JDialog {
 	private JPanel panelEvents;
 	private JToolBar toolBarEvents;
 	private JSplitPane splitPaneEvents;
-	private JEditorPane editorPaneDescription;
 	private JScrollPane scrollPaneEvents;
 	private JTree treeEvents;
 	private JPanel panelOmitOrChooseSignals;
@@ -288,6 +295,8 @@ public class LoggingDialog extends JDialog {
 	private JPanel panelMessages;
 	private JPopupMenu popupMenu;
 	private JMenuItem menuAddBreakPoint;
+	private JScrollPane scrollPaneEventsDescription;
+	private JTextPane editorPaneDescription;
 	
 	/**
 	 * Show dialog.
@@ -363,10 +372,6 @@ public class LoggingDialog extends JDialog {
 		splitPaneEvents.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		panelEvents.add(splitPaneEvents, BorderLayout.CENTER);
 		
-		editorPaneDescription = new JEditorPane();
-		editorPaneDescription.setContentType("text/html");
-		splitPaneEvents.setRightComponent(editorPaneDescription);
-		
 		scrollPaneEvents = new JScrollPane();
 		splitPaneEvents.setLeftComponent(scrollPaneEvents);
 		
@@ -388,6 +393,14 @@ public class LoggingDialog extends JDialog {
 			}
 		});
 		popupMenu.add(menuAddBreakPoint);
+		
+		scrollPaneEventsDescription = new JScrollPane();
+		splitPaneEvents.setRightComponent(scrollPaneEventsDescription);
+		
+		editorPaneDescription = new JTextPane();
+		editorPaneDescription.setEditable(false);
+		editorPaneDescription.setContentType("text/html");
+		scrollPaneEventsDescription.setViewportView(editorPaneDescription);
 		
 		panelOmitOrChooseSignals = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textOmitOrChooseSignals", null, panelOmitOrChooseSignals, null);
@@ -453,7 +466,8 @@ public class LoggingDialog extends JDialog {
 		
 		// A tool bar for logged events.
 		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
-
+		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedEventsSettings", () -> onOnEventsSettings());
+		
 		// A tool bar for break points.
 		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
 	}
@@ -850,9 +864,11 @@ public class LoggingDialog extends JDialog {
 			Signal signal = (Signal) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<b>signal</b>: %s<br>"
-					+ "<b>priority</b>: %d<br>"
-					+ "<b>types</b>: %s<br>"
+					+ "<table>"
+					+ "<tr><td><b>signal:</b></td><td>%s</td></tr>"
+					+ "<tr><td><b>priority:</b></td><td>%d</td></tr>"
+					+ "<tr><td><b>types:</b></td><td>%s</td></tr>"
+					+ "</table>"
 					+ "</html>",
 					signal.name(),
 					signal.getPriority(),
@@ -864,16 +880,20 @@ public class LoggingDialog extends JDialog {
 			Message message = (Message) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<b>signal</b>: %s<br>"
-					+ "<b>[hashcode] execution time</b>: [0x%08X] %s<br>"
-					+ "<b>source</b>: %s<br>"
-					+ "<b>target</b>: %s<br>"
-					+ "<b>info</b>: %s<br>"
-					+ "<b>+infos</b>: %s<br>"
-					+ "<b>code</b>: %s<br>"
+					+ "<table>"
+					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X]</td></tr>"
+					+ "<tr><td><b>signal:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>recieve time:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>source:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>target:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>info:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>+infos:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>source code:</b></td><td> %s</td></tr>"
+					+ "</table>"
 					+ "</html>",
+					message.hashCode(),
 					message.signal.name(),
-					message.hashCode(), Utility.formatTime(message.receiveTime),
+					Utility.formatTime(message.receiveTime),
 					getObjectDescription(message.source),
 					getObjectDescription(message.target),
 					getDataDescription(message.relatedInfo),
@@ -886,14 +906,19 @@ public class LoggingDialog extends JDialog {
 			LoggedEvent loggedEvent = (LoggedEvent) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<b>[hashcode] event"
-					+ "<b>handle ID</b>: %s<br>"
-					+ "<b>coalesce</b>: %d ms<br>"
-					+ "<b>code</b>: %s<br>"
+					+ "<table>"
+					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X] %s</td></tr>"
+					+ "<tr><td><b>coalesce time</b>:</td><td>%d ms</td></tr>"
+					+ "<tr><td><b>execution time</b>:</td><td>%s</td></tr>"
+					+ "<tr><td><b>action</b>:</td><td>%s</td></tr>"
+					+ "<tr><td><b>source code</b>:</td><td>%s</td></tr>"
+					+ "</table>"
 					+ "</html>",
 					loggedEvent.hashCode(),
 					loggedEvent.eventHandle.identifier,
 					loggedEvent.eventHandle.coalesceTimeSpanMs,
+					Utility.formatTime(loggedEvent.executionTime),
+					loggedEvent.eventHandle.action.toString(),
 					getReflectionDescription(loggedEvent.eventHandle.reflection)
 					);
 		}
@@ -960,19 +985,50 @@ public class LoggingDialog extends JDialog {
 		if (missingMessage) {
 			messageMap = addMessage(message);
 		}
+		// Limit the number of messages.
+		int messageCount = messageMap.size();
+		if (messageCount > messageLimit) {
+			
+			// Remove leading entries.
+			int messageRemovalCount = messageCount - messageLimit;
+			HashSet<Message> messagesToRemove = new HashSet<Message>();
+			
+			for (Message messageToRemove : messageMap.keySet()) {
+				if (messageRemovalCount-- <= 0) {
+					break;
+				}
+				messagesToRemove.add(messageToRemove);
+			}
+			for (Message messageToRemove : messagesToRemove) {
+				messageMap.remove(messageToRemove);
+			}
+		}
 		
 		// Try to get execution time map.
-		LinkedHashMap<Long, LinkedList<LoggedEvent>> timeMap = messageMap.get(messageMap);
+		LinkedHashMap<Long, LinkedList<LoggedEvent>> timeMap = messageMap.get(message);
 		if (timeMap == null) {
 			timeMap = new LinkedHashMap<Long, LinkedList<LoggedEvent>>();
 			messageMap.put(message, timeMap);
 		}
 		
-		// Try to get events list.
+		// Try to get event list.
 		LinkedList<LoggedEvent> events = timeMap.get(executionTime);
 		if (events == null) {
 			events = new LinkedList<LoggedEvent>();
 			timeMap.put(executionTime, events);
+		}
+		else {
+			// Limit the number of logged events.
+			int eventCount = events.size();
+			if (eventCount > eventLimit) {
+				
+				// Remove leading items.
+				int eventRemovalCount = eventCount - eventLimit;
+				
+				while (--eventRemovalCount > 0) {
+					events.removeFirst();
+				}
+			}
 		}
 		
 		// Append new event.
@@ -1272,7 +1328,6 @@ public class LoggingDialog extends JDialog {
 	 * Add break point.
 	 */
 	protected void onAddBreakPoint() {
-		// TODO Auto-generated method stub
 		
 		// Get selected event object.
 		TreePath selectedPath = treeEvents.getSelectionPath();
@@ -1310,9 +1365,55 @@ public class LoggingDialog extends JDialog {
 	 * Clear break points.
 	 */
 	private void onClearBreakPoints() {
-		// TODO Auto-generated method stub
+		
+		// Ask user.
+		if (!Utility.ask(this, "org.multipage.generator.textShouldClearLogBreakPoints")) {
+			return;
+		}
+		
+		// Clear break points and update the GUI list.
+		breakPointMatchObjects.clear();
+		updateBreakPointsList(breakPointMatchObjects);
 	}
 	
+	/**
+	 * Set update interval for events tree view.
+	 */
+	private void onOnEventsSettings() {
+		
+		// Open settings.
+		LoggingSettingsDialog.showDialog(this, intervalMs -> {
+			
+			// Check interval value.
+			if (intervalMs == null) {
+				Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
+				return false;
+			}
+			if (intervalMs < 100 || intervalMs > 10000) {
+				Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
+				return false;
+			}
+			
+			// Set interval.
+			setEventUpdateInterval(intervalMs);
+			return true;
+		});
+	}
+	
+	/**
+	 * Set event display interval.
+	 * @param intervalMs
+	 */
+	protected void setEventUpdateInterval(int intervalMs) {
+		
+		// Set event update interval.
+		treeUpdateIntervalMs = intervalMs;
+		updateTimer.setDelay(treeUpdateIntervalMs);
+		
+		// Update event tree.
+		updateEventTree(events);
+	}
+
 	/**
 	 * On close dialog.
 	 */
@@ -1328,6 +1429,8 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void breakPoint(Object breakPointObject) {
 		
+		boolean isBreakPoint = false;
+		
 		synchronized (breakPointMatchObjects) {
 				
 			// Check the break point object.
@@ -1337,9 +1440,16 @@ public class LoggingDialog extends JDialog {
 					return;
 				}
 				
-				// TODO: place a new breakpoint at the following line.
-				j.log("BREAK POINT");
+				isBreakPoint = true;
 			}
 		}
+		if (!isBreakPoint) {
+			return;
+		}
+		
+		// TODO: place your IDE breakpoint at the next line.
+		//////////////////////////////////////////////////////
+		j.log("BREAK POINT");
+		//////////////////////////////////////////////////////
 	}
 }

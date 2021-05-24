@@ -180,6 +180,7 @@ public class ProgramGenerator {
 		CreateAreasFromSourceCode.setDefaultData();
 		ClonedDiagramDialog.setDefaultData();
 		LoggingDialog.setDefaultData();
+		LoggingSettingsDialog.setDefaultData();
 	}
 	
 	/**
@@ -241,6 +242,7 @@ public class ProgramGenerator {
 		CreateAreasFromSourceCode.serializeData(inputStream);
 		ClonedDiagramDialog.serializeData(inputStream);
 		LoggingDialog.serializeData(inputStream);
+		LoggingSettingsDialog.serializeData(inputStream);
 	}
 	
 	/**
@@ -301,6 +303,7 @@ public class ProgramGenerator {
 		CreateAreasFromSourceCode.serializeData(outputStream);
 		ClonedDiagramDialog.serializeData(outputStream);
 		LoggingDialog.serializeData(outputStream);
+		LoggingSettingsDialog.serializeData(outputStream);
 	}
 	
 	/**
