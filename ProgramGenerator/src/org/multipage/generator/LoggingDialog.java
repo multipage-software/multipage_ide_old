@@ -84,10 +84,15 @@ public class LoggingDialog extends JDialog {
 	private static Integer treeUpdateIntervalMs = null;
 	
 	/**
+	 * Message limit.
+	 */
+	private static int messageLimit = 20;
+	
+	/**
 	 * Limit of logged events.
 	 */
-	private static final int eventLimit = 30;
-	
+	private static int eventLimit = 30;
+
 	/**
 	 * Bounds.
 	 */
@@ -232,11 +237,6 @@ public class LoggingDialog extends JDialog {
 	 * Singleton dialog object.
 	 */
 	private static LoggingDialog dialog = null;
-
-	/**
-	 * Message limit.
-	 */
-	private static final int messageLimit = 20;
 	
 	/**
 	 * Break point matching object.
@@ -327,7 +327,7 @@ public class LoggingDialog extends JDialog {
 				onClose();
 			}
 		});
-		setTitle("Logging dialog");
+		setTitle("org.multipage.generator.textLoggingDialogTitle");
 		setBounds(100, 100, 557, 471);
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
@@ -477,6 +477,7 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void localize() {
 		
+		Utility.localize(this);
 		Utility.localize(tabbedPane);
 		Utility.localize(checkOmitOrChooseSignals);
 		Utility.localize(menuAddBreakPoint);
@@ -1382,22 +1383,55 @@ public class LoggingDialog extends JDialog {
 	private void onOnEventsSettings() {
 		
 		// Open settings.
-		LoggingSettingsDialog.showDialog(this, intervalMs -> {
+		LoggingSettingsDialog.showDialog(this, treeUpdateIntervalMs, messageLimit, eventLimit,
+				intervalMs -> {
 			
-			// Check interval value.
-			if (intervalMs == null) {
-				Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
-				return false;
-			}
-			if (intervalMs < 100 || intervalMs > 10000) {
-				Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
-				return false;
-			}
-			
-			// Set interval.
-			setEventUpdateInterval(intervalMs);
-			return true;
-		});
+					// Check interval value.
+					if (intervalMs == null) {
+						Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
+						return false;
+					}
+					if (intervalMs < 100 || intervalMs > 10000) {
+						Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
+						return false;
+					}
+					
+					// Set interval.
+					setEventUpdateInterval(intervalMs);
+					return true;
+				},
+				newMessageLimit -> {
+					
+					// Check message limit.
+					if (newMessageLimit == null) {
+						Utility.show(this, "org.multipage.generator.messageMessagesLimitNotNumber");
+						return false;
+					}
+					if (newMessageLimit < 0 || newMessageLimit > 100) {
+						Utility.show(this, "org.multipage.generator.messageMessagesLimitOutOfRange");
+						return false;
+					}
+					
+					// Set limit.
+					setMessageLimit(newMessageLimit);
+					return true;
+				},
+				newEventLimit -> {
+					
+					// Check event limit.
+					if (newEventLimit == null) {
+						Utility.show(this, "org.multipage.generator.messageEventsLimitNotNumber");
+						return false;
+					}
+					if (newEventLimit < 0 || newEventLimit > 100) {
+						Utility.show(this, "org.multipage.generator.messageEventsLimitOutOfRange");
+						return false;
+					}
+					
+					// Set limit.
+					setEventLimit(newEventLimit);
+					return true;
+				});
 	}
 	
 	/**
@@ -1409,6 +1443,32 @@ public class LoggingDialog extends JDialog {
 		// Set event update interval.
 		treeUpdateIntervalMs = intervalMs;
 		updateTimer.setDelay(treeUpdateIntervalMs);
+		
+		// Update event tree.
+		updateEventTree(events);
+	}
+		
+	/**
+	 * Set messages limit.
+	 * @param newMessageLimit
+	 */
+	private void setMessageLimit(Integer newMessageLimit) {
+		
+		// Set message limit.
+		messageLimit = newMessageLimit;
+		
+		// Update event tree.
+		updateEventTree(events);
+	}
+	
+	/**
+	 * Set events limit.
+	 * @param newEventLimit
+	 */
+	private void setEventLimit(Integer newEventLimit) {
+		
+		// Set event limit.
+		eventLimit = newEventLimit;
 		
 		// Update event tree.
 		updateEventTree(events);
