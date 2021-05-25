@@ -455,7 +455,17 @@ public class Utility {
 	 */
 	public static void localize(JButton button) {
 		
-		button.setText(Resources.getString(button.getText()));
+		// Localize caption.
+		String caption = button.getText();
+		if (caption != null && !caption.isEmpty()) {
+			button.setText(Resources.getString(caption));
+		}
+		
+		// Localize tool tip.
+		String tooltip = button.getToolTipText();
+		if (tooltip != null && !tooltip.isEmpty()) {
+			button.setToolTipText(Resources.getString(tooltip));
+		}
 	}
 
 	/**

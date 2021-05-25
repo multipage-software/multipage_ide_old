@@ -19,6 +19,7 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.swing.JButton;
@@ -26,6 +27,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SpringLayout;
+import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 
 import org.multipage.gui.Images;
@@ -48,8 +50,15 @@ public class LoggingSettingsDialog extends JDialog {
 	//$hide>>$
 	
 	/**
+	 * Correct and error borders.
+	 */
+	private static final Border correctBorder = new LineBorder(Color.BLACK);
+	private static final Border errorBorder = new LineBorder(Color.RED);
+	
+	/**
 	 * Lambda callbacks.
 	 */
+	private Consumer<Boolean> enableGuiLambda = null;
 	private Function<Integer, Boolean> setUpdateIntervalLambda = null;
 	private Function<Integer, Boolean> setEventLimitLambda = null;
 	private Function<Integer, Boolean> setMessageLimitLambda = null;
@@ -93,7 +102,8 @@ public class LoggingSettingsDialog extends JDialog {
 	/**
 	 * Initialize this dialog.
 	 */
-	public static void showDialog(Component parent, Integer updateIntervalMs, Integer messagelimit, Integer eventlimit, 
+	public static void showDialog(Component parent, Integer updateIntervalMs, Integer messagelimit, Integer eventlimit,
+			Consumer<Boolean> enableGuiLambda,
 			Function<Integer, Boolean> setUpdateIntervalLambda,
 			Function<Integer, Boolean> setEventLimitLambda,
 			Function<Integer, Boolean> setMessageLimitLambda) {
@@ -106,6 +116,7 @@ public class LoggingSettingsDialog extends JDialog {
 		dialog.textMessageLimit.setText(messagelimit.toString());
 		dialog.textEventLimit.setText(eventlimit.toString());
 		
+		dialog.enableGuiLambda = enableGuiLambda;
 		dialog.setUpdateIntervalLambda = setUpdateIntervalLambda;
 		dialog.setMessageLimitLambda = setMessageLimitLambda;
 		dialog.setEventLimitLambda = setEventLimitLambda;
@@ -146,7 +157,7 @@ public class LoggingSettingsDialog extends JDialog {
 	 * Initialize components.
 	 */
 	private void initComponents() {
-		setResizable(false);
+		setMinimumSize(new Dimension(370, 200));
 		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter() {
 			@Override
@@ -155,7 +166,7 @@ public class LoggingSettingsDialog extends JDialog {
 			}
 		});
 		setTitle("org.multipage.generator.textLogSettingsTitle");
-		setBounds(100, 100, 409, 185);
+		setBounds(100, 100, 535, 201);
 		
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
@@ -171,8 +182,8 @@ public class LoggingSettingsDialog extends JDialog {
 		getContentPane().add(buttonOk);
 		
 		labelUpdateItnterval = new JLabel("org.multipage.generator.textLoggedEventsDisplayInterval");
-		springLayout.putConstraint(SpringLayout.NORTH, labelUpdateItnterval, 10, SpringLayout.NORTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, labelUpdateItnterval, 10, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.NORTH, labelUpdateItnterval, 30, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, labelUpdateItnterval, 30, SpringLayout.WEST, getContentPane());
 		getContentPane().add(labelUpdateItnterval);
 		
 		textUpdateInterval = new JTextField();
@@ -234,6 +245,11 @@ public class LoggingSettingsDialog extends JDialog {
 		buttonCancel.setPreferredSize(new Dimension(80, 25));
 		buttonCancel.setMargin(new Insets(0, 0, 0, 0));
 		getContentPane().add(buttonCancel);
+		
+		JLabel labelIntervalUnits = new JLabel("ms");
+		springLayout.putConstraint(SpringLayout.NORTH, labelIntervalUnits, 0, SpringLayout.NORTH, labelUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelIntervalUnits, 6, SpringLayout.EAST, textUpdateInterval);
+		getContentPane().add(labelIntervalUnits);
 	}
 	
 	/**
@@ -316,9 +332,9 @@ public class LoggingSettingsDialog extends JDialog {
 	 */
 	protected void onOk() {
 		
-		// Set output data.
-		boolean success = setOutputData();
-		if (!success) {
+		// If there is an input error, do not exit the dialog.
+		if (isInputError()) {
+			Utility.show(this, "org.multipage.generator.messageLoggedEventsSettingsError");
 			return;
 		}
 		
@@ -327,32 +343,6 @@ public class LoggingSettingsDialog extends JDialog {
 		
 		// Close dialog.
 		dispose();
-	}
-	
-	/**
-	 * Set output data.
-	 */
-	private boolean setOutputData() {
-		
-		// Update interval.
-		boolean success = onSetUpdateInterval();
-		if (!success) {
-			return false;
-		}
-		
-		// Message limit.
-		success = onSetMessageLimit();
-		if (!success) {
-			return false;
-		}
-		
-		// Event limit.
-		success = onSetEventLimit();
-		if (!success) {
-			return false;
-		}
-		
-		return true;
 	}
 	
 	/**
@@ -381,7 +371,7 @@ public class LoggingSettingsDialog extends JDialog {
 		}
 		
 		// Set control border.
-		textUpdateInterval.setBorder(new LineBorder(success ? Color.BLACK : Color.RED));
+		textUpdateInterval.setBorder(success ? correctBorder : errorBorder);
 		
 		return success;
 	}
@@ -412,7 +402,7 @@ public class LoggingSettingsDialog extends JDialog {
 		}
 		
 		// Set control border.
-		textMessageLimit.setBorder(new LineBorder(success ? Color.BLACK : Color.RED));
+		textMessageLimit.setBorder(success ? correctBorder : errorBorder);
 		
 		return success;
 	}
@@ -443,8 +433,34 @@ public class LoggingSettingsDialog extends JDialog {
 		}
 		
 		// Set control border.
-		textEventLimit.setBorder(new LineBorder(success ? Color.BLACK : Color.RED));
+		textEventLimit.setBorder(success ? correctBorder : errorBorder);
 		
 		return success;
+	}
+	
+	/**
+	 * Check if an input error exists.
+	 * @return
+	 */
+	private boolean isInputError() {
+		
+		// Disable GUI messages.
+		enableGuiLambda.accept(false);
+		
+		// Check inputs.
+		boolean success = onSetUpdateInterval();
+		if (success) {
+			
+			success = onSetMessageLimit();
+			if (success) {
+				
+				success = onSetEventLimit();
+			}
+		}
+		
+		// Enable GUI messages.
+		enableGuiLambda.accept(true);
+		
+		return !success;
 	}
 }		

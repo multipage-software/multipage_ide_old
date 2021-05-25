@@ -63,6 +63,11 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
+import javax.swing.JButton;
+import java.awt.Insets;
+import java.awt.Dimension;
+import javax.swing.JSeparator;
+import javax.swing.SwingConstants;
 
 /**
  * 
@@ -84,19 +89,24 @@ public class LoggingDialog extends JDialog {
 	private static Integer treeUpdateIntervalMs = null;
 	
 	/**
+	 * Omit/choose selected signals.
+	 */
+	private static Boolean omitChooseSignals = null;
+	
+	/**
 	 * Message limit.
 	 */
-	private static int messageLimit = 20;
+	private static Integer messageLimit = null;
 	
 	/**
 	 * Limit of logged events.
 	 */
-	private static int eventLimit = 30;
+	private static Integer eventLimit = null;
 
 	/**
 	 * Bounds.
 	 */
-	private static Rectangle bounds;
+	private static Rectangle bounds = null;
 	
 	/**
 	 * Splitter position.
@@ -127,6 +137,9 @@ public class LoggingDialog extends JDialog {
 		eventsWindowSplitter = -1;
 		selectedTab = 0;
 		treeUpdateIntervalMs = 1000;
+		omitChooseSignals = true;
+		messageLimit = 20;
+		eventLimit = 30;
 	}
 
 	/**
@@ -139,10 +152,13 @@ public class LoggingDialog extends JDialog {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		omitChooseSignals = inputStream.readBoolean();
 		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
 		selectedTab = inputStream.readInt();
 		treeUpdateIntervalMs = inputStream.readInt();
+		messageLimit = inputStream.readInt();
+		eventLimit = inputStream.readInt();
 	}
 
 	/**
@@ -154,10 +170,13 @@ public class LoggingDialog extends JDialog {
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
+		outputStream.writeBoolean(omitChooseSignals);
 		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
 		outputStream.writeInt(selectedTab);
 		outputStream.writeInt(treeUpdateIntervalMs);
+		outputStream.writeInt(messageLimit);
+		outputStream.writeInt(eventLimit);
 	}
 	
 	/**
@@ -205,11 +224,6 @@ public class LoggingDialog extends JDialog {
 		 * Invoked event handle.
 		 */
 		public EventHandle eventHandle = null;
-		
-		/**
-		 * Incoming message.
-		 */
-		public Message message = null;
 		
 		/**
 		 * Error flags.
@@ -271,6 +285,11 @@ public class LoggingDialog extends JDialog {
 	 * Update tree timer.
 	 */
 	private Timer updateTimer = null;
+	
+	/**
+	 * Recently selected event tree object.
+	 */
+	private Object lastSelectedTreeObject;
 
 	//$hide<<$
 	
@@ -297,6 +316,9 @@ public class LoggingDialog extends JDialog {
 	private JMenuItem menuAddBreakPoint;
 	private JScrollPane scrollPaneEventsDescription;
 	private JTextPane editorPaneDescription;
+	private JMenuItem menuAddOmittedChosen;
+	private JButton buttonClearOmitedChosen;
+	private JSeparator separator;
 	
 	/**
 	 * Show dialog.
@@ -394,6 +416,14 @@ public class LoggingDialog extends JDialog {
 		});
 		popupMenu.add(menuAddBreakPoint);
 		
+		menuAddOmittedChosen = new JMenuItem("org.multipage.generator.menuAddLogOmittedChosenSignal");
+		menuAddOmittedChosen.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onMenuOmitChooseSignal();
+			}
+		});
+		popupMenu.add(menuAddOmittedChosen);
+		
 		scrollPaneEventsDescription = new JScrollPane();
 		splitPaneEvents.setRightComponent(scrollPaneEventsDescription);
 		
@@ -416,6 +446,22 @@ public class LoggingDialog extends JDialog {
 			}
 		});
 		panelTopOmitOrChoose.add(checkOmitOrChooseSignals);
+		
+		buttonClearOmitedChosen = new JButton("");
+		buttonClearOmitedChosen.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onClearOmittedChosen();
+			}
+		});
+		
+		separator = new JSeparator();
+		separator.setPreferredSize(new Dimension(2, 24));
+		separator.setOrientation(SwingConstants.VERTICAL);
+		panelTopOmitOrChoose.add(separator);
+		buttonClearOmitedChosen.setToolTipText("org.multipage.generator.tooltipLogClearOmitedChoseSignal");
+		buttonClearOmitedChosen.setPreferredSize(new Dimension(24, 24));
+		buttonClearOmitedChosen.setMargin(new Insets(0, 0, 0, 0));
+		panelTopOmitOrChoose.add(buttonClearOmitedChosen);
 		
 		scrollPaneOmitOrChoose = new JScrollPane();
 		panelOmitOrChooseSignals.add(scrollPaneOmitOrChoose, BorderLayout.CENTER);
@@ -480,7 +526,9 @@ public class LoggingDialog extends JDialog {
 		Utility.localize(this);
 		Utility.localize(tabbedPane);
 		Utility.localize(checkOmitOrChooseSignals);
+		Utility.localize(buttonClearOmitedChosen);
 		Utility.localize(menuAddBreakPoint);
+		Utility.localize(menuAddOmittedChosen);
 	}
 	
 	/**
@@ -488,8 +536,13 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void setIcons() {
 		
+		// Set window icon.
 		setIconImage(Images.getImage("org/multipage/generator/images/main_icon.png"));
+		
+		// Set control icons.
 		menuAddBreakPoint.setIcon(Images.getIcon("org/multipage/generator/images/breakpoint.png"));
+		menuAddOmittedChosen.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
+		buttonClearOmitedChosen.setIcon(Images.getIcon("org/multipage/generator/images/close_all.png"));
 		
 		// Set tree icons.
 		DefaultTreeCellRenderer renderer = (DefaultTreeCellRenderer) treeEvents.getCellRenderer();
@@ -517,6 +570,7 @@ public class LoggingDialog extends JDialog {
 			splitPaneEvents.setDividerLocation(0.8);
 		}
 		tabbedPane.setSelectedIndex(selectedTab);
+		checkOmitOrChooseSignals.setSelected(omitChooseSignals);
 	}
 	
 	/**
@@ -527,6 +581,7 @@ public class LoggingDialog extends JDialog {
 		bounds = getBounds();
 		eventsWindowSplitter = splitPaneEvents.getDividerLocation();
 		selectedTab = tabbedPane.getSelectedIndex();
+		omitChooseSignals = checkOmitOrChooseSignals.isSelected();
 	}
 	
 	/**
@@ -561,6 +616,7 @@ public class LoggingDialog extends JDialog {
 		treeRootNode = new DefaultMutableTreeNode();
 		eventTreeModel = new DefaultTreeModel(treeRootNode);
 		treeEvents.setModel(eventTreeModel);
+		treeEvents.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		
 		// Set tree node renderer.
 		treeEvents.setCellRenderer(new TreeCellRenderer() {
@@ -595,7 +651,7 @@ public class LoggingDialog extends JDialog {
 					// On the message.
 					else if (eventObject instanceof Message) {
 						Message message = (Message) eventObject;
-						renderer.setText(String.format("[0x%08X] %s message", message.hashCode(), Utility.formatTime(message.receiveTime)));
+						renderer.setText(String.format("[0x%08X] message", message.hashCode()));
 						nodeColor = DARK_GREEN;
 					}
 					// On the logged event.
@@ -734,6 +790,13 @@ public class LoggingDialog extends JDialog {
 				return;
 			}
 			
+			// Check selection change.
+			Object selectedObject = node.getUserObject();
+			if (lastSelectedTreeObject == selectedObject) {
+				return;
+			}
+			lastSelectedTreeObject = selectedObject;
+			
 			// Get description.
 			String description = getNodeDescription(node);
 			
@@ -865,7 +928,7 @@ public class LoggingDialog extends JDialog {
 			Signal signal = (Signal) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<table>"
+					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
 					+ "<tr><td><b>signal:</b></td><td>%s</td></tr>"
 					+ "<tr><td><b>priority:</b></td><td>%d</td></tr>"
 					+ "<tr><td><b>types:</b></td><td>%s</td></tr>"
@@ -881,15 +944,15 @@ public class LoggingDialog extends JDialog {
 			Message message = (Message) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<table>"
-					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X]</td></tr>"
+					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
+					+ "<tr><td><b>hashcode:</b></td><td> [0x%08X]</td></tr>"
 					+ "<tr><td><b>signal:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>recieve time:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>recieve&nbsp;time:</b></td><td>  %s</td></tr>"
 					+ "<tr><td><b>source:</b></td><td> %s</td></tr>"
 					+ "<tr><td><b>target:</b></td><td> %s</td></tr>"
 					+ "<tr><td><b>info:</b></td><td> %s</td></tr>"
 					+ "<tr><td><b>+infos:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>source code:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>source&nbsp;code:</b></td><td> %s</td></tr>"
 					+ "</table>"
 					+ "</html>",
 					message.hashCode(),
@@ -907,19 +970,17 @@ public class LoggingDialog extends JDialog {
 			LoggedEvent loggedEvent = (LoggedEvent) eventPart;
 			description = String.format(
 					"<html>"
-					+ "<table>"
+					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
 					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X] %s</td></tr>"
-					+ "<tr><td><b>coalesce time</b>:</td><td>%d ms</td></tr>"
-					+ "<tr><td><b>execution time</b>:</td><td>%s</td></tr>"
-					+ "<tr><td><b>action</b>:</td><td>%s</td></tr>"
-					+ "<tr><td><b>source code</b>:</td><td>%s</td></tr>"
+					+ "<tr><td><b>coalesce&nbsp;time</b>:</td><td> %d ms</td></tr>"
+					+ "<tr><td><b>execution&nbsp;time</b>:</td><td> %s</td></tr>"
+					+ "<tr><td><b>source&nbsp;code</b>:</td><td> %s</td></tr>"
 					+ "</table>"
 					+ "</html>",
 					loggedEvent.hashCode(),
 					loggedEvent.eventHandle.identifier,
 					loggedEvent.eventHandle.coalesceTimeSpanMs,
 					Utility.formatTime(loggedEvent.executionTime),
-					loggedEvent.eventHandle.action.toString(),
 					getReflectionDescription(loggedEvent.eventHandle.reflection)
 					);
 		}
@@ -1034,7 +1095,6 @@ public class LoggingDialog extends JDialog {
 		
 		// Append new event.
 		LoggedEvent event = new LoggedEvent();
-		event.message = message;
 		event.eventHandle = eventHandle;
 		event.executionTime = executionTime;
 		
@@ -1113,6 +1173,8 @@ public class LoggingDialog extends JDialog {
 					TreePath treePath = new TreePath(treeNodes);
 					treeEvents.setSelectionPath(treePath);
 					
+					// Ensure that the selection is visible.
+					treeEvents.makeVisible(treePath);
 					return;
 				}
 			}
@@ -1145,6 +1207,18 @@ public class LoggingDialog extends JDialog {
 			Signal signal1 = (Signal) eventObject1;
 			Signal signal2 = (Signal) eventObject2;
 			return signal1.name().equals(signal2.name());
+		}
+		// Check messages.
+		else if (eventObject1 instanceof Message) {
+			Message message1 = (Message) eventObject1;
+			Message message2 = (Message) eventObject2;
+			return message1 == message2;
+		}
+		// Check events.
+		else if (eventObject1 instanceof LoggedEvent) {
+			LoggedEvent event1 = (LoggedEvent) eventObject1;
+			LoggedEvent event2 = (LoggedEvent) eventObject2;
+			return event1 == event2;
 		}
 		
 		// Perform standard check.
@@ -1326,6 +1400,21 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * On clear omitted/chosen signals list.
+	 */
+	protected void onClearOmittedChosen() {
+		
+		// Ask user.
+		if (!Utility.ask(this, "org.multipage.generator.messageLogResetOmittedChosenList")) {
+			return;
+		}
+		
+		// Clear the list and update GUI.
+		omittedOrChosenSignals.clear();
+		listOmittedOrChosenSignals.updateUI();
+	}	
+	
+	/**
 	 * Add break point.
 	 */
 	protected void onAddBreakPoint() {
@@ -1383,16 +1472,25 @@ public class LoggingDialog extends JDialog {
 	private void onOnEventsSettings() {
 		
 		// Open settings.
+		Obj<Boolean> isGuiEnabled = new Obj<Boolean>(true);
+		
 		LoggingSettingsDialog.showDialog(this, treeUpdateIntervalMs, messageLimit, eventLimit,
+				
+				enableGui -> isGuiEnabled.ref = enableGui,
+				
 				intervalMs -> {
 			
 					// Check interval value.
 					if (intervalMs == null) {
-						Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
+						}
 						return false;
 					}
 					if (intervalMs < 100 || intervalMs > 10000) {
-						Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
+						}
 						return false;
 					}
 					
@@ -1400,15 +1498,20 @@ public class LoggingDialog extends JDialog {
 					setEventUpdateInterval(intervalMs);
 					return true;
 				},
+				
 				newMessageLimit -> {
 					
 					// Check message limit.
 					if (newMessageLimit == null) {
-						Utility.show(this, "org.multipage.generator.messageMessagesLimitNotNumber");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageMessagesLimitNotNumber");
+						}
 						return false;
 					}
 					if (newMessageLimit < 0 || newMessageLimit > 100) {
-						Utility.show(this, "org.multipage.generator.messageMessagesLimitOutOfRange");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageMessagesLimitOutOfRange");
+						}
 						return false;
 					}
 					
@@ -1416,15 +1519,20 @@ public class LoggingDialog extends JDialog {
 					setMessageLimit(newMessageLimit);
 					return true;
 				},
+				
 				newEventLimit -> {
 					
 					// Check event limit.
 					if (newEventLimit == null) {
-						Utility.show(this, "org.multipage.generator.messageEventsLimitNotNumber");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageEventsLimitNotNumber");
+						}
 						return false;
 					}
 					if (newEventLimit < 0 || newEventLimit > 100) {
-						Utility.show(this, "org.multipage.generator.messageEventsLimitOutOfRange");
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageEventsLimitOutOfRange");
+						}
 						return false;
 					}
 					
@@ -1432,6 +1540,50 @@ public class LoggingDialog extends JDialog {
 					setEventLimit(newEventLimit);
 					return true;
 				});
+	}
+	
+	/**
+	 * On omit/choose signal menu item clicked.
+	 */
+	protected void onMenuOmitChooseSignal() {
+		
+		// Get selected signal.
+		TreePath selectedPath = treeEvents.getSelectionPath();
+		if (selectedPath == null) {
+			return;
+		}
+		
+		int pathNodesCount = selectedPath.getPathCount();
+		
+		// Reset flag.
+		boolean success = false;
+		
+		// Check path.
+		if (pathNodesCount >= 2) {
+			
+			// Get signal object.
+			DefaultMutableTreeNode signalNode = (DefaultMutableTreeNode) selectedPath.getPathComponent(1);
+			Object loggedObject = signalNode.getUserObject();
+			
+			// Add signal to the list.
+			if (loggedObject instanceof Signal) {
+				Signal signal = (Signal) loggedObject;
+				
+				omittedOrChosenSignals.add(signal);
+				listOmittedOrChosenSignals.updateUI();
+				
+				// Set the flag.
+				success = true;
+			}
+		}
+		
+		// If successful, update the tree. If not successful, inform the user.
+		if (success) {
+			updateEventTree(events);
+		}
+		else {
+			Utility.show(this, "org.multipage.generator.messageLogCannotOmitOrChooseNode");
+		}
 	}
 	
 	/**
