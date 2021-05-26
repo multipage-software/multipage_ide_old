@@ -6,13 +6,13 @@
  */
 package org.multipage.generator;
 
+import java.awt.BorderLayout;
+
 import javax.swing.JPanel;
 
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.Utility;
-
-import java.awt.BorderLayout;
 
 /**
  * @author user

@@ -7,21 +7,40 @@
 
 package org.multipage.generator;
 
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.table.*;
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
+import javax.swing.JDialog;
+import javax.swing.JPopupMenu;
+import javax.swing.JTable;
+import javax.swing.LayoutStyle.ComponentPlacement;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
-
-import javax.swing.GroupLayout.*;
-import javax.swing.LayoutStyle.*;
-import java.awt.*;
-import java.io.*;
+import com.maclan.Area;
+import com.maclan.AreasModel;
 
 
 /**

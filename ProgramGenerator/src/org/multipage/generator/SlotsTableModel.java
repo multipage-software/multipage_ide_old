@@ -7,14 +7,19 @@
 
 package org.multipage.generator;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
 
-import javax.swing.table.*;
+import javax.swing.table.AbstractTableModel;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.StringValueEditor;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.AreaReference;
+import com.maclan.Slot;
+import com.maclan.SlotHolder;
+import com.maclan.SlotType;
 
 /**
  * 

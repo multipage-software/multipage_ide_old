@@ -309,7 +309,7 @@ public enum Signal implements EventCondition {
 	/**
 	 * Priority of the signal.
 	 */
-	private EventConditionPriority priority = EventConditionPriority.middle;
+	private int priority = ConditionalEvents.MIDDLE_PRIORITY;
 	
 	/**
 	 * Enable or disable this signal.
@@ -421,7 +421,7 @@ public enum Signal implements EventCondition {
 	 * Set priority.
 	 */
 	@Override
-	public void setPriority(EventConditionPriority priority) {
+	public void setPriority(int priority) {
 		
 		this.priority = priority;
 	}
@@ -432,7 +432,7 @@ public enum Signal implements EventCondition {
 	@Override
 	public int getPriority() {
 		
-		return priority.ordinal();
+		return priority;
 	}
 	
 	/**

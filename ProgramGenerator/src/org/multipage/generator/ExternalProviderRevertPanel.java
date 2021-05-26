@@ -1,17 +1,17 @@
 package org.multipage.generator;
 
-import javax.swing.JPanel;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
 import org.multipage.generator.RevertExternalProvidersDialog.ListEntry;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
-
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Color;
 
 public class ExternalProviderRevertPanel extends JPanel {
 	

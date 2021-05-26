@@ -7,21 +7,46 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-
-import javax.swing.*;
-
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.ListCellRenderer;
+import javax.swing.SpringLayout;
+
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Images;
+import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+
+import com.maclan.Area;
+import com.maclan.MiddleResult;
+import com.maclan.Resource;
 
 /**
  * 

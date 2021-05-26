@@ -7,21 +7,38 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.image.BufferedImage;
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.ListCellRenderer;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.generator.ProgramPaths.PathSupplier;
 import org.multipage.gui.RendererPathItem;
 import org.multipage.gui.Utility;
-import org.multipage.util.*;
+import org.multipage.util.Obj;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
+import com.maclan.MimeType;
+import com.maclan.Slot;
+import com.maclan.SlotType;
 import com.maclan.server.AreaServer;
 
 /**

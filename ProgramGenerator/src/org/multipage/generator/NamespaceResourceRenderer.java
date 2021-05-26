@@ -7,9 +7,14 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
 
-import java.awt.*;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
 
 /**
  * 

@@ -7,7 +7,8 @@
 
 package org.multipage.generator;
 
-import java.awt.geom.*;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 
 import com.maclan.Area;
 

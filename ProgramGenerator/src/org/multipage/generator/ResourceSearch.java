@@ -7,20 +7,44 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.ListModel;
+import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import java.awt.event.*;
-
-import java.util.*;
 import org.eclipse.wb.swing.FocusTraversalOnArray;
-import org.multipage.gui.*;
+import org.multipage.gui.BooleanTriState;
+import org.multipage.gui.FoundAttr;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.MimeType;
+import com.maclan.Resource;
 
 
 /**

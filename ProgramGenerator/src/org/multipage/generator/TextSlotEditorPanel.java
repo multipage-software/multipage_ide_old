@@ -7,20 +7,59 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JTextPane;
 
-import org.multipage.gui.*;
+import org.multipage.gui.Callback;
+import org.multipage.gui.CssAnimationPanel;
+import org.multipage.gui.CssBackgroundImagesPanel;
+import org.multipage.gui.CssBorderImagePanel;
+import org.multipage.gui.CssBorderPanel;
+import org.multipage.gui.CssBorderRadiusPanel;
+import org.multipage.gui.CssBoxShadowPanel;
+import org.multipage.gui.CssClipPanel;
+import org.multipage.gui.CssCountersPanel;
+import org.multipage.gui.CssCursorPanel;
+import org.multipage.gui.CssFlexPanel;
+import org.multipage.gui.CssFontPanel;
+import org.multipage.gui.CssKeyframesPanel;
+import org.multipage.gui.CssListStylePanel;
+import org.multipage.gui.CssNumberPanel;
+import org.multipage.gui.CssOutlinesPanel;
+import org.multipage.gui.CssPerspectiveOriginPanel;
+import org.multipage.gui.CssQuotesPanel;
+import org.multipage.gui.CssResourcePanel;
+import org.multipage.gui.CssResourcesUrlsPanel;
+import org.multipage.gui.CssSpacingPanel;
+import org.multipage.gui.CssTextLinePanel;
+import org.multipage.gui.CssTextShadowPanel;
+import org.multipage.gui.CssTransformOriginPanel;
+import org.multipage.gui.CssTransformPanel;
+import org.multipage.gui.CssTransitionPanel;
+import org.multipage.gui.EditorValueHandler;
+import org.multipage.gui.FoundAttr;
+import org.multipage.gui.HtmlAnchorPanel;
+import org.multipage.gui.Images;
+import org.multipage.gui.StringValueEditor;
+import org.multipage.gui.TextEditorPane;
+import org.multipage.gui.TextPopupMenuAddIn;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;
 import com.maclan.Slot;
-import com.maclan.server.*;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.util.LinkedList;
+import com.maclan.server.ServerUtilities;
 
 /**
  * 

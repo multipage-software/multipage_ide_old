@@ -7,7 +7,7 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Window;
 import java.util.LinkedList;
 
 import javax.swing.JList;

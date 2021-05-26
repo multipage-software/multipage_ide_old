@@ -7,12 +7,22 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.util.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.util.LinkedList;
+import java.util.TimerTask;
 
-import javax.swing.*;
+import javax.swing.SwingUtilities;
 
-import org.multipage.gui.*;
+import org.multipage.gui.CursorArea;
+import org.multipage.gui.CursorAreaImpl;
+import org.multipage.gui.ToolTipWindow;
 
 
 /**

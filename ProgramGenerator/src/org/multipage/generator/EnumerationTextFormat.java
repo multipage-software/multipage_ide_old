@@ -7,7 +7,7 @@
 
 package org.multipage.generator;
 
-import java.io.*;
+import java.io.Serializable;
 
 /**
  * @author

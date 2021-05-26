@@ -7,7 +7,8 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Window;
 
 import javax.swing.JFrame;
 
@@ -15,7 +16,9 @@ import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.TextPopupMenuAddIn;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.Resource;
+import com.maclan.Slot;
 
 /**
  * @author

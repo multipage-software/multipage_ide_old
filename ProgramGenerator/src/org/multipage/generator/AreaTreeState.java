@@ -7,10 +7,15 @@
 
 package org.multipage.generator;
 
-import java.util.*;
+import java.util.Enumeration;
+import java.util.LinkedList;
 
-import javax.swing.*;
-import javax.swing.tree.*;
+import javax.swing.JTree;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
 
 import com.maclan.Area;
 

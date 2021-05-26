@@ -7,12 +7,15 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.util.LinkedList;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 
 import org.multipage.gui.Utility;
-
-import java.awt.*;
-import java.util.*;
 
 /**
  * 

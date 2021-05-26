@@ -9,9 +9,9 @@ package org.multipage.generator;
 
 import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.JFrame;
 
-import org.multipage.translator.*;
+import org.multipage.translator.TranslatorDialog;
 
 import com.maclan.Area;
 

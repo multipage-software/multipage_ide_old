@@ -7,21 +7,35 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.image.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.util.Properties;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
-import com.maclan.*;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
+import com.maclan.Resource;
 
 /**
  * 

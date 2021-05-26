@@ -7,22 +7,74 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
-import javax.swing.Timer;
-import javax.swing.event.*;
-import javax.swing.table.*;
-
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-
-import java.awt.*;
-import java.util.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.SystemColor;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-import java.awt.event.*;
-import java.io.*;
+import java.util.Properties;
+
+import javax.swing.AbstractAction;
+import javax.swing.DefaultRowSorter;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TableColumnModelEvent;
+import javax.swing.event.TableColumnModelListener;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
+
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Callback;
+import org.multipage.gui.EditorPaneEx;
+import org.multipage.gui.FoundAttr;
+import org.multipage.gui.Images;
+import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+
+import com.maclan.Area;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
+import com.maclan.Slot;
+import com.maclan.SlotHolder;
+import com.maclan.SlotType;
 
 /**
  * 

@@ -9,7 +9,11 @@ package org.multipage.generator;
 
 import java.awt.Color;
 
-import javax.swing.*;
+import javax.swing.ButtonGroup;
+import javax.swing.ButtonModel;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.Utility;

@@ -7,13 +7,27 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
-import org.multipage.gui.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JRadioButton;
+import javax.swing.SpringLayout;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
 
 /**
  * 

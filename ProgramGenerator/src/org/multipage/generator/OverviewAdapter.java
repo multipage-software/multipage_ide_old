@@ -7,7 +7,7 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 
 /**

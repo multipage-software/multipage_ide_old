@@ -11,10 +11,11 @@ import java.awt.Rectangle;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.*;
-import javax.swing.*;
+import java.util.LinkedList;
 
-import com.maclan.*;
+import javax.swing.JFrame;
+
+import com.maclan.Slot;
 
 /**
  * @author

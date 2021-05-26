@@ -36,7 +36,7 @@ public class ConditionalEventsAuxTable {
 		/**
 		 * Priority.
 		 */
-		public EventConditionPriority priority = null;
+		public Integer priority = null;
 		
 		/**
 		 * Set of event handles.
@@ -55,7 +55,7 @@ public class ConditionalEventsAuxTable {
 	 * @return
 	 */
 	public static ConditionalEventsAuxTable createFrom(
-			LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents) {
+			LinkedHashMap<EventCondition, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents) {
 		
 		// Create, set and return new singleton object.
 		ConditionalEventsAuxTable conditionalEventsTable = new ConditionalEventsAuxTable();
@@ -79,7 +79,7 @@ public class ConditionalEventsAuxTable {
 	 * @param priority
 	 * @param handles
 	 */
-	private void addRecords(Object key, EventCondition condition, EventConditionPriority priority,
+	private void addRecords(Object key, EventCondition condition, Integer priority,
 			LinkedList<EventHandle> handles) {
 		
 		// Delegate the call.
@@ -95,7 +95,7 @@ public class ConditionalEventsAuxTable {
 	 * @param priority
 	 * @param handle
 	 */
-	public void addRecord(Object key, EventCondition eventCondition, EventConditionPriority priority, EventHandle handle) {
+	public void addRecord(Object key, EventCondition eventCondition, Integer priority, EventHandle handle) {
 		
 		// Create new record.
 		Record record = new Record();
@@ -116,7 +116,7 @@ public class ConditionalEventsAuxTable {
 	 * Sort and retrieve conditional events.
 	 * @return
 	 */
-	public LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>>> retrieveSorted() {
+	public LinkedHashMap<EventCondition, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>> retrieveSorted() {
 		
 		// Sort table records.
 		Collections.sort(table, new Comparator () {
@@ -129,7 +129,7 @@ public class ConditionalEventsAuxTable {
 				
 				int delta = r1.condition.ordinal() - r2.condition.ordinal();
 				if (delta == 0) {
-					delta = r1.priority.ordinal() - r2.priority.ordinal();
+					delta = r1.priority - r2.priority;
 				}
 				// Records with higher priority are on the table bottom.
 				return -delta;
@@ -137,16 +137,16 @@ public class ConditionalEventsAuxTable {
 		});
 		
 		// Create new conditional events.
-		LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents
-			= new LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>>>();
+		LinkedHashMap<EventCondition, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents
+			= new LinkedHashMap<EventCondition, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>>();
 		
 		// Add sorted records of the table.
 		table.forEach(record -> {
 			
 			// Map 1
-			LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> map1 = conditionalEvents.get(record.condition);
+			LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>> map1 = conditionalEvents.get(record.condition);
 			if (map1 == null) {
-				map1 = new LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>>();
+				map1 = new LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>();
 				conditionalEvents.put(record.condition, map1);
 			}
 			

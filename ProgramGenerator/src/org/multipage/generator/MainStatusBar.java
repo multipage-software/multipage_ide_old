@@ -7,11 +7,13 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.image.*;
-import java.util.*;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.util.Properties;
 
-import org.multipage.gui.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.StatusBar;
 import org.multipage.util.Resources;
 
 /**

@@ -10,7 +10,10 @@ package org.multipage.generator;
 import java.awt.Color;
 import java.awt.Graphics;
 
-import javax.swing.*;
+import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Utility;

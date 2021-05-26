@@ -7,11 +7,11 @@
 
 package org.multipage.generator;
 
-import java.util.*;
+import java.util.LinkedList;
 
 import org.multipage.gui.FoundAttr;
 
-import com.maclan.*;
+import com.maclan.Slot;
 
 
 /**

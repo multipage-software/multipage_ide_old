@@ -7,16 +7,35 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.util.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.util.HashSet;
+import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
 
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.ProgressResult;
+import org.multipage.util.Resources;
+import org.multipage.util.SwingWorkerHelper;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.AreaResource;
+import com.maclan.AreasModel;
+import com.maclan.Flag;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 
 
 /**

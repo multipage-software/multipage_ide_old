@@ -7,17 +7,34 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
-import javax.swing.table.*;
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Properties;
 
-import org.multipage.basic.*;
-import org.multipage.util.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpringLayout;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 
-import com.maclan.*;
+import org.multipage.basic.ProgramBasic;
+import org.multipage.util.Resources;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
+import com.maclan.Area;
+import com.maclan.AreasModel;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 
 /**
  * 

@@ -18,23 +18,33 @@ class EventHandle {
 	/**
 	 * An action is a lambda function. It consumes the message if it is not coalesced in a time span.
 	 */
-	Consumer<Message> action;
+	public Consumer<Message> action;
 	
 	/**
 	 * Time span in milliseconds for coalescing the same messages. They do not trigger the action.
 	 */
-	Long coalesceTimeSpanMs;
+	public Long coalesceTimeSpanMs;
 	
 	/**
 	 * Reflection of the signal receiver.
 	 */
-	StackTraceElement reflection;
+	public StackTraceElement reflection;
 	
 	/**
 	 *  Identifier of this event handle (only for debugging purposes; this property can be removed from
 	 *  the class code along with the debugging code).
 	 */
-	String identifier;
+	public String identifier;
+	
+	/**
+	 * A priority of the event handle. For debugging purposes.
+	 */
+	public Integer priority;
+	
+	/**
+	 * An event handle key. For debugging purposes.
+	 */
+	public Object key;
 	
 	/**
 	 * Constructor.

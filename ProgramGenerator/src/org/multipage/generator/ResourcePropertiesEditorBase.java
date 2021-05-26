@@ -7,16 +7,27 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Window;
+import java.io.File;
 import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.AreaResource;
+import com.maclan.MimeType;
+import com.maclan.Resource;
 
 /**
  * @author

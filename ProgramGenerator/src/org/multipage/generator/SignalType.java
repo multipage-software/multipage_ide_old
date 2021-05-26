@@ -37,7 +37,7 @@ public enum SignalType implements EventCondition {
 	/**
 	 * Priority of the signal.
 	 */
-	private EventConditionPriority priority = EventConditionPriority.middle;
+	private int priority = ConditionalEvents.MIDDLE_PRIORITY;
 	
 	/**
 	 * Returns true if the incoming message matches this signal type.
@@ -51,7 +51,7 @@ public enum SignalType implements EventCondition {
 	/**
 	 * Set priority.
 	 */
-	public void setPriority(EventConditionPriority priority) {
+	public void setPriority(int priority) {
 		
 		this.priority = priority;
 	}
@@ -61,6 +61,6 @@ public enum SignalType implements EventCondition {
 	 */
 	public int getPriority() {
 		
-		return this.priority.ordinal();
+		return this.priority;
 	}
 }

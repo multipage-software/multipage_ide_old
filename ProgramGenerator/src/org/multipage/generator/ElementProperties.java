@@ -7,16 +7,18 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Cursor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.LinkedList;
 
-import javax.swing.*;
+import javax.swing.JPanel;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.Area;
 
 
 /**

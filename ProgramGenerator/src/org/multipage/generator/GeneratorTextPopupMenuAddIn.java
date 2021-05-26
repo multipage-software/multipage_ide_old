@@ -7,14 +7,23 @@
 
 package org.multipage.generator;
 
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-import javax.swing.*;
+import javax.swing.JEditorPane;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextPopupMenuAddIn;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.AreasModel;
+import com.maclan.Slot;
+import com.maclan.SlotHolder;
 
 /**
  * @author

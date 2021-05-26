@@ -7,16 +7,24 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButton;
+import javax.swing.JTable;
 
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
+import com.maclan.Area;
+import com.maclan.MiddleResult;
 
 /**
  * @author

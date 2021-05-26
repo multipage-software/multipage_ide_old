@@ -7,11 +7,13 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
 
 import org.multipage.gui.StringValueEditor;
 
-import com.maclan.*;
+import com.maclan.EnumerationValue;
+import com.maclan.Slot;
 
 /**
  * @author

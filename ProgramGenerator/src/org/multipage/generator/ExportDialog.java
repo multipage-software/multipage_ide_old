@@ -7,21 +7,40 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-
-import javax.swing.*;
-
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Properties;
+import java.util.concurrent.CancellationException;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
+
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Images;
+import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
+import org.multipage.util.SwingWorkerHelper;
+
+import com.maclan.Area;
+import com.maclan.AreaTreeData;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 
 /**
  * 

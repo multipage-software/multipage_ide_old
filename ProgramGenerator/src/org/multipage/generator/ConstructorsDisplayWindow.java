@@ -7,14 +7,25 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Point;
 
-import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.JPanel;
+import javax.swing.JWindow;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
-import org.multipage.gui.*;
+import org.multipage.gui.ToolTipWindow;
+import org.multipage.gui.Utility;
 
-import com.maclan.*;
+import com.maclan.Area;
 
 /**
  * @author

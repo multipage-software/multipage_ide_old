@@ -64,7 +64,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreasModel;

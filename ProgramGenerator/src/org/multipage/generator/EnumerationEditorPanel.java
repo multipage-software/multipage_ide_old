@@ -7,18 +7,28 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
-
-import org.multipage.gui.*;
-
-import com.maclan.*;
-
-import java.awt.*;
-import java.awt.event.ActionListener;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.ListCellRenderer;
+import javax.swing.SpringLayout;
+
+import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.Utility;
+
+import com.maclan.EnumerationObj;
+import com.maclan.EnumerationValue;
+import com.maclan.Slot;
 
 /**
  * 

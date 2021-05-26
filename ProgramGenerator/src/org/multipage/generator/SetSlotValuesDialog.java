@@ -7,14 +7,21 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.SpringLayout;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import java.awt.event.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
 
 /**
  * 

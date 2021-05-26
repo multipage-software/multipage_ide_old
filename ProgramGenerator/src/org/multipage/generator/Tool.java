@@ -7,12 +7,14 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.image.*;
-import java.io.*;
-import java.net.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
 
-import javax.imageio.*;
+import javax.imageio.ImageIO;
 
 
 /**

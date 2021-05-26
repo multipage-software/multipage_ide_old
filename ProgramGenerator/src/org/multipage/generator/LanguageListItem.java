@@ -7,13 +7,18 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Dimension;
+import java.awt.Font;
 
-import org.multipage.gui.*;
+import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 
-import com.maclan.*;
+import org.multipage.gui.Utility;
 
-import java.awt.*;
+import com.maclan.Language;
 
 /**
  * 

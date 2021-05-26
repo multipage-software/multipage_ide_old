@@ -7,8 +7,10 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.image.*;
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.image.BufferedImage;
 
 import org.multipage.gui.Images;
 

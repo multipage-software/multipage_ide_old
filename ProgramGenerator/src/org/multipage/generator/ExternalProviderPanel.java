@@ -6,7 +6,14 @@
  */
 package org.multipage.generator;
 
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.SpringLayout;
 
 import org.multipage.gui.StringValueEditor;
@@ -16,13 +23,6 @@ import com.maclan.Area;
 import com.maclan.ExternalLinkParser;
 import com.maclan.ExternalLinkParser.Type;
 import com.maclan.Slot;
-
-import javax.swing.JRadioButton;
-import javax.swing.ButtonGroup;
-import java.awt.BorderLayout;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import javax.swing.JCheckBox;
 
 /**
  * 

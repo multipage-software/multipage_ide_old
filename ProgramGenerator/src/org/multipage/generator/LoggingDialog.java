@@ -9,6 +9,8 @@ package org.multipage.generator;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -28,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JList;
@@ -35,6 +38,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -43,6 +47,7 @@ import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TreeSelectionEvent;
@@ -63,11 +68,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
-import javax.swing.JButton;
-import java.awt.Insets;
-import java.awt.Dimension;
-import javax.swing.JSeparator;
-import javax.swing.SwingConstants;
 
 /**
  * 
@@ -229,6 +229,11 @@ public class LoggingDialog extends JDialog {
 		 * Error flags.
 		 */
 		public Long executionTime = null;
+		
+		/**
+		 * Matching message.
+		 */
+		public Message matchingMessage = null;
 	}
 	
 	/**
@@ -319,6 +324,7 @@ public class LoggingDialog extends JDialog {
 	private JMenuItem menuAddOmittedChosen;
 	private JButton buttonClearOmitedChosen;
 	private JSeparator separator;
+	private JMenuItem menuPrintReflection;
 	
 	/**
 	 * Show dialog.
@@ -424,6 +430,14 @@ public class LoggingDialog extends JDialog {
 		});
 		popupMenu.add(menuAddOmittedChosen);
 		
+		menuPrintReflection = new JMenuItem("org.multipage.generator.menuLogPrintReflection");
+		menuPrintReflection.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onPrintReflection();
+			}
+		});
+		popupMenu.add(menuPrintReflection);
+		
 		scrollPaneEventsDescription = new JScrollPane();
 		splitPaneEvents.setRightComponent(scrollPaneEventsDescription);
 		
@@ -490,7 +504,7 @@ public class LoggingDialog extends JDialog {
 		listBreakPoints = new JList();
 		scrollPaneBreakPoints.setViewportView(listBreakPoints);
 	}
-	
+
 	/**
 	 * Post creation.
 	 */
@@ -529,6 +543,7 @@ public class LoggingDialog extends JDialog {
 		Utility.localize(buttonClearOmitedChosen);
 		Utility.localize(menuAddBreakPoint);
 		Utility.localize(menuAddOmittedChosen);
+		Utility.localize(menuPrintReflection);
 	}
 	
 	/**
@@ -943,7 +958,7 @@ public class LoggingDialog extends JDialog {
 			
 			Message message = (Message) eventPart;
 			description = String.format(
-					"<html>"
+					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
 					+ "<tr><td><b>hashcode:</b></td><td> [0x%08X]</td></tr>"
 					+ "<tr><td><b>signal:</b></td><td> %s</td></tr>"
@@ -969,18 +984,23 @@ public class LoggingDialog extends JDialog {
 			
 			LoggedEvent loggedEvent = (LoggedEvent) eventPart;
 			description = String.format(
-					"<html>"
+					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
-					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X] %s</td></tr>"
+					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X] id:%s</td></tr>"
+					+ "<tr><td><b>priority:</b></td><td> %d</td></tr>"
+					+ "<tr><td><b>key:</b></td><td> [0x%08X] %s</td></tr>"
 					+ "<tr><td><b>coalesce&nbsp;time</b>:</td><td> %d ms</td></tr>"
 					+ "<tr><td><b>execution&nbsp;time</b>:</td><td> %s</td></tr>"
+					+ "<tr><td><b>matching&nbsp;message</b>:</td><td> [0x%08X]</td></tr>"
 					+ "<tr><td><b>source&nbsp;code</b>:</td><td> %s</td></tr>"
 					+ "</table>"
 					+ "</html>",
-					loggedEvent.hashCode(),
-					loggedEvent.eventHandle.identifier,
+					loggedEvent.hashCode(), loggedEvent.eventHandle.identifier,
+					loggedEvent.eventHandle.priority,
+					loggedEvent.eventHandle.key.hashCode(), loggedEvent.eventHandle.key.getClass().getName(),
 					loggedEvent.eventHandle.coalesceTimeSpanMs,
 					Utility.formatTime(loggedEvent.executionTime),
+					loggedEvent.matchingMessage.hashCode(),
 					getReflectionDescription(loggedEvent.eventHandle.reflection)
 					);
 		}
@@ -1040,8 +1060,7 @@ public class LoggingDialog extends JDialog {
 		LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> messageMap = events.get(signal);
 		
 		// Check if the incoming message is missing.
-		boolean missingMessage = messageMap.containsKey(message);
-		message.userObject = new Object [] { "missingMessage", true };
+		boolean missingMessage = !messageMap.containsKey(message);
 		
 		// Add missing incoming message
 		if (missingMessage) {
@@ -1074,21 +1093,21 @@ public class LoggingDialog extends JDialog {
 		}
 		
 		// Try to get event list.
-		LinkedList<LoggedEvent> events = timeMap.get(executionTime);
-		if (events == null) {
-			events = new LinkedList<LoggedEvent>();
-			timeMap.put(executionTime, events);
+		LinkedList<LoggedEvent> loggedEvents = timeMap.get(executionTime);
+		if (loggedEvents == null) {
+			loggedEvents = new LinkedList<LoggedEvent>();
+			timeMap.put(executionTime, loggedEvents);
 		}
 		else {
 			// Limit the number of logged events.
-			int eventCount = events.size();
+			int eventCount = loggedEvents.size();
 			if (eventCount > eventLimit) {
 				
 				// Remove leading items.
 				int eventRemovalCount = eventCount - eventLimit;
 				
 				while (--eventRemovalCount > 0) {
-					events.removeFirst();
+					loggedEvents.removeFirst();
 				}
 			}
 		}
@@ -1097,8 +1116,9 @@ public class LoggingDialog extends JDialog {
 		LoggedEvent event = new LoggedEvent();
 		event.eventHandle = eventHandle;
 		event.executionTime = executionTime;
+		event.matchingMessage = message;
 		
-		events.add(event);
+		loggedEvents.add(event);
 	}
 	
 	/**
@@ -1312,6 +1332,11 @@ public class LoggingDialog extends JDialog {
 								}
 							});
 						}
+						else {
+							// Informative node.
+							DefaultMutableTreeNode auxNode = new DefaultMutableTreeNode("COALESCED");
+							messageNode.add(auxNode);
+						}
 					});
 				}
 			});
@@ -1418,7 +1443,7 @@ public class LoggingDialog extends JDialog {
 	 * Add break point.
 	 */
 	protected void onAddBreakPoint() {
-		
+				
 		// Get selected event object.
 		TreePath selectedPath = treeEvents.getSelectionPath();
 		if (selectedPath == null) {
@@ -1583,6 +1608,29 @@ public class LoggingDialog extends JDialog {
 		}
 		else {
 			Utility.show(this, "org.multipage.generator.messageLogCannotOmitOrChooseNode");
+		}
+	}
+	
+	/**
+	 * On print reflection.
+	 */
+	protected void onPrintReflection() {
+		
+		// Get selected input message or logged event.
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) treeEvents.getSelectionPath().getLastPathComponent();
+		Object userObject = node.getUserObject();
+		
+		if (userObject instanceof Message) {
+			Message message = (Message) userObject;
+			System.out.println(message.reflection.toString());
+		}
+		else if (userObject instanceof LoggedEvent) {
+			LoggedEvent event = (LoggedEvent) userObject;
+			System.out.println(event.eventHandle.reflection.toString());
+		}
+		else {
+			// Bad selection.
+			Utility.show(this, "org.multipage.generator.messageLogNodeHasNoReflection");
 		}
 	}
 	

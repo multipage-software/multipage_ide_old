@@ -7,14 +7,28 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.geom.*;
-import java.awt.image.*;
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.multipage.gui.*;
+import org.multipage.gui.CursorArea;
+import org.multipage.gui.CursorAreaImpl;
+import org.multipage.gui.CursorAreaListener;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
 
 
 /**

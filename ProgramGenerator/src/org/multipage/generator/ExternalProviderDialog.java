@@ -6,27 +6,26 @@
  */
 package org.multipage.generator;
 
-import javax.swing.JDialog;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
-import com.maclan.Slot;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.SpringLayout;
 
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 
-import javax.swing.JButton;
-
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.Insets;
-import java.awt.Rectangle;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import com.maclan.Slot;
 
 /**
  * 

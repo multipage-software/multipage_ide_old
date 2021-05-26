@@ -51,25 +51,25 @@ public class ConditionalEvents {
 	public static class LogParameters {
 		
 		// If you want to enable message LOG on STD ERR, set this flag to true.
-		public boolean enable = true;
+		public boolean enable = false;
 		
 		// To display full log information, set this flag to true.
 		public boolean full = false;
 		
 		// Concrete signals.
-		public Signal [] concereteSignals = { Signal.updateAll };
+		public Signal [] concreteSignals = { Signal.updateAll };
 	}
 	public static LogParameters logParameters = new LogParameters();
 	
 	/**
 	 * Coalesce time span.
 	 */
-	private static final long timeSpanMs = 100;
+	private static final long defaultCoalesceTimeMs = 500;
 	
 	/**
 	 * Stop receiving unnecessary events. (Only for debugging purposes).
 	 */
-	private static boolean stopReceivingUnnecessary = false;
+	private static boolean stopReceivingUnnecessary = true;
 	
 	/**
 	 * Default message coalesce time span in milliseconds.
@@ -80,6 +80,13 @@ public class ConditionalEvents {
 	 * Dispatch lock timeout in milliseconds. Must be greater then above coalesce time span.
 	 */
 	private final static long dispatchLockTimeoutMs = 250;
+	
+	/**
+	 * Receiver priorities.
+	 */
+	public static final int HIGH_PRIORITY = 100;
+	public static final int MIDDLE_PRIORITY = 50;
+	public static final int LOW_PRIORITY = 10;
 	
 	/**
 	 * Message object.
@@ -323,8 +330,8 @@ public class ConditionalEvents {
 	/**
 	 * All conditional event processors in the application.
 	 */
-	private static LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
-					LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<EventConditionPriority,
+	private static LinkedHashMap<EventCondition, LinkedHashMap<Integer,
+					LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<Integer,
 																							LinkedHashMap<Object, LinkedList<EventHandle>>>>();
 	
 	/**
@@ -418,47 +425,55 @@ public class ConditionalEvents {
 			
 			// Log incoming message.
 			LoggingDialog.log(incomingMessage.ref);
-				
+			
 			// Get message signal.
 			Signal signal = incomingMessage.ref.signal;
 			
-			// Break point managed by log.
-			LoggingDialog.breakPoint(signal);
+			// Clear expired messages.
+			clearExpiredMessages(currentTime);
 			
-			// On special signals skip use special event invocation.
-			if (signal.isSpecial()) {
-				invokeSpecialEvents(incomingMessage.ref);
-			}
-			// For all other matching events do ...
-			else {
+			// Check if some similar message is surviving in the dedicated memory,
+			// so that current incoming message have to be skipped.
+			// If so, skip the invocations of event actions.
+			if (!isMessageSurviving(incomingMessage.ref, currentTime)) {
 				
-				synchronized (conditionalEvents) {
+				// Break point managed by log.
+				LoggingDialog.breakPoint(signal);
+				
+				// For special signals perform special invocation.
+				if (signal.isSpecial()) {
+					invokeSpecialEvents(incomingMessage.ref);
+				}
+				// For all other matching events invoke theirs action lambdas.
+				else {
 					
-					LinkedHashMap<EventConditionPriority, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
-					
-					if (priorities != null) {
-						priorities.forEach((priority, keys) -> {
-							if (keys != null) {
-								keys.forEach((key, eventHandles) -> {
-									
-									if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... a switch for debugging purposes; a condition stops receiving unnecessary events
+					synchronized (conditionalEvents) {
+						
+						LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
+						
+						if (priorities != null) {
+							priorities.forEach((priority, keys) -> {
+								if (keys != null) {
+									keys.forEach((key, eventHandles) -> {
 										
-										// Save the message key for debugging purposes.
-										incomingMessage.ref.key = key;
-										
-										// Invoke events associated with the incoming message.
-										// Coalesce same events that arise in given time span.
-										invokeEvents(currentTime, eventHandles, incomingMessage.ref);
-									}
-									else {
-										
-										// Do nothing.
-									}
-								});
-							}
-						});
+										if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... a switch for debugging purposes; this condition disables receiving of unnecessary signals
+											
+											// Save the message key for debugging purposes.
+											incomingMessage.ref.key = key;
+											
+											// Invoke event actions matching the incoming message.
+											// Let survive messages for a time spans defined in event handlers.
+											invokeActions(currentTime, eventHandles, priority, key, incomingMessage.ref);
+										}
+									});
+								}
+							});
+						}
 					}
 				}
+			}
+			else {
+				j.log("COALESCED SIGNAL %s", signal.name());
 			}
 		}
 	}
@@ -505,9 +520,11 @@ public class ConditionalEvents {
 	/**
 	 * Invoke events. Pass a reference to the incoming message to input lambda function.
 	 * @param eventHandles
+	 * @param priority 
+	 * @param key - event handler key
 	 * @param message
 	 */
-	public static void invokeEvents(long currentTime, LinkedList<EventHandle> eventHandles, Message message) {
+	public static void invokeActions(long currentTime, LinkedList<EventHandle> eventHandles, Integer priority, Object key, Message message) {
 		
 		// Check input.
 		if (eventHandles == null || message == null) {
@@ -520,115 +537,72 @@ public class ConditionalEvents {
 			// Compute expiration time.
 			long expirationTime = currentTime + eventHandle.coalesceTimeSpanMs;
 			
-			// Let the incoming message survive till expiration time. When it survives invoke the event action.
-			boolean messageSurvived = letSurviveMessage(message, currentTime, expirationTime);
+			// Remember the priority and event handler key.
+			eventHandle.priority = priority;
+			eventHandle.key = key;
+			
+			// Let the incoming message survive until their time expiration. For coalescing purposes.
+			letMessageSurvive(message, expirationTime);
 			
 			// Break point managed by log.
 			LoggingDialog.breakPoint(message.signal);
 			
-			// If the message survived, invoke the event on Swing thread and write log.
-			if (messageSurvived) {
-				SwingUtilities.invokeLater(() -> {
-					
-					// Invoke action.
-					eventHandle.action.accept(message);
-					long executionTime = new Date().getTime();
-							
-					// Log the event.
-					logEvent(message, eventHandle, executionTime);
-					LoggingDialog.log(message, eventHandle, executionTime);
-				});
-			}
-			else {
-				j.log("MESSAGE %s HAS BEEN COALESCED", message.signal);
-			}
+			// Invoke the event on Swing thread and write log.
+			SwingUtilities.invokeLater(() -> {
+				
+				// Invoke action.
+				eventHandle.action.accept(message);
+				long executionTime = new Date().getTime();
+						
+				// Log the event.
+				LoggingDialog.log(message, eventHandle, executionTime);
+			});
 		}
 	}
 	
 	/**
 	 * Let survive the input message till expiration time.
 	 * @param message
-	 * @param currentTime
 	 * @param expirationTime
 	 */
-	private static boolean letSurviveMessage(Message message, long currentTime, long expirationTime) {
+	private static void letMessageSurvive(Message message, long expirationTime) {
 		
-		// Clear expired messages.
-		HashSet<Long> expirationsToRemove = new HashSet<Long>();
-		
-		survivingMessages.entrySet().stream()
-			.filter(item -> item.getKey() < currentTime)
-			.forEach(item -> expirationsToRemove.add(item.getKey()));
-		
-		expirationsToRemove.stream().forEach(exprationTime -> survivingMessages.remove(exprationTime));
-		
-		// Try to find message that equal the input message.
+		survivingMessages.put(expirationTime, message);
+	}
+	
+	/**
+	 * Check if the message is surviving in dedicated memory.
+	 * @param message
+	 * @param currentTime
+	 * @return
+	 */
+	private static boolean isMessageSurviving(Message message, Long currentTime) {
+
+		// Try to find message that equals the input message.
 		List<Entry<Long, Message>> foundEqualMessages = survivingMessages.entrySet().stream()
 			.filter(item -> message.equals(item.getValue()))
 			.collect(Collectors.toList());
 		
-		// If the input message survives, put it to the surviving messages list.
-		boolean messageSurvived = foundEqualMessages.isEmpty();
-		if (messageSurvived) {
-			
-			survivingMessages.put(expirationTime, message);
-		}
-		
-		return messageSurvived;
+		boolean messageSurviving = !foundEqualMessages.isEmpty();
+		return messageSurviving;
 	}
-
+	
 	/**
-	 * Log event.
-	 * @param message
-	 * @param eventHandle
-	 * @param executionTime
+	 * Clear expired messages.
+	 * @param currentTime
 	 */
-	private static void logEvent(Message message, EventHandle eventHandle, long executionTime) {
+	private static void clearExpiredMessages(Long currentTime) {
 		
-		if (!logParameters.enable) {
-			return;
-		}
+		// Initialization.
+		HashSet<Long> expirationsToRemove = new HashSet<Long>();
 		
-		if (Signal.displayOrRedrawToolTip.equals(message.signal)
-				|| Signal.removeToolTip.equals(message.signal)) {
-			return;
-		}
+		// Find expired time keys.
+		survivingMessages.entrySet().stream()
+			.filter(item -> item.getKey() < currentTime)
+			.forEach(item -> expirationsToRemove.add(item.getKey()));
 		
-		Signal signal = message.signal;
-		
-		int concereteSignalsCount = logParameters.concereteSignals.length;
-		boolean logThisSignal = concereteSignalsCount == 0;
-		if (concereteSignalsCount > 0) {
-			
-			for (Signal concreteSignal : logParameters.concereteSignals) {
-				if (signal.equals(concreteSignal)) {
-					
-					logThisSignal = true;
-					break;
-				}
-			}
-		}
-		
-		if (!logThisSignal) {
-			return;
-		}
-		
-		// Full log information.
-		if (logParameters.full) {
-			
-			String receivedTimeString = Utility.formatTime(message.receiveTime);
-			String scheduledTimeString = Utility.formatTime(executionTime);
-			
-			j.log("-----------------------------------------------------------------");
-			j.log("Event: %s [Source: %s, OID %d]\t\ttransmitted with %s in %s", message.signal, message.source.getClass().getSimpleName(), System.identityHashCode(message.source), receivedTimeString, message.reflection);
-			j.log("\t-> Action was scheduled for %s and processed in %s", scheduledTimeString, eventHandle.reflection);
-		}
-		// Simplified log information.
-		else {
-			j.log("-----------------------------------------------------------------");
-			//j.log("%s\t\t\t%s\t%s", message.signal, message.reflection, eventHandle.reflection);
-			j.log("%s[0x%08x]\t\t\t%s", message.signal, message.key.hashCode(), eventHandle.reflection);
-		}
+		// Remove expired map items.
+		expirationsToRemove.stream().forEach(exprationTime -> survivingMessages.remove(exprationTime));
 	}
 	
 	/**
@@ -794,7 +768,7 @@ public class ConditionalEvents {
 	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
+		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
 	}
 		
 	/**
@@ -804,11 +778,11 @@ public class ConditionalEvents {
 	 * @param priority
 	 * @param messageLambda
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, EventConditionPriority priority, Consumer<Message> messageLambda) {
+	public static Object receiver(Object key, EventCondition eventCondition, int priority, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
 		eventCondition.setPriority(priority);
-		return registerConditionalEvent(key, eventCondition, priority, messageLambda, timeSpanMs, null);
+		return registerConditionalEvent(key, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
 	}
 	
 	/**
@@ -830,7 +804,7 @@ public class ConditionalEvents {
 		for (int index = 0; index < count; index++) {
 			
 			EventCondition eventCondition = eventConditions[index];
-			outputKeys[index] = registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
+			outputKeys[index] = registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
 		}
 		
 		return outputKeys;
@@ -847,7 +821,7 @@ public class ConditionalEvents {
 	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, null);
+		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
 	}
 
 	/**
@@ -862,7 +836,7 @@ public class ConditionalEvents {
 	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, minDelayMessageCoalesceMs, identifier);
+		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, minDelayMessageCoalesceMs, identifier);
 	}
 	
 	/**
@@ -877,7 +851,7 @@ public class ConditionalEvents {
 	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, EventConditionPriority.middle, messageLambda, timeSpanMs, identifier);
+		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, identifier);
 	}
 	
 	/**
@@ -890,7 +864,7 @@ public class ConditionalEvents {
 	 * @param identifier 
 	 * @return a key for action group
 	 */
-	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, EventConditionPriority priority,
+	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, int priority,
 			Consumer<Message> message, Long timeSpanMs, String identifier) {
 		
 		// Get reflection info.

@@ -7,19 +7,44 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.Properties;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
 
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.Progress2Dialog;
+import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+import org.multipage.util.SwingWorkerHelper;
 
-import com.maclan.*;
-
-import java.awt.event.*;
-import java.io.*;
-import java.util.Properties;
+import com.maclan.Area;
+import com.maclan.AreaTreeData;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 
 /**
  * 

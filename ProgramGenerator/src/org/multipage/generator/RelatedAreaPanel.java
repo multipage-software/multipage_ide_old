@@ -7,20 +7,26 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Properties;
+
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;
 import com.maclan.Middle;
 import com.maclan.MiddleResult;
-
-import java.awt.*;
-import java.util.Properties;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
 /**
  * 

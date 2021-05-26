@@ -1,13 +1,12 @@
 package org.multipage.generator;
 
+import java.awt.BorderLayout;
 import java.awt.Component;
 
 import javax.swing.JDialog;
 
 import org.multipage.generator.RevertExternalProvidersDialog.ListEntry;
 import org.multipage.gui.Utility;
-
-import java.awt.BorderLayout;
 
 /**
  * 

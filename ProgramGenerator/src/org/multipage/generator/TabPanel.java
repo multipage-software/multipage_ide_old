@@ -7,15 +7,22 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.event.ContainerAdapter;
+import java.awt.event.ContainerEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.LinkedList;
 
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.DnDTabbedPane;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
 /**
  * @author

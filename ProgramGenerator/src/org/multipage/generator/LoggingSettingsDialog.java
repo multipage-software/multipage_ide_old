@@ -8,6 +8,8 @@ package org.multipage.generator;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -32,8 +34,6 @@ import javax.swing.border.LineBorder;
 
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-import java.awt.Dimension;
-import java.awt.Insets;
 
 /**
  * 

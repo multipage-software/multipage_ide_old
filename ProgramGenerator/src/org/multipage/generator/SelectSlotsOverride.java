@@ -7,19 +7,31 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.util.List;
-import java.util.*;
-
-import javax.swing.*;
-
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-
-import java.awt.event.ActionListener;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JToolBar;
+import javax.swing.SpringLayout;
+
+import org.multipage.gui.CheckBoxList;
+import org.multipage.gui.CheckBoxListManager;
+import org.multipage.gui.Images;
+import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+
+import com.maclan.Slot;
 
 /**
  * 

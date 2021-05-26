@@ -709,7 +709,7 @@ public class GeneratorMainFrame extends JFrame {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, EventConditionPriority.high, message -> {
+		ConditionalEvents.receiver(this, Signal.updateAll, ConditionalEvents.HIGH_PRIORITY, message -> {
 			
 			// Disable the signal temporarily.
 			Signal.updateAll.disable();

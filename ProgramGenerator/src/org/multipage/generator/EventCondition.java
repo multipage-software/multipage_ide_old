@@ -36,7 +36,7 @@ public interface EventCondition {
 	/**
 	 * Set priority.
 	 */
-	public void setPriority(EventConditionPriority priority);
+	public void setPriority(int priority);
 	
 	/**
 	 * Get priority.

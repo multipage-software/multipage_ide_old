@@ -30,7 +30,6 @@ import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.Middle;

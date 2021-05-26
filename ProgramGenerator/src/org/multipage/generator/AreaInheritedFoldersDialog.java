@@ -7,18 +7,44 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
-import javax.swing.*;
-import javax.swing.table.*;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpringLayout;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 
-import org.multipage.gui.*;
+import org.multipage.gui.Images;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
-import com.maclan.*;
-
-import java.awt.datatransfer.*;
-import java.awt.event.*;
+import com.maclan.Area;
+import com.maclan.AreasModel;
+import com.maclan.VersionObj;
 
 /**
  * 

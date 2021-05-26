@@ -7,18 +7,33 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.awt.font.*;
-import java.awt.geom.*;
-import java.awt.image.*;
-import java.text.*;
-import java.util.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Shape;
+import java.awt.Stroke;
+import java.awt.font.TextAttribute;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.text.AttributedString;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.gui.GraphUtility;
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
 import com.maclan.Area;
+import com.maclan.AreasModel;
 
 
 /**

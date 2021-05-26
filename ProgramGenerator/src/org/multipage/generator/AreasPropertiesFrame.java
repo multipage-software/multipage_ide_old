@@ -7,20 +7,24 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
-
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-
-import java.awt.*;
-import java.util.*;
+import java.awt.BorderLayout;
+import java.awt.Rectangle;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.LinkedList;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
+
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
+
+import com.maclan.Area;
 
 /**
  * 

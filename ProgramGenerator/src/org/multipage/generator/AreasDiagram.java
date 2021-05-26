@@ -443,7 +443,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, EventConditionPriority.middle, message -> {
+		ConditionalEvents.receiver(this, Signal.updateAll, ConditionalEvents.MIDDLE_PRIORITY, message -> {
 			
 			// Render the areas diagram.
 			renderDiagram();
@@ -481,7 +481,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		0L);
 		
 		// Add receiver for the "remove toll tip" event. Event priority is decreased with relation to "display or redraw tool tip" event.
-		ConditionalEvents.receiver(this, Signal.removeToolTip, EventConditionPriority.low, message -> {
+		ConditionalEvents.receiver(this, Signal.removeToolTip, ConditionalEvents.LOW_PRIORITY, message -> {
 			
 			// Hide tool tip window.
 			tooltipWindow.hidew();

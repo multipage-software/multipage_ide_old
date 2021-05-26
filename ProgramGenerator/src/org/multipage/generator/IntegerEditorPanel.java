@@ -1,12 +1,19 @@
 package org.multipage.generator;
 
-import javax.swing.*;
-import javax.swing.event.*;
+import java.awt.Color;
+import java.awt.Font;
 
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
-import java.awt.*;
+import org.multipage.gui.StringValueEditor;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.util.Resources;
 
 /**
  * 
