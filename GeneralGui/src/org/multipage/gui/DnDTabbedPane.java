@@ -80,10 +80,8 @@ public class DnDTabbedPane extends JTabbedPane {
 	    rForward  = SwingUtilities.convertRectangle(
 	        getParent(), rForward,  glassPane);
 	    if(rBackward.contains(glassPt)) {
-	      //System.out.println(new java.util.Date() + "Backward");
 	      clickArrowButton("scrollTabsBackwardAction");
 	    }else if(rForward.contains(glassPt)) {
-	      //System.out.println(new java.util.Date() + "Forward");
 	      clickArrowButton("scrollTabsForwardAction");
 	    }
 	  }

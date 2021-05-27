@@ -12,7 +12,6 @@ import java.awt.Window;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -25,6 +24,7 @@ import org.multipage.gui.FoundAttr;
 import org.multipage.gui.SerializeStateAdapter;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;
@@ -698,9 +698,6 @@ public class ProgramGenerator {
 			
 			// Get hidden slots flag.
 			boolean loadHiddenSlots = ProgramGenerator.isExtensionToBuilder() ? true : false;
-			
-			// LOG
-			long start = new Date().getTime();
 			
 			// Load areas model from database.
 			MiddleResult result = ProgramBasic.getMiddle().loadAreasModel(properties, model, loadHiddenSlots);

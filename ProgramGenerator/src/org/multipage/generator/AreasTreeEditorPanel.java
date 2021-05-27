@@ -843,10 +843,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	
 		    	onSelectedTreeItem();
 		    	
-		    	// Propagate the "select tree area" event.
-		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectTreeArea, selectedTreeAreaIds);
 		    	// Propagate the "show areas' properties" event.
-		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedTreeAreaIds);
+		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedTreeAreaIds);
 		    }
 		});
 		
@@ -861,10 +859,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				
 				onSelectedListItem();
 				
-		    	// Propagate the "select list area" event.
-		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.selectListArea, selectedListAreaIds);
 		    	// Propagate the "show areas' properties" event.
-		    	ConditionalEvents.transmit(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedListAreaIds);
+		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedListAreaIds);
 			}
 		});
 		

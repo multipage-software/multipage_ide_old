@@ -7,7 +7,6 @@
 package org.multipage.generator;
 
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -107,6 +106,9 @@ public class ConditionalEvents {
 		// Additional information added to the above related information. 
 		public Object [] additionalInfos;
 		
+		// A flag that is true if related or additional info has to be renewed
+		public boolean renewInfo = false;
+		
 		// Message source reflection.
 		public StackTraceElement reflection;
 		
@@ -115,9 +117,6 @@ public class ConditionalEvents {
 		
 		// Event handler key.
 		public Object key;
-		
-		// User object.
-		public Object userObject;
 		
 		/**
 		 * Dump message.
@@ -419,7 +418,7 @@ public class ConditionalEvents {
 			while (incomingMessage.ref == null);
 			
 			// Get current time and save it in the incoming message.
-			final Long currentTime = new Date().getTime();
+			final Long currentTime = Utility.getNow();
 			incomingMessage.ref.receiveTime = currentTime;
 			
 			// Log incoming message.
@@ -551,7 +550,7 @@ public class ConditionalEvents {
 				
 				// Invoke action.
 				eventHandle.action.accept(message);
-				long executionTime = new Date().getTime();
+				long executionTime = Utility.getNow();
 						
 				// Log the event.
 				LoggingDialog.log(message, eventHandle, executionTime);
@@ -584,7 +583,23 @@ public class ConditionalEvents {
 			.filter(item -> message.equals(item.getValue()))
 			.collect(Collectors.toList());
 		
+		// Check surviving message.
 		boolean messageSurviving = !foundEqualMessages.isEmpty();
+		
+		// Possibly renew message info.
+		if (messageSurviving && message.renewInfo) {
+			foundEqualMessages.stream().forEach(entry -> {
+				
+				Message survivingMessage = entry.getValue();
+				
+				j.log("RENEW %s -> %s", survivingMessage.relatedInfo.toString(), message.relatedInfo.toString());
+				
+				survivingMessage.relatedInfo = message.relatedInfo;
+				survivingMessage.additionalInfos = message.additionalInfos;
+			});
+		}
+		
+		// Return the state.
 		return messageSurviving;
 	}
 	
@@ -638,7 +653,21 @@ public class ConditionalEvents {
 	public static void transmit(Object source, Signal signal, Object ... info) {
 		
 		// Delegate the call.
-		propagateMessage(source, Target.all, signal, info);
+		propagateMessage(source, Target.all, signal, false, info);
+	}
+	
+	/**
+	 * Transmit renewed signal.
+	 * @param source - the source is mostly an object that calls transmit(...) method
+	 * @param signal - can be Target that specifies common target group or
+	 *                 it can be any other object in application
+	 * @param info   - the first info object is saved as relatedInfo and additional items
+	 *                 are saved in array and attached to additionalInfo field
+	 */
+	public static void transmitRenewed(Object source, Signal signal, Object ... info) {
+		
+		// Delegate the call.
+		propagateMessage(source, Target.all, signal, true, info);
 	}
 	
 	/**
@@ -653,7 +682,23 @@ public class ConditionalEvents {
 	public static void transmit(Object source, Object target, Signal signal, Object ... info) {
 		
 		// Delegate the call.
-		propagateMessage(source, target, signal, info);
+		propagateMessage(source, target, signal, false, info);
+	}
+	
+	
+	/**
+	 * Transmit renewed signal.
+	 * @param source - the source is mostly the object that calls the transmit(...) method
+	 * @param target - the target can be a Target enumeration value that specifies common target group or
+	 *                 it can be any other object in application
+	 * @param signal - current signal
+	 * @param info   - array of additional message informations, the first info object is saved as relatedInfo
+	 * 				   and additional array items are saved in the additionalInfo field as an array
+	 */
+	public static void transmitRenewed(Object source, Object target, Signal signal, Object ... info) {
+		
+		// Delegate the call.
+		propagateMessage(source, target, signal, true, info);
 	}
 	
 	/**
@@ -663,7 +708,7 @@ public class ConditionalEvents {
 	 * @param target
 	 * @param info
 	 */
-	private static void propagateMessage(Object source, Object target, Signal signal, Object ... info) {
+	private static void propagateMessage(Object source, Object target, Signal signal, boolean renewInfo, Object ... info) {
 		
 		// Check if the signal is enabled.
 		if (!signal.isEnabled()) {
@@ -693,6 +738,7 @@ public class ConditionalEvents {
 					message.additionalInfos = Arrays.copyOfRange(info, 1, count);
 				}
 			}
+			message.renewInfo = renewInfo;
 			
 			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 			if (stackElements.length >= 4) {

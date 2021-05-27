@@ -11,7 +11,6 @@ import java.awt.Font;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.function.Consumer;
 
@@ -649,7 +648,7 @@ public class SlotEditorHelper {
 	 */
 	protected boolean saveSlot(boolean newRevision) {
 		
-		long start = new Date().getTime();
+		long start = Utility.getNow();
 		
 		// Get current slot
 		Slot newSlot = loadCurrentSlot();
@@ -711,17 +710,17 @@ public class SlotEditorHelper {
 		editedSlot = newSlot;
 		originalSlot = newSlot;
 		
-		System.out.format("SAVE EVENT: %dms main part\n", new Date().getTime() - start);
-		start = new Date().getTime();
+		System.out.format("SAVE EVENT: %dms main part\n", Utility.getNow() - start);
+		start = Utility.getNow();
 		
 		// Update information.
 		long slotId = editedSlot.getId();
 		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.saveSlot, slotId);
 		
-		System.out.format("SAVE EVENT: %dms updateInformation\n", new Date().getTime() - start);
-		start = new Date().getTime();
+		System.out.format("SAVE EVENT: %dms updateInformation\n",  Utility.getNow() - start);
+		start =  Utility.getNow();
 		
-		System.out.format("SAVE EVENT: %dms fireChangeEvent\n", new Date().getTime() - start);
+		System.out.format("SAVE EVENT: %dms fireChangeEvent\n",  Utility.getNow() - start);
 		
 		Utility.stopWaitCursor(editor.getComponent(), cursorInfo);
 		

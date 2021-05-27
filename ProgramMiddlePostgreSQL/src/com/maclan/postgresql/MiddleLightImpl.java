@@ -378,6 +378,7 @@ public class MiddleLightImpl implements MiddleLight {
 	/**
 	 * Log in to the database.
 	 */
+	@SuppressWarnings("deprecation")
 	public MiddleResult login(Properties properties) {
 		
 		MiddleResult result = MiddleResult.OK;;
@@ -486,6 +487,7 @@ public class MiddleLightImpl implements MiddleLight {
 	 * @param dataSource
 	 * @return
 	 */
+	@SuppressWarnings("deprecation")
 	public MiddleResult loginFast(Properties loginProperties, String databaseName) {
 		
 		// Create and set data source object.

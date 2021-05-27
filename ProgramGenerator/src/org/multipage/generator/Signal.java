@@ -103,16 +103,6 @@ public enum Signal implements EventCondition {
 			SignalType.slotViewChange
 			),
 	
-	// Select tree area.
-	selectTreeArea(
-			SignalType.slotViewChange
-			),
-	
-	// Select list area.
-	selectListArea(
-			SignalType.slotViewChange
-			),
-	
 	// On show/hide IDs in areas diagram..
 	showOrHideIds(
 			SignalType.guiChange

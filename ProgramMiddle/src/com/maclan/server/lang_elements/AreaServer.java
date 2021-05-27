@@ -14,13 +14,12 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.TextOutputCapturer;
+import org.openjdk.nashorn.internal.runtime.Undefined;
 
 import com.maclan.Language;
 import com.maclan.server.BlockDescriptor;
 import com.maclan.server.JavaScriptBlockDescriptor;
 import com.maclan.server.ScriptingEngine;
-
-import jdk.nashorn.internal.runtime.Undefined;
 
 
 
@@ -334,6 +333,7 @@ public class AreaServer implements BoxedObject {
 		
 		return area();
 	}
+	
 	
 	/**
 	 * Returns this area.

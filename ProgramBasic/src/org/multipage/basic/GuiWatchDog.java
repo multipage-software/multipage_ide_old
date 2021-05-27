@@ -57,7 +57,6 @@ public class GuiWatchDog {
 	/**
 	 * Start a thread that ensures Swing thread running.
 	 */
-	@SuppressWarnings("deprecation")
 	public static void start() {
 		
 		// Start watch dog thread.

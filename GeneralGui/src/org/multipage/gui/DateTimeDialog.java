@@ -189,9 +189,8 @@ public class DateTimeDialog extends JDialog {
 	 */
 	private void setControls() {
 		
-		DateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd");
-		Date date = new Date();
-		radioCurrentDate.setText(dateFormat.format(date));
+		String nowString = Utility.getNowText("yyyy.MM.dd");
+		radioCurrentDate.setText(nowString);
 	}
 
 	/**

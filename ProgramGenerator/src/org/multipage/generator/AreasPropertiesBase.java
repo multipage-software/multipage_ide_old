@@ -413,7 +413,7 @@ public class AreasPropertiesBase extends JPanel {
 				Properties login = ProgramBasic.getLoginProperties();
 				
 				// Initialize the flag.
-				boolean saved = false;
+				boolean saving = false;
 				
 				// Get text box text.
 				String text = null;
@@ -427,7 +427,7 @@ public class AreasPropertiesBase extends JPanel {
 						
 						if (text != null) {
 							result = middle.updateAreaDescription(login, area, text);
-							saved = true;
+							saving = true;
 						}
 					}
 				}
@@ -439,7 +439,7 @@ public class AreasPropertiesBase extends JPanel {
 						
 						if (text != null) {
 							result = middle.updateAreaAlias(login, area, text);
-							saved = true;
+							saving = true;
 						}
 					}
 				}
@@ -449,8 +449,8 @@ public class AreasPropertiesBase extends JPanel {
 					result.show(this);
 				}
 				
-				// On saves event...
-				if (saved) {
+				// On save event...
+				if (saving) {
 					
 					// Propagate update event
 					ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);

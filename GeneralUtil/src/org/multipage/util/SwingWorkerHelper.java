@@ -13,9 +13,7 @@ import java.beans.PropertyChangeSupport;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.*;
-
-import org.multipage.util.ProgressResult;
+import javax.swing.SwingWorker;
 
 /**
  * @author

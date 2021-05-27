@@ -62,13 +62,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.Normalizer;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -4598,5 +4601,33 @@ public class Utility {
 		}
 		
 		return theSet;
+	}
+	
+	/**
+	 * Get formated date/time string for current date and time.
+	 * @param format
+	 * @return
+	 */
+	public static String getNowText(String format) {
+		
+		DateFormat dateFormat = new SimpleDateFormat(format);
+		Calendar calendar = Calendar.getInstance();
+		
+		String nowText = dateFormat.format(calendar.getTimeInMillis());
+		return nowText;
+	}
+	
+	
+	/**
+	 * Get current time.
+	 * @param format
+	 * @return
+	 */
+	public static long getNow() {
+		
+		Calendar calendar = Calendar.getInstance();
+		
+		long now = calendar.getTimeInMillis();
+		return now;
 	}
 }

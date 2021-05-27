@@ -13,10 +13,9 @@ import java.awt.Toolkit;
 import javax.swing.SwingUtilities;
 
 import org.multipage.util.Lock;
+import org.openjdk.nashorn.internal.runtime.Debug;
 
 import com.maclan.server.JavaScriptDebuggerObjectDump.Action;
-
-import jdk.nashorn.internal.runtime.Debug;
 
 /**
  * 

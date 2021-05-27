@@ -44,7 +44,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.ImgUtility;
 import org.multipage.util.Obj;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 import org.postgresql.PGConnection;
 import org.postgresql.largeobject.LargeObject;
 import org.postgresql.largeobject.LargeObjectManager;
