@@ -555,6 +555,8 @@ public class ConditionalEvents {
 						
 				// Log the event.
 				LoggingDialog.log(message, eventHandle, executionTime);
+				
+				j.log("INVOKED %s ACTION", message.signal.name());
 			});
 		}
 	}
@@ -701,6 +703,20 @@ public class ConditionalEvents {
 			
 			Lock.notify(dispatchLock);
 		}
+	}
+	
+	/**
+	 * Invoke lambda function later on the message dispatch thread.
+	 * @param lambdaFunction
+	 */
+	public static void invokeLater(Runnable lambdaFunction) {
+		
+		// Delegate the call.
+		invokeLater(message -> {
+			
+			lambdaFunction.run();
+			return null;
+		});
 	}
 
 	/**

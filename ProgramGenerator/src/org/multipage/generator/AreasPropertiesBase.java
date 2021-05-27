@@ -451,11 +451,12 @@ public class AreasPropertiesBase extends JPanel {
 				
 				// On saves event...
 				if (saved) {
-					// Call finished function.
-					onSaveFinished.run();
 					
-					// Call request update function.
-					onRequestUpdate.run();
+					// Propagate update event
+					ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);
+					
+					// Call finished function on the event thread.
+					ConditionalEvents.invokeLater(() -> onSaveFinished.run());
 				}
 			}
 		};
@@ -468,11 +469,8 @@ public class AreasPropertiesBase extends JPanel {
 		 */
 		Runnable updateEvent = () -> {
 			
-			// Disable editing.
-			enableEditing(false);
-			
 			// Propagate update event
-			//ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);
+			ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);
 		};
 		
 		textDescription.updateLambda = updateEvent;
