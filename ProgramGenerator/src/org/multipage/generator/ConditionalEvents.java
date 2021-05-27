@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.swing.JComponent;
@@ -875,25 +874,20 @@ public class ConditionalEvents {
 		}
 		
 		// A lambda function that can register conditional event.
-		Supplier<Object> registerEventLambda = () -> {
-			synchronized (conditionalEvents) {
-			
-				// Create auxiliary table from the map.
-				ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
-				
-				// Create new event handle, add new table record.
-				EventHandle handle = new EventHandle(message, timeSpanMs, reflection.ref, identifier);
-				auxiliaryTable.addRecord(key, eventCondition, priority, handle);
-				
-				// Retrieve sorted conditional events.
-				conditionalEvents = auxiliaryTable.retrieveSorted();
-				
-				// Return key.
-				return key;
-			}
-		};
+		synchronized (conditionalEvents) {
 		
-		// If the key is a Swing component, use automatic registering/release of the event receiver on component creation/disposal.
+			// Create auxiliary table from the map.
+			ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
+			
+			// Create new event handle, add new table record.
+			EventHandle eventHandle = new EventHandle(message, timeSpanMs, reflection.ref, identifier);
+			auxiliaryTable.addRecord(key, eventCondition, priority, eventHandle);
+			
+			// Retrieve sorted conditional events.
+			conditionalEvents = auxiliaryTable.retrieveSorted();
+		}
+		
+		// If the key is a Swing component, use automatic release of the event receiver when the component is removed.
 		if (key instanceof JComponent) {
 			JComponent component = (JComponent) key;
 			
@@ -902,7 +896,7 @@ public class ConditionalEvents {
 				// Register conditional event listener.
 				@Override
 				public void ancestorAdded(AncestorEvent event) {
-					registerEventLambda.get();
+					// Nothing to do when the component is added.
 				}
 				
 				// Release all listeners associated with the key.
@@ -916,11 +910,10 @@ public class ConditionalEvents {
 					// Nothing to do when the component is moved.
 				}
 			});
-			return key;
 		}
-		else {
-			return registerEventLambda.get();
-		}
+		
+		// Return key.
+		return key;
 	}
 	
 	/**
