@@ -61,7 +61,6 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import org.multipage.generator.ConditionalEvents.Message;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.ToolBarKit;
@@ -1053,72 +1052,75 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void log(Message message, EventHandle eventHandle, long executionTime) {
 		
-		// Get message signal.
-		Signal signal = message.signal;
-		
-		// Get message map.
-		LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> messageMap = events.get(signal);
-		
-		// Check if the incoming message is missing.
-		boolean missingMessage = !messageMap.containsKey(message);
-		
-		// Add missing incoming message
-		if (missingMessage) {
-			messageMap = addMessage(message);
-		}
-		// Limit the number of messages.
-		int messageCount = messageMap.size();
-		if (messageCount > messageLimit) {
+		synchronized (events) {
 			
-			// Remove leading entries.
-			int messageRemovalCount = messageCount - messageLimit;
-			HashSet<Message> messagesToRemove = new HashSet<Message>();
+			// Get message signal.
+			Signal signal = message.signal;
 			
-			for (Message messageToRemove : messageMap.keySet()) {
-				if (messageRemovalCount-- <= 0) {
-					break;
+			// Get message map.
+			LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> messageMap = events.get(signal);
+			
+			// Check if the incoming message is missing.
+			boolean missingMessage = !messageMap.containsKey(message);
+			
+			// Add missing incoming message
+			if (missingMessage) {
+				messageMap = addMessage(message);
+			}
+			// Limit the number of messages.
+			int messageCount = messageMap.size();
+			if (messageCount > messageLimit) {
+				
+				// Remove leading entries.
+				int messageRemovalCount = messageCount - messageLimit;
+				HashSet<Message> messagesToRemove = new HashSet<Message>();
+				
+				for (Message messageToRemove : messageMap.keySet()) {
+					if (messageRemovalCount-- <= 0) {
+						break;
+					}
+					messagesToRemove.add(messageToRemove);
 				}
-				messagesToRemove.add(messageToRemove);
-			}
-			for (Message messageToRemove : messagesToRemove) {
-				messageMap.remove(messageToRemove);
-			}
-		}
-		
-		// Try to get execution time map.
-		LinkedHashMap<Long, LinkedList<LoggedEvent>> timeMap = messageMap.get(message);
-		if (timeMap == null) {
-			timeMap = new LinkedHashMap<Long, LinkedList<LoggedEvent>>();
-			messageMap.put(message, timeMap);
-		}
-		
-		// Try to get event list.
-		LinkedList<LoggedEvent> loggedEvents = timeMap.get(executionTime);
-		if (loggedEvents == null) {
-			loggedEvents = new LinkedList<LoggedEvent>();
-			timeMap.put(executionTime, loggedEvents);
-		}
-		else {
-			// Limit the number of logged events.
-			int eventCount = loggedEvents.size();
-			if (eventCount > eventLimit) {
-				
-				// Remove leading items.
-				int eventRemovalCount = eventCount - eventLimit;
-				
-				while (--eventRemovalCount > 0) {
-					loggedEvents.removeFirst();
+				for (Message messageToRemove : messagesToRemove) {
+					messageMap.remove(messageToRemove);
 				}
 			}
+			
+			// Try to get execution time map.
+			LinkedHashMap<Long, LinkedList<LoggedEvent>> timeMap = messageMap.get(message);
+			if (timeMap == null) {
+				timeMap = new LinkedHashMap<Long, LinkedList<LoggedEvent>>();
+				messageMap.put(message, timeMap);
+			}
+			
+			// Try to get event list.
+			LinkedList<LoggedEvent> loggedEvents = timeMap.get(executionTime);
+			if (loggedEvents == null) {
+				loggedEvents = new LinkedList<LoggedEvent>();
+				timeMap.put(executionTime, loggedEvents);
+			}
+			else {
+				// Limit the number of logged events.
+				int eventCount = loggedEvents.size();
+				if (eventCount > eventLimit) {
+					
+					// Remove leading items.
+					int eventRemovalCount = eventCount - eventLimit;
+					
+					while (--eventRemovalCount > 0) {
+						loggedEvents.removeFirst();
+					}
+				}
+			}
+			
+			// Append new event.
+			LoggedEvent event = new LoggedEvent();
+			event.eventHandle = eventHandle;
+			event.executionTime = executionTime;
+			event.matchingMessage = message;
+			
+			loggedEvents.add(event);
 		}
-		
-		// Append new event.
-		LoggedEvent event = new LoggedEvent();
-		event.eventHandle = eventHandle;
-		event.executionTime = executionTime;
-		event.matchingMessage = message;
-		
-		loggedEvents.add(event);
 	}
 	
 	/**

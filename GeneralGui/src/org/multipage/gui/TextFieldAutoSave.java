@@ -72,9 +72,20 @@ public class TextFieldAutoSave extends TextFieldEx {
 	public class States {
 		
 		/**
+		 * Content changed by user flag.
+		 */
+		private boolean userChanged;
+		
+		/**
+		 * Content changed by computer flag.
+		 */
+		private boolean computerChanged;
+		
+		/**
 		 * Content save flag.
 		 */
 		private boolean saved;
+
 		
 		/**
 		 * Constructor.
@@ -89,7 +100,45 @@ public class TextFieldAutoSave extends TextFieldEx {
 		 */
 		public void initialize() {
 			
+			userChanged = false;
+			computerChanged = false;
 			saved = true;
+		}
+		
+		/**
+		 * Set changed by user state.
+		 * @param changed
+		 */
+		public void setUserChanged(boolean changed) {
+			
+			this.userChanged = changed;
+		}
+		
+		/**
+		 * Get changed by computer flag.
+		 * @return
+		 */
+		public boolean isComputerChanged() {
+			
+			return this.computerChanged;
+		}
+		
+		/**
+		 * Set changed by computer state.
+		 * @param changed
+		 */
+		public void setComputerChanged(boolean changed) {
+			
+			this.computerChanged = changed;
+		}
+		
+		/**
+		 * Get changed by user flag.
+		 * @return
+		 */
+		public boolean isUserChanged() {
+			
+			return this.userChanged;
 		}
 		
 		/**
@@ -111,7 +160,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 		}
 	};
 	
-	public States states = new States();
+	public States state = new States();
 	
 	/**
 	 * Save timer.
@@ -149,15 +198,27 @@ public class TextFieldAutoSave extends TextFieldEx {
         getDocument().addDocumentListener(new DocumentListener() {
 			@Override
 			public void insertUpdate(DocumentEvent e) {
-				onChangeText();
+				
+				// Delegate call.
+				if (!state.isComputerChanged()) {
+					onUserChangedText();
+				}
 			}
 			@Override
 			public void removeUpdate(DocumentEvent e) {
-				onChangeText();
+				
+				// Delegate call.
+				if (!state.isComputerChanged()) {
+					onUserChangedText();
+				}
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) {
-				onChangeText();
+				
+				// Delegate call.
+				if (!state.isComputerChanged()) {
+					onUserChangedText();
+				}
 			}
         });
         
@@ -209,7 +270,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 				super.focusLost(e);
 				
 				// Try to save unsaved text content.
-				if (!states.isSaved()) {
+				if (!state.isSaved()) {
 					saveTextInternal();
 				}
 			}
@@ -226,7 +287,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 	 * Set user object reference.
 	 * @param userObject
 	 */
-	public void setUser(Object userObject) {
+	public void setUserObject(Object userObject) {
 		
 		this.userObject = userObject;
 	}
@@ -235,7 +296,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 	 * Get user object.
 	 * @return
 	 */
-	public Object getUser() {
+	public Object getUserObject() {
 		
 		return this.userObject;
 	}
@@ -288,10 +349,12 @@ public class TextFieldAutoSave extends TextFieldEx {
 		// Delegate the call.
 		if (genuineText != null && !genuineText.equals(text)) {
 			
+			state.setComputerChanged(true);
+			
 			super.setText(text);
 			
-			// Set unsaved state.
-			states.setSaved(false);
+			// Reset flag.
+			SwingUtilities.invokeLater(() -> state.setComputerChanged(false));
 		}
 		
 		// Request end of update signals.
@@ -356,7 +419,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 				.apply(() -> {
 				
 					// Set the flag.
-					states.setSaved(true);
+					state.setSaved(true);
 				})
 				
 				// On request update.
@@ -378,7 +441,7 @@ public class TextFieldAutoSave extends TextFieldEx {
 		}
 		
 		// If the description changes...
-		if (isTextChange()) {
+		if (state.isUserChanged()) {
 			
 			// Invoke event.
 			if (saveTextLambda != null) {
@@ -390,7 +453,9 @@ public class TextFieldAutoSave extends TextFieldEx {
 					.apply(() -> {
 						
 						// Set the flag.
-						states.setSaved(true);
+						state.setSaved(true);
+						// Reset change flag.
+						state.setUserChanged(false);
 					})
 					
 					// On request update.
@@ -409,10 +474,10 @@ public class TextFieldAutoSave extends TextFieldEx {
 	}
 	
 	/**
-	 * Returns true if the text has been.
+	 * Returns true if the text box ha genuine content.
 	 * @return
 	 */
-	public boolean isTextChange() {
+	public boolean isGenuine() {
 		
 		// Check the callback.
 		if (getGenuineTextLambda == null) {
@@ -437,9 +502,21 @@ public class TextFieldAutoSave extends TextFieldEx {
 	}
 	
 	/**
-	 * On change text.
+	 * Check if the text content has been changed by user.
+	 * @return
 	 */
-	public void onChangeText() {
+	public boolean isTextChangedByUser() {
+		
+		return state.isUserChanged();
+	}
+	
+	/**
+	 * On new text.
+	 */
+	public void onUserChangedText() {
+		
+		// Set flag.
+		state.setUserChanged(true);
 		
 		Color color;
 		boolean isMessage = this.message != null;
@@ -456,15 +533,10 @@ public class TextFieldAutoSave extends TextFieldEx {
 	
 			// If the current text is not equal to loaded area
 			// description set red text color.
-			if (isTextChange()) {
-				color = Color.RED;
-				
-				// Start save timer.
-				saveTimer.restart();
-			}
-			else {
-				color = Color.black;
-			}
+			color = Color.RED;
+			
+			// Start save timer.
+			saveTimer.restart();
 		}
 		
 		// Set the color.

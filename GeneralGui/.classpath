@@ -22,5 +22,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/libraries/icu4j/icu4j-65_1.jar" sourcepath="C:/libraries/icu4j/icu4j-65_1-src.jar"/>
+	<classpathentry kind="lib" path="C:/libraries/gson-2.8.5 (1).jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

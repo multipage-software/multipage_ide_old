@@ -294,17 +294,17 @@ public class AreasPropertiesBase extends JPanel {
 			this.areas = selectedAreas;
 			
 			// Try to save unsaved changes in description and/or alias.
-			if (!textDescription.states.isSaved()) {
+			if (!textDescription.state.isSaved()) {
 				
-				Object userObject = textDescription.getUser();
+				Object userObject = textDescription.getUserObject();
 				if (userObject instanceof Long) {
 					
 					textDescription.saveText();
 				}
 			}
-			if (!textAlias.states.isSaved()) {
+			if (!textAlias.state.isSaved()) {
 				
-				Object userObject = textDescription.getUser();
+				Object userObject = textDescription.getUserObject();
 				if (userObject instanceof Long) {
 					
 					textAlias.saveText();
@@ -312,8 +312,8 @@ public class AreasPropertiesBase extends JPanel {
 			}
 			
 			// Initialize user objects.
-			textDescription.setUser(null);
-			textAlias.setUser(null);
+			textDescription.setUserObject(null);
+			textAlias.setUserObject(null);
 			
 			// If is single area selected, enable description editing.
 			if (areaCount == 1) {
@@ -327,8 +327,8 @@ public class AreasPropertiesBase extends JPanel {
 				long areaId = area.getId();
 				
 				// Set user object of text boxes to this area.
-				textDescription.setUser(areaId);
-				textAlias.setUser(areaId);
+				textDescription.setUserObject(areaId);
+				textAlias.setUserObject(areaId);
 				
 				// Get description and alias. Trim the texts.
 				String description = area.getDescription();
@@ -398,7 +398,7 @@ public class AreasPropertiesBase extends JPanel {
 		Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextEvent = textBox -> onSaveFinished -> onRequestUpdate -> {
 			
 			// Get current area.
-			Object userObject = textBox.getUser();
+			Object userObject = textBox.getUserObject();
 			
 			// If the areas reference is not set, exit the method.
 			if (userObject instanceof Long) {
@@ -421,7 +421,7 @@ public class AreasPropertiesBase extends JPanel {
 				// Update description or alias.
 				if (AreasPropertiesBase.description.equals(textBox.identifier)) {
 					
-					if (textBox.isTextChange()) {
+					if (textBox.isTextChangedByUser()) {
 						
 						text = textBox.getText();
 						
@@ -433,7 +433,7 @@ public class AreasPropertiesBase extends JPanel {
 				}
 				else if (AreasPropertiesBase.alias.equals(textBox.identifier))  {
 					
-					if (textBox.isTextChange()) {
+					if (textBox.isTextChangedByUser()) {
 						
 						text = textBox.getText();
 						

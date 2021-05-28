@@ -68,6 +68,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.Middle;
@@ -1802,6 +1803,8 @@ public class SlotListPanel extends JPanel {
 	public void setAreas(LinkedList<Area> areas) {
 
 		this.areas = areas;
+		
+		j.log("SELECTED AREAS %s", areas.toString());
 		
 		// Load slots.
 		loadSlots();

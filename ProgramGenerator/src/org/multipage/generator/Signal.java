@@ -8,8 +8,6 @@ package org.multipage.generator;
 
 import java.util.HashSet;
 
-import org.multipage.generator.ConditionalEvents.Message;
-
 public enum Signal implements EventCondition {
 	
 	// Special signal that runs user lambda function placed in a message on the message thread.

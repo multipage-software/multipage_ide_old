@@ -239,19 +239,19 @@ public abstract class AreaEditorCommonBase {
 
 		// Set description.
 		getTextDescription().setText(area.getDescription());
-		getTextDescription().setUser(area.getId());
+		getTextDescription().setUserObject(area.getId());
 		
 		// Set alias.
 		getTextAlias().setText(area.getAlias());
-		getTextAlias().setUser(area.getId());
+		getTextAlias().setUserObject(area.getId());
 		
 		// Set folder.
 		getTextFolder().setText(area.getFolder());
-		getTextFolder().setUser(area.getId());
+		getTextFolder().setUserObject(area.getId());
 		
 		// Set file name.
 		getTextFileName().setText(area.getFileName());
-		getTextFileName().setUser(area.getId());
+		getTextFileName().setUserObject(area.getId());
 	}
 	
 	/**
@@ -895,7 +895,7 @@ public abstract class AreaEditorCommonBase {
 		Function<TextFieldAutoSave, Function<Runnable, Consumer<Runnable>>> saveTextEvent = textBox -> onSaveFinished -> onRequestUpdate -> {
 			
 			// Get current area.
-			Object userObject = textBox.getUser();
+			Object userObject = textBox.getUserObject();
 			
 			// If the areas reference is not set, exit the method.
 			if (userObject instanceof Long) {

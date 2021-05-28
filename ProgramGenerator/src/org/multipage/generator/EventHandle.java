@@ -8,8 +8,6 @@ package org.multipage.generator;
 
 import java.util.function.Consumer;
 
-import org.multipage.generator.ConditionalEvents.Message;
-
 /**
  * Event handle.
  */

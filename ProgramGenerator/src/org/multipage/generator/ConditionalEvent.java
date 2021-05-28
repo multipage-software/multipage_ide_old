@@ -6,7 +6,6 @@
  */
 package org.multipage.generator;
 
-import org.multipage.generator.ConditionalEvents.Message;
 import org.multipage.gui.Utility;
 
 /**

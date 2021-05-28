@@ -6,8 +6,6 @@
  */
 package org.multipage.generator;
 
-import org.multipage.generator.ConditionalEvents.Message;
-
 /**
  * Groups.
  * @author user

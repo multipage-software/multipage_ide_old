@@ -146,6 +146,7 @@ import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.w3c.dom.Node;
 
+import com.google.gson.Gson;
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
@@ -4474,18 +4475,6 @@ public class Utility {
 	}
 	
 	/**
-	 * Color
-	 * @param messageDetails
-	 * @param string
-	 * @param red
-	 * @return
-	 */
-	public static String colorText(String messageDetails, String string, Color red) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	/**
 	 * Color all HTML texts that matches regular exception
 	 * @param text
 	 * @param textRegex
@@ -4616,8 +4605,7 @@ public class Utility {
 		String nowText = dateFormat.format(calendar.getTimeInMillis());
 		return nowText;
 	}
-	
-	
+
 	/**
 	 * Get current time.
 	 * @param format
@@ -4629,5 +4617,29 @@ public class Utility {
 		
 		long now = calendar.getTimeInMillis();
 		return now;
+	}
+
+	/**
+	 * Make deep check of equivalence of two input objects.
+	 * @param object1
+	 * @param object2
+	 * @return
+	 */
+	public static boolean equalsDeep(Object object1, Object object2) {
+		
+		Gson gson = new Gson();
+		
+		// TODO: GSON has to be synchronized, it is not threda safe.
+		try {
+			String dump1 = gson.toJson(object1);
+			String dump2 = gson.toJson(object2);
+			
+			return dump1.contentEquals(dump2);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return false;
 	}
 }
