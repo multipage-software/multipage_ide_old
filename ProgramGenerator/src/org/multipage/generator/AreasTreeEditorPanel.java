@@ -64,6 +64,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreasModel;
@@ -843,6 +844,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	
 		    	onSelectedTreeItem();
 		    	
+		    	j.log("TRANSMITTED 9 showAreasProperties %s", selectedTreeAreaIds.toString());
 		    	// Propagate the "show areas' properties" event.
 		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedTreeAreaIds);
 		    }
@@ -859,6 +861,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				
 				onSelectedListItem();
 				
+				j.log("TRANSMITTED 10 showAreasProperties %s", selectedListAreaIds.toString());
 		    	// Propagate the "show areas' properties" event.
 		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedListAreaIds);
 			}

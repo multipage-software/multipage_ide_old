@@ -61,6 +61,7 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -1015,6 +1016,7 @@ public class GeneratorMainFrame extends JFrame {
 				
 				// Transmit event.
 				if (selectedAreaIds != null) {
+					j.log("TRANSMITTED 6 showAreasProperties %s", selectedAreaIds.toString());
 					ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showAreasProperties, selectedAreaIds);
 				}
 			}
@@ -1685,6 +1687,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Select all areas.
 		ConditionalEvents.transmit(this, Signal.selectAll);
+		j.log("TRANSMITTED 7 showAreasProperties %s", "");
 		// Show areas' properties.
 		ConditionalEvents.transmit(this, Signal.showAreasProperties);
 	}
@@ -1694,6 +1697,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUnselectAll() {
 		
+		j.log("TRANSMITTED 8 showAreasProperties %s", "");
 		// Unselect all areas.
 		ConditionalEvents.transmit(this, Signal.unselectAll);
 		// Show areas' properties.

@@ -4517,7 +4517,7 @@ public class Utility {
 	 * @param tree
 	 * @param object
 	 */
-	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Consumer<DefaultMutableTreeNode>>> curriedFunctions) {
+	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Consumer<DefaultMutableTreeNode>>> callbackFunctions) {
 		
 		// Recursive function
 		class Helper {
@@ -4532,7 +4532,7 @@ public class Utility {
 					DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) parent;
 					
 					Object userObject = treeNode.getUserObject();
-					curriedFunctions.apply(userObject).apply(treeNode).accept(parentNode);
+					callbackFunctions.apply(userObject).apply(treeNode).accept(parentNode);
 				}
 			}
 			

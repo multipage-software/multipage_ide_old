@@ -167,11 +167,31 @@ public class ConditionalEvents {
 		
 		synchronized (messageQueue) {
 			
-			if (!messageQueue.isEmpty()) {
-				
-				// Append message.
-				messageQueue.add(message);
+			if (message.signal == Signal.showAreasProperties) {
+				j.log("PUSHING %s", message.toString());
 			}
+			// Append message.
+			messageQueue.add(message);
+		}
+	}
+
+	/**
+	 * Create message queue snapshot.
+	 * @return
+	 */
+	public static LinkedList getQueueSnapshot() {
+		
+		synchronized (messageQueue) {
+			
+			if (messageQueue.isEmpty()) {
+				return null;
+			}
+			
+			// Make message queue clone.
+			LinkedList<Message> queueSnapshot = new LinkedList<Message>();
+			queueSnapshot.addAll(messageQueue);
+			
+			return queueSnapshot;
 		}
 	}
 	
@@ -187,11 +207,20 @@ public class ConditionalEvents {
 			
 			// Try to pop single incoming message from the message queue or wait for a new incoming message.
 			Boolean newMessage = null;
+			
 			do {
+				
+				// Log message queue.
+				LoggingDialog.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
 				
 				// Pop the message and exit the loop.
 				incomingMessage.ref = popMessage();
 				if (incomingMessage.ref != null) {
+					
+					// TODO: debug
+					if (incomingMessage.ref.signal == Signal.showAreasProperties && incomingMessage.ref.relatedInfo != null && incomingMessage.ref.relatedInfo.toString().equals("[640]")) {
+						j.log("INCOMING %s", incomingMessage.ref.toString());
+					}
 					break;
 				}
 	
@@ -200,6 +229,10 @@ public class ConditionalEvents {
 				
 				// Pop the new message.
 				if (newMessage) {
+					
+					// Log message queue.
+					LoggingDialog.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
+					
 					incomingMessage.ref = popMessage();
 				}
 			}
@@ -261,14 +294,16 @@ public class ConditionalEvents {
 			else {
 				
 				// If the message should be renewed, schedule it.
-				if (incomingMessage.ref.renewInfo) {
+				if (incomingMessage.ref.renew) {
 					
 					// Wait for a while, push the message back into the input queue with renewal flag cleared
-					// and release the message dispatch lock.
+					// and updated message receive time. Release the message dispatch lock.
 					try {
 						Thread.sleep(messageRenewalIntervalMs);
 						
-						incomingMessage.ref.renewInfo = false;
+						incomingMessage.ref.receiveTime = currentTime;
+						incomingMessage.ref.renew = false;
+						
 						pushMessage(incomingMessage.ref);
 						
 						Lock.notify(dispatchLock);
@@ -381,11 +416,11 @@ public class ConditionalEvents {
 	private static boolean isMessageSurviving(Message message, Long currentTime) {
 		
 		// Get renewal flag.
-		boolean renewInfo = message.renewInfo;
+		boolean renew = message.renew;
 
 		// Try to find message that equals the input message.
 		List<Entry<Long, Message>> foundEqualMessages = survivingMessages.entrySet().stream()
-			.filter(item -> message.coalesces(item.getValue(), renewInfo))
+			.filter(item -> message.coalesces(item.getValue(), renew))
 			.collect(Collectors.toList());
 		
 		// Check surviving message.
@@ -500,7 +535,7 @@ public class ConditionalEvents {
 	 * @param target
 	 * @param info
 	 */
-	private static void propagateMessage(Object source, Object target, Signal signal, boolean renewInfo, Object ... info) {
+	private static void propagateMessage(Object source, Object target, Signal signal, boolean renew, Object ... info) {
 		
 		// Check if the signal is enabled.
 		if (!signal.isEnabled()) {
@@ -515,11 +550,14 @@ public class ConditionalEvents {
 		// Add new message to the message queue and unlock the message dispatch thread.
 		synchronized (messageQueue) {
 			
+			long currentTime = Utility.getNow();
+			
 			Message message = new Message();
 			
 			message.source = source;
 			message.target = target;
 			message.signal = signal;
+			message.receiveTime = currentTime;
 			
 			if (info instanceof Object []) {
 				int count = info.length;
@@ -530,11 +568,15 @@ public class ConditionalEvents {
 					message.additionalInfos = Arrays.copyOfRange(info, 1, count);
 				}
 			}
-			message.renewInfo = renewInfo;
+			message.renew = renew;
 			
 			StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 			if (stackElements.length >= 4) {
 				message.reflection = stackElements[3];
+			}
+			
+			if (signal == Signal.showAreasProperties) {
+				j.log("ADDING %s", message.toString());
 			}
 			
 			messageQueue.add(message);

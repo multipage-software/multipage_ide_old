@@ -29,11 +29,14 @@ public class Message {
 	// Additional information added to the above related information. 
 	public Object [] additionalInfos;
 	
-	// A flag that is true if related or additional info has to be renewed
-	public boolean renewInfo = false;
+	// A flag that is true when the message has to be renewed.
+	public boolean renew = false;
 	
 	// Message source reflection.
 	public StackTraceElement reflection;
+	
+	// Transmit time.
+	public Long transmitTime;
 	
 	// Receive time.
 	public Long receiveTime;
@@ -47,7 +50,8 @@ public class Message {
 	@Override
 	public String toString() {
 		String timeStamp = receiveTime != null ? Utility.formatTime(receiveTime) : "null";
-		return String.format("Message 0x%08x [signal=%s, received=%s]", this.hashCode(), signal.name(), timeStamp);
+		String info = relatedInfo != null ? ", info=" + relatedInfo.toString() : "";
+		return String.format("Message 0x%08x [signal=%s, received=%s%s]", this.hashCode(), signal.name(), timeStamp, info);
 	}
 	
 	/**
@@ -133,10 +137,10 @@ public class Message {
 	/**
 	 * Check if this message coalesces with the input object.
 	 * @param obj
-	 * @param renewInfo 
+	 * @param renew 
 	 * @return
 	 */
-	public boolean coalesces(Object obj, boolean renewInfo) {
+	public boolean coalesces(Object obj, boolean renew) {
 		
 		// Check references.
 		if (this == obj)
@@ -164,7 +168,7 @@ public class Message {
 		} else if (!target.equals(other.target))
 			return false;
 		
-		if (!renewInfo) {
+		if (!renew) {
 			// Check relatedInfo.
 			if (relatedInfo == null) {
 				if (other.relatedInfo != null)

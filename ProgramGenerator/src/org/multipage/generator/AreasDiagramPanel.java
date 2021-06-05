@@ -48,6 +48,7 @@ import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreasModel;
@@ -576,6 +577,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			// Get selected areas.
 			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
 			
+			j.log("TRANSMITTED 5 showAreasProperties %s", selectedAreaIds.toString());
 			// Propagate "show areas properties" event.
 			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.showAreasProperties, selectedAreaIds);
 			// Propagate "select diagram areas" event.

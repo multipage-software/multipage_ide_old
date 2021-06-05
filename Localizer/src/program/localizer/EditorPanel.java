@@ -1297,7 +1297,11 @@ public class EditorPanel extends JPanel {
 		tableModel.fireTableDataChanged();
 		
 		// Select item.
-		table.setRowSelectionInterval(selectedRow, selectedRow);
+		try {
+			table.setRowSelectionInterval(selectedRow, selectedRow);
+		}
+		catch (Exception e) {
+		}
 	}
 
 	/**

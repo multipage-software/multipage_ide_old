@@ -9,6 +9,7 @@ package org.multipage.generator;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Rectangle;
@@ -28,6 +29,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.function.BiFunction;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -67,6 +69,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
+import java.awt.FlowLayout;
 
 /**
  * 
@@ -83,24 +86,34 @@ public class LoggingDialog extends JDialog {
 	//$hide>>$
 	
 	/**
+	 * Message queue viewer update interval
+	 */
+	private static int messageQueueUpdateIntervalMs = 3000;
+	
+	/**
 	 * Events tree update interval in milliseconds.
 	 */
-	private static Integer treeUpdateIntervalMs = null;
+	private static int eventTreeUpdateIntervalMs = 1000;
 	
 	/**
 	 * Omit/choose selected signals.
 	 */
-	private static Boolean omitChooseSignals = null;
+	private static boolean omitChooseSignals = true;
+	
+	/**
+	 * Queue limit.
+	 */
+	private static int queueLimit = 20;
 	
 	/**
 	 * Message limit.
 	 */
-	private static Integer messageLimit = null;
+	private static int logLimit = 20;
 	
 	/**
 	 * Limit of logged events.
 	 */
-	private static Integer eventLimit = null;
+	private static int eventLimit = 30;
 
 	/**
 	 * Bounds.
@@ -108,14 +121,15 @@ public class LoggingDialog extends JDialog {
 	private static Rectangle bounds = null;
 	
 	/**
-	 * Splitter position.
+	 * Splitter positions.
 	 */
-	private static Integer eventsWindowSplitter;
+	private static int eventsWindowSplitter = -1;
+	private static int queueWindowSplitter = -1;
 	
 	/**
 	 * Selected tab.
 	 */
-	private static Integer selectedTab;
+	private static int selectedTab = 0;
 	
 	/**
 	 * Dark green color constant.
@@ -133,12 +147,6 @@ public class LoggingDialog extends JDialog {
 	public static void setDefaultData() {
 		
 		bounds = new Rectangle();
-		eventsWindowSplitter = -1;
-		selectedTab = 0;
-		treeUpdateIntervalMs = 1000;
-		omitChooseSignals = true;
-		messageLimit = 20;
-		eventLimit = 30;
 	}
 
 	/**
@@ -154,9 +162,12 @@ public class LoggingDialog extends JDialog {
 		omitChooseSignals = inputStream.readBoolean();
 		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
+		queueWindowSplitter = inputStream.readInt();
 		selectedTab = inputStream.readInt();
-		treeUpdateIntervalMs = inputStream.readInt();
-		messageLimit = inputStream.readInt();
+		messageQueueUpdateIntervalMs = inputStream.readInt();
+		eventTreeUpdateIntervalMs = inputStream.readInt();
+		queueLimit = inputStream.readInt();
+		logLimit = inputStream.readInt();
 		eventLimit = inputStream.readInt();
 	}
 
@@ -172,9 +183,12 @@ public class LoggingDialog extends JDialog {
 		outputStream.writeBoolean(omitChooseSignals);
 		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
+		outputStream.writeInt(queueWindowSplitter);
 		outputStream.writeInt(selectedTab);
-		outputStream.writeInt(treeUpdateIntervalMs);
-		outputStream.writeInt(messageLimit);
+		outputStream.writeInt(messageQueueUpdateIntervalMs);
+		outputStream.writeInt(eventTreeUpdateIntervalMs);
+		outputStream.writeInt(queueLimit);
+		outputStream.writeInt(logLimit);
 		outputStream.writeInt(eventLimit);
 	}
 	
@@ -238,7 +252,13 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Logged messages.
 	 */
-	private static LinkedList<LoggedMessage> messages = new LinkedList<LoggedMessage>();
+	private static LinkedList<LoggedMessage> logTexts = new LinkedList<LoggedMessage>();
+	
+	/**
+	 * Logged message queue snapshots.
+	 * Maps: Time Moment -> List of Messages
+	 */
+	private static LinkedHashMap<String, LinkedList<Message>> messageQueueSnapshots = new LinkedHashMap<String, LinkedList<Message>>();
 	
 	/**
 	 * Logged events.
@@ -271,24 +291,39 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * Root node of the message queue viewer.
+	 */
+	private DefaultMutableTreeNode messageQueueTreeRootNode;
+	
+	/**
+	 * Message queue tree model.
+	 */
+	private DefaultTreeModel messageQueueTreeModel;
+
+	/**
+	 * A timer that updates message queue viewer.
+	 */
+	private Timer updateMessageQueueTimer = null;
+	
+	/**
+	 * Root node of the events tree.
+	 */
+	private DefaultMutableTreeNode eventTreeRootNode = null;
+	
+	/**
 	 * Tree model for displaying logged events.
 	 */
 	private DefaultTreeModel eventTreeModel = null;
 	
 	/**
+	 * Update event tree timer.
+	 */
+	private Timer updateEventTreeTimer = null;
+	
+	/**
 	 * List model of break points set.
 	 */
 	private DefaultListModel listBreakPointsModel = null;
-	
-	/**
-	 * Root node of the events tree.
-	 */
-	private DefaultMutableTreeNode treeRootNode = null;
-	
-	/**
-	 * Update tree timer.
-	 */
-	private Timer updateTimer = null;
 	
 	/**
 	 * Recently selected event tree object.
@@ -315,7 +350,7 @@ public class LoggingDialog extends JDialog {
 	private JCheckBox checkOmitOrChooseSignals;
 	private JScrollPane scrollPaneOmitOrChoose;
 	private JList<Signal> listOmittedOrChosenSignals;
-	private JPanel panelMessages;
+	private JPanel panelLog;
 	private JPopupMenu popupMenu;
 	private JMenuItem menuAddBreakPoint;
 	private JScrollPane scrollPaneEventsDescription;
@@ -323,7 +358,18 @@ public class LoggingDialog extends JDialog {
 	private JMenuItem menuAddOmittedChosen;
 	private JButton buttonClearOmitedChosen;
 	private JSeparator separator;
-	private JMenuItem menuPrintReflection;
+	private JMenuItem menuEventsPrintReflection;
+	private JPanel panelMessageQueue;
+	private JScrollPane scrollPaneMessageQueue;
+	private JTree treeMessageQueue;
+	private JToolBar toolBarMessageQueue;
+	private JSplitPane splitPaneMessageQueue;
+	private JScrollPane scrollPaneQueueMessageDescription;
+	private JTextPane textPaneQueueMessage;
+	private JPopupMenu popupMenuMessageQueues;
+	private JMenuItem menuMessageQueuePrintReflection;
+	private JMenuItem menuMessageGoToEvent;
+	private JMenuItem menuGoToQueueMessage;
 	
 	/**
 	 * Show dialog.
@@ -340,8 +386,10 @@ public class LoggingDialog extends JDialog {
 	public LoggingDialog(Window parentWindow) {
 		super(parentWindow, ModalityType.MODELESS);
 		
-		initComponents();
-		postCreate(); //$hide$
+		synchronized (this) {//$hide$
+			initComponents();
+			postCreate(); //$hide$
+		}//$hide$
 	}
 	
 	/**
@@ -376,15 +424,69 @@ public class LoggingDialog extends JDialog {
 			}
 		});
 		
-		panelMessages = new JPanel();
-		tabbedPane.addTab("org.multipage.generator.textLoggedMessages", null, panelMessages, null);
-		panelMessages.setLayout(new BorderLayout(0, 0));
+		panelLog = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textLoggedMessages", null, panelLog, null);
+		panelLog.setLayout(new BorderLayout(0, 0));
 		
-		JScrollPane scrollPaneMessages = new JScrollPane();
-		panelMessages.add(scrollPaneMessages, BorderLayout.CENTER);
+		JScrollPane scrollPaneLog = new JScrollPane();
+		panelLog.add(scrollPaneLog, BorderLayout.CENTER);
 		
-		JTextArea textAreaDescription1 = new JTextArea();
-		scrollPaneMessages.setViewportView(textAreaDescription1);
+		JTextArea textLog = new JTextArea();
+		scrollPaneLog.setViewportView(textLog);
+		
+		panelMessageQueue = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textLogMessageQueue", null, panelMessageQueue, null);
+		panelMessageQueue.setLayout(new BorderLayout(0, 0));
+		DefaultTreeSelectionModel queueSelectionModel = new DefaultTreeSelectionModel();
+		queueSelectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		treeEvents.setSelectionModel(queueSelectionModel);
+		
+		toolBarMessageQueue = new JToolBar();
+		toolBarMessageQueue.setFloatable(false);
+		panelMessageQueue.add(toolBarMessageQueue, BorderLayout.NORTH);
+		
+		splitPaneMessageQueue = new JSplitPane();
+		splitPaneMessageQueue.setResizeWeight(0.8);
+		splitPaneMessageQueue.setOrientation(JSplitPane.VERTICAL_SPLIT);
+		panelMessageQueue.add(splitPaneMessageQueue, BorderLayout.CENTER);
+		
+		scrollPaneMessageQueue = new JScrollPane();
+		splitPaneMessageQueue.setLeftComponent(scrollPaneMessageQueue);
+		
+		treeMessageQueue = new JTree();
+		treeMessageQueue.addTreeSelectionListener(new TreeSelectionListener() {
+			public void valueChanged(TreeSelectionEvent e) {
+				onMessageQueueObjectSelected();
+			}
+		});
+		treeMessageQueue.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+		scrollPaneMessageQueue.setViewportView(treeMessageQueue);
+		
+		popupMenuMessageQueues = new JPopupMenu();
+		addPopup(treeMessageQueue, popupMenuMessageQueues);
+		
+		menuMessageQueuePrintReflection = new JMenuItem("org.multipage.generator.menuLogPrintReflection");
+		menuMessageQueuePrintReflection.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onPrintReflection(treeMessageQueue);
+			}
+		});
+		
+		menuMessageGoToEvent = new JMenuItem("org.multipage.generator.menuLogMessageGoToEvent");
+		menuMessageGoToEvent.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onGoToMessageEvent();
+			}
+		});
+		popupMenuMessageQueues.add(menuMessageGoToEvent);
+		popupMenuMessageQueues.add(menuMessageQueuePrintReflection);
+		
+		scrollPaneQueueMessageDescription = new JScrollPane();
+		splitPaneMessageQueue.setRightComponent(scrollPaneQueueMessageDescription);
+		
+		textPaneQueueMessage = new JTextPane();
+		textPaneQueueMessage.setContentType("text/html");
+		scrollPaneQueueMessageDescription.setViewportView(textPaneQueueMessage);
 		
 		panelEvents = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textLoggedConditionalEvents", null, panelEvents, null);
@@ -401,13 +503,6 @@ public class LoggingDialog extends JDialog {
 		
 		scrollPaneEvents = new JScrollPane();
 		splitPaneEvents.setLeftComponent(scrollPaneEvents);
-		
-		treeEvents = new JTree();
-		treeEvents.addTreeSelectionListener(new TreeSelectionListener() {
-			public void valueChanged(TreeSelectionEvent e) {
-				onEventSelection();
-			}
-		});
 		scrollPaneEvents.setViewportView(treeEvents);
 		
 		popupMenu = new JPopupMenu();
@@ -429,13 +524,21 @@ public class LoggingDialog extends JDialog {
 		});
 		popupMenu.add(menuAddOmittedChosen);
 		
-		menuPrintReflection = new JMenuItem("org.multipage.generator.menuLogPrintReflection");
-		menuPrintReflection.addActionListener(new ActionListener() {
+		menuEventsPrintReflection = new JMenuItem("org.multipage.generator.menuLogPrintReflection");
+		menuEventsPrintReflection.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onPrintReflection();
+				onPrintReflection(treeEvents);
 			}
 		});
-		popupMenu.add(menuPrintReflection);
+		
+		menuGoToQueueMessage = new JMenuItem("org.multipage.generator.menuLogMessageGoToQueue");
+		menuGoToQueueMessage.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onGoToMessageQueue();
+			}
+		});
+		popupMenu.add(menuGoToQueueMessage);
+		popupMenu.add(menuEventsPrintReflection);
 		
 		scrollPaneEventsDescription = new JScrollPane();
 		splitPaneEvents.setRightComponent(scrollPaneEventsDescription);
@@ -450,6 +553,8 @@ public class LoggingDialog extends JDialog {
 		panelOmitOrChooseSignals.setLayout(new BorderLayout(0, 0));
 		
 		JPanel panelTopOmitOrChoose = new JPanel();
+		FlowLayout flowLayout = (FlowLayout) panelTopOmitOrChoose.getLayout();
+		flowLayout.setAlignment(FlowLayout.LEFT);
 		panelOmitOrChooseSignals.add(panelTopOmitOrChoose, BorderLayout.NORTH);
 		
 		checkOmitOrChooseSignals = new JCheckBox("org.multipage.generator.textOmitOrChoose");
@@ -458,7 +563,6 @@ public class LoggingDialog extends JDialog {
 				onOmitChooseSignals();
 			}
 		});
-		panelTopOmitOrChoose.add(checkOmitOrChooseSignals);
 		
 		buttonClearOmitedChosen = new JButton("");
 		buttonClearOmitedChosen.addActionListener(new ActionListener() {
@@ -466,15 +570,16 @@ public class LoggingDialog extends JDialog {
 				onClearOmittedChosen();
 			}
 		});
+		buttonClearOmitedChosen.setToolTipText("org.multipage.generator.tooltipLogClearOmitedChoseSignal");
+		buttonClearOmitedChosen.setPreferredSize(new Dimension(24, 24));
+		buttonClearOmitedChosen.setMargin(new Insets(0, 0, 0, 0));
+		panelTopOmitOrChoose.add(buttonClearOmitedChosen);
 		
 		separator = new JSeparator();
 		separator.setPreferredSize(new Dimension(2, 24));
 		separator.setOrientation(SwingConstants.VERTICAL);
 		panelTopOmitOrChoose.add(separator);
-		buttonClearOmitedChosen.setToolTipText("org.multipage.generator.tooltipLogClearOmitedChoseSignal");
-		buttonClearOmitedChosen.setPreferredSize(new Dimension(24, 24));
-		buttonClearOmitedChosen.setMargin(new Insets(0, 0, 0, 0));
-		panelTopOmitOrChoose.add(buttonClearOmitedChosen);
+		panelTopOmitOrChoose.add(checkOmitOrChooseSignals);
 		
 		scrollPaneOmitOrChoose = new JScrollPane();
 		panelOmitOrChooseSignals.add(scrollPaneOmitOrChoose, BorderLayout.CENTER);
@@ -503,7 +608,7 @@ public class LoggingDialog extends JDialog {
 		listBreakPoints = new JList();
 		scrollPaneBreakPoints.setViewportView(listBreakPoints);
 	}
-
+	
 	/**
 	 * Post creation.
 	 */
@@ -513,6 +618,7 @@ public class LoggingDialog extends JDialog {
 		localize();
 		setIcons();
 		loadDialog();
+		createMessaqeQueueTree();
 		createEventTree();
 		createOmittedSignalList();
 		createBreakPointsList();
@@ -523,9 +629,14 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void createToolBars() {
 		
+		// A tool bar for message queue.
+		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedQueues", () -> onClearQueues());
+		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedQueuesSettings", () -> onLogSettings());
+
+		
 		// A tool bar for logged events.
 		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
-		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedEventsSettings", () -> onOnEventsSettings());
+		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedEventsSettings", () -> onLogSettings());
 		
 		// A tool bar for break points.
 		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
@@ -542,7 +653,10 @@ public class LoggingDialog extends JDialog {
 		Utility.localize(buttonClearOmitedChosen);
 		Utility.localize(menuAddBreakPoint);
 		Utility.localize(menuAddOmittedChosen);
-		Utility.localize(menuPrintReflection);
+		Utility.localize(menuEventsPrintReflection);
+		Utility.localize(menuMessageQueuePrintReflection);
+		Utility.localize(menuMessageGoToEvent);
+		Utility.localize(menuGoToQueueMessage);
 	}
 	
 	/**
@@ -577,6 +691,12 @@ public class LoggingDialog extends JDialog {
 		else {
 			setBounds(bounds);
 		}
+		if (queueWindowSplitter != -1) {
+			splitPaneMessageQueue.setDividerLocation(queueWindowSplitter);
+		}
+		else {
+			splitPaneMessageQueue.setDividerLocation(0.8);
+		}
 		if (eventsWindowSplitter != -1) {
 			splitPaneEvents.setDividerLocation(eventsWindowSplitter);
 		}
@@ -593,6 +713,7 @@ public class LoggingDialog extends JDialog {
 	private void saveDialog() {
 		
 		bounds = getBounds();
+		queueWindowSplitter = splitPaneMessageQueue.getDividerLocation();
 		eventsWindowSplitter = splitPaneEvents.getDividerLocation();
 		selectedTab = tabbedPane.getSelectedIndex();
 		omitChooseSignals = checkOmitOrChooseSignals.isSelected();
@@ -622,13 +743,77 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * Create message queue tree.
+	 */
+	private void createMessaqeQueueTree() {
+		
+		// Create the tree model.
+		messageQueueTreeRootNode = new DefaultMutableTreeNode();
+		messageQueueTreeModel = new DefaultTreeModel(messageQueueTreeRootNode);
+		treeMessageQueue.setModel(messageQueueTreeModel);
+		
+		// Set tree node renderer.
+		treeMessageQueue.setCellRenderer(new TreeCellRenderer() {
+			
+			// Renderer.
+			RendererJLabel renderer = new RendererJLabel();
+			
+			// Callback method.s
+			@Override
+			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded,
+					boolean leaf, int row, boolean hasFocus) {
+				
+				// Check value.
+				if (!(value instanceof DefaultMutableTreeNode)) {
+					renderer.setText("unknown");
+				}
+				else {
+					// Get queue object.
+					DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+					Object queueObject = node.getUserObject();
+					
+					Color nodeColor = Color.BLACK;
+					
+					// Set node text.
+					// On the message.
+					if (queueObject instanceof Message) {
+						Message message = (Message) queueObject;
+						renderer.setText(String.format("[0x%08X] message %s", message.hashCode(), message.signal.name()));
+						nodeColor = DARK_GREEN;
+					}
+					// Otherwise...
+					else if (queueObject != null) {
+						renderer.setText(queueObject.toString());
+						nodeColor = Color.GRAY;
+					}
+					else {
+						renderer.setText("root");
+						nodeColor = Color.GRAY;
+					}
+					
+					// Set node color.
+					renderer.setForeground(nodeColor);
+				}
+				
+				// Set renderer properties
+				renderer.set(selected, hasFocus, row);
+				return renderer;
+			}
+		});
+			
+		// Start update timer.
+		updateMessageQueueTimer = new Timer(messageQueueUpdateIntervalMs, event -> updateMessageQueueTree());
+		updateMessageQueueTimer.start();
+	}
+	
+	/**
 	 * Create a tree with categorized events.
 	 */
 	private void createEventTree() {
 		
 		// Create and set tree model.
-		treeRootNode = new DefaultMutableTreeNode();
-		eventTreeModel = new DefaultTreeModel(treeRootNode);
+		eventTreeRootNode = new DefaultMutableTreeNode();
+		eventTreeModel = new DefaultTreeModel(eventTreeRootNode);
 		treeEvents.setModel(eventTreeModel);
 		treeEvents.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		
@@ -695,15 +880,15 @@ public class LoggingDialog extends JDialog {
 		});
 		
 		// Create update timer.
-		updateTimer = new Timer(treeUpdateIntervalMs, event -> {
+		updateEventTreeTimer = new Timer(eventTreeUpdateIntervalMs, event -> {
 			
 			SwingUtilities.invokeLater(() -> {
 				synchronized (events) {
-					updateEventTree(events);
+					updateEventTree();
 				}
 			});
 		});
-		updateTimer.start();
+		updateEventTreeTimer.start();
 	}
 	
 	/**
@@ -827,8 +1012,8 @@ public class LoggingDialog extends JDialog {
 	private String getNodeDescription(DefaultMutableTreeNode node) {
 
 		// Get description of the event part.
-		Object eventPart = node.getUserObject();
-		String description = getEventPartDescription(eventPart);
+		Object loggedObject = node.getUserObject();
+		String description = getLoggedObjectDescription(loggedObject);
 
 		return description;
 	}
@@ -928,18 +1113,18 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Get event part description.
-	 * @param eventPart
+	 * Get logged object description.
+	 * @param loggedObject
 	 * @return
 	 */
-	private String getEventPartDescription(Object eventPart) {
+	private String getLoggedObjectDescription(Object loggedObject) {
 		
 		String description = "";
 		
 		// Get signal description.
-		if (eventPart instanceof Signal) {
+		if (loggedObject instanceof Signal) {
 			
-			Signal signal = (Signal) eventPart;
+			Signal signal = (Signal) loggedObject;
 			description = String.format(
 					"<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
@@ -953,9 +1138,9 @@ public class LoggingDialog extends JDialog {
 					getSignalTypesDescription(signal)
 					);
 		}
-		else if (eventPart instanceof Message) {
+		else if (loggedObject instanceof Message) {
 			
-			Message message = (Message) eventPart;
+			Message message = (Message) loggedObject;
 			description = String.format(
 					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
@@ -979,9 +1164,9 @@ public class LoggingDialog extends JDialog {
 					getReflectionDescription(message.reflection)
 					);
 		}
-		else if (eventPart instanceof LoggedEvent) {
+		else if (loggedObject instanceof LoggedEvent) {
 			
-			LoggedEvent loggedEvent = (LoggedEvent) eventPart;
+			LoggedEvent loggedEvent = (LoggedEvent) loggedObject;
 			description = String.format(
 					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
@@ -1003,32 +1188,32 @@ public class LoggingDialog extends JDialog {
 					getReflectionDescription(loggedEvent.eventHandle.reflection)
 					);
 		}
-		else if (eventPart != null)  {
-			description = eventPart.toString();
+		else if (loggedObject != null)  {
+			description = loggedObject.toString();
 		}
 		return description;
 	}
 
 	/**
 	 * Log message.
-	 * @param messageText
+	 * @param logText
 	 */
-	public static void log(String messageText) {
+	public static void log(String logText) {
 		
 		// Add new message.
-		LoggedMessage message = new LoggedMessage(messageText);
-		messages.add(message);
+		LoggedMessage log = new LoggedMessage(logText);
+		logTexts.add(log);
 		
 		// Message limit.
-		int extraMessagesCount = messages.size() - messageLimit;
+		int extraMessagesCount = logTexts.size() - logLimit;
 
 		// Remove extra messages from the list beginning.
 		while (extraMessagesCount-- > 0) {
-			messages.removeFirst();
+			logTexts.removeFirst();
 		}
 		
-		// Compile messages.
-		compileMessages();
+		// Compile logged messages.
+		compileLog();
 	}
 	
 	/**
@@ -1069,10 +1254,10 @@ public class LoggingDialog extends JDialog {
 			}
 			// Limit the number of messages.
 			int messageCount = messageMap.size();
-			if (messageCount > messageLimit) {
+			if (messageCount > logLimit) {
 				
 				// Remove leading entries.
-				int messageRemovalCount = messageCount - messageLimit;
+				int messageRemovalCount = messageCount - logLimit;
 				HashSet<Message> messagesToRemove = new HashSet<Message>();
 				
 				for (Message messageToRemove : messageMap.keySet()) {
@@ -1147,11 +1332,11 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Compile messages.
 	 */
-	private static void compileMessages() {
+	private static void compileLog() {
 		
 		String resultingText = "";
 		
-		for (LoggedMessage message : messages) {
+		for (LoggedMessage message : logTexts) {
 			resultingText += message.getText() + '\n';
 		}
 		
@@ -1160,43 +1345,52 @@ public class LoggingDialog extends JDialog {
 	
 	/**
 	 * Restore event selection.
-	 * @param selectedEventObject
+	 * @param selectedNode
 	 */
-	private void restoreEventSelection(DefaultMutableTreeNode selectedNode) {
+	private void restoreTreeNodeSelection(JTree tree, DefaultMutableTreeNode rootNode,
+			TreePath selectedPath, BiFunction<Object, Object, Boolean> userObjectsEqualLambda) {
 		
 		// Check the node.
-		if (selectedNode == null) {
+		if (selectedPath == null) {
 			return;
 		}
 		
+		// Get last path node.
+		Object lastComponent = selectedPath.getLastPathComponent();
+		if (!(lastComponent instanceof DefaultMutableTreeNode)) {
+			return;
+		}
+		
+		DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) lastComponent;
+		
 		// Get event object.
-		Object selectedEventObject = selectedNode.getUserObject();
+		Object selectedQueuebject = selectedNode.getUserObject();
 		
 		// Check the event object.
-		if (selectedEventObject == null) {
+		if (selectedQueuebject == null) {
 			return;
 		}
 		
 		// Select found node.
-		Enumeration<TreeNode> enumeration = treeRootNode.depthFirstEnumeration();
+		Enumeration<TreeNode> enumeration = rootNode.depthFirstEnumeration();
 		while (enumeration.hasMoreElements()) {
 			
 			// Get the node event object.
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumeration.nextElement();
-			Object eventObject = node.getUserObject();
+			Object queueObject = node.getUserObject();
 			
 			// If the event object matches, select that node.
-			if (eventObjectsEqual(selectedEventObject, eventObject)) {
+			if (userObjectsEqualLambda.apply(selectedQueuebject, queueObject)) {
 				
 				TreeNode [] treeNodes = node.getPath();
 				if (treeNodes.length > 0) {
 					
 					// Set selection path.
 					TreePath treePath = new TreePath(treeNodes);
-					treeEvents.setSelectionPath(treePath);
+					tree.setSelectionPath(treePath);
 					
 					// Ensure that the selection is visible.
-					treeEvents.makeVisible(treePath);
+					tree.makeVisible(treePath);
 					return;
 				}
 			}
@@ -1204,12 +1398,12 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Check if the events object area equal.
+	 * Check if event objects area equal.
 	 * @param eventObject1
 	 * @param eventObject2
 	 * @return
 	 */
-	private boolean eventObjectsEqual(Object eventObject1, Object eventObject2) {
+	private static boolean eventObjectsEqual(Object eventObject1, Object eventObject2) {
 		
 		// Check null objects.
 		if (eventObject1 == null) {
@@ -1248,6 +1442,44 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * Check if message queue objects area equal.
+	 * @param queueObject1
+	 * @param queueObject2
+	 * @return
+	 */
+	private boolean queueObjectsEqual(Object queueObject1, Object queueObject2) {
+		
+		// Check null objects.
+		if (queueObject1 == null) {
+			return queueObject2 == null;
+		}
+		else if (queueObject2 == null) {
+			return false;
+		}
+		
+		// Check objects types.
+		if (queueObject1.getClass() != queueObject2.getClass()) {
+			return false;
+		}
+		
+		// Check time stamps.
+		if (queueObject1 instanceof String) {
+			String timeStamp1 = (String) queueObject1;
+			String timeStamp2 = (String) queueObject2;
+			return timeStamp1.equals(timeStamp2);
+		}
+		// Check messages.
+		else if (queueObject1 instanceof Message) {
+			Message message1 = (Message) queueObject1;
+			Message message2 = (Message) queueObject2;
+			return message1 == message2;
+		}
+		
+		// Perform standard check.
+		return queueObject1.equals(queueObject2);
+	}
+	
+	/**
 	 * Add break point object.
 	 * @param breakPointObject
 	 */
@@ -1259,23 +1491,124 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * Update the list of break points.
+	 * @param breakPointObjects
+	 */
+	private void updateBreakPointsList(HashSet<Object> breakPointObjects) {
+		
+		// Clear the model.
+		listBreakPointsModel.clear();
+		
+		// Add break points.
+		listBreakPointsModel.addAll(breakPointObjects);
+		
+		// Repaint GUI.
+		listBreakPoints.updateUI();
+	}
+	
+	/**
+	 * Add a message queue snapshot into the list.
+	 * @param messageQueueSnapshot
+	 * @param timeMoment 
+	 */
+	public static void addMessageQueueSnapshot(LinkedList<Message> messageQueueSnapshot, Long timeMoment) {
+		
+		synchronized (messageQueueSnapshots) {
+			
+			// Check input.
+			if (messageQueueSnapshot == null || timeMoment == null) {
+				return;
+			}
+			
+			// Get new formatted time moment.
+			String timeMomentText = Utility.formatTime(timeMoment);
+
+			// Insert new items.
+			LinkedList<Message> oldSnapshot = messageQueueSnapshots.get(timeMomentText);
+			if (oldSnapshot != null) {
+				oldSnapshot.addAll(messageQueueSnapshot);
+			}
+			else {
+				messageQueueSnapshots.put(timeMomentText, messageQueueSnapshot);
+			}
+			
+			// Remove extra snapshots.
+			int snapshotCount = messageQueueSnapshots.size();
+			Obj<Integer> snapshotsToRemove = new Obj<Integer>(snapshotCount - queueLimit);
+			
+			if (snapshotsToRemove.ref > 0) {
+				HashSet<String> timeStampsToRemove = new HashSet<String>();
+				
+				messageQueueSnapshots.forEach((timeStamp, snapshot) -> {
+					
+					if (snapshotsToRemove.ref > 0) {
+						timeStampsToRemove.add(timeStamp);
+					}
+					snapshotsToRemove.ref--;
+				});
+				
+				timeStampsToRemove.forEach(timeStamp -> messageQueueSnapshots.remove(timeStamp));
+			}
+		}
+	}
+	
+	/**
+	 * Update message queue tree.
+	 */
+	public void updateMessageQueueTree() {
+		
+		synchronized (messageQueueSnapshots) {
+			
+			// Get current selection.
+			TreePath selectedPath = treeMessageQueue.getSelectionPath();
+			
+			// Clear the tree nodes except the root node.
+			messageQueueTreeRootNode.removeAllChildren();
+			
+			// Add snap shots.
+			messageQueueSnapshots.entrySet().stream().forEach(entry -> {
+				
+				// Get time moment.
+				String timeMomentText = entry.getKey();
+				
+				// Add new time node.
+				DefaultMutableTreeNode timeNode = new DefaultMutableTreeNode(timeMomentText);
+				messageQueueTreeRootNode.add(timeNode);
+				
+				// Get message queue snapshots.
+				LinkedList<Message> messageQueueSnapshot = entry.getValue();
+				if (messageQueueSnapshot != null) {
+					messageQueueSnapshot.forEach(message -> {
+						
+						// Add new message node.
+						DefaultMutableTreeNode messageNode = new DefaultMutableTreeNode(message);
+						timeNode.add(messageNode);
+					});
+				}
+			});
+			
+			// Update tree GUI.
+			treeMessageQueue.updateUI();
+			// Expand all nodes.
+			Utility.expandAll(treeMessageQueue, true);
+			// Restore selection.
+			restoreTreeNodeSelection(treeMessageQueue, messageQueueTreeRootNode, selectedPath, (object1, object2) -> queueObjectsEqual(object1, object2));
+		}
+	}
+	
+	/**
 	 * Reload event tree.
 	 * @param events
 	 */
-	private void updateEventTree(LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>> events) {
+	private void updateEventTree() {
 		
 		synchronized (treeEvents) {
 			
 			// Save current selection.
-			DefaultMutableTreeNode selectedNode = null;
 			TreePath selectedPath = treeEvents.getSelectionPath();
 			
-			if (selectedPath != null) {
-				selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
-			}
-			
 			// Clear old tree of logged events.
-			treeRootNode.removeAllChildren();
+			eventTreeRootNode.removeAllChildren();
 			
 			// Add events.
 			events.forEach((signal, messageMap) -> {
@@ -1302,7 +1635,7 @@ public class LoggingDialog extends JDialog {
 				
 				// Create signal.
 				DefaultMutableTreeNode signalNode = new DefaultMutableTreeNode(signal);
-				treeRootNode.add(signalNode);
+				eventTreeRootNode.add(signalNode);
 				
 				// Create message nodes.
 				if (messageMap != null) {
@@ -1343,41 +1676,47 @@ public class LoggingDialog extends JDialog {
 				}
 			});
 			
-			// Reload the tree model.
-			eventTreeModel.reload(treeRootNode);
+			// Update tree GUI.
+			treeEvents.updateUI();
 			// Expand all nodes.
 			Utility.expandAll(treeEvents, true);
 			// Restore selection.
-			restoreEventSelection(selectedNode);
+			restoreTreeNodeSelection(treeEvents, eventTreeRootNode, selectedPath, (object1, object2) -> eventObjectsEqual(object1, object2));
+		}
+	}
+
+	/**
+	 * Clear logged message queues.
+	 * @return
+	 */
+	private void onClearQueues() {
+		
+		// Ask user.
+		if (!Utility.ask(this, "org.multipage.generator.messageShallClearLoggedQueues")) {
+			return;
+		}
+		
+		synchronized (messageQueueSnapshots) {
+			// Clear message queue snapshots.
+			messageQueueSnapshots.clear();
+		}
+		
+		synchronized (treeMessageQueue) {
+			// Update the queues tree.
+			updateMessageQueueTree();
 		}
 	}
 	
 	/**
-	 * Update the list of break points.
-	 * @param breakPointObjects
-	 */
-	private void updateBreakPointsList(HashSet<Object> breakPointObjects) {
-		
-		// Clear the model.
-		listBreakPointsModel.clear();
-		
-		// Add break points.
-		listBreakPointsModel.addAll(breakPointObjects);
-		
-		// Repaint GUI.
-		listBreakPoints.updateUI();
-	}
-	
-	/**
-	 * Clear logged events.
+	 * Clear message queue snapshots viewer.
 	 */
 	private void onClearEvents() {
 		
 		// Ask user.
-		if (!Utility.ask(this, "org.multipage.generator.tooltipShallClearLoggedEvents")) {
+		if (!Utility.ask(this, "org.multipage.generator.messageShallClearLoggedEvents")) {
 			return;
 		}
-		
+
 		synchronized (events) {
 			// Clear events.
 			events.clear();
@@ -1385,7 +1724,7 @@ public class LoggingDialog extends JDialog {
 		
 		synchronized (treeEvents) {
 			// Update the events tree.
-			updateEventTree(events);
+			updateEventTree();
 		}
 	}
 	
@@ -1494,27 +1833,49 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
-	 * Set update interval for events tree view.
+	 * Set update settings for log views.
 	 */
-	private void onOnEventsSettings() {
+	private void onLogSettings() {
 		
 		// Open settings.
 		Obj<Boolean> isGuiEnabled = new Obj<Boolean>(true);
 		
-		LoggingSettingsDialog.showDialog(this, treeUpdateIntervalMs, messageLimit, eventLimit,
+		LoggingSettingsDialog.showDialog(this,
+				messageQueueUpdateIntervalMs, eventTreeUpdateIntervalMs, queueLimit, logLimit, eventLimit,
 				
 				enableGui -> isGuiEnabled.ref = enableGui,
-				
-				intervalMs -> {
+
+				queuesUpdateIntervalMs -> {
 			
 					// Check interval value.
-					if (intervalMs == null) {
+					if (queuesUpdateIntervalMs == null) {
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageQueuesUpdateIntervalNotNumber");
+						}
+						return false;
+					}
+					if (queuesUpdateIntervalMs < 100 || queuesUpdateIntervalMs > 10000) {
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageQueuesUpdateIntervalOutOfRange");
+						}
+						return false;
+					}
+					
+					// Set interval.
+					setQueuesUpdateInterval(queuesUpdateIntervalMs);
+					return true;
+				},
+						
+				eventsUpdateIntervalMs -> {
+			
+					// Check interval value.
+					if (eventsUpdateIntervalMs == null) {
 						if (isGuiEnabled.ref) {
 							Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalNotNumber");
 						}
 						return false;
 					}
-					if (intervalMs < 100 || intervalMs > 10000) {
+					if (eventsUpdateIntervalMs < 100 || eventsUpdateIntervalMs > 10000) {
 						if (isGuiEnabled.ref) {
 							Utility.show(this, "org.multipage.generator.messageEventsUpdateIntervalOutOfRange");
 						}
@@ -1522,7 +1883,28 @@ public class LoggingDialog extends JDialog {
 					}
 					
 					// Set interval.
-					setEventUpdateInterval(intervalMs);
+					setEventUpdateInterval(eventsUpdateIntervalMs);
+					return true;
+				},
+				
+				newQueueLimit -> {
+					
+					// Check queue limit.
+					if (newQueueLimit == null) {
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageQueueLimitNotNumber");
+						}
+						return false;
+					}
+					if (newQueueLimit < 0 || newQueueLimit > 100) {
+						if (isGuiEnabled.ref) {
+							Utility.show(this, "org.multipage.generator.messageQueueLimitOutOfRange");
+						}
+						return false;
+					}
+					
+					// Set limit.
+					setQueueLimit(newQueueLimit);
 					return true;
 				},
 				
@@ -1568,7 +1950,7 @@ public class LoggingDialog extends JDialog {
 					return true;
 				});
 	}
-	
+
 	/**
 	 * On omit/choose signal menu item clicked.
 	 */
@@ -1606,7 +1988,7 @@ public class LoggingDialog extends JDialog {
 		
 		// If successful, update the tree. If not successful, inform the user.
 		if (success) {
-			updateEventTree(events);
+			updateEventTree();
 		}
 		else {
 			Utility.show(this, "org.multipage.generator.messageLogCannotOmitOrChooseNode");
@@ -1616,10 +1998,10 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * On print reflection.
 	 */
-	protected void onPrintReflection() {
+	protected void onPrintReflection(JTree tree) {
 		
 		// Get selected input message or logged event.
-		DefaultMutableTreeNode node = (DefaultMutableTreeNode) treeEvents.getSelectionPath().getLastPathComponent();
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
 		Object userObject = node.getUserObject();
 		
 		if (userObject instanceof Message) {
@@ -1637,19 +2019,162 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * On selected message queue object.
+	 */
+	protected void onMessageQueueObjectSelected() {
+		
+		// Initialization.
+		String nodeDescription = "";
+		
+		// Get selected message queue object and display its description.
+		TreePath path = treeMessageQueue.getSelectionPath();
+		if (path != null) {
+			
+			Object component = path.getLastPathComponent();
+			if (component instanceof DefaultMutableTreeNode) {
+				
+				// Get node description.
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) component;
+				nodeDescription = getNodeDescription(node);
+			}
+		}
+		
+		// Display the description text.
+		textPaneQueueMessage.setText(nodeDescription);
+	}
+	
+	/**
+	 * Go to message event.
+	 */
+	protected void onGoToMessageEvent() {
+		
+		// Get selected message.
+		TreePath path = treeMessageQueue.getSelectionPath();
+		if (path == null) {
+			Utility.show(this, "org.multipage.generator.messageSelectQueueMessage");
+			return;
+		}
+		
+		Object pathComponent = path.getLastPathComponent();
+		if (!(pathComponent instanceof DefaultMutableTreeNode)) {
+			Utility.show(this, "org.multipage.generator.messageSelectQueueMessage");
+			return;
+		}
+		
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) pathComponent;
+		Object nodeObject = node.getUserObject();
+		if (!(nodeObject instanceof Message)) {
+			Utility.show(this, "org.multipage.generator.messageSelectQueueMessage");
+			return;			
+		}
+		
+		Message message = (Message) nodeObject;
+		
+		// Switch tab.
+		tabbedPane.setSelectedComponent(panelEvents);
+		
+		// Select event.
+		Utility.traverseElements(treeEvents, userObject -> treeNode -> parentNode -> {
+			if (message.equals(userObject)) {
+				
+				TreePath selectionPath = new TreePath(treeNode.getPath());
+				treeEvents.setSelectionPath(selectionPath);
+				treeEvents.makeVisible(selectionPath);
+			}
+		});
+	}
+	
+	/**
+	 * Go to message queue.
+	 */
+	protected void onGoToMessageQueue() {
+		
+		// Get selected message.
+		TreePath path = treeEvents.getSelectionPath();
+		if (path == null) {
+			Utility.show(this, "org.multipage.generator.messageSelectEventsMessage");
+			return;
+		}
+		
+		Object pathComponent = path.getLastPathComponent();
+		if (!(pathComponent instanceof DefaultMutableTreeNode)) {
+			Utility.show(this, "org.multipage.generator.messageSelectEventsMessage");
+			return;
+		}
+		
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) pathComponent;
+		Object nodeObject = node.getUserObject();
+		if (!(nodeObject instanceof Message)) {
+			Utility.show(this, "org.multipage.generator.messageSelectEventsMessage");
+			return;			
+		}
+		
+		Message message = (Message) nodeObject;
+		
+		// Switch tab.
+		tabbedPane.setSelectedComponent(panelMessageQueue);
+		
+		// Select event.
+		Utility.traverseElements(treeMessageQueue, userObject -> treeNode -> parentNode -> {
+			if (message.equals(userObject)) {
+				
+				TreePath selectionPath = new TreePath(treeNode.getPath());
+				treeMessageQueue.setSelectionPath(selectionPath);
+				treeMessageQueue.makeVisible(selectionPath);
+			}
+		});
+	}
+	
+	/**
+	 * On close dialog.
+	 */
+	protected void onClose() {
+		
+		// Save dialog state.
+		saveDialog();
+	}
+	
+	/**
+	 * Set queues display interval.
+	 * @param intervalMs
+	 */
+	private void setQueuesUpdateInterval(Integer intervalMs) {
+
+		// Set event update interval.
+		messageQueueUpdateIntervalMs = intervalMs;
+		updateMessageQueueTimer.setDelay(messageQueueUpdateIntervalMs);
+		
+		// Update queues tree.
+		updateMessageQueueTree();
+	}
+	
+	/**
 	 * Set event display interval.
 	 * @param intervalMs
 	 */
 	protected void setEventUpdateInterval(int intervalMs) {
 		
 		// Set event update interval.
-		treeUpdateIntervalMs = intervalMs;
-		updateTimer.setDelay(treeUpdateIntervalMs);
+		eventTreeUpdateIntervalMs = intervalMs;
+		updateEventTreeTimer.setDelay(eventTreeUpdateIntervalMs);
 		
 		// Update event tree.
-		updateEventTree(events);
+		updateEventTree();
 	}
+	
+	/**
+	 * Set queue limit.
+	 * @param newQueueLimit
+	 */
+	private void setQueueLimit(Integer newQueueLimit) {
 		
+		// Set message limit.
+		queueLimit = newQueueLimit;
+		
+		// Update event tree.
+		updateMessageQueueTree();
+	}
+	
 	/**
 	 * Set messages limit.
 	 * @param newMessageLimit
@@ -1657,10 +2182,10 @@ public class LoggingDialog extends JDialog {
 	private void setMessageLimit(Integer newMessageLimit) {
 		
 		// Set message limit.
-		messageLimit = newMessageLimit;
+		logLimit = newMessageLimit;
 		
 		// Update event tree.
-		updateEventTree(events);
+		updateEventTree();
 	}
 	
 	/**
@@ -1673,16 +2198,7 @@ public class LoggingDialog extends JDialog {
 		eventLimit = newEventLimit;
 		
 		// Update event tree.
-		updateEventTree(events);
-	}
-
-	/**
-	 * On close dialog.
-	 */
-	protected void onClose() {
-		
-		// Save dialog state.
-		saveDialog();
+		updateEventTree();
 	}
 	
 	/**

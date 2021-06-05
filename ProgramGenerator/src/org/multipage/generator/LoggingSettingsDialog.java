@@ -34,6 +34,7 @@ import javax.swing.border.LineBorder;
 
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
+import javax.swing.SwingConstants;
 
 /**
  * 
@@ -59,7 +60,9 @@ public class LoggingSettingsDialog extends JDialog {
 	 * Lambda callbacks.
 	 */
 	private Consumer<Boolean> enableGuiLambda = null;
-	private Function<Integer, Boolean> setUpdateIntervalLambda = null;
+	private Function<Integer, Boolean> setQueuesUpdateIntervalLambda = null;
+	private Function<Integer, Boolean> setEventsUpdateIntervalLambda = null;
+	private Function<Integer, Boolean> setQueueLimitLambda = null;
 	private Function<Integer, Boolean> setEventLimitLambda = null;
 	private Function<Integer, Boolean> setMessageLimitLambda = null;
 	
@@ -102,22 +105,29 @@ public class LoggingSettingsDialog extends JDialog {
 	/**
 	 * Initialize this dialog.
 	 */
-	public static void showDialog(Component parent, Integer updateIntervalMs, Integer messagelimit, Integer eventlimit,
+	public static void showDialog(Component parent,
+			Integer queuesUpdateIntervalMs, Integer eventsUpdateIntervalMs, 
+			Integer queueLimit, Integer messagelimit, Integer eventlimit,
 			Consumer<Boolean> enableGuiLambda,
-			Function<Integer, Boolean> setUpdateIntervalLambda,
+			Function<Integer, Boolean> setQueuesUpdateIntervalLambda,
+			Function<Integer, Boolean> setEventsUpdateIntervalLambda,
+			Function<Integer, Boolean> setQueueLimitLambda,
 			Function<Integer, Boolean> setEventLimitLambda,
 			Function<Integer, Boolean> setMessageLimitLambda) {
 		
 		Window parentWindow = Utility.findWindow(parent);
-		
 		LoggingSettingsDialog dialog = new LoggingSettingsDialog(parentWindow);
 		
-		dialog.textUpdateInterval.setText(updateIntervalMs.toString());
+		dialog.textQueuesUpdateInterval.setText(queuesUpdateIntervalMs.toString());
+		dialog.textEventsUpdateInterval.setText(eventsUpdateIntervalMs.toString());
+		dialog.textQueueLimit.setText(queueLimit.toString());
 		dialog.textMessageLimit.setText(messagelimit.toString());
 		dialog.textEventLimit.setText(eventlimit.toString());
 		
 		dialog.enableGuiLambda = enableGuiLambda;
-		dialog.setUpdateIntervalLambda = setUpdateIntervalLambda;
+		dialog.setQueuesUpdateIntervalLambda = setQueuesUpdateIntervalLambda;
+		dialog.setEventsUpdateIntervalLambda = setEventsUpdateIntervalLambda;
+		dialog.setQueueLimitLambda = setQueueLimitLambda;
 		dialog.setMessageLimitLambda = setMessageLimitLambda;
 		dialog.setEventLimitLambda = setEventLimitLambda;
 		
@@ -134,14 +144,19 @@ public class LoggingSettingsDialog extends JDialog {
 	/**
 	 * Components.
 	 */
-	private JTextField textUpdateInterval;
-	private JLabel labelUpdateItnterval;
+	private JTextField textEventsUpdateInterval;
+	private JLabel labelEventsUpdateItnterval;
 	private JButton buttonOk;
 	private JTextField textMessageLimit;
 	private JTextField textEventLimit;
 	private JLabel labelMessageLimit;
 	private JLabel labelEventLimit;
 	private JButton buttonCancel;
+	private JLabel labelQueuesUpdateItnterval;
+	private JTextField textQueuesUpdateInterval;
+	private JLabel labelQueuesIntervalUnits;
+	private JTextField textQueueLimit;
+	private JLabel labelQueueLimit;
 	
 	/**
 	 * Create the dialog.
@@ -157,7 +172,7 @@ public class LoggingSettingsDialog extends JDialog {
 	 * Initialize components.
 	 */
 	private void initComponents() {
-		setMinimumSize(new Dimension(370, 200));
+		setMinimumSize(new Dimension(450, 250));
 		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter() {
 			@Override
@@ -166,7 +181,7 @@ public class LoggingSettingsDialog extends JDialog {
 			}
 		});
 		setTitle("org.multipage.generator.textLogSettingsTitle");
-		setBounds(100, 100, 535, 201);
+		setBounds(100, 100, 537, 294);
 		
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
@@ -181,29 +196,30 @@ public class LoggingSettingsDialog extends JDialog {
 		});
 		getContentPane().add(buttonOk);
 		
-		labelUpdateItnterval = new JLabel("org.multipage.generator.textLoggedEventsDisplayInterval");
-		springLayout.putConstraint(SpringLayout.NORTH, labelUpdateItnterval, 30, SpringLayout.NORTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, labelUpdateItnterval, 30, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelUpdateItnterval);
+		labelEventsUpdateItnterval = new JLabel("org.multipage.generator.textLoggedEventsDisplayInterval");
+		getContentPane().add(labelEventsUpdateItnterval);
 		
-		textUpdateInterval = new JTextField();
-		textUpdateInterval.addFocusListener(new FocusAdapter() {
+		textEventsUpdateInterval = new JTextField();
+		textEventsUpdateInterval.setHorizontalAlignment(SwingConstants.TRAILING);
+		springLayout.putConstraint(SpringLayout.NORTH, textEventsUpdateInterval, 0, SpringLayout.NORTH, labelEventsUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, textEventsUpdateInterval, 6, SpringLayout.EAST, labelEventsUpdateItnterval);
+		textEventsUpdateInterval.addFocusListener(new FocusAdapter() {
 			@Override
 			public void focusLost(FocusEvent e) {
-				onSetUpdateInterval();
+				onEventsUpdateIntervalChanged();
 			}
 		});
-		springLayout.putConstraint(SpringLayout.NORTH, textUpdateInterval, 0, SpringLayout.NORTH, labelUpdateItnterval);
-		springLayout.putConstraint(SpringLayout.WEST, textUpdateInterval, 6, SpringLayout.EAST, labelUpdateItnterval);
-		getContentPane().add(textUpdateInterval);
-		textUpdateInterval.setColumns(10);
+		getContentPane().add(textEventsUpdateInterval);
+		textEventsUpdateInterval.setColumns(10);
 		
 		labelMessageLimit = new JLabel("org.multipage.generator.textLoggedEventsMessageLimit");
-		springLayout.putConstraint(SpringLayout.NORTH, labelMessageLimit, 10, SpringLayout.SOUTH, textUpdateInterval);
-		springLayout.putConstraint(SpringLayout.WEST, labelMessageLimit, 0, SpringLayout.WEST, labelUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.NORTH, labelMessageLimit, 10, SpringLayout.SOUTH, textEventsUpdateInterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelEventsUpdateItnterval, 0, SpringLayout.WEST, labelMessageLimit);
+		springLayout.putConstraint(SpringLayout.WEST, labelMessageLimit, 30, SpringLayout.WEST, getContentPane());
 		getContentPane().add(labelMessageLimit);
 		
 		textMessageLimit = new JTextField();
+		textMessageLimit.setHorizontalAlignment(SwingConstants.TRAILING);
 		springLayout.putConstraint(SpringLayout.WEST, textMessageLimit, 6, SpringLayout.EAST, labelMessageLimit);
 		textMessageLimit.addFocusListener(new FocusAdapter() {
 			@Override
@@ -217,10 +233,11 @@ public class LoggingSettingsDialog extends JDialog {
 		
 		labelEventLimit = new JLabel("org.multipage.generator.textLoggedEventsLimit");
 		springLayout.putConstraint(SpringLayout.NORTH, labelEventLimit, 10, SpringLayout.SOUTH, textMessageLimit);
-		springLayout.putConstraint(SpringLayout.WEST, labelEventLimit, 0, SpringLayout.WEST, labelUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelEventLimit, 30, SpringLayout.WEST, getContentPane());
 		getContentPane().add(labelEventLimit);
 		
 		textEventLimit = new JTextField();
+		textEventLimit.setHorizontalAlignment(SwingConstants.TRAILING);
 		springLayout.putConstraint(SpringLayout.WEST, textEventLimit, 6, SpringLayout.EAST, labelEventLimit);
 		textEventLimit.addFocusListener(new FocusAdapter() {
 			@Override
@@ -246,10 +263,52 @@ public class LoggingSettingsDialog extends JDialog {
 		buttonCancel.setMargin(new Insets(0, 0, 0, 0));
 		getContentPane().add(buttonCancel);
 		
-		JLabel labelIntervalUnits = new JLabel("ms");
-		springLayout.putConstraint(SpringLayout.NORTH, labelIntervalUnits, 0, SpringLayout.NORTH, labelUpdateItnterval);
-		springLayout.putConstraint(SpringLayout.WEST, labelIntervalUnits, 6, SpringLayout.EAST, textUpdateInterval);
-		getContentPane().add(labelIntervalUnits);
+		JLabel labelEventsIntervalUnits = new JLabel("ms");
+		springLayout.putConstraint(SpringLayout.NORTH, labelEventsIntervalUnits, 0, SpringLayout.NORTH, labelEventsUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelEventsIntervalUnits, 6, SpringLayout.EAST, textEventsUpdateInterval);
+		getContentPane().add(labelEventsIntervalUnits);
+		
+		labelQueuesUpdateItnterval = new JLabel("org.multipage.generator.textLoggedQueuesDisplayInterval");
+		springLayout.putConstraint(SpringLayout.NORTH, labelQueuesUpdateItnterval, 30, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, labelQueuesUpdateItnterval, 30, SpringLayout.WEST, getContentPane());
+		getContentPane().add(labelQueuesUpdateItnterval);
+		
+		textQueuesUpdateInterval = new JTextField();
+		textQueuesUpdateInterval.setHorizontalAlignment(SwingConstants.TRAILING);
+		textQueuesUpdateInterval.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+				onQueuesUpdateIntervalChanged();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.NORTH, textQueuesUpdateInterval, 0, SpringLayout.NORTH, labelQueuesUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, textQueuesUpdateInterval, 6, SpringLayout.EAST, labelQueuesUpdateItnterval);
+		textQueuesUpdateInterval.setColumns(10);
+		getContentPane().add(textQueuesUpdateInterval);
+		
+		labelQueuesIntervalUnits = new JLabel("ms");
+		springLayout.putConstraint(SpringLayout.NORTH, labelQueuesIntervalUnits, 0, SpringLayout.NORTH, labelQueuesUpdateItnterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelQueuesIntervalUnits, 6, SpringLayout.EAST, textQueuesUpdateInterval);
+		getContentPane().add(labelQueuesIntervalUnits);
+		
+		labelQueueLimit = new JLabel("org.multipage.generator.textLoggedQueueLimit");
+		springLayout.putConstraint(SpringLayout.NORTH, labelQueueLimit, 10, SpringLayout.SOUTH, textQueuesUpdateInterval);
+		springLayout.putConstraint(SpringLayout.WEST, labelQueueLimit, 0, SpringLayout.WEST, labelEventsUpdateItnterval);
+		getContentPane().add(labelQueueLimit);
+		
+		textQueueLimit = new JTextField();
+		textQueueLimit.setHorizontalAlignment(SwingConstants.TRAILING);
+		textQueueLimit.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+				onSetQueueLimit();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.NORTH, labelEventsUpdateItnterval, 10, SpringLayout.SOUTH, textQueueLimit);
+		springLayout.putConstraint(SpringLayout.NORTH, textQueueLimit, 6, SpringLayout.SOUTH, textQueuesUpdateInterval);
+		springLayout.putConstraint(SpringLayout.WEST, textQueueLimit, 6, SpringLayout.EAST, labelQueueLimit);
+		textQueueLimit.setColumns(10);
+		getContentPane().add(textQueueLimit);
 	}
 	
 	/**
@@ -268,7 +327,9 @@ public class LoggingSettingsDialog extends JDialog {
 	private void localize() {
 		
 		Utility.localize(this);
-		Utility.localize(labelUpdateItnterval);
+		Utility.localize(labelQueuesUpdateItnterval);
+		Utility.localize(labelEventsUpdateItnterval);
+		Utility.localize(labelQueueLimit);
 		Utility.localize(labelMessageLimit);
 		Utility.localize(labelEventLimit);
 		Utility.localize(buttonOk);
@@ -299,7 +360,7 @@ public class LoggingSettingsDialog extends JDialog {
 			setBounds(bounds);
 		}
 		
-		textUpdateInterval.setBorder(new LineBorder(Color.BLACK));
+		textEventsUpdateInterval.setBorder(new LineBorder(Color.BLACK));
 		textMessageLimit.setBorder(new LineBorder(Color.BLACK));
 		textEventLimit.setBorder(new LineBorder(Color.BLACK));
 	}
@@ -346,9 +407,9 @@ public class LoggingSettingsDialog extends JDialog {
 	}
 	
 	/**
-	 * On update interval.
+	 * On queues update interval.
 	 */
-	protected boolean onSetUpdateInterval() {
+	protected boolean onQueuesUpdateIntervalChanged() {
 		
 		// Check cancel.
 		if (cancelled) {
@@ -356,7 +417,7 @@ public class LoggingSettingsDialog extends JDialog {
 		}
 		
 		// Get update interval.
-		String limitText = textUpdateInterval.getText();
+		String limitText = textQueuesUpdateInterval.getText();
 		
 		// Set the interval.
 		Integer intervalMs = null;
@@ -365,13 +426,75 @@ public class LoggingSettingsDialog extends JDialog {
 		}
 		catch (Exception e) {
 		}
-		Boolean success = setUpdateIntervalLambda.apply(intervalMs);
+		Boolean success = setQueuesUpdateIntervalLambda.apply(intervalMs);
 		if (success == null) {
 			success = false;
 		}
 		
 		// Set control border.
-		textUpdateInterval.setBorder(success ? correctBorder : errorBorder);
+		textQueuesUpdateInterval.setBorder(success ? correctBorder : errorBorder);
+		
+		return success;
+	}
+	
+	/**
+	 * On events update interval.
+	 */
+	protected boolean onEventsUpdateIntervalChanged() {
+		
+		// Check cancel.
+		if (cancelled) {
+			return false;
+		}
+		
+		// Get update interval.
+		String limitText = textEventsUpdateInterval.getText();
+		
+		// Set the interval.
+		Integer intervalMs = null;
+		try {
+			intervalMs = Integer.parseInt(limitText);
+		}
+		catch (Exception e) {
+		}
+		Boolean success = setEventsUpdateIntervalLambda.apply(intervalMs);
+		if (success == null) {
+			success = false;
+		}
+		
+		// Set control border.
+		textEventsUpdateInterval.setBorder(success ? correctBorder : errorBorder);
+		
+		return success;
+	}
+	
+	/**
+	 * On queue limit.
+	 */
+	protected boolean onSetQueueLimit() {
+		
+		// Check cancel.
+		if (cancelled) {
+			return false;
+		}
+		
+		// Get limit.
+		String limitText = textQueueLimit.getText();
+		
+		// Set the limit.
+		Integer newLimit = null;
+		try {
+			newLimit = Integer.parseInt(limitText);
+		}
+		catch (Exception e) {
+		}
+		Boolean success = setQueueLimitLambda.apply(newLimit);
+		if (success == null) {
+			success = false;
+		}
+		
+		// Set control border.
+		textQueueLimit.setBorder(success ? correctBorder : errorBorder);
 		
 		return success;
 	}
@@ -448,16 +571,24 @@ public class LoggingSettingsDialog extends JDialog {
 		enableGuiLambda.accept(false);
 		
 		// Check inputs.
-		boolean success = onSetUpdateInterval();
+		boolean success = onQueuesUpdateIntervalChanged();
 		if (success) {
 			
-			success = onSetMessageLimit();
+			success = onEventsUpdateIntervalChanged();
 			if (success) {
 				
-				success = onSetEventLimit();
+				success = onSetQueueLimit();
+				if (success) {
+					
+					success = onSetMessageLimit();
+					if (success) {
+						
+						success = onSetEventLimit();
+					}
+				}
 			}
 		}
-		
+	
 		// Enable GUI messages.
 		enableGuiLambda.accept(true);
 		

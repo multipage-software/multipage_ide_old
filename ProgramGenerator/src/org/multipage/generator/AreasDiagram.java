@@ -49,6 +49,7 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaResource;
@@ -349,6 +350,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			// Get selected area IDs.
 			HashSet<Long> selectedIds = getSelectedAreaIds();
 			
+			j.log("TRANSMITTED 4 showAreasProperties %s", selectedIds.toString());
 			// Propagate the "show areas' properties" signal.
 			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 			// Propagate the "show areas' relations" signal.
@@ -377,6 +379,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				// Get selected area IDs.
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
+				j.log("TRANSMITTED 2 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
@@ -393,6 +396,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				// Get selected area IDs.
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
+				j.log("TRANSMITTED 1 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
@@ -513,6 +517,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 					selectRecursive(area, true, false);
 				}
 				
+				j.log("TRANSMITTED 3 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
