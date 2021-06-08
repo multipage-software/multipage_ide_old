@@ -9,6 +9,8 @@ package com.maclan;
 
 import java.awt.Component;
 import java.sql.SQLException;
+import java.util.LinkedList;
+import java.util.function.Function;
 
 import javax.swing.JOptionPane;
 
@@ -120,6 +122,12 @@ public class MiddleResult {
 	public static final MiddleResult NOT_PROCESSED = new MiddleResult("middle.resultNotProcessed", null);
 	public static final MiddleResult NULL_INPUT_STREAM = new MiddleResult("middle.resultNullInputStream", null);
 	public static final MiddleResult BAD_TEMPLATE_DAT_STREAM = new MiddleResult("middle.resultBadTemplateDatStream", null);
+	public static final MiddleResult DATABASE_ALREADY_OPENED = new MiddleResult("middle.resultDatabaseAlreadyOpened", null);
+	
+	/**
+	 * Extensions.
+	 */
+	public static LinkedList<Function<Exception, MiddleResult>> sqlToResultLambdas = new LinkedList<Function<Exception, MiddleResult>>();
 	
 	/**
 	 * Message resource.
@@ -212,6 +220,16 @@ public class MiddleResult {
 				return OK_NOT_ALL_DEPENDENCIES_REMOVED;
 			}
 		}
+		
+		// Try to invoke extended functions.
+		for (Function<Exception, MiddleResult> sqlToResultLambda : sqlToResultLambdas) {
+			
+			MiddleResult lambdaResult = sqlToResultLambda.apply(e);
+			if (lambdaResult != null) {
+				
+				return lambdaResult;
+			}
+		};
 		
 		return new MiddleResult(null, e.getLocalizedMessage());
 	}

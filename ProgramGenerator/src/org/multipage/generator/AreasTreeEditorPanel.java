@@ -459,18 +459,14 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		}
 		
 		DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) path.getPathComponent(elementsCount - 2);
-		Area parentArea = (Area) parentNode.getUserObject();
+		Area parentArea = getNodeArea(parentNode);
 		
 		// Get selected area.
 		DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-		Area area = (Area) node.getUserObject();
-		
-		AreaShapes areaShapes = (AreaShapes) area.getUser();
-		HashSet<AreaShapes> shapesSet = new HashSet<AreaShapes>();
-		shapesSet.add(areaShapes);
+		Area area = getNodeArea(node);
 		
 		// Remove area.
-		GeneratorMainFrame.getVisibleAreasDiagram().removeArea(shapesSet, parentArea, this);
+		GeneratorMainFrame.removeArea(area, parentArea, this);
 		
 		reload();
 	}
@@ -488,7 +484,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		}
 		
 		DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-		Area parentArea = (Area) node.getUserObject();
+		Area parentArea = getNodeArea(node);
 		
 		// Add new area.
 		Obj<Area> newArea = new Obj<Area>();
@@ -496,7 +492,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		
 			// Select and expand the area.
 			if (newArea.ref != null) {
-				SwingUtilities.invokeLater(() -> {
+				ConditionalEvents.invokeLater(() -> {
 					
 					selectAndExpandNewArea(newArea.ref.getId(), true);
 				});
@@ -1733,5 +1729,19 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		
 		// Set area ID
 		this.areaId = topAreaId;
+	}
+	
+	public Area getNodeArea(DefaultMutableTreeNode node) {
+		
+		// Get node object.
+		Object nodeObject = node.getUserObject();
+		if (!(nodeObject instanceof Long)) {
+			return null;
+		}
+		
+		Long areaId = (Long) nodeObject;
+		
+		Area area = ProgramGenerator.getArea(areaId);
+		return area;
 	}
 }

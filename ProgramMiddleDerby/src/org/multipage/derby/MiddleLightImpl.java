@@ -79,6 +79,34 @@ public class MiddleLightImpl implements MiddleLight {
 	 * Read buffer length.
 	 */
 	protected static final int readBufferLength = 2048;
+	
+	/**
+	 * Adds Derby database extensions to this application.
+	 */
+	public static void addExtensions() {
+		
+		// Add middle result extension.
+		addMiddleResultExtension();
+	}
+	
+	/**
+	 * Adds middle result extension.
+	 */
+	private static void addMiddleResultExtension() {
+		
+		MiddleResult.sqlToResultLambdas.add(e -> {
+			
+			if (e instanceof SQLException) {
+				SQLException sqlException = (SQLException)e;
+				
+				// When the dabase is already opened.
+				if (sqlException.getNextException().getErrorCode() ==  45000) {
+	                return MiddleResult.DATABASE_ALREADY_OPENED;
+	            }
+			}
+			return null;
+		});
+	}
 
 	/**
 	 * SQL commands.
@@ -4425,9 +4453,9 @@ public class MiddleLightImpl implements MiddleLight {
 			connection.setAutoCommit(false);
 		}
 		catch (SQLException e) {
+			
 			// Set result.
 			result = MiddleResult.sqlToResult(e);
-			e.printStackTrace();
 		}
 		
 		if (result.isOK()) {

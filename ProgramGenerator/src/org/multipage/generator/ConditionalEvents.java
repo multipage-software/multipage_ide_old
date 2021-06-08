@@ -206,8 +206,6 @@ public class ConditionalEvents {
 		while (!stopDispatchMessages) {
 			
 			// Try to pop single incoming message from the message queue or wait for a new incoming message.
-			Boolean newMessage = null;
-			
 			do {
 				
 				// Log message queue.
@@ -225,16 +223,7 @@ public class ConditionalEvents {
 				}
 	
 				// Wait for a new message.
-				newMessage = !Lock.waitFor(dispatchLock, dispatchLockTimeoutMs);
-				
-				// Pop the new message.
-				if (newMessage) {
-					
-					// Log message queue.
-					LoggingDialog.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
-					
-					incomingMessage.ref = popMessage();
-				}
+				Lock.waitFor(dispatchLock, dispatchLockTimeoutMs);
 			}
 			while (incomingMessage.ref == null);
 			

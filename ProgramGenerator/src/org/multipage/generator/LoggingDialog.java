@@ -1128,9 +1128,9 @@ public class LoggingDialog extends JDialog {
 			description = String.format(
 					"<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
-					+ "<tr><td><b>signal:</b></td><td>%s</td></tr>"
-					+ "<tr><td><b>priority:</b></td><td>%d</td></tr>"
-					+ "<tr><td><b>types:</b></td><td>%s</td></tr>"
+					+ "<tr><td><b>signal:</b></td><td>&nbsp;%s</td></tr>"
+					+ "<tr><td><b>priority:</b></td><td>&nbsp;&nbsp;%d</td></tr>"
+					+ "<tr><td><b>types:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
 					+ "</table>"
 					+ "</html>",
 					signal.name(),
@@ -1144,14 +1144,14 @@ public class LoggingDialog extends JDialog {
 			description = String.format(
 					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
-					+ "<tr><td><b>hashcode:</b></td><td> [0x%08X]</td></tr>"
-					+ "<tr><td><b>signal:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>recieve&nbsp;time:</b></td><td>  %s</td></tr>"
-					+ "<tr><td><b>source:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>target:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>info:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>+infos:</b></td><td> %s</td></tr>"
-					+ "<tr><td><b>source&nbsp;code:</b></td><td> %s</td></tr>"
+					+ "<tr><td><b>hashcode:</b></td><td>&nbsp;&nbsp;[0x%08X]</td></tr>"
+					+ "<tr><td><b>signal:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>recieve&nbsp;time:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>source:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>target:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>info:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>+infos:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>source&nbsp;code:</b></td><td>&nbsp;&nbsp;%s</td></tr>"
 					+ "</table>"
 					+ "</html>",
 					message.hashCode(),
@@ -1170,13 +1170,13 @@ public class LoggingDialog extends JDialog {
 			description = String.format(
 					  "<html>"
 					+ "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
-					+ "<tr><td><b>hashcode:</b></td><td>[0x%08X] id:%s</td></tr>"
-					+ "<tr><td><b>priority:</b></td><td> %d</td></tr>"
-					+ "<tr><td><b>key:</b></td><td> [0x%08X] %s</td></tr>"
-					+ "<tr><td><b>coalesce&nbsp;time</b>:</td><td> %d ms</td></tr>"
-					+ "<tr><td><b>execution&nbsp;time</b>:</td><td> %s</td></tr>"
-					+ "<tr><td><b>matching&nbsp;message</b>:</td><td> [0x%08X]</td></tr>"
-					+ "<tr><td><b>source&nbsp;code</b>:</td><td> %s</td></tr>"
+					+ "<tr><td><b>hashcode:</b></td><td>&nbsp;&nbsp;[0x%08X]&nbsp;id = %s</td></tr>"
+					+ "<tr><td><b>priority:</b></td><td>&nbsp;&nbsp;%d</td></tr>"
+					+ "<tr><td><b>key:</b></td><td> [0x%08X]&nbsp;%s</td></tr>"
+					+ "<tr><td><b>coalesce&nbsp;time</b>:</td><td>&nbsp;&nbsp;%d ms</td></tr>"
+					+ "<tr><td><b>execution&nbsp;time</b>:</td><td>&nbsp;&nbsp;%s</td></tr>"
+					+ "<tr><td><b>matching&nbsp;message</b>:</td><td>&nbsp;&nbsp;[0x%08X]</td></tr>"
+					+ "<tr><td><b>source&nbsp;code</b>:</td><td>&nbsp;&nbsp;%s</td></tr>"
 					+ "</table>"
 					+ "</html>",
 					loggedEvent.hashCode(), loggedEvent.eventHandle.identifier,

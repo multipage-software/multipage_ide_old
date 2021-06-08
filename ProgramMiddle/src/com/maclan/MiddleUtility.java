@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -194,7 +195,9 @@ public class MiddleUtility {
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
 			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleImpl");
-			return (Middle) objectClass.getDeclaredConstructor().newInstance();
+			
+			Middle middle = (Middle) objectClass.getDeclaredConstructor().newInstance();
+			return middle;
 		}
 		catch (Exception e) {
 			
@@ -213,12 +216,37 @@ public class MiddleUtility {
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
 			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
-			return (MiddleLight) objectClass.getDeclaredConstructor().newInstance();
+			
+			MiddleLight middleLight = (MiddleLight) objectClass.getDeclaredConstructor().newInstance();
+			return middleLight;
 		}
 		catch (Exception e) {
 			
 			e.printStackTrace();
 			return null;
+		}
+	}
+	
+	/**
+	 * Set extended functions.
+	 * @param pathToMiddle
+	 */
+	private static void setExtendedFunctions(String pathToMiddle) {
+		
+		// Create middle layer.
+		try {
+			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
+			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
+
+			Method method = objectClass.getDeclaredMethod("addExtensions");
+			if (method != null) {
+				
+				method.invoke(null);
+			}
+		}
+		catch (Exception e) {
+			
+			e.printStackTrace();
 		}
 	}
 	
@@ -229,6 +257,9 @@ public class MiddleUtility {
 	public static void setPathToMiddle(String pathToMiddleObjects) {
 		
 		pathToMiddle = pathToMiddleObjects;
+		
+		// Set extended function from the middle layer..
+		setExtendedFunctions(pathToMiddle);
 	}
 	
 	/**

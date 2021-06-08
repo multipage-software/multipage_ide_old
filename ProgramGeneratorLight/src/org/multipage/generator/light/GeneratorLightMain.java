@@ -21,7 +21,7 @@ public class GeneratorLightMain {
 	 */
 	public static void main(String[] args) {
 		
-		// Use Derby middle layer.
+		// Use Derby middle layer with extensions.
 		GeneratorMain.main("Multipage Generator Standalone", args, "org.multipage.derby", false);
 	}
 }

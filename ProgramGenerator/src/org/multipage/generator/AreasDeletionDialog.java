@@ -63,7 +63,7 @@ public class AreasDeletionDialog extends JDialog {
     /**
      * Top areas that should be deleted.
      */
-	private HashSet<AreaShapes> topAreas;
+	private HashSet<Area> topAreas;
 
 	/**
 	 * Parent area.
@@ -85,18 +85,36 @@ public class AreasDeletionDialog extends JDialog {
     private javax.swing.JButton deleteButton;
     private javax.swing.JCheckBox deleteIntersections;
     private javax.swing.JEditorPane message;
-
+    
 	/**
 	 * Constructor.
 	 * @param parentComponent 
-	 * @param overlap 
+	 * @param topAreas - can be of types HashSet<Area> or HashSet<AreaShapes>
+	 * @param parentArea
 	 */
-	public AreasDeletionDialog(Component parentComponent, HashSet<AreaShapes> topAreas, Area parentArea) {
+	public AreasDeletionDialog(Component parentComponent, HashSet topAreas, Area parentArea) {
         super(Utility.findWindow(parentComponent), ModalityType.APPLICATION_MODAL);
         setResizable(false);
+        
+        // Initialization.
+        this.topAreas = null;
 
-
-        this.topAreas = topAreas;
+        // Ensure proper type of the top areas.
+        if (!topAreas.isEmpty()) {
+        	Object firstItem = topAreas.iterator().next();
+        	
+        	if (firstItem instanceof AreaShapes) {
+        		this.topAreas = getAreasFrom(topAreas);
+        	}
+        	else if (firstItem instanceof Area) {
+        		this.topAreas = topAreas;
+        	}
+        }
+        
+        if (this.topAreas == null) {
+        	this.topAreas = new HashSet<Area>();
+        }
+        
         this.parentArea = parentArea;
         
         // Initialize content.
@@ -105,6 +123,18 @@ public class AreasDeletionDialog extends JDialog {
         postCreate(); // $hide$
 	}
 	
+	/**
+	 * Gets extract areas from diagram shapes.
+	 * @param topAreasShapes
+	 * @return
+	 */
+	private HashSet<Area> getAreasFrom(HashSet<AreaShapes> topAreasShapes) {
+		
+		HashSet<Area> topAreas = new HashSet<Area>();
+		topAreasShapes.forEach(areaShape -> topAreas.add(areaShape.getArea()));
+		return topAreas;
+	}
+
 	/**
 	 * Post creation.
 	 */
@@ -238,8 +268,8 @@ public class AreasDeletionDialog extends JDialog {
 		model.setAllAreasFlags(Flag.NONE);
 		
 		// Set top areas trees flags.
-		for (AreaShapes shape : topAreas) {
-			model.setAreaSubTreeFlags(shape.getArea(), Flag.SET);
+		for (Area area : topAreas) {
+			model.setAreaSubTreeFlags(area, Flag.SET);
 		}
 		
 		// If the delete intersections flag is not set, reset overlapped area flags.
@@ -328,8 +358,7 @@ public class AreasDeletionDialog extends JDialog {
 	 */
 	private boolean isAffectedRootArea() {
 
-		for (AreaShapes shape : topAreas) {
-			Area area = shape.getArea();
+		for (Area area : topAreas) {
 			
 			if (area.getId() == 0) {
 				return true;
@@ -341,17 +370,16 @@ public class AreasDeletionDialog extends JDialog {
 
 	/**
 	 * Creates description of areas.
-	 * @param shapes
+	 * @param areas
 	 * @return
 	 */
-    private String getDescription(HashSet<AreaShapes> shapes) {
+    private String getDescription(HashSet<Area> areas) {
 
     	String description = "";
     	boolean isFirst = true;
     	
     	// Do loop for all shapes.
-    	for (AreaShapes shape : shapes) {
-    		Area area = shape.getArea();
+    	for (Area area : areas) {
     		
     		if (isFirst) {
     			isFirst = false;
@@ -571,8 +599,7 @@ public class AreasDeletionDialog extends JDialog {
 	    		// Do loop for all affected shapes.
     			if (parentArea != null) {
     				
-		    		for (AreaShapes shape : topAreas) {
-		    			Area area = shape.getArea();
+		    		for (Area area : topAreas) {
 		    			
 		    			// If the area is read only, exit the loop.
 		    			if (GeneratorMainFrame.areasLocked() && area.isReadOnly()) {

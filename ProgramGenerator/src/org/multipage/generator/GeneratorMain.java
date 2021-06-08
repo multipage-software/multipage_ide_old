@@ -126,7 +126,7 @@ public class GeneratorMain {
 		// Set path to middle objects.
 		MiddleUtility.setPathToMiddle(pathToMiddleObjects);
 		
-		// Create serializer.
+		// Create application state serializer.
 		String userDirectory = MiddleUtility.getUserDirectory();
 		String serializedFile = null;
 		

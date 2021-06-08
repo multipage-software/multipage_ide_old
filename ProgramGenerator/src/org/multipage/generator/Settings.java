@@ -428,7 +428,7 @@ public class Settings extends JDialog {
 	 * Initialize components.
 	 */
 	private void initComponents() {
-		setMinimumSize(new Dimension(330, 300));
+		setMinimumSize(new Dimension(330, 520));
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
@@ -461,7 +461,7 @@ public class Settings extends JDialog {
 		
 		textMaxTextResourceSize = new TextFieldEx();
 		springLayout.putConstraint(SpringLayout.NORTH, textMaxTextResourceSize, 3, SpringLayout.SOUTH, labelMaxSizeOfTextResource);
-		springLayout.putConstraint(SpringLayout.WEST, textMaxTextResourceSize, 30, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, textMaxTextResourceSize, 10, SpringLayout.WEST, getContentPane());
 		textMaxTextResourceSize.setHorizontalAlignment(SwingConstants.RIGHT);
 		getContentPane().add(textMaxTextResourceSize);
 		textMaxTextResourceSize.setColumns(15);
@@ -507,7 +507,7 @@ public class Settings extends JDialog {
 		
 		textExtractCharacters = new TextFieldEx();
 		springLayout.putConstraint(SpringLayout.NORTH, textExtractCharacters, 3, SpringLayout.SOUTH, labelIndexExtractLength);
-		springLayout.putConstraint(SpringLayout.WEST, textExtractCharacters, 30, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, textExtractCharacters, 10, SpringLayout.WEST, getContentPane());
 		textExtractCharacters.setHorizontalAlignment(SwingConstants.RIGHT);
 		springLayout.putConstraint(SpringLayout.EAST, textExtractCharacters, 0, SpringLayout.EAST, textMaxTextResourceSize);
 		getContentPane().add(textExtractCharacters);
@@ -520,7 +520,7 @@ public class Settings extends JDialog {
 		
 		checkRemovePartiallyRenderedPages = new JCheckBox("org.multipage.generator.textRemovePartiallyRenderedPages");
 		springLayout.putConstraint(SpringLayout.NORTH, checkRemovePartiallyRenderedPages, 10, SpringLayout.SOUTH, textExtractCharacters);
-		springLayout.putConstraint(SpringLayout.WEST, checkRemovePartiallyRenderedPages, 30, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, checkRemovePartiallyRenderedPages, 10, SpringLayout.WEST, getContentPane());
 		getContentPane().add(checkRemovePartiallyRenderedPages);
 		
 		labelHttpPortNumer = new JLabel("org.multipage.generator.textHttpPortNumber");

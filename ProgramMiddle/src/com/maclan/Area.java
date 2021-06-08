@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.stream.Collectors;
 
 import org.multipage.gui.IdentifiedTreeNode;
 import org.multipage.gui.Utility;
@@ -2345,5 +2346,16 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * Trim list of areas.
+	 * @param areas
+	 * @return
+	 */
+	public static LinkedList<Area> trim(LinkedList<Area> areas) {
+
+		LinkedList<Area> trimmedAreas = areas.stream().filter(area -> area != null).collect(Collectors.toCollection(LinkedList::new));
+		return trimmedAreas;
 	}
 }

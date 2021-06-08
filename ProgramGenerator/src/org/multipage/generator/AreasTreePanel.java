@@ -387,7 +387,7 @@ public class AreasTreePanel extends JPanel {
 		shapesSet.add(areaShapes);
 		
 		// Remove area.
-		GeneratorMainFrame.getVisibleAreasDiagram().removeArea(shapesSet, parentArea, this);
+		GeneratorMainFrame.getVisibleAreasDiagram().removeDiagramArea(shapesSet, parentArea, this);
 		SwingUtilities.invokeLater(() -> {
 			updateData();
 		});

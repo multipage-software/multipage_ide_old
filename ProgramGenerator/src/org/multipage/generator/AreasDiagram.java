@@ -2745,7 +2745,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		HashSet<AreaShapes> affectedAreaShapes = AreaShapes.getAffectedAreaShapes();
 		Area affectedParentArea = AreaShapes.getAffectedParentArea();
 		
-		removeArea(affectedAreaShapes, affectedParentArea, this);
+		removeDiagramArea(affectedAreaShapes, affectedParentArea, this);
 		
 		// Show remove area shape.
 		setRemoveShapeVisibility(true);
@@ -2754,9 +2754,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	}
 	
 	/**
-	 * Remove existing area.
+	 * Remove existing diagram area.
 	 */
-	public void removeArea(HashSet<AreaShapes> affectedAreaShapes, Area affectedParentArea, Component parentComponent) {
+	public void removeDiagramArea(HashSet<AreaShapes> affectedAreaShapes, Area affectedParentArea, Component parentComponent) {
 		
 		// Areas deletion dialog.
 		AreasDeletionDialog dialog = newAreasDeletionDialog(affectedAreaShapes,
@@ -2776,7 +2776,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 * @param parentArea
 	 * @param parentComponent 
 	 */
-	protected AreasDeletionDialog newAreasDeletionDialog(HashSet<AreaShapes> topAreas,
+	protected AreasDeletionDialog newAreasDeletionDialog(HashSet topAreas,
 			Area parentArea, Component parentComponent) {
 		
 		return new AreasDeletionDialog(parentComponent, topAreas, parentArea);

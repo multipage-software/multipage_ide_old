@@ -62,7 +62,8 @@ public class AreaTreeState {
 	public static boolean getNodePath(DefaultMutableTreeNode node,
 			Long [] areaIdPath, int index, DefaultMutableTreeNode [] nodePath) {
 		
-		if (index >= areaIdPath.length) {
+		// Check input values.
+		if (node == null || areaIdPath == null || index < 0 || index >= areaIdPath.length || nodePath == null) {
 			return true;
 		}
 		

@@ -15,7 +15,6 @@ public class Lock {
 	/**
 	 * Lock identifier
 	 */
-	@SuppressWarnings("unused")
 	private String id;
 	
 	/**

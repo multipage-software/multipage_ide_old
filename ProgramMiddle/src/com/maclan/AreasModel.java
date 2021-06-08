@@ -382,7 +382,10 @@ public class AreasModel {
 	 * @return
 	 */
 	public boolean isHomeArea(Area area) {
-
+		
+		if (area == null) {
+			return false;
+		}
 		return area.getId() == homeAreaId;
 	}
 

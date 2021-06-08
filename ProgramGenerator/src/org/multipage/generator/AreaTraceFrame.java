@@ -716,7 +716,7 @@ public class AreaTraceFrame extends JFrame {
 		shapesSet.add(areaShapes);
 		
 		// Remove area.
-		GeneratorMainFrame.getVisibleAreasDiagram().removeArea(shapesSet, parentArea, this);
+		GeneratorMainFrame.getVisibleAreasDiagram().removeDiagramArea(shapesSet, parentArea, this);
 	}
 
 	/**

@@ -281,7 +281,7 @@ public class AreasPropertiesBase extends JPanel {
 			// Get selected areas' list.
 			LinkedList<Area> selectedAreas;
 			if (areas != null) {
-				selectedAreas = areas;
+				selectedAreas = Area.trim(areas);
 			}
 			else {
 				selectedAreas = new LinkedList<Area>();

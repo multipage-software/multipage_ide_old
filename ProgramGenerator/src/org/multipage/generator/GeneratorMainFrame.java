@@ -3552,4 +3552,25 @@ public class GeneratorMainFrame extends JFrame {
 		mainFrame.propertiesPanel.setAreas(areas);
 		mainFrame.setPropertiesVisible(true);
 	}
+	
+	/**
+	 * Removes area or a link to the area.
+	 * @param area
+	 * @param parentArea
+	 * @param parentComponent
+	 */
+	public static void removeArea(Area area, Area parentArea, Component parentComponent) {
+		
+		// Areas deletion dialog.
+		HashSet<Area> areas = new HashSet<Area>();
+		areas.add(area);
+		
+		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areas,
+				parentArea);
+		dialog.setVisible(true);
+		
+		// Propagate update all event.
+		ConditionalEvents.transmit(parentComponent, Signal.updateAll);
+		
+	}
 }
