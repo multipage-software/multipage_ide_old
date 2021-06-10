@@ -38,18 +38,58 @@ public class AreaTreeState {
 	 * Add selected area ID.
 	 * @param idPath
 	 */
-	public void addSelectedAreaId(Long [] idPath) {
+	public void addSelectedAreaIdPath(Long [] idPath) {
 		
 		selectedAreasIdPaths.add(idPath);
 	}
-
+	
+	/**
+	 * Selected paths.
+	 * @param selectedPaths
+	 */
+	public void addSelectedPaths(TreePath[] selectedPaths) {
+		
+		// Add each path.
+		for (TreePath treePath : selectedPaths) {
+			
+			Long [] idPath = getAreaIdPath(treePath);
+			addSelectedAreaIdPath(idPath);
+		}
+	}
+	
 	/**
 	 * Add expanded area ID.
 	 * @param idPath
 	 */
-	public void addExpandedAreaId(Long [] idPath) {
+	public void addExpandedAreaIdPath(Long [] idPath) {
 		
 		expandedAreasIdPaths.add(idPath);
+	}
+
+	/**
+	 * Add expanded paths.
+	 * @param expandedPaths
+	 */
+	public void addExpandedPaths(TreePath[] expandedPaths) {
+		
+		// Add each path.
+		for (TreePath treePath : expandedPaths) {
+			
+			Long [] idPath = getAreaIdPath(treePath);
+			addExpandedAreaIdPath(idPath);
+		}
+	}
+
+	/**
+	 * Selected and expanded paths.
+	 * @param tree
+	 * @param selectedPaths
+	 */
+	public static void addSelectedAndExpanded(JTree tree, TreePath[] selectedPaths) {
+		
+		AreaTreeState treeState = getTreeState(tree);
+		treeState.addSelectedPaths(selectedPaths);
+		treeState.addExpandedPaths(selectedPaths);
 	}
 
 	/**
@@ -191,7 +231,7 @@ public class AreaTreeState {
 					
 					Long [] idPath = getAreaIdPath(treePath);
 					
-					treeState.addExpandedAreaId(idPath);
+					treeState.addExpandedAreaIdPath(idPath);
 				}
 			}
 		}
@@ -205,7 +245,7 @@ public class AreaTreeState {
 				Long [] idPath = getAreaIdPath(selectedTreePath);
 						
 				// Add selected area ID to the tree state object.
-				treeState.addSelectedAreaId(idPath);
+				treeState.addSelectedAreaIdPath(idPath);
 			}
 		}
 		
@@ -241,5 +281,4 @@ public class AreaTreeState {
 		
 		selectedAreasIdPaths.clear();
 	}
-
 }

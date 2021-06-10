@@ -43,8 +43,7 @@ public class AreaLocalMenu {
 	/**
 	 * Listeners.
 	 */
-	private AreaLocalMenuListener listener =
-		new AreaLocalMenuListener();
+	private AreaLocalMenuListener listener = new AreaLocalMenuListener();
 	
 	/**
 	 * Is favorites flag.

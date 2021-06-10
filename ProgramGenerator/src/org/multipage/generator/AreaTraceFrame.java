@@ -308,16 +308,6 @@ public class AreaTraceFrame extends JFrame {
 	 * MessagePanel label.
 	 */
 	private MessagePanel panelMessage;
-
-	/**
-	 * New area ID path.
-	 */
-	private Long[] newAreaIdPath;
-
-	/**
-	 * New area added.
-	 */
-	private Long newAreaAddedId;
 	
 	/**
 	 * Toggle debug.
@@ -582,7 +572,7 @@ public class AreaTraceFrame extends JFrame {
 		panelTree.add(toolBarTree);
 		
 		panelList = new JPanel();
-		tabbedPane.addTab("org.multipage.generator.textListAreas", null, panelList, null);
+		tabbedPane.addTab("org.multipage.generator.textSearchAreas", null, panelList, null);
 		SpringLayout sl_panelList = new SpringLayout();
 		panelList.setLayout(sl_panelList);
 		
@@ -742,42 +732,13 @@ public class AreaTraceFrame extends JFrame {
 			if (newArea.ref != null) {
 				SwingUtilities.invokeLater(() -> {
 					
-					selectAndExpandNewArea(newArea.ref.getId(), true);
+					AreaTreeState.addSelectedAndExpanded(tree, selectedPaths);
+					reload();
 				});
 			}
 		}
 	}
-
-	/**
-	 * Select and expand new area tree item.
-	 * @param newAreaId
-	 * @param select 
-	 */
-	private void selectAndExpandNewArea(Long newAreaId, boolean select) {
-		
-		// Save expand state.
-		TreePath selectedPath = tree.getSelectionPath();
-		if (selectedPath != null) {
-			
-			int count = selectedPath.getPathCount();
-			newAreaIdPath = new Long [count];
-			
-			for (int index = 0; index < count; index++) {
-				
-				DefaultMutableTreeNode mutableNode = (DefaultMutableTreeNode) selectedPath.getPathComponent(index);
-				Object object = mutableNode.getUserObject();
-				if (object instanceof Area) {
-					
-					Area area = (Area) object;
-					newAreaIdPath[index] = area.getId();
-				}
-			}
-		}
-		
-		newAreaAddedId = select ? newAreaId : null;
-		reload();
-	}
-
+	
 	/**
 	 * Select area with sub nodes.
 	 */
@@ -1021,7 +982,7 @@ public class AreaTraceFrame extends JFrame {
 				GeneratorMainFrame.getVisibleAreasDiagram().removeSelection();
 				GeneratorMainFrame.getVisibleAreasDiagram().select(newAreaId, true, false);
 				
-				selectAndExpandNewArea(newAreaId, false);
+				reload();
 			}
 		});
 		// Add new trayMenu items.
@@ -1587,27 +1548,6 @@ public class AreaTraceFrame extends JFrame {
 			
 			// Get tree state.
 			AreaTreeState treeState = AreaTreeState.getTreeState(tree);
-			if (newAreaIdPath != null) {
-				
-				treeState.addExpandedAreaId(newAreaIdPath);
-				
-				if (newAreaAddedId != null) {
-					
-					int count = newAreaIdPath.length;
-					Long [] path = new Long[count + 1];
-					
-					for (int index = 0; index < count; index++) {
-						path[index] = newAreaIdPath[index];
-					}
-					path[count] = newAreaAddedId;
-					treeState.clearSelected();
-					treeState.addSelectedAreaId(path);
-					
-					newAreaAddedId = null;
-				}
-				
-				newAreaIdPath = null;
-			}
 			
 			// Load tree.
 			updateTreeModel(treeModel, areaId, isSubareas, inheritance);

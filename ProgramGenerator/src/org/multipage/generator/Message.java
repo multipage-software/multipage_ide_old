@@ -290,12 +290,26 @@ public class Message {
 	}
 	
 	/**
+	 * Try to get related information of given returned type.
+	 * @return
+	 */
+	public <T> T getRelatedInfo() {
+		
+		try {
+			T info = (T) relatedInfo;
+			return info;
+		}
+		catch (Throwable e) {
+			return null;
+		}
+	}
+	
+	/**
 	 * Try to get additional information at given array index of given returned type.
 	 * @param <T>
 	 * @param index
 	 * @return
 	 */
-	
 	public <T> T getAdditionalInfo(int index) {
 		
 		try {
@@ -305,5 +319,5 @@ public class Message {
 		catch (Throwable e) {
 			return null;
 		}
-	}		
+	}
 }

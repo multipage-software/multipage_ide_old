@@ -212,16 +212,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 	private DefaultTreeModel treeModel;
 	
 	/**
-	 * New area ID path.
-	 */
-	private Long[] newAreaIdPath;
-
-	/**
-	 * New area added.
-	 */
-	private Long newAreaAddedId;
-	
-	/**
 	 * Toggle button for sub areas and super areas.
 	 */
 	private JToggleButton buttonSuperAreas;
@@ -492,10 +482,9 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		
 			// Select and expand the area.
 			if (newArea.ref != null) {
-				ConditionalEvents.invokeLater(() -> {
-					
-					selectAndExpandNewArea(newArea.ref.getId(), true);
-				});
+				
+				AreaTreeState.addSelectedAndExpanded(tree, selectedPaths);
+				reload();
 			}
 		}
 	}
@@ -523,36 +512,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				}
 			}
 		});
-	}
-
-	/**
-	 * Select and expand new area tree item.
-	 * @param newAreaId
-	 * @param select 
-	 */
-	private void selectAndExpandNewArea(Long newAreaId, boolean select) {
-		
-		// Save expand state.
-		TreePath selectedPath = tree.getSelectionPath();
-		if (selectedPath != null) {
-			
-			int count = selectedPath.getPathCount();
-			newAreaIdPath = new Long [count];
-			
-			for (int index = 0; index < count; index++) {
-				
-				DefaultMutableTreeNode mutableNode = (DefaultMutableTreeNode) selectedPath.getPathComponent(index);
-				Object object = mutableNode.getUserObject();
-				if (object instanceof Area) {
-					
-					Area area = (Area) object;
-					newAreaIdPath[index] = area.getId();
-				}
-			}
-		}
-		
-		newAreaAddedId = select ? newAreaId : null;
-		reload();
 	}
 
 	/**
@@ -737,7 +696,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				GeneratorMainFrame.getVisibleAreasDiagram().removeSelection();
 				GeneratorMainFrame.getVisibleAreasDiagram().select(newAreaId, true, false);
 				
-				selectAndExpandNewArea(newAreaId, false);
+				reload();
 			}
 		});
 		// Add new trayMenu items.
@@ -1090,6 +1049,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				// Get area.
 				Long areaId = (Long) treeNode.getUserObject();
 				Area area = ProgramGenerator.getArea(areaId);
+				if (area == null) {
+					return null;
+				}
+				
 				boolean isHomeArea = ProgramGenerator.getAreasModel().isHomeArea(area);
 				boolean isVisible = area.isVisible();
 				boolean isDisabled = !area.isEnabled();
@@ -1353,27 +1316,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				
 				// Get tree state.
 				AreaTreeState treeState = AreaTreeState.getTreeState(tree);
-				if (newAreaIdPath != null) {
-					
-					treeState.addExpandedAreaId(newAreaIdPath);
-					
-					if (newAreaAddedId != null) {
-						
-						int count = newAreaIdPath.length;
-						Long [] path = new Long[count + 1];
-						
-						for (int index = 0; index < count; index++) {
-							path[index] = newAreaIdPath[index];
-						}
-						path[count] = newAreaAddedId;
-						treeState.clearSelected();
-						treeState.addSelectedAreaId(path);
-						
-						newAreaAddedId = null;
-					}
-					
-					newAreaIdPath = null;
-				}
 				
 				// Load tree.
 				updateTreeModel(treeModel, areaId, isSubareas, inheritance);

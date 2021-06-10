@@ -79,7 +79,7 @@ import com.maclan.SlotType;
 
 /**
  * 
- * @author
+ * @author vakol
  *
  */
 public class SlotListPanel extends JPanel {
@@ -652,6 +652,29 @@ public class SlotListPanel extends JPanel {
 			SwingUtilities.invokeLater(() -> {
 				Signal.updateAll.enable();
 			});
+		});
+		
+		// Create "area slot saved" event listener.
+		ConditionalEvents.receiver(SlotListPanel.this, Signal.areaSlotSaved, message -> {
+			
+			// Get slot.
+			Slot slot = message.getRelatedInfo();
+			if (slot == null) {
+				return;
+			}
+			
+			// Check slot area.
+			SlotHolder slotHolder = slot.getHolder();
+			if (!(slotHolder instanceof Area)) {
+				return;
+			}
+			
+			Area slotArea = (Area) slotHolder;
+			if (SlotListPanel.this.areas.contains(slotArea)) {
+			
+				// Reload the slot table view.
+				update();
+			}
 		});
 	}
 
@@ -1588,8 +1611,12 @@ public class SlotListPanel extends JPanel {
 	 */
 	protected void loadSlotsFromDatabase() {
 		
+		// Clear area slots.
+		Area.clearSlots(areas);
+		
+		// Load area slots.
 		MiddleResult result = ProgramBasic.getMiddle().loadAreasSlots(
-				ProgramBasic.getLoginProperties(), areas, false, false);
+				ProgramBasic.getLoginProperties(), areas, false, true);
 		if (result.isNotOK()) {
 			result.show(this);
 			return;
@@ -1601,7 +1628,7 @@ public class SlotListPanel extends JPanel {
 	 */
 	protected void onChange() {
 		
-		// Override this method.
+		
 	}
 	
 	/**

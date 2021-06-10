@@ -2358,4 +2358,32 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		LinkedList<Area> trimmedAreas = areas.stream().filter(area -> area != null).collect(Collectors.toCollection(LinkedList::new));
 		return trimmedAreas;
 	}
+	
+	/**
+	 * Clear slots.
+	 */
+	@Override
+	public void clearSlots() {
+		
+		// Delegate call to parent object method.
+		super.clearSlots();
+		
+		// Clear additional slot information.
+		slotAliases.clear();
+		slotNames.clear();
+	}
+	
+	/**
+	 * Clear area slots.
+	 * @param areas
+	 */
+	public static void clearSlots(LinkedList<Area> areas) {
+		
+		// Clear slots in each area in the list.
+		for (Area area : areas) {
+			if (area != null) {
+				area.clearSlots();
+			}
+		}
+	}
 }

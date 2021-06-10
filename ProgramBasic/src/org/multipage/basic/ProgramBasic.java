@@ -146,7 +146,6 @@ public class ProgramBasic {
 		ProgramBasic.getMiddle().setCurrentLanguageId(0L);
 		
 		// Default data.
-		BasicUtilities.setDefaultData();
 		LoginDialog.setDefaultData();
 		FindReplaceDialog.setDefaultData();
 	}
@@ -163,7 +162,6 @@ public class ProgramBasic {
 		ProgramBasic.getMiddle().setCurrentLanguageId(inputStream.readLong());
 		
 		// Load data.
-		BasicUtilities.serializeData(inputStream);
 		LoginDialog.serializeData(inputStream);
 		FindReplaceDialog.serializeData(inputStream);
 	}
@@ -180,7 +178,6 @@ public class ProgramBasic {
 		outputStream.writeLong(ProgramBasic.getMiddle().getCurrentLanguageId());
 		
 		// Save data
-		BasicUtilities.serializeData(outputStream);
 		LoginDialog.serializeData(outputStream);
 		FindReplaceDialog.serializeData(outputStream);
 	}

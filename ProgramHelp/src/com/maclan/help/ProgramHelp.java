@@ -34,5 +34,4 @@ public class ProgramHelp {
 		InputStream inputStream = ProgramHelp.class.getResourceAsStream("/com/maclan/reference_template/maclan_reference.dat");
 		return new BufferedInputStream(inputStream);
 	}
-
 }

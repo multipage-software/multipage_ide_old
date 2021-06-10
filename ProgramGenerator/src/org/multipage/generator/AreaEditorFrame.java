@@ -92,6 +92,7 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 	private JLabel labelFileExtension;
 	private JCheckBox checkBoxIsDisabled;
 	private JButton buttonDisplay;
+	private JPanel panelConstructorAux;
 
 	/**
 	 * Show window.
@@ -283,6 +284,10 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		tabbedPane.addTab("org.multipage.generator.textAreaDependenciesTab", null, panelDependenciesAux, null);
 		panelDependenciesAux.setLayout(new BorderLayout(0, 0));
 		
+		panelConstructorAux = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textAreaConstructorTab", null, panelConstructorAux, null);
+		panelConstructorAux.setLayout(new BorderLayout(0, 0));
+		
 		labelAreaAlias = new JLabel("org.multipage.generator.textAreaAlias");
 		panel.add(labelAreaAlias);
 		
@@ -397,6 +402,11 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		panelDependencies = new AreaDependenciesPanel();
 		panelDependencies.setArea(area);
 		insertTabContent(panelDependenciesAux, panelDependencies);
+		
+		// Area constructors panel.
+		panelConstructor = new AreaConstructorPanel();
+		panelConstructor.setArea(area);
+		insertTabContent(panelConstructorAux, panelConstructor);
 	}
 	
 	/**

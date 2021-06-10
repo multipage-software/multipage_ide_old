@@ -157,9 +157,8 @@ public enum Signal implements EventCondition {
 			SignalType.areaViewChange
 			),
 	// Save slot.
-	saveSlot(
-			SignalType.slotModelChange,
-			SignalType.slotViewChange
+	areaSlotSaved(
+			SignalType.slotModelChange
 			),
 	// Reactivate GUI
 	reactivateGui(

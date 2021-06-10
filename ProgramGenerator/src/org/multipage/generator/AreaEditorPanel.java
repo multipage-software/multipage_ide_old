@@ -272,6 +272,9 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 		tabbedPane.addTab("org.multipage.generator.textAreaDependenciesTab", null, panelDependenciesAux, null);
 		panelDependenciesAux.setLayout(new BorderLayout(0, 0));
 		
+		JPanel panelConstructorsAux = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textAreaConstructorsTab", null, panelConstructorsAux, null);
+		
 		labelAreaAlias = new JLabel("org.multipage.generator.textAreaAlias");
 		panel.add(labelAreaAlias);
 		

@@ -48,6 +48,7 @@ import java.io.ObjectOutputStream;
 import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -146,7 +147,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.w3c.dom.Node;
 
-import com.google.gson.Gson;
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
@@ -4627,19 +4627,24 @@ public class Utility {
 	 */
 	public static boolean equalsDeep(Object object1, Object object2) {
 		
-		Gson gson = new Gson();
+		// Initialize.
+		boolean equals = false;
 		
-		// TODO: GSON has to be synchronized, it is not threda safe.
 		try {
-			String dump1 = gson.toJson(object1);
-			String dump2 = gson.toJson(object2);
 			
-			return dump1.contentEquals(dump2);
+			// Try to invoke method with same name on the first object.
+			Method method = object1.getClass().getMethod("equalsDeep", Object.class);
+			Object result = method.invoke(object2);
+			
+			// Check invoke result.
+			if (result instanceof Boolean) {
+				equals = (Boolean) result;
+			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			// Leave the "equals" flag unchanged.
 		}
 
-		return false;
+		return equals;
 	}
 }

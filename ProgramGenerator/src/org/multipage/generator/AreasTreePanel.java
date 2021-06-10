@@ -89,11 +89,6 @@ public class AreasTreePanel extends JPanel {
 	 */
 	private int localMenuHint;
 	
-	/**
-	 * New area ID path.
-	 */
-	private Long[] newAreaIdPath;
-	
 	// $hide<<$
 	/**
 	 * Components.
@@ -416,39 +411,11 @@ public class AreasTreePanel extends JPanel {
 			if (newArea.ref != null) {
 				SwingUtilities.invokeLater(() -> {
 					
-					selectAndExpandNewArea(newArea.ref.getId(), true);
+					AreaTreeState.addSelectedAndExpanded(tree, selectedPaths);
+					updateData();
 				});
 			}
 		}
-	}
-
-	/**
-	 * Select and expand new area tree item.
-	 * @param newAreaId
-	 * @param select 
-	 */
-	private void selectAndExpandNewArea(Long newAreaId, boolean select) {
-		
-		// Save expand state.
-		TreePath selectedPath = tree.getSelectionPath();
-		if (selectedPath != null) {
-			
-			int count = selectedPath.getPathCount();
-			newAreaIdPath = new Long [count];
-			
-			for (int index = 0; index < count; index++) {
-				
-				DefaultMutableTreeNode mutableNode = (DefaultMutableTreeNode) selectedPath.getPathComponent(index);
-				Object object = mutableNode.getUserObject();
-				if (object instanceof Area) {
-					
-					Area area = (Area) object;
-					newAreaIdPath[index] = area.getId();
-				}
-			}
-		}
-		
-		updateData();
 	}
 
 	/**

@@ -252,7 +252,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		// Remember the panel
 		helper.remember();
 	}
-	
+
 	/**
 	 * Enable/disable slot properties trayMenu.
 	 */

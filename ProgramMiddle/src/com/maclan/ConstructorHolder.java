@@ -240,10 +240,21 @@ public class ConstructorHolder implements IdentifiedTreeNode {
 	}
 
 	/**
+	 * Get name.
 	 * @return the name
 	 */
 	public String getName() {
+		
 		return name;
+	}
+
+	/**
+	 * Get trimmed name.
+	 * @return the name
+	 */
+	public String getNameText() {
+		
+		return name == null ? "" : name;
 	}
 	
 	/**

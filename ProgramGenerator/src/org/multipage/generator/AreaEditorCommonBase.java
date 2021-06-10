@@ -147,6 +147,11 @@ public abstract class AreaEditorCommonBase {
 	 * Resources panel.
 	 */
 	protected AreaResourcesEditor panelResources;
+	
+	/**
+	 * Constructors panel.
+	 */
+	protected AreaConstructorPanel panelConstructor;
 
 	/**
 	 * Parent component reference.
