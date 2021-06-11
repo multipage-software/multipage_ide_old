@@ -1628,7 +1628,8 @@ public class SlotListPanel extends JPanel {
 	 */
 	protected void onChange() {
 		
-		
+		// Transmit the "update all" signal.
+		ConditionalEvents.transmit(SlotListPanel.this, Signal.updateAll);
 	}
 	
 	/**
@@ -2242,7 +2243,7 @@ public class SlotListPanel extends JPanel {
 			return;
 		}
 
-		// Check slot existance.
+		// Check slot existence.
 		List<Slot> tableSlots = tableModel.getSlots();
 		List<Slot> slotsToMoveOrCopy = new LinkedList<Slot>();
 		List<Slot> slotsToDelete = new LinkedList<Slot>();
@@ -2298,7 +2299,5 @@ public class SlotListPanel extends JPanel {
 		
 		// Update data.
 		onChange();
-		
-		ConditionalEvents.transmit(SlotListPanel.this, Signal.moveSlots);
 	}
 }

@@ -99,7 +99,7 @@ public class MiddleLightImpl implements MiddleLight {
 			if (e instanceof SQLException) {
 				SQLException sqlException = (SQLException)e;
 				
-				// When the dabase is already opened.
+				// When the database is already opened.
 				if (sqlException.getNextException().getErrorCode() ==  45000) {
 	                return MiddleResult.DATABASE_ALREADY_OPENED;
 	            }

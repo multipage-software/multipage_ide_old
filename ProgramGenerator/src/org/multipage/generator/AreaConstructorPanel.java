@@ -190,7 +190,7 @@ public class AreaConstructorPanel extends JPanel {
 		// Load slot values.
 		try {
 			Middle middle = ProgramBasic.loginMiddle();
-			MiddleResult result = middle.loadAreaSlots(null, constructorArea);
+			MiddleResult result = middle.loadSlots(constructorArea, true);
 			result.throwPossibleException();
 		}
 		catch (Exception e) {

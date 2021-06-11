@@ -8,6 +8,7 @@
 package org.multipage.generator;
 
 import java.awt.Component;
+import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
@@ -39,6 +40,11 @@ public class AreaLocalMenu {
 	 */
 	public static final int DIAGRAM = 1;
 	public static final int EDITOR = 2;
+	
+	/**
+	 * Empty menu item padding.
+	 */
+	private static final Insets emptyMenuItemPadding = new Insets(0, 0, 0, 0);
 
 	/**
 	 * Listeners.
@@ -98,130 +104,130 @@ public class AreaLocalMenu {
 	 */
 	public void addTo(JPopupMenu popupMenu, int start) {
 		
-		JMenuItem menuCopyAreaTree = new JMenuItem(
+		JMenuItem menuCopyAreaTree = createMenuItem(
 				Resources.getString("org.multipage.generator.menuCopyAreaTree"));
 		menuCopyAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
 		
-		JMenuItem menuPasteAreaTree = new JMenuItem(
+		JMenuItem menuPasteAreaTree = createMenuItem(
 				Resources.getString("org.multipage.generator.menuPasteAreaTree"));
 		menuPasteAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
 				
-		JMenuItem menuAddToFavoritesArea = new JMenuItem(
+		JMenuItem menuAddToFavoritesArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAddToFavorites"));
 		menuAddToFavoritesArea.setIcon(Images.getIcon("org/multipage/generator/images/favorite.png"));
 		
-		JMenu menuCreateAreas = new JMenu(Resources.getString("org.multipage.generator.menuCreateAreas"));
+		JMenu menuCreateAreas = createMenu(Resources.getString("org.multipage.generator.menuCreateAreas"));
 		
-		JMenuItem menuExternalSources = new JMenuItem(
+		JMenuItem menuExternalSources = createMenuItem(
 				Resources.getString("org.multipage.generator.menuExternalSourceCodes"));
 		menuCreateAreas.add(menuExternalSources);
 		
-		JMenuItem menuSetHomeArea = new JMenuItem(
+		JMenuItem menuSetHomeArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuSetHomeArea"));
 		menuSetHomeArea.setIcon(Images.getIcon("org/multipage/generator/images/home_page.png"));
 		
-		JMenuItem menuEditAreaSlots = new JMenuItem(
+		JMenuItem menuEditAreaSlots = createMenuItem(
 				Resources.getString("org.multipage.generator.menuEditArea"));
 		menuEditAreaSlots.setIcon(Images.getIcon("org/multipage/generator/images/list.png"));
 		
-		JMenuItem menuEditAreaResources = new JMenuItem(
+		JMenuItem menuEditAreaResources = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAreaEditResources"));
 		
-		JMenu menuFile = new JMenu(Resources.getString("org.multipage.generator.menuFile"));
+		JMenu menuFile = createMenu(Resources.getString("org.multipage.generator.menuFile"));
 		
-		JMenuItem menuExport = new JMenuItem(
+		JMenuItem menuExport = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFileExport"));
 		menuExport.setIcon(Images.getIcon("org/multipage/generator/images/export2_icon.png"));
 		
-		JMenuItem menuImport = new JMenuItem(
+		JMenuItem menuImport = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFileImport"));
 		menuImport.setIcon(Images.getIcon("org/multipage/generator/images/import2_icon.png"));
 		
-		JMenuItem menuFocusArea = new JMenuItem(
+		JMenuItem menuFocusArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFocusArea"));
 		menuFocusArea.setIcon(Images.getIcon("org/multipage/generator/images/search_icon.png"));
 		
-		JMenuItem menuFocusSuperArea = new JMenuItem(
+		JMenuItem menuFocusSuperArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFocusSuperArea"));
 		menuFocusSuperArea.setIcon(Images.getIcon("org/multipage/generator/images/search_parent.png"));
 		menuFocusSuperArea.setAccelerator(KeyStroke.getKeyStroke("control S"));
 		
-		JMenuItem menuFocusNextArea = new JMenuItem(
+		JMenuItem menuFocusNextArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFocusNextArea"));
 		menuFocusNextArea.setIcon(Images.getIcon("org/multipage/generator/images/next.png"));
 		
-		JMenuItem menuFocusPreviousArea = new JMenuItem(
+		JMenuItem menuFocusPreviousArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFocusPreviousArea"));
 		menuFocusPreviousArea.setIcon(Images.getIcon("org/multipage/generator/images/previous.png"));
 		
-		JMenuItem menuFocusTabTopArea = new JMenuItem(
+		JMenuItem menuFocusTabTopArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuFocusTabTopArea"));
 		menuFocusTabTopArea.setIcon(Images.getIcon("org/multipage/generator/images/focus_tab.png"));
 
-		JMenu menuEditArea = new JMenu(
+		JMenu menuEditArea = createMenu(
 				Resources.getString("org.multipage.generator.menuEditAreaResourcesList"));
 		menuEditArea.setIcon(Images.getIcon("org/multipage/generator/images/edit.png"));
 
-		JMenuItem menuCopyDescription = new JMenuItem(
+		JMenuItem menuCopyDescription = createMenuItem(
 				Resources.getString("org.multipage.generator.menuCopyAreaDescription"));
 		menuCopyDescription.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
 		
-		JMenuItem menuCopyAlias = new JMenuItem(
+		JMenuItem menuCopyAlias = createMenuItem(
 				Resources.getString("org.multipage.generator.menuCopyAreaAlias"));
 		menuCopyAlias.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
 		
-		JMenuItem menuAreaTrace = new JMenuItem(
+		JMenuItem menuAreaTrace = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAreaTrace"));
 		menuAreaTrace.setIcon(Images.getIcon("org/multipage/generator/images/area_trace.png"));
 		
-		JMenuItem menuDisplayArea = new JMenuItem(
+		JMenuItem menuDisplayArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuDisplayOnlineArea"));
 		menuDisplayArea.setIcon(Images.getIcon("org/multipage/generator/images/display.png"));
 
-		JMenuItem menuDisplayRenderedArea = new JMenuItem(
+		JMenuItem menuDisplayRenderedArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuDisplayRenderedArea"));
 		menuDisplayRenderedArea.setIcon(Images.getIcon("org/multipage/generator/images/display_rendered.png"));
 		
-		JMenu displayMenu = new JMenu(
+		JMenu displayMenu = createMenu(
 				Resources.getString("org.multipage.generator.menuDisplayMenu"));
 		displayMenu.add(menuDisplayArea);
 		displayMenu.add(menuDisplayRenderedArea);
 		
-		JMenuItem menuAreaHelp = new JMenuItem(
+		JMenuItem menuAreaHelp = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAreaHelp"));
 		menuAreaHelp.setIcon(Images.getIcon("org/multipage/generator/images/help_small.png"));
 				
-		JMenuItem menuAreaInheritedFolders = new JMenuItem(
+		JMenuItem menuAreaInheritedFolders = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAreaInheritedFolders"));
 		menuAreaInheritedFolders.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
 		
-		JMenu focusMenu = new JMenu(
+		JMenu focusMenu = createMenu(
 				Resources.getString("org.multipage.generator.menuFocus"));
 		
-		JMenu selectMenu = new JMenu(
+		JMenu selectMenu = createMenu(
 				Resources.getString("org.multipage.generator.menuSelect"));
 		
-		JMenuItem menuSelectArea = new JMenuItem(
+		JMenuItem menuSelectArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuSelectArea2"));
 		menuSelectArea.setIcon(Images.getIcon("org/multipage/generator/images/selected_area.png"));
 		
-		JMenuItem menuSelectAreaAdd = new JMenuItem(
+		JMenuItem menuSelectAreaAdd = createMenuItem(
 				Resources.getString("org.multipage.generator.menuSelectAreaAdd"));
 		menuSelectAreaAdd.setIcon(Images.getIcon("org/multipage/generator/images/selected_area_add.png"));
 		
-		JMenuItem menuSelectAreaAndSuabreas = new JMenuItem(
+		JMenuItem menuSelectAreaAndSuabreas = createMenuItem(
 				Resources.getString("org.multipage.generator.menuSelectAreaAndSubareas2"));
 		menuSelectAreaAndSuabreas.setIcon(Images.getIcon("org/multipage/generator/images/selected_subareas.png"));
 		
-		JMenuItem menuSelectAreaAndSuabreasAdd = new JMenuItem(
+		JMenuItem menuSelectAreaAndSuabreasAdd = createMenuItem(
 				Resources.getString("org.multipage.generator.menuSelectAreaAndSubareasAdd"));
 		menuSelectAreaAndSuabreasAdd.setIcon(Images.getIcon("org/multipage/generator/images/selected_subareas_add.png"));
-		JMenuItem menuClearSelection = new JMenuItem(
+		JMenuItem menuClearSelection = createMenuItem(
 				Resources.getString("org.multipage.generator.menuClearSelection"));
 		menuClearSelection.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
 		// Add clone trayMenu item.
-		JMenuItem menuCloneDiagram = new JMenuItem(Resources.getString("org.multipage.generator.menuCloneAreasDiagram"),
-				Images.getIcon("org/multipage/generator/images/clone.png"));
+		JMenuItem menuCloneDiagram = createMenuItem(Resources.getString("org.multipage.generator.menuCloneAreasDiagram"));
+		menuDisplayArea.setIcon(Images.getIcon("org/multipage/generator/images/clone.png"));
 		
 		int index = start;
 
@@ -489,7 +495,7 @@ public class AreaLocalMenu {
 	 */
 	protected void insertEditAreaMenu(JMenu menuEditArea) {
 		
-		JMenuItem menuAreaEdit = new JMenuItem(Resources.getString("org.multipage.generator.menuAreaEdit"));
+		JMenuItem menuAreaEdit = createMenuItem(Resources.getString("org.multipage.generator.menuAreaEdit"));
 		menuAreaEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onEditArea(AreaEditorFrame.NOT_SPECIFIED);
@@ -498,7 +504,7 @@ public class AreaLocalMenu {
 		menuEditArea.add(menuAreaEdit);
 		menuEditArea.addSeparator();
 		
-		JMenuItem menuEditResources = new JMenuItem(Resources.getString("org.multipage.generator.menuAreaEditResources"));
+		JMenuItem menuEditResources = createMenuItem(Resources.getString("org.multipage.generator.menuAreaEditResources"));
 		menuEditResources.addActionListener(new ActionListener() {
 			
 			public void actionPerformed(ActionEvent e) {
@@ -508,17 +514,50 @@ public class AreaLocalMenu {
 		
 		menuEditArea.add(menuEditResources);
 		
-		JMenuItem menuEditDependencies = new JMenuItem(Resources.getString("org.multipage.generator.menuAreaEditDependencies"));
+		JMenuItem menuEditDependencies = createMenuItem(Resources.getString("org.multipage.generator.menuAreaEditDependencies"));
 		menuEditDependencies.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onEditArea(AreaEditorFrame.DEPENDENCIES);
 			}
 		});
 		menuEditArea.add(menuEditDependencies);
+		
+		JMenuItem menuEditConstructor = createMenuItem(Resources.getString("org.multipage.generator.menuAreaEditConstructor"));
+		menuEditConstructor.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onEditArea(AreaEditorFrame.CONSTRUCTOR);
+			}
+		});
+		menuEditArea.add(menuEditConstructor);
+	}
+	
+	/**
+	 * Create new menu.
+	 * @param caption
+	 * @return
+	 */
+	private JMenu createMenu(String caption) {
+		
+		JMenu menu = new JMenu(caption);
+		menu.setMargin(emptyMenuItemPadding);
+		return menu;
+	}
+	
+	/**
+	 * Create new menu item.
+	 * @param caption
+	 * @return
+	 */
+	private JMenuItem createMenuItem(String caption) {
+		
+		JMenuItem menuItem = new JMenuItem(caption);
+		menuItem.setMargin(emptyMenuItemPadding);
+		return menuItem;
+		
 	}
 
 	/**
-	 * Display renderd area.
+	 * Display rendered area.
 	 */
 	protected void displayRenderedArea() {
 		

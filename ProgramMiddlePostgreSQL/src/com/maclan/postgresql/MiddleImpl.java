@@ -2120,8 +2120,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				statement.setBoolean(11, newArea.isProjectRoot());
 				
 				UUID guid = UUID.randomUUID();
-				String guidString = guid.toString();
-				statement.setObject(12, guidString);
+				statement.setObject(12, guid);
 				
 				ResultSet set = statement.executeQuery();
 				
@@ -16224,7 +16223,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		
 		return result;
 	}
-
+	
 	/**
 	 * Insert area slots.
 	 */

@@ -24,7 +24,6 @@ import org.multipage.gui.FoundAttr;
 import org.multipage.gui.SerializeStateAdapter;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
-import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;

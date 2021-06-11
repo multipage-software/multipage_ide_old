@@ -54,6 +54,7 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 	public static final int NOT_SPECIFIED = -1;
 	public static final int RESOURCES = 0;
 	public static final int DEPENDENCIES = 1;
+	public static final int CONSTRUCTOR = 2;
 
 	private static AreaEditorFrameBase dialog;
 

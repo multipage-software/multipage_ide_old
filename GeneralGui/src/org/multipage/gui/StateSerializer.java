@@ -18,6 +18,7 @@ import java.util.LinkedList;
 import javax.swing.JOptionPane;
 
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * @author
@@ -213,6 +214,7 @@ public class StateSerializer {
 			try {
 				// Do loop for all listeners. Invoke read state event.
 				for (SerializeStateAdapter listener : serializeStateListenersRef) {
+					
 					// Invoke lister.
 					listener.onReadState(loadStateInputStream);
 				}
