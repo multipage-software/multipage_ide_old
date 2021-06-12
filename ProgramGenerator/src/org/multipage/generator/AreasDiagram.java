@@ -457,7 +457,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		ConditionalEvents.receiver(this, Signal.focusBasicArea, message -> {
 			
 			// Focus currently visible Basic Area.
-			if (message.sourceClass(GeneratorMainFrame.class) && AreasDiagram.this.isShowing()) {
+			if (AreasDiagram.this.isShowing()) {
 				focusBasicArea();
 			}
 		});

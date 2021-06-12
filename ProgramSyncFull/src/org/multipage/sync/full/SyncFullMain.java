@@ -88,7 +88,7 @@ public class SyncFullMain {
 		// Delegate call.
 		try {
 			SyncMain.isStandalone = true;
-			SyncMain.initialize(args);
+			//SyncMain.initialize(args);
 			SyncMain.startService(false);
 		}
 		catch (Exception e) {

@@ -541,7 +541,7 @@ public class Utility {
 	 * @param menuAreaEdit
 	 */
 	public static void localize(JMenuItem menuItem) {
-
+		
 		menuItem.setText(Resources.getString(menuItem.getText()));
 	}
 
