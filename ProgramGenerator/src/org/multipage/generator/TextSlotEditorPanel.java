@@ -59,6 +59,7 @@ import org.multipage.util.Resources;
 
 import com.maclan.Area;
 import com.maclan.Slot;
+import com.maclan.help.Intellisense;
 import com.maclan.server.ServerUtilities;
 
 /**
@@ -433,9 +434,13 @@ public class TextSlotEditorPanel extends JPanel implements SlotValueEditorPanelI
 		
 		localize();
 		setIcons();
+		
+		// Use intellisense for the text editor.
+		Intellisense.applyTo(textEditorPanel);
+		
 		// $hide<<$
 	}
-
+	
 	/**
 	 * Set icons.
 	 */
@@ -474,7 +479,7 @@ public class TextSlotEditorPanel extends JPanel implements SlotValueEditorPanelI
 		menuFilePath.setIcon(Images.getIcon("org/multipage/gui/images/folder.png"));
 		menuFolderPath.setIcon(Images.getIcon("org/multipage/gui/images/folder.png"));
 	}
-
+	
 	/**
 	 * Show text editor.
 	 */

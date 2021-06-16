@@ -7,23 +7,79 @@
 
 package org.multipage.gui;
 
-import javax.swing.*;
-
-import java.awt.*;
-
-import java.awt.print.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Point;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.print.PrinterException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.StringWriter;
 import java.util.LinkedList;
-import java.util.regex.*;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import javax.swing.event.*;
-import javax.swing.text.*;
-import javax.swing.text.html.*;
-import javax.swing.undo.*;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JEditorPane;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Caret;
+import javax.swing.text.Document;
+import javax.swing.text.DocumentFilter;
+import javax.swing.text.EditorKit;
+import javax.swing.text.Highlighter;
+import javax.swing.text.JTextComponent;
+import javax.swing.text.MutableAttributeSet;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.swing.text.TabSet;
+import javax.swing.text.TabStop;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.UndoManager;
 
-import org.multipage.util.*;
-
-import java.awt.event.*;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+import org.multipage.util.SimpleMethodRef;
 
 /**
  * 
@@ -244,6 +300,11 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	 * Highlight script commands timer.
 	 */
 	private javax.swing.Timer highlightScriptCommandsTimer;
+	
+	/**
+	 * Lambda function that returns text hints.
+	 */
+	public Function<String, Function<Integer, Function<Caret, LinkedList<String>>>> intellisenseLambda = null;
 
 	/**
 	 * Rich text buttons.
@@ -1193,27 +1254,42 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		if (changing) {
 			return;
 		}
-		if (useHtmlEditor) {
+		
+		// Disable deadlock.
+		changing = true;
+		
+		// Get plain text and insert it to the design text component.
+		Document plainDocument = plainTextPane.getDocument();
+		int plainLength = plainDocument.getLength();
+		
+		final Obj<String> plainText = new Obj<String>("");
+		try {
+			// Get text content.
+			plainText.ref = plainDocument.getText(0, plainLength);
 			
-			// Disable deadlock.
-			changing = true;
+			// Get caret position.
+			int selection = plainTextPane.getSelectionStart();
+			Caret caret = plainTextPane.getCaret();
 			
-			// Get plain text and insert it to the design text component.
-			Document plainDocument = plainTextPane.getDocument();
-			int plainLength = plainDocument.getLength();
-			
-			String plainText = "";
-			try {
-				plainText = plainDocument.getText(0, plainLength);
+			// If the intellisense exists, get text hints.
+			if (intellisenseLambda != null) {
+				
+				SwingUtilities.invokeLater(() -> {
+					intellisenseLambda.apply(plainText.ref).apply(selection).apply(caret);
+				});
+				
 			}
-			catch (BadLocationException e) {
-				e.printStackTrace();
-			}
-			
-			htmlTextPane.setText(plainText);
-
-			changing = false;
 		}
+		catch (BadLocationException e) {
+			e.printStackTrace();
+		}
+			
+		if (useHtmlEditor) {
+			htmlTextPane.setText(plainText.ref);
+
+			
+		}
+		changing = false;
 		
 		// Highlight script commands.
 		highlightScriptCommands();

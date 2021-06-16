@@ -55,6 +55,59 @@ public class ScriptingEngine {
 	private boolean used = false;
 	
 	/**
+	 * Try to get parameter.
+	 * @param <T>
+	 * @param parameter
+	 * @param defaultValue 
+	 * @return
+	 */
+	public static <T> T getParameter(Object parameter, T defaultValue) {
+		
+		// Check null value.
+		if (parameter == null) {
+			return null;
+		}
+		
+		// Check undefined parameter sent by Nashorn.
+		if (parameter.toString().equalsIgnoreCase("undefined")) {
+			return defaultValue;
+		}
+		
+		// Convert the input parameter.
+		T typedParameter = (T) parameter;
+		return typedParameter;
+	}
+	
+	/**
+	 * Try to get parameter of type Long.
+	 * @param parameter
+	 * @param object
+	 * @return
+	 */
+	public static Long getLongParameter(Object parameter, Long defaultValue) {
+		
+		// Check null value.
+		if (parameter == null) {
+			return null;
+		}
+		
+		// Check undefined parameter sent by Nashorn.
+		if (parameter.toString().equalsIgnoreCase("undefined")) {
+			return defaultValue;
+		}
+		
+		// Convert the input parameter.
+		Long typedParameter = null;
+		if (parameter instanceof Integer) {
+			typedParameter = Long.valueOf((int) parameter);
+		}
+		else {
+			typedParameter = (Long) parameter;
+		}
+		return typedParameter;
+	}
+	
+	/**
 	 * CHeck the current engiine.
 	 * @param scriptingEngine
 	 * @return

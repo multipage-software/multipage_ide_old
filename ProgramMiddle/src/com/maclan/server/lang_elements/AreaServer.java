@@ -457,7 +457,7 @@ public class AreaServer implements BoxedObject {
 	 * @throws Exception 
 	 */
 	//graalvm @HostAccess.Export
-	public Object slot(String slotAlias, Object areaObjectOrType, Object skipDefaultOrArea, Boolean parent, Long inheritanceLevel) throws Exception {
+	public Object slot(String slotAlias, Object areaObjectOrType, Object skipDefaultOrArea, Object parent, Object inheritanceLevel) throws Exception {
 		
 		if (areaObjectOrType instanceof String) {
 			
@@ -465,11 +465,13 @@ public class AreaServer implements BoxedObject {
 			return slot(slotAlias, skipDefaultOrArea, (String) areaObjectOrType);
 		}
 		
-		com.maclan.Slot middleSlot = server.slot(
-				slotAlias,
-				getAreaJsParameter(areaObjectOrType),
-				skipDefaultOrArea != null && !(skipDefaultOrArea instanceof Undefined) ? (Boolean) skipDefaultOrArea : false, 
-				parent != null ? parent : false, inheritanceLevel, false);
+		// Trim parameters.
+		com.maclan.Area area = getAreaJsParameter(areaObjectOrType);
+		boolean skipDefaultFlag = ScriptingEngine.getParameter(skipDefaultOrArea, false);
+		boolean parentFlag = ScriptingEngine.getParameter(parent, false);
+		Long inheritanceLevelValue = ScriptingEngine.getLongParameter(inheritanceLevel, null);
+		
+		com.maclan.Slot middleSlot = server.slot(slotAlias,	area, skipDefaultFlag, parentFlag, inheritanceLevelValue, false);
 		
 		if (middleSlot == null) {
 			return null;

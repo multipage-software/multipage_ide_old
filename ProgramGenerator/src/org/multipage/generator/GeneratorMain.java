@@ -29,6 +29,7 @@ import org.multipage.util.j;
 
 import com.maclan.MiddleResult;
 import com.maclan.MiddleUtility;
+import com.maclan.help.Intellisense;
 import com.maclan.help.ProgramHelp;
 import com.maclan.server.AreaServer;
 
@@ -168,6 +169,9 @@ public class GeneratorMain {
 			System.exit(7);
 			return;
 		}
+		
+		// Initialize intellisense.
+		Intellisense.initialize();
 		
 		// Set middle layer model reference.
 		ProgramBasic.getMiddle().setModel(ProgramGenerator.getAreasModel());
