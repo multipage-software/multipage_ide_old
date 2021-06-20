@@ -12,11 +12,13 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Window;
+import java.awt.geom.Rectangle2D;
 import java.util.LinkedList;
 
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.Caret;
 
@@ -51,8 +53,10 @@ public class IntellisenseWindow extends JDialog {
 		// Try to close old window.
 		closeOld();
 		
-		// Create new one.
+		// Create new hidden window.
 		dialog = new IntellisenseWindow(Utility.findWindow(parent));
+		dialog.setFocusable(false);
+		dialog.setVisible(false);
 	}
 	
 	/**
@@ -69,34 +73,47 @@ public class IntellisenseWindow extends JDialog {
 
 	/**
 	 * Display intellisense window with suggestions near the text editor caret.
-	 * @param parent
+	 * @param textPane
 	 * @param caret
 	 * @param suggestions
 	 */
-	public static final void displayAtCaret(Component parent, Caret caret, LinkedList<String> suggestions) {
+	public static final void displayAtCaret(JTextPane textPane, Caret caret, LinkedList<String> suggestions) {
 		
 		// Check dialog and possibly create new one.
 		if (dialog == null) {
-			createNew(parent);
+			createNew(textPane);
 		}
 		
-		// Try to get text editor caret location.
-		Point caretLocation = caret.getMagicCaretPosition();
-		if (caretLocation == null) {
+		// Get current caret position in text and its location.
+		int caretPosition = caret.getDot();
+		Rectangle2D caretBounds = null;
+		try {
+			caretBounds = textPane.modelToView2D(caretPosition);
+		}
+		catch (Exception e) {
+			
+			dialog.setVisible(false);
 			return;
 		}
+		Point caretLocation = new Point();
+		caretLocation.x = (int) caretBounds.getX() + 10;
+		caretLocation.y = (int) caretBounds.getY();
 		
 		// Load suggestions.
 		dialog.loadSuggestions(suggestions);
 		
 		// Trim the coordinates.
-		caretLocation.x += 10;
-		SwingUtilities.convertPointToScreen(caretLocation, parent);
+		SwingUtilities.convertPointToScreen(caretLocation, textPane);
 		
 		// Display window at caret location.
-		dialog.setLocation(caretLocation);
-		j.log(parent.getBounds());
-		dialog.setVisible(true);
+		SwingUtilities.invokeLater(() -> dialog.setLocation(caretLocation));
+		
+		// Update the window.
+		SwingUtilities.invokeLater(() -> dialog.setVisible(false));
+		SwingUtilities.invokeLater(() -> dialog.setVisible(true));
+		
+		// Return focus.
+		SwingUtilities.invokeLater(() -> textPane.grabFocus());
 	}
 	
 	//$hide<<$
@@ -111,7 +128,7 @@ public class IntellisenseWindow extends JDialog {
 	 * @param parent 
 	 */
 	public IntellisenseWindow(Window parent) {
-		super(parent, ModalityType.DOCUMENT_MODAL);
+		super(parent, ModalityType.MODELESS);
 		
 		initComponents();
 		postCreate(); //$hide$

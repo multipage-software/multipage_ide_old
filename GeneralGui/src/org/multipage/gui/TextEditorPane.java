@@ -80,6 +80,7 @@ import javax.swing.undo.UndoManager;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
+import java.awt.event.KeyAdapter;
 
 /**
  * 
@@ -304,7 +305,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	/**
 	 * Lambda function that returns text hints.
 	 */
-	public Function<String, Function<Integer, Function<Caret, LinkedList<String>>>> intellisenseLambda = null;
+	public Function<String, Function<Integer, Function<Caret, Function<JTextPane, LinkedList<String>>>>> intellisenseLambda = null;
 
 	/**
 	 * Rich text buttons.
@@ -391,6 +392,12 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		tabbedPane.addTab("org.multipage.gui.messageHtmlText", null, plainScrollPane, null);
 		
 		plainTextPane = new JTextPane();
+		plainTextPane.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				onKeyReleased(e);
+			}
+		});
 		plainTextPane.setBorder(null);
 		plainTextPane.setDragEnabled(true);
 		plainScrollPane.setViewportView(plainTextPane);
@@ -410,6 +417,12 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		springLayout.putConstraint(SpringLayout.EAST, htmlScrollPane, 223, SpringLayout.WEST, this);
 		
 		htmlTextPane = new JTextPane();
+		htmlTextPane.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				onKeyReleased(e);
+			}
+		});
 		htmlTextPane.setBorder(null);
 		htmlTextPane.addCaretListener(new CaretListener() {
 			public void caretUpdate(CaretEvent e) {
@@ -437,7 +450,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		panelHtml.add(richTextToolBar, BorderLayout.NORTH);
 		richTextToolBar.setFloatable(false);
 	}
-
+	
 	/**
 	 * Post creation.
 	 */
@@ -1245,7 +1258,40 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		
 		fireChange();
 	}
-
+	
+	/**
+	 * On key released event.
+	 * @param event
+	 */
+	protected void onKeyReleased(KeyEvent event) {
+		
+		// Get plain text and insert it to the design text component.
+		Document plainDocument = plainTextPane.getDocument();
+		int plainLength = plainDocument.getLength();
+		
+		final Obj<String> plainText = new Obj<String>("");
+		try {
+			// Get text content.
+			plainText.ref = plainDocument.getText(0, plainLength);
+			
+			// Get caret position.
+			int selection = plainTextPane.getSelectionStart();
+			Caret caret = plainTextPane.getCaret();
+			
+			// If the intellisense exists, get text hints.
+			if (intellisenseLambda != null) {
+				
+				SwingUtilities.invokeLater(() -> {
+					intellisenseLambda.apply(plainText.ref).apply(selection).apply(caret).apply(plainTextPane);
+				});
+				
+			}
+		}
+		catch (BadLocationException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/**
 	 * On change source.
 	 */
@@ -1266,19 +1312,6 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 		try {
 			// Get text content.
 			plainText.ref = plainDocument.getText(0, plainLength);
-			
-			// Get caret position.
-			int selection = plainTextPane.getSelectionStart();
-			Caret caret = plainTextPane.getCaret();
-			
-			// If the intellisense exists, get text hints.
-			if (intellisenseLambda != null) {
-				
-				SwingUtilities.invokeLater(() -> {
-					intellisenseLambda.apply(plainText.ref).apply(selection).apply(caret);
-				});
-				
-			}
 		}
 		catch (BadLocationException e) {
 			e.printStackTrace();

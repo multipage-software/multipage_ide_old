@@ -6,8 +6,9 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/libraries/gnuprologjava-0.2.6/gnuprologjava-0.2.6.jar"/>
-	<classpathentry kind="src" path="/GeneralUtil"/>
+	<classpathentry kind="lib" path="C:/libraries/gnuprologjava-0.2.6/gnuprologjava-0.2.6.jar" sourcepath="C:/libraries/gnuprologjava-0.2.6-src/src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
+	<classpathentry kind="src" path="/GeneralUtil"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
