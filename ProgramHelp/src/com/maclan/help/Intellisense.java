@@ -19,11 +19,8 @@ import gnu.prolog.term.AtomTerm;
 import gnu.prolog.term.CompoundTerm;
 import gnu.prolog.term.CompoundTermTag;
 import gnu.prolog.term.Term;
-import gnu.prolog.term.VariableTerm;
 import gnu.prolog.vm.Environment;
 import gnu.prolog.vm.Interpreter;
-import gnu.prolog.vm.Interpreter.Goal;
-import gnu.prolog.vm.PrologCode;
 
 /**
  * 
@@ -48,10 +45,11 @@ public class Intellisense {
 	private static enum TokenType { initial, tag_start, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
 	
 	private static final Pattern tagStartRegex = Pattern.compile("\\[\\s*@\\s*(\\w*)");
+	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\s+");
 	private static final Pattern tagPropertyNameRegex = Pattern.compile("(\\w+)");
-	private static final Pattern tagEqualSignRegex = Pattern.compile("=");
+	private static final Pattern tagEqualSignRegex = Pattern.compile("(=)");
 	private static final Pattern tagPropertyValueRegex = Pattern.compile("(\\S*)|(\"\\S*\")");
-	private static final Pattern tagPropertySeparatorRegex = Pattern.compile("(,)");
+	private static final Pattern tagPropertySeparatorRegex = Pattern.compile("(,|\\s)");
 	private static final Pattern tagClosingRegex = Pattern.compile("(])");
 	private static final Pattern tagTextRegex = Pattern.compile("(.*?)");
 	private static final Pattern endTagRegex = Pattern.compile("\\[\\s*@\\s*(\\w)\\s*\\]");
@@ -99,36 +97,36 @@ public class Intellisense {
 		
 		// Initialization.
 		LinkedList<String> suggestions = new LinkedList<String>();
-		
-		// Create query term.
-		Term suggestionsAnswer = new VariableTerm("Suggestions");
-		Term suggestionsGoal = new CompoundTerm(AtomTerm.get("suggestion"), new Term [] { inputTokens, suggestionsAnswer });
-		
-		// Run Prolog interpreter and get answer.
-		synchronized (prologInterpreter) {
-			
-			try {
-				
-				Goal theGoal = prologInterpreter.prepareGoal(suggestionsGoal);
-				int result;
-				
-				do {
-					
-					result = prologInterpreter.execute(theGoal);
-					if (result == PrologCode.HALT || result == PrologCode.FAIL) {
-						break;
-					}
-					
-					Term resultingSuggestion = suggestionsAnswer.dereference();
-					suggestions.add(resultingSuggestion.toString());
-				}
-				while (result != PrologCode.SUCCESS_LAST);
-			}
-			catch (Exception e) {
-				
-				e.printStackTrace();
-			}
-		}
+//		
+//		// Create query term.
+//		Term suggestionsAnswer = new VariableTerm("Suggestions");
+//		Term suggestionsGoal = new CompoundTerm(AtomTerm.get("suggestion"), new Term [] { inputTokens, suggestionsAnswer });
+//		
+//		// Run Prolog interpreter and get answer.
+//		synchronized (prologInterpreter) {
+//			
+//			try {
+//				
+//				Goal theGoal = prologInterpreter.prepareGoal(suggestionsGoal);
+//				int result;
+//				
+//				do {
+//					
+//					result = prologInterpreter.execute(theGoal);
+//					if (result == PrologCode.HALT || result == PrologCode.FAIL) {
+//						break;
+//					}
+//					
+//					Term resultingSuggestion = suggestionsAnswer.dereference();
+//					suggestions.add(resultingSuggestion.toString());
+//				}
+//				while (result != PrologCode.SUCCESS_LAST);
+//			}
+//			catch (Exception e) {
+//				
+//				e.printStackTrace();
+//			}
+//		}
 		
 		// Return suggestions.
 		return suggestions;
@@ -175,6 +173,12 @@ public class Intellisense {
 		// Lambda functions consuming and returning the tokens.
 		Runnable tagStartLambda = () -> {
 			term.ref = consume(preparedSourceCode.ref, position, tagStartRegex, "tag_start");
+			if (term.ref != null) {
+				termType.ref = TokenType.tag_start;
+			}
+		};
+		Runnable whiteSpaceSeparatorLambda = () -> {
+			term.ref = consume(preparedSourceCode.ref, position, whiteSpaceSeparatorRegex, "white_speparator");
 			if (term.ref != null) {
 				termType.ref = TokenType.tag_start;
 			}
@@ -245,11 +249,11 @@ public class Intellisense {
 			}
 			
 			for (Runnable lambdaFunction : lambdaFunctions) {
+				
 				lambdaFunction.run();
-			}
-			
-			if (term.ref == null || termType.ref == null || position.ref == null) {
-				break;
+				if (term.ref != null) {
+					break;
+				}
 			}
 			
 			// Add new term to the list of terms.
@@ -258,6 +262,10 @@ public class Intellisense {
 		
 		// Create compound term.
 		Term tokensTerm = CompoundTerm.getList(terms.toArray(new Term [0]));
+		
+		if (ProgramHelp.logLambda != null) {
+			ProgramHelp.logLambda.accept(tokensTerm.toString());
+		}
 		return tokensTerm;
 	}
 	

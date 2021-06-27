@@ -11,6 +11,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Window;
@@ -43,8 +44,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
@@ -65,11 +66,13 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.TextAreaEx;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
-import java.awt.FlowLayout;
+
+import com.maclan.help.ProgramHelp;
 
 /**
  * 
@@ -84,6 +87,16 @@ public class LoggingDialog extends JDialog {
 	private static final long serialVersionUID = 1L;
 	
 	//$hide>>$
+	
+	/**
+	 * If the following flag is set to true, the dialog is opened when it is initialized.
+	 */
+	private static boolean openedWhenInitialized = false;
+	
+	/**
+	 * Switch between list and single item view for the log.
+	 */
+	private static boolean logList = true;
 	
 	/**
 	 * Message queue viewer update interval
@@ -159,6 +172,8 @@ public class LoggingDialog extends JDialog {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		openedWhenInitialized = inputStream.readBoolean();
+		logList = inputStream.readBoolean();
 		omitChooseSignals = inputStream.readBoolean();
 		omittedOrChosenSignals = Utility.readInputStreamObject(inputStream, HashSet.class);
 		eventsWindowSplitter = inputStream.readInt();
@@ -180,6 +195,8 @@ public class LoggingDialog extends JDialog {
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
+		outputStream.writeBoolean(openedWhenInitialized);
+		outputStream.writeBoolean(logList);
 		outputStream.writeBoolean(omitChooseSignals);
 		outputStream.writeObject(omittedOrChosenSignals);
 		outputStream.writeInt(eventsWindowSplitter);
@@ -288,6 +305,14 @@ public class LoggingDialog extends JDialog {
 		
 		Window parentWindow = Utility.findWindow(parent);
 		dialog = new LoggingDialog(parentWindow);
+		
+		// Attach the help module.
+		ProgramHelp.logLambda = text -> log(text);
+		
+		// If the following flag was set, open the dialog.
+		if (openedWhenInitialized) {
+			showDialog(parentWindow);
+		}
 	}
 	
 	/**
@@ -335,7 +360,7 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Components.
 	 */
-	protected JTextArea textAreaDescription;
+	private TextAreaEx textLog;
 	private JTabbedPane tabbedPane;
 	private DefaultListModel<Signal> listModelOmittedSignals;
 	private JPanel panelBreakPoints;
@@ -370,6 +395,8 @@ public class LoggingDialog extends JDialog {
 	private JMenuItem menuMessageQueuePrintReflection;
 	private JMenuItem menuMessageGoToEvent;
 	private JMenuItem menuGoToQueueMessage;
+	private JToolBar toolBarLog;
+	private JToggleButton buttonListOrSingleItem;
 	
 	/**
 	 * Show dialog.
@@ -377,7 +404,11 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void showDialog(Component parent) {
 		
+		// Shwo window.
 		dialog.setVisible(true);
+		
+		// Reset the flag.
+		openedWhenInitialized = true;
 	}
 	
 	/**
@@ -431,8 +462,12 @@ public class LoggingDialog extends JDialog {
 		JScrollPane scrollPaneLog = new JScrollPane();
 		panelLog.add(scrollPaneLog, BorderLayout.CENTER);
 		
-		JTextArea textLog = new JTextArea();
+		textLog = new TextAreaEx();
 		scrollPaneLog.setViewportView(textLog);
+		
+		toolBarLog = new JToolBar();
+		toolBarLog.setFloatable(false);
+		panelLog.add(toolBarLog, BorderLayout.NORTH);
 		
 		panelMessageQueue = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textLogMessageQueue", null, panelMessageQueue, null);
@@ -629,6 +664,10 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void createToolBars() {
 		
+		// Add tool bar for log.
+		buttonListOrSingleItem = ToolBarKit.addToggleButton(toolBarLog, "org/multipage/generator/images/list.png", "org.multipage.generator.tooltipLogListOrSingleItem", () -> onListOrSingleItem());
+		buttonListOrSingleItem.setSelected(true);
+		
 		// A tool bar for message queue.
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedQueues", () -> onClearQueues());
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedQueuesSettings", () -> onLogSettings());
@@ -684,7 +723,7 @@ public class LoggingDialog extends JDialog {
 	 */
 	private void loadDialog() {
 		
-		if (bounds.isEmpty()) {
+		if (bounds == null || bounds.isEmpty()) {
 			Utility.centerOnScreen(this);
 			bounds = getBounds();
 		}
@@ -705,6 +744,7 @@ public class LoggingDialog extends JDialog {
 		}
 		tabbedPane.setSelectedIndex(selectedTab);
 		checkOmitOrChooseSignals.setSelected(omitChooseSignals);
+		buttonListOrSingleItem.setSelected(logList);
 	}
 	
 	/**
@@ -717,6 +757,7 @@ public class LoggingDialog extends JDialog {
 		eventsWindowSplitter = splitPaneEvents.getDividerLocation();
 		selectedTab = tabbedPane.getSelectedIndex();
 		omitChooseSignals = checkOmitOrChooseSignals.isSelected();
+		logList = buttonListOrSingleItem.isSelected();
 	}
 	
 	/**
@@ -1202,6 +1243,11 @@ public class LoggingDialog extends JDialog {
 		
 		// Add new message.
 		LoggedMessage log = new LoggedMessage(logText);
+		
+		if (!LoggingDialog.logList) {
+			logTexts.clear();
+		}
+		
 		logTexts.add(log);
 		
 		// Message limit.
@@ -1340,7 +1386,7 @@ public class LoggingDialog extends JDialog {
 			resultingText += message.getText() + '\n';
 		}
 		
-		dialog.textAreaDescription.setText(resultingText);
+		dialog.textLog.setText(resultingText);
 	}
 	
 	/**
@@ -2126,12 +2172,24 @@ public class LoggingDialog extends JDialog {
 	}
 	
 	/**
+	 * List or single item switch.
+	 * @return
+	 */
+	private void onListOrSingleItem() {
+		
+		LoggingDialog.logList = buttonListOrSingleItem.isSelected();
+	}
+	
+	/**
 	 * On close dialog.
 	 */
 	protected void onClose() {
 		
 		// Save dialog state.
 		saveDialog();
+		
+		// Reset the flag.
+		openedWhenInitialized = false;
 	}
 	
 	/**

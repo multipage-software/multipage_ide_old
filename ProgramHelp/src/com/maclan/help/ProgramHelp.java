@@ -8,12 +8,18 @@ package com.maclan.help;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
+import java.util.function.Consumer;
 
 /**
  * @author user
  *
  */
 public class ProgramHelp {
+	
+	/**
+	 * Log lambda function.
+	 */
+	public static Consumer<String> logLambda = null;
 	
 	/**
 	 * Open Maclan reference template XML as input stream.

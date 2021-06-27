@@ -101,4 +101,52 @@ public class ToolBarKit {
 		
 		return toggleButton;
 	}
+	
+
+	/**
+	 * Add toggle button.
+	 */
+	@SuppressWarnings("serial")
+	public static JToggleButton addToggleButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure, Runnable actionLambda) {
+		
+		// Add toggle button and set action adapter.
+		JToggleButton toggleButton = new JToggleButton();
+		
+		if (actionLambda != null) {
+			toggleButton.setAction(new AbstractAction() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					
+					// Invoke lambda function.
+					actionLambda.run();
+				}
+			});
+		}
+		
+		toolBarObject.add(toggleButton);
+		toggleButton.setToolTipText(Resources.getString(toolTipResoure));
+
+		ImageIcon icon = Images.getIcon(iconPictureName);
+		if (icon != null) {
+			toggleButton.setIcon(icon);
+		}
+		else {
+			String format = Resources.getString("org.multipage.gui.errorCannotLoadToolbarIcon");
+			String message = String.format(format, iconPictureName);
+			JOptionPane.showMessageDialog(null, message);
+		}
+		
+		return toggleButton;
+	}
+	
+	/**
+	 * Add toggle button.
+	 */
+	public static JToggleButton addToggleButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure) {
+		
+		// Delegate the call.
+		return addToggleButton(toolBarObject, iconPictureName, toolTipResoure, null);
+	}
 }
