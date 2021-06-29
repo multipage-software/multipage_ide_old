@@ -42,17 +42,17 @@ public class Intellisense {
 	/**
 	 * Regular enum and expressions for the tokenizer.
 	 */
-	private static enum TokenType { initial, tag_start, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
+	private static enum TokenType { initial, tag_start, white_space_speparator, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
 	
-	private static final Pattern tagStartRegex = Pattern.compile("\\[\\s*@\\s*(\\w*)");
-	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\s+");
-	private static final Pattern tagPropertyNameRegex = Pattern.compile("(\\w+)");
-	private static final Pattern tagEqualSignRegex = Pattern.compile("(=)");
-	private static final Pattern tagPropertyValueRegex = Pattern.compile("(\\S*)|(\"\\S*\")");
-	private static final Pattern tagPropertySeparatorRegex = Pattern.compile("(,|\\s)");
-	private static final Pattern tagClosingRegex = Pattern.compile("(])");
-	private static final Pattern tagTextRegex = Pattern.compile("(.*?)");
-	private static final Pattern endTagRegex = Pattern.compile("\\[\\s*@\\s*(\\w)\\s*\\]");
+	private static final Pattern tagStartRegex = Pattern.compile("\\s*\\[\\s*@\\s*(\\w*)");
+	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\s");
+	private static final Pattern tagPropertyNameRegex = Pattern.compile("\\s*(\\w+)");
+	private static final Pattern tagEqualSignRegex = Pattern.compile("\\s*=");
+	private static final Pattern tagPropertyValueRegex = Pattern.compile("\\s*([^\\s\\]]*|\"\\S*\")");
+	private static final Pattern tagPropertySeparatorRegex = Pattern.compile("\\s*,|\\s");
+	private static final Pattern tagClosingRegex = Pattern.compile("\\s*\\]");
+	private static final Pattern tagTextRegex = Pattern.compile("\\s*(.*?)");
+	private static final Pattern endTagRegex = Pattern.compile("\\s*\\[\\s*@\\s*(\\w)\\s*\\]");
 
 	/**
 	 * Initialization.
@@ -178,9 +178,9 @@ public class Intellisense {
 			}
 		};
 		Runnable whiteSpaceSeparatorLambda = () -> {
-			term.ref = consume(preparedSourceCode.ref, position, whiteSpaceSeparatorRegex, "white_speparator");
+			term.ref = consume(preparedSourceCode.ref, position, whiteSpaceSeparatorRegex, "white_space_speparator");
 			if (term.ref != null) {
-				termType.ref = TokenType.tag_start;
+				termType.ref = TokenType.white_space_speparator;
 			}
 		};
 		Runnable tagPropertyNameLambda = () -> {
@@ -230,14 +230,15 @@ public class Intellisense {
 		LinkedHashMap<TokenType, Runnable []> tokenizerRules = new LinkedHashMap<TokenType, Runnable []>();
 		
 		tokenizerRules.put(TokenType.initial, new Runnable [] { tagStartLambda });
-		tokenizerRules.put(TokenType.tag_start, new Runnable [] { tagPropertyNameLambda, tagClosingLambda });
-		tokenizerRules.put(TokenType.property_name, new Runnable [] { tagPropertyValueLambda, tagEqualSignLambda, tagPropertySeparatorLambda, tagClosingLambda });
+		tokenizerRules.put(TokenType.tag_start, new Runnable [] { tagClosingLambda, whiteSpaceSeparatorLambda });
+		tokenizerRules.put(TokenType.white_space_speparator, new Runnable [] { tagPropertyNameLambda });
+		tokenizerRules.put(TokenType.property_name, new Runnable [] { tagEqualSignLambda, tagClosingLambda, tagPropertySeparatorLambda });
 		tokenizerRules.put(TokenType.equal_sign, new Runnable [] { tagPropertyValueLambda });
-		tokenizerRules.put(TokenType.property_value, new Runnable [] { tagPropertySeparatorLambda, tagClosingLambda });
+		tokenizerRules.put(TokenType.property_value, new Runnable [] { tagClosingLambda, tagPropertySeparatorLambda });
 		tokenizerRules.put(TokenType.property_separator, new Runnable [] { tagPropertyNameLambda });
-		tokenizerRules.put(TokenType.tag_closing, new Runnable [] { tagStartLambda, endTagLambda, textLambda });
+		tokenizerRules.put(TokenType.tag_closing, new Runnable [] {textLambda, endTagLambda, tagStartLambda });
 		tokenizerRules.put(TokenType.text, new Runnable [] { tagStartLambda, endTagLambda });
-		tokenizerRules.put(TokenType.end_tag, new Runnable [] { tagStartLambda, endTagLambda, textLambda });
+		tokenizerRules.put(TokenType.end_tag, new Runnable [] { textLambda, tagStartLambda, endTagLambda });
 
 		// Tokenize the source code.
 		while (position.ref < sourceLength) {
@@ -254,6 +255,10 @@ public class Intellisense {
 				if (term.ref != null) {
 					break;
 				}
+			}
+			
+			if (term.ref == null) {
+				break;
 			}
 			
 			// Add new term to the list of terms.
@@ -280,20 +285,33 @@ public class Intellisense {
 		Matcher matcher = regex.matcher(preparedSourceCode);
 		boolean found = matcher.find(position.ref);
 		
+		Term resultingTerm = null;
+		
 		if (!found) {
 			return null;
 		}
 		
-		int groupCount = matcher.groupCount();
-		if (groupCount != 1) {
+		int start = matcher.start();
+		if (start != position.ref) {
 			return null;
 		}
 		
 		position.ref = matcher.end();
 		
+		int groupCount = matcher.groupCount();
+		if (groupCount <= 0) {
+			
+			resultingTerm = AtomTerm.get(termName);
+			return resultingTerm;
+		}
+		
+		if (groupCount > 1) {
+			return null;
+		}
+		
 		String atomTerm = matcher.group(1);
 		
-		Term resultingTerm = new CompoundTerm(CompoundTermTag.get(termName, 1), AtomTerm.get(atomTerm));
+		resultingTerm = new CompoundTerm(CompoundTermTag.get(termName, 1), AtomTerm.get(atomTerm));
 		return resultingTerm;
 	}
 	

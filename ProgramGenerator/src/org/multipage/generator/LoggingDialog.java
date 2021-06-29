@@ -12,6 +12,7 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Window;
@@ -35,7 +36,9 @@ import java.util.function.BiFunction;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
@@ -145,6 +148,11 @@ public class LoggingDialog extends JDialog {
 	private static int selectedTab = 0;
 	
 	/**
+	 * Index of font size for the simple log view.
+	 */
+	private static int logFontSizeIndex = 0;
+	
+	/**
 	 * Dark green color constant.
 	 */
 	private static final Color DARK_GREEN = new Color(0, 128, 0);
@@ -172,6 +180,7 @@ public class LoggingDialog extends JDialog {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		logFontSizeIndex = inputStream.readInt();
 		openedWhenInitialized = inputStream.readBoolean();
 		logList = inputStream.readBoolean();
 		omitChooseSignals = inputStream.readBoolean();
@@ -195,6 +204,7 @@ public class LoggingDialog extends JDialog {
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
+		outputStream.writeInt(logFontSizeIndex);
 		outputStream.writeBoolean(openedWhenInitialized);
 		outputStream.writeBoolean(logList);
 		outputStream.writeBoolean(omitChooseSignals);
@@ -397,6 +407,8 @@ public class LoggingDialog extends JDialog {
 	private JMenuItem menuGoToQueueMessage;
 	private JToolBar toolBarLog;
 	private JToggleButton buttonListOrSingleItem;
+	private JComboBox<Integer> comboFontSize;
+	private JLabel labelLogFontSize;
 	
 	/**
 	 * Show dialog.
@@ -404,7 +416,7 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void showDialog(Component parent) {
 		
-		// Shwo window.
+		// Show window.
 		dialog.setVisible(true);
 		
 		// Reset the flag.
@@ -463,11 +475,24 @@ public class LoggingDialog extends JDialog {
 		panelLog.add(scrollPaneLog, BorderLayout.CENTER);
 		
 		textLog = new TextAreaEx();
+		textLog.setLineWrap(true);
 		scrollPaneLog.setViewportView(textLog);
 		
 		toolBarLog = new JToolBar();
 		toolBarLog.setFloatable(false);
 		panelLog.add(toolBarLog, BorderLayout.NORTH);
+		
+		labelLogFontSize = new JLabel("org.multipage.generator.textLogFontSize");
+		toolBarLog.add(labelLogFontSize);
+		
+		comboFontSize = new JComboBox<Integer>();
+		comboFontSize.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onFontSize();
+			}
+		});
+		comboFontSize.setMaximumSize(new Dimension(50, 22));
+		toolBarLog.add(comboFontSize);
 		
 		panelMessageQueue = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textLogMessageQueue", null, panelMessageQueue, null);
@@ -667,11 +692,11 @@ public class LoggingDialog extends JDialog {
 		// Add tool bar for log.
 		buttonListOrSingleItem = ToolBarKit.addToggleButton(toolBarLog, "org/multipage/generator/images/list.png", "org.multipage.generator.tooltipLogListOrSingleItem", () -> onListOrSingleItem());
 		buttonListOrSingleItem.setSelected(true);
+		loadFontSizes(comboFontSize);
 		
 		// A tool bar for message queue.
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedQueues", () -> onClearQueues());
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/settings.png", "org.multipage.generator.tooltipLoggedQueuesSettings", () -> onLogSettings());
-
 		
 		// A tool bar for logged events.
 		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
@@ -680,7 +705,7 @@ public class LoggingDialog extends JDialog {
 		// A tool bar for break points.
 		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
 	}
-	
+
 	/**
 	 * Localize components.
 	 */
@@ -688,6 +713,7 @@ public class LoggingDialog extends JDialog {
 		
 		Utility.localize(this);
 		Utility.localize(tabbedPane);
+		Utility.localize(labelLogFontSize);
 		Utility.localize(checkOmitOrChooseSignals);
 		Utility.localize(buttonClearOmitedChosen);
 		Utility.localize(menuAddBreakPoint);
@@ -742,6 +768,7 @@ public class LoggingDialog extends JDialog {
 		else {
 			splitPaneEvents.setDividerLocation(0.8);
 		}
+		comboFontSize.setSelectedIndex(logFontSizeIndex);
 		tabbedPane.setSelectedIndex(selectedTab);
 		checkOmitOrChooseSignals.setSelected(omitChooseSignals);
 		buttonListOrSingleItem.setSelected(logList);
@@ -753,6 +780,7 @@ public class LoggingDialog extends JDialog {
 	private void saveDialog() {
 		
 		bounds = getBounds();
+		logFontSizeIndex = comboFontSize.getSelectedIndex();
 		queueWindowSplitter = splitPaneMessageQueue.getDividerLocation();
 		eventsWindowSplitter = splitPaneEvents.getDividerLocation();
 		selectedTab = tabbedPane.getSelectedIndex();
@@ -781,6 +809,21 @@ public class LoggingDialog extends JDialog {
 				popup.show(e.getComponent(), e.getX(), e.getY());
 			}
 		});
+	}
+	
+	/**
+	 * Load font sizes.
+	 * @param comboBox
+	 */
+	private void loadFontSizes(JComboBox comboBox) {
+		
+		comboBox.removeAll();
+		
+		for (int index = 9; index < 14; index++) {
+			
+			int size = (int) Math.pow(Math.E, (double) index / 3.0) / 3 + 3;
+			comboBox.addItem(size);
+		}
 	}
 	
 	/**
@@ -2178,6 +2221,28 @@ public class LoggingDialog extends JDialog {
 	private void onListOrSingleItem() {
 		
 		LoggingDialog.logList = buttonListOrSingleItem.isSelected();
+	}
+	
+	/**
+	 * On font size changed.
+	 */
+	protected void onFontSize() {
+		
+		// Get font size.
+		int selectedIndex = comboFontSize.getSelectedIndex();
+		if (selectedIndex == -1) {
+			return;
+		}
+		
+		Integer fontSize = comboFontSize.getItemAt(selectedIndex);
+		if (fontSize == null) {
+			return;
+		}
+		
+		// Change text area font size.
+		Font newFont = textLog.getFont().deriveFont((float) fontSize);
+		textLog.setFont(newFont);
+		textLog.updateUI();
 	}
 	
 	/**
