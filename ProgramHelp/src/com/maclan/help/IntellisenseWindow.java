@@ -12,9 +12,12 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Window;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
 import java.util.LinkedList;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
@@ -24,6 +27,8 @@ import javax.swing.text.Caret;
 
 import org.multipage.gui.Utility;
 import org.multipage.util.j;
+
+import com.maclan.help.Intellisense.Suggestion;
 
 /**
  * 
@@ -54,9 +59,28 @@ public class IntellisenseWindow extends JDialog {
 		closeOld();
 		
 		// Create new hidden window.
-		dialog = new IntellisenseWindow(Utility.findWindow(parent));
+		Window parentWindow = Utility.findWindow(parent);
+		dialog = new IntellisenseWindow(parentWindow);
+		dialog.setAlwaysOnTop(true);
 		dialog.setFocusable(false);
 		dialog.setVisible(false);
+		
+		// Set parent window close handler.
+		parentWindow.addWindowListener(new WindowAdapter() {
+			
+			@Override
+			public void windowClosed(WindowEvent e) {
+				
+				// Hide the dialog.
+				closeOld();
+				
+				// Delegate the call.
+				super.windowClosed(e);
+				
+				// Remove listener.
+				parentWindow.removeWindowListener(this);
+			}
+		});
 	}
 	
 	/**
@@ -77,7 +101,7 @@ public class IntellisenseWindow extends JDialog {
 	 * @param caret
 	 * @param suggestions
 	 */
-	public static final void displayAtCaret(JTextPane textPane, Caret caret, LinkedList<String> suggestions) {
+	public static final void displayAtCaret(JTextPane textPane, Caret caret, LinkedList<Suggestion> suggestions) {
 		
 		// Check dialog and possibly create new one.
 		if (dialog == null) {
@@ -116,12 +140,28 @@ public class IntellisenseWindow extends JDialog {
 		SwingUtilities.invokeLater(() -> textPane.grabFocus());
 	}
 	
+	/**
+	 * Hide window.
+	 */
+	public static void hideWindow() {
+		
+		// Hide the dialog window.
+		if (dialog != null) {
+			dialog.setVisible(false);
+		}
+	}
+	
+	/**
+	 * List model.
+	 */
+	private DefaultListModel<Suggestion> listModel;
+	
 	//$hide<<$
 	
 	/**
 	 * Components.
 	 */
-	private JList<String> list;
+	private JList<Suggestion> list;
 
 	/**
 	 * Create the dialog.
@@ -146,7 +186,7 @@ public class IntellisenseWindow extends JDialog {
 		JScrollPane scrollPane = new JScrollPane();
 		getContentPane().add(scrollPane, BorderLayout.CENTER);
 		
-		list = new JList<String>();
+		list = new JList<Suggestion>();
 		scrollPane.setViewportView(list);
 	}
 	
@@ -155,15 +195,32 @@ public class IntellisenseWindow extends JDialog {
 	 */
 	private void postCreate() {
 		
-		
+		createList();
 	}
 	
+	/**
+	 * Create list of suggestions.
+	 */
+	private void createList() {
+		
+		// Create list model.
+		listModel = new DefaultListModel<Suggestion>();
+		list.setModel(listModel);
+	}
+
 	/**
 	 * Load suggestions.
 	 * @param suggestions
 	 */
-	private void loadSuggestions(LinkedList<String> suggestions) {
-		// TODO Auto-generated method stub
+	private void loadSuggestions(LinkedList<Suggestion> suggestions) {
 		
+		// Clear the list.
+		listModel.clear();
+		
+		// Insert suggestions.
+		listModel.addAll(suggestions);
+		list.updateUI();
+		
+		j.log("DISPLAYED SUGGESTIONS %s", suggestions.toString());
 	}
 }

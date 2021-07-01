@@ -305,7 +305,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	/**
 	 * Lambda function that returns text hints.
 	 */
-	public Function<String, Function<Integer, Function<Caret, Function<JTextPane, LinkedList<String>>>>> intellisenseLambda = null;
+	public Function<String, Function<Integer, Function<Caret, Function<JTextPane, Object>>>> intellisenseLambda = null;
 
 	/**
 	 * Rich text buttons.

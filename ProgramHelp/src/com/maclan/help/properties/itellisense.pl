@@ -1,16 +1,11 @@
  /**
- * Maclan macrolanguage intellisense suggestions.
- */
- /* TODO: test clauses. */
-tstprops(X) :- get_properties([tag_start('TA'), property_name('slot'), property_value('#myData'), property_name('inher'), property_value('true'), tag_closing(']'), text('abcdefgh 12345678'), end_tag('TAE')], X).
-tstvals(X) :- get_values([tag_start('TA'), property_name('slot'), property_value('#myData'), property_name('inher'), property_value('true'), tag_closing(']'), text('abcdefgh 12345678'), end_tag('TAE')], X).
-tsttag(X) :- get_suggestions([tag_start('TA')], X).
-tstend(X) :- get_suggestions([tag_start('TA'), property_name('slot'), property_value('#myData'), property_name('inher'), property_value('true'), tag_closing(']'), text('abcdefgh 12345678'), end_tag('TAE')], X).
-tstpro1(X) :- get_suggestions([tag_start('TA'), property_name('sl')], X).
-tstpro2(X) :- get_suggestions([tag_start('TA'), property_name('sl'), equal_sign('='), property_value('#myData'), property_name('ar'), property_separator], X).
-tstval1(X) :- get_suggestions([tag_start('TA'), property_name('slot'), equal_sign('='), property_value('#myData'), property_name('inher'), equal_sign('=')], X).
-tstexc(X) :- exclude_item([a,d,b,c,d,d,e,f,d,d,g], d, X).
-tsthas :- has_item([a,d,b,c,d,d,e,f,d,d,g], d).
+  * Copyright 2010-2021 (C) vakol
+  * 
+  * Created on : 01-07-2021
+  *
+  * Maclan macrolanguage intellisense suggestions.
+  *
+  */
 
 /* Provides intellisense suggestions for a token list. */
 get_suggestions(TOKENS, SUGGESTIONS) :-
@@ -29,6 +24,11 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
         /* Tag propeties and values. */
         \+has_closing(TOKENS),
         (
+            /* Suggest all available properties. */
+            white_space_speparator = LAST_TOKEN,
+            setof(SUGGESTION, statement_match(maclan(tag(TAG), property), SUGGESTION), SUGGESTIONS), !
+            ;
+            /* Suggest properties or values. */
             get_properties(TOKENS, PROPERTIES),
             get_last(PROPERTIES, LAST_PROPERTY),
             exclude_item(PROPERTIES, LAST_PROPERTY, EXCLUDED_PROPERTIES),
@@ -36,7 +36,7 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
                 property_name(LAST_PROPERTY) = LAST_TOKEN,
                 setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY)), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
                 ;
-                equal_sign('=') = LAST_TOKEN,
+                equal_sign = LAST_TOKEN,
                 setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY), value('')), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
                 ;
                 get_values(TOKENS, VALUES),
@@ -130,9 +130,9 @@ begin_match(TEXT_BEGINS, TEXT) :-
 maclan(tag('TAG')).
 maclan(tag('TAGS')).
 maclan(tag('LOOP')).
-maclan(tag('TAG'), property('slot')).
-maclan(tag('TAGS'), property('slot')).
-maclan(tag('TAG'), property('area')).
-maclan(tag('LOOP'), property('count')).
-maclan(tag('TAG'), property('inherits'), value('true')).
-maclan(tag('TAG'), property('inherits'), value('false')).
+maclan(tag('TAG'), property(slot)).
+maclan(tag('TAGS'), property(slot)).
+maclan(tag('TAG'), property(area)).
+maclan(tag('LOOP'), property(count)).
+maclan(tag('TAG'), property(inherits), value(true)).
+maclan(tag('TAG'), property(inherits), value(false)).

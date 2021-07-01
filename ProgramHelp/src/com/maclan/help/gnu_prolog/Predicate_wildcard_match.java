@@ -8,6 +8,8 @@ package com.maclan.help.gnu_prolog;
 
 import java.util.regex.Pattern;
 
+import org.multipage.util.j;
+
 import gnu.prolog.term.Term;
 import gnu.prolog.vm.ExecuteOnlyCode;
 import gnu.prolog.vm.Interpreter;
@@ -35,8 +37,14 @@ public class Predicate_wildcard_match extends ExecuteOnlyCode {
 		Term patternTerm = args[0];
 		Term textTerm = args[1];
 		
-		String pattern = patternTerm.toString();
-		String text = textTerm.toString();
+		String pattern = patternTerm.dereference().toString();
+		String text = textTerm.dereference().toString();
+		
+		// Remove apostrophes.
+		pattern = PrologUtility.removeApostrophes(pattern);
+		text = PrologUtility.removeApostrophes(text);
+		
+		j.log("PATTERN %s MATCH %s", patternTerm.toString(), textTerm.toString());
 		
 		// Create regular expression.
 		pattern = pattern.replace("*", ".*?");
