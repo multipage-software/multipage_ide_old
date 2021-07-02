@@ -217,9 +217,25 @@ public class ScriptingEngine {
 				
 				Bindings bindings = new SimpleBindings();
 				
-				// Put root object named server.
+				// Put area server objects.
 				try {
-					bindings.put("server", new com.maclan.server.lang_elements.AreaServer(server));
+					com.maclan.server.lang_elements.AreaServer areaServer = new com.maclan.server.lang_elements.AreaServer(server);
+					
+					bindings.put("server", areaServer);
+					
+					// New style bindings.
+					bindings.put("_", areaServer);
+					
+					bindings.put("_thisArea", areaServer.thisArea);
+					bindings.put("_startArea", areaServer.startArea);
+					bindings.put("_requestedArea", areaServer.requestedArea);
+					bindings.put("_homeArea", areaServer.homeArea);
+					
+					bindings.put("_level", areaServer.level);
+					
+					bindings.put("_request", areaServer.request);
+					bindings.put("_response", areaServer.response);
+					
 				}
 				catch (Exception e) {
 					

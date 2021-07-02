@@ -114,10 +114,15 @@ public class Intellisense {
 		String builtInFile = builtInUrl.getFile();
 		prologEnvironment.ensureLoaded(AtomTerm.get(builtInFile));
 		
-		// Load main Prolog filename for the intellisense.
+		// Load main Prolog file for the intellisense.
 		URL prologUrl = Intellisense.class.getResource("/com/maclan/help/properties/itellisense.pl");
 		String prologFile = prologUrl.getFile();
 		prologEnvironment.ensureLoaded(AtomTerm.get(prologFile));
+		
+		// Load Prolog file with maclan tags for the intellisense.
+		URL maclanUrl = Intellisense.class.getResource("/com/maclan/help/properties/maclan.pl");
+		String maclanFile = maclanUrl.getFile();
+		prologEnvironment.ensureLoaded(AtomTerm.get(maclanFile));
 
 		// Get the interpreter.
 		prologInterpreter = prologEnvironment.createInterpreter();

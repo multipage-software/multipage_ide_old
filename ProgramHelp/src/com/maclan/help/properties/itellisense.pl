@@ -123,16 +123,3 @@ statement_match(maclan(tag(TAG_BEGIN), property(PROPERTY_BEGIN), value(VALUE_BEG
 begin_match(TEXT_BEGINS, TEXT) :-
     atom_concat(TEXT_BEGINS, '*', PATTERN),
     wildcard_match(PATTERN, TEXT).
-
-/**
- * Maclan tag definitions.
- */
-maclan(tag('TAG')).
-maclan(tag('TAGS')).
-maclan(tag('LOOP')).
-maclan(tag('TAG'), property(slot)).
-maclan(tag('TAGS'), property(slot)).
-maclan(tag('TAG'), property(area)).
-maclan(tag('LOOP'), property(count)).
-maclan(tag('TAG'), property(inherits), value(true)).
-maclan(tag('TAG'), property(inherits), value(false)).
