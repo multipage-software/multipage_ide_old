@@ -88,7 +88,7 @@ public class Intellisense {
 	/**
 	 * Regular enum and expressions for the tokenizer.
 	 */
-	private static enum TokenType { initial, tag_start, white_space_speparator, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
+	private static enum TokenType { initial, tag_start, white_space_separator, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
 	
 	private static final Pattern tagStartRegex = Pattern.compile("\\G\\s*\\[\\s*@\\s*(\\w*)");
 	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\G\\s");
@@ -235,9 +235,9 @@ public class Intellisense {
 			}
 		};
 		Runnable whiteSpaceSeparatorLambda = () -> {
-			term.ref = consume(preparedSourceCode.ref, position, whiteSpaceSeparatorRegex, "white_space_speparator");
+			term.ref = consume(preparedSourceCode.ref, position, whiteSpaceSeparatorRegex, "whitespace_separator");
 			if (term.ref != null) {
-				termType.ref = TokenType.white_space_speparator;
+				termType.ref = TokenType.white_space_separator;
 			}
 		};
 		Runnable tagPropertyNameLambda = () -> {
@@ -288,7 +288,7 @@ public class Intellisense {
 		
 		tokenizerRules.put(TokenType.initial, new Runnable [] { tagStartLambda });
 		tokenizerRules.put(TokenType.tag_start, new Runnable [] { tagClosingLambda, whiteSpaceSeparatorLambda });
-		tokenizerRules.put(TokenType.white_space_speparator, new Runnable [] { tagPropertyNameLambda });
+		tokenizerRules.put(TokenType.white_space_separator, new Runnable [] { tagPropertyNameLambda });
 		tokenizerRules.put(TokenType.property_name, new Runnable [] { tagEqualSignLambda, tagClosingLambda, tagPropertySeparatorLambda });
 		tokenizerRules.put(TokenType.equal_sign, new Runnable [] { tagPropertyValueLambda });
 		tokenizerRules.put(TokenType.property_value, new Runnable [] { tagClosingLambda, tagPropertySeparatorLambda });

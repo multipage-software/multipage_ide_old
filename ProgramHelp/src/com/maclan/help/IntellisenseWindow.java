@@ -22,6 +22,7 @@ import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.text.Caret;
 
@@ -29,6 +30,7 @@ import org.multipage.gui.Utility;
 import org.multipage.util.j;
 
 import com.maclan.help.Intellisense.Suggestion;
+import java.awt.Color;
 
 /**
  * 
@@ -47,8 +49,15 @@ public class IntellisenseWindow extends JDialog {
 	 */
 	private static IntellisenseWindow dialog = null;
 	
-	//$hide>>$
-	
+	/**
+	 * Window size.
+	 */
+	public Dimension windowSize = new Dimension(250, 100);
+
+	/**
+	 * List model.
+	 */
+	private DefaultListModel<Suggestion> listModel;
 	/**
 	 * Create new window.
 	 * @param parent
@@ -94,7 +103,7 @@ public class IntellisenseWindow extends JDialog {
 			dialog = null;
 		}
 	}
-
+	
 	/**
 	 * Display intellisense window with suggestions near the text editor caret.
 	 * @param textPane
@@ -152,16 +161,9 @@ public class IntellisenseWindow extends JDialog {
 	}
 	
 	/**
-	 * List model.
+	 * Control.
 	 */
-	private DefaultListModel<Suggestion> listModel;
-	
-	//$hide<<$
-	
-	/**
-	 * Components.
-	 */
-	private JList<Suggestion> list;
+	private JList<Suggestion> list = null;
 
 	/**
 	 * Create the dialog.
@@ -180,7 +182,7 @@ public class IntellisenseWindow extends JDialog {
 	private void initComponents() {
 		
 		setUndecorated(true);
-		setMinimumSize(new Dimension(250, 100));
+		setMinimumSize(windowSize );
 		getContentPane().setLayout(new BorderLayout(0, 0));
 		
 		JScrollPane scrollPane = new JScrollPane();
@@ -206,6 +208,23 @@ public class IntellisenseWindow extends JDialog {
 		// Create list model.
 		listModel = new DefaultListModel<Suggestion>();
 		list.setModel(listModel);
+		
+		// Create renderer.
+		list.setCellRenderer(new ListCellRenderer<Suggestion>() {
+			
+			// Renderer of the suggestion.
+			IntellisenseItemPanel renderer = new IntellisenseItemPanel(IntellisenseWindow.this);
+			
+			// Callback method.
+			@Override
+			public Component getListCellRendererComponent(JList<? extends Suggestion> list, Suggestion suggestion, int index,
+					boolean isSelected, boolean cellHasFocus) {
+				
+				renderer.setSuggestion(suggestion, index, isSelected, cellHasFocus);
+				return renderer;
+			}
+			
+		});
 	}
 
 	/**

@@ -44,8 +44,6 @@ public class Predicate_wildcard_match extends ExecuteOnlyCode {
 		pattern = PrologUtility.removeApostrophes(pattern);
 		text = PrologUtility.removeApostrophes(text);
 		
-		j.log("PATTERN %s MATCH %s", patternTerm.toString(), textTerm.toString());
-		
 		// Create regular expression.
 		pattern = pattern.replace("*", ".*?");
 		boolean success = Pattern.matches(pattern, text);

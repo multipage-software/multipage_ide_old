@@ -25,7 +25,7 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
         \+has_closing(TOKENS),
         (
             /* Suggest all available properties. */
-            white_space_speparator = LAST_TOKEN,
+            whitespace_separator = LAST_TOKEN,
             setof(SUGGESTION, statement_match(maclan(tag(TAG), property), SUGGESTION), SUGGESTIONS), !
             ;
             /* Suggest properties or values. */
@@ -33,6 +33,10 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
             get_last(PROPERTIES, LAST_PROPERTY),
             exclude_item(PROPERTIES, LAST_PROPERTY, EXCLUDED_PROPERTIES),
             (
+                property_separator = LAST_TOKEN,
+                ALL_EXCLUDED_PROPERTIES = [LAST_PROPERTY|EXCLUDED_PROPERTIES],
+                setof(SUGGESTION, statement_match(maclan(tag(TAG), property), ALL_EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
+                ;
                 property_name(LAST_PROPERTY) = LAST_TOKEN,
                 setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY)), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
                 ;
@@ -43,9 +47,6 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
                 get_last(VALUES, LAST_VALUE),
                 property_value(LAST_VALUE) = LAST_TOKEN,
                 setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY), value(LAST_VALUE)), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
-                ;
-                property_separator = LAST_TOKEN,
-                setof(SUGGESTION, statement_match(maclan(tag(TAG), property), SUGGESTION), SUGGESTIONS), !
             )
         )
     ).
@@ -98,15 +99,21 @@ exclude_item([ITEM|T], ITEM, NEW_T) :-
 statement_match(maclan(tag(TAG_BEGIN)), maclan(tag(TAG))) :-
     maclan(tag(TAG)),
     begin_match(TAG_BEGIN, TAG).
-    
+
 /* Tag and properties without value. */
 statement_match(maclan(tag(TAG_BEGIN), property), maclan(tag(TAG), property(PROPERTY))) :-
-    maclan(tag(TAG), property(PROPERTY)),
+    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
     begin_match(TAG_BEGIN, TAG).
+
+/* Tag and properties without value. */
+statement_match(maclan(tag(TAG_BEGIN), property), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY))) :-
+    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
+    begin_match(TAG_BEGIN, TAG),
+    \+member(PROPERTY, EXCLUDED_PROPERTIES).
 
 /* Tag and property without value. */
 statement_match(maclan(tag(TAG_BEGIN), property(PROPERTY_BEGIN)), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY))) :-
-    maclan(tag(TAG), property(PROPERTY)),
+    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
     begin_match(TAG_BEGIN, TAG),
     begin_match(PROPERTY_BEGIN, PROPERTY),
     \+member(PROPERTY, EXCLUDED_PROPERTIES).
