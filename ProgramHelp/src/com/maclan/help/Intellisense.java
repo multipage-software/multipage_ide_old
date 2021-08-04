@@ -12,6 +12,10 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JTextPane;
+import javax.swing.Timer;
+import javax.swing.text.Caret;
+
 import org.multipage.gui.TextEditorPane;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
@@ -34,6 +38,16 @@ import gnu.prolog.vm.PrologCode;
  *
  */
 public class Intellisense {
+	
+	/**
+	 * A delay in milliseconds between keystrokes that invoke intellisense window.
+	 */
+	private static final int intellisenseKeystrokeTimeSpanMs = 1000;
+	
+	/**
+	 * Font used in extended suggestion.
+	 */
+	private static final String suggestionExtensionFont = "size=\"2\" color=\"#999999\"";
 	
 	/**
 	 * Suggestion class.
@@ -66,13 +80,183 @@ public class Intellisense {
 		}
 		
 		/**
+		 * Get string value of term functor value.
+		 * @param compundTerm
+		 * @param argumentIndex
+		 * @param argumentTagName
+		 * @return
+		 */
+		public static String getTermArgumentStringValue(CompoundTerm compundTerm, int argumentIndex, String argumentTagName) {
+			
+			// Get the argument.
+			Term maclanTagTerm = compundTerm.args[argumentIndex];
+			int termType = maclanTagTerm.getTermType();
+			
+			// Check argument type.
+			if (termType != Term.COMPOUND) {
+				return null;
+			}
+			
+			// Convert reference type.
+			CompoundTerm maclanTagCompoundTerm = (CompoundTerm) maclanTagTerm;
+			
+			// Check tag value.
+			if (!argumentTagName.equals(maclanTagCompoundTerm.tag.functor.value)) {
+				return null;
+			}
+			
+			// Check arity.
+			if (maclanTagCompoundTerm.tag.arity != 1) {
+				return null;
+			}
+			
+			// Get Maclan token name.
+			Term maclanTagNameTerm = maclanTagCompoundTerm.args[0];
+			termType = maclanTagNameTerm.getTermType();
+			
+			if (termType != Term.ATOM) {
+				return null;
+			}
+			
+			// Get string value.
+			AtomTerm maclanTagAtomTerm = (AtomTerm) maclanTagNameTerm;
+			String stringValue = maclanTagAtomTerm.value;
+			
+			return stringValue;
+		}
+		
+		/**
 		 * Get caption.
 		 */
 		@Override
 		public String toString() {
-			return caption;
+			
+			// Check source term.
+			if (sourceTerm == null) {
+				return "null";
+			}
+			
+			// Check term type.
+			int termType = sourceTerm.getTermType();
+			if (termType != Term.COMPOUND) {
+				return "bad_term";
+			}
+			
+			CompoundTerm compundTerm = (CompoundTerm) sourceTerm;
+			
+			// Get term tag and arity.
+			CompoundTermTag termTag = compundTerm.tag;
+			int termArity = termTag.arity;
+			
+			// Check term tag.
+			String tag = termTag.functor.value;
+			if (!"maclan".equals(tag)) {
+				return "not_maclan";
+			}
+			
+			// Get Maclan tag name.
+			String maclanTagName = null;
+			if (termArity >= 1) {
+				
+				// Get first argument value.
+				maclanTagName = getTermArgumentStringValue(compundTerm, 0, "tag");
+			}
+			
+			// Try to get Maclan property.
+			String maclanPropertyName = null;
+			if (termArity >= 2) {
+
+				// Get second argument value.
+				maclanPropertyName = getTermArgumentStringValue(compundTerm, 1, "property");
+			}
+			
+			// Try to get Maclan property type.
+			String maclanPropertyTypeName = null;
+			if (termArity >= 3) {
+
+				// Get third argument value.
+				maclanPropertyTypeName = getTermArgumentStringValue(compundTerm, 2, "type");
+			}
+			
+			// Compile caption.
+			String caption = this.caption;
+			if (maclanTagName != null) {
+				
+				if (maclanPropertyName != null) {
+					
+					if (maclanPropertyTypeName != null) {
+						caption = String.format("<b>%s</b><font %s><i> of type %s in %s</i></font>", maclanPropertyName, suggestionExtensionFont, maclanPropertyTypeName, maclanTagName);
+					}
+					else {
+						caption = String.format("<b>%s</b><font %s><i> in %s</i></font>", maclanPropertyName, suggestionExtensionFont, maclanTagName);
+					}
+				}
+				else {
+					caption = String.format("<b>%s</b>", maclanTagName);
+				}
+			}
+			
+			return "<html>" + caption + "</html>";
+		}
+	}
+	
+	/**
+	 * Input class.
+	 */
+	private static class Input {
+		
+		/**
+		 * Text of the source code.
+		 */
+		public String sourceCode = null;
+		
+		/**
+		 * Cursor position.
+		 */
+		public Integer cursorPosition = null;
+		
+		/**
+		 * Caret position.
+		 */
+		public Caret caret = null;
+		
+		/**
+		 * Reference to text panel.
+		 */
+		private JTextPane textPane = null;
+
+		/**
+		 * Set input data for the intellisense.
+		 * @param sourceCode
+		 * @param cursorPosition
+		 * @param caret
+		 * @param textPane
+		 */
+		public void set(String sourceCode, Integer cursorPosition, Caret caret, JTextPane textPane) {
+			
+			this.sourceCode = sourceCode;
+			this.cursorPosition = cursorPosition;
+			this.caret = caret;
+			this.textPane = textPane;
 		}
 		
+		/**
+		 * Reset input values.
+		 */
+		public void reset() {
+			
+			set(null, null, null, null);
+		}
+		
+		/**
+		 * Check if the input is valid.
+		 * @return
+		 */
+		public boolean isValid() {
+			
+			boolean isValid = this.sourceCode != null && this.cursorPosition != null && this.caret != null && this.textPane != null;
+			return isValid;
+		}
 	}
 	
 	/**
@@ -100,6 +284,12 @@ public class Intellisense {
 	private static final Pattern tagTextRegex = Pattern.compile("\\G(.+?)(?=\\[\\s*\\/?\\s*@)");
 	private static final Pattern endTagRegex = Pattern.compile("\\G\\s*\\[\\s*\\/\\s*@\\s*(\\w*)");
 	
+	/**
+	 * Intellisense timer.
+	 */
+	private static Timer intellisenseTimer;
+
+	private static Input input = new Input();
 
 	/**
 	 * Initialization.
@@ -128,6 +318,10 @@ public class Intellisense {
 		prologInterpreter = prologEnvironment.createInterpreter();
 		// Run the initialization
 		prologEnvironment.runInitialization(prologInterpreter);
+		
+		// Initialize keystroke timer.
+		intellisenseTimer = new Timer(intellisenseKeystrokeTimeSpanMs, e -> onIntellisense());
+		intellisenseTimer.setRepeats(false);
 	}
 
 	/**
@@ -381,18 +575,38 @@ public class Intellisense {
 		// Set intellisense lambda function.
 		textEditorPanel.intellisenseLambda = sourceCode -> cursorPosition -> caret -> textPane -> {
 			
+			// Initially, hide the window with intellisense suggestions.
+			IntellisenseWindow.hideWindow();
+			
+			// Set input values.
+			Intellisense.input.set(sourceCode, cursorPosition, caret, textPane);
+			
+			// Restart the intellisense timer.
+			intellisenseTimer.start();
+		};
+	}
+	
+	/**
+	 * On intellisense.
+	 */
+	private static void onIntellisense() {
+		
+		// Check input values.
+		if (Intellisense.input.isValid()) {
+		
 			// Get suggestions.
-			LinkedList<Suggestion> suggestions = makeSuggestions(sourceCode, cursorPosition);
+			LinkedList<Suggestion> suggestions = makeSuggestions(Intellisense.input.sourceCode, Intellisense.input.cursorPosition);
 			
 			// Display the suggestions.
 			if (suggestions != null &&!suggestions.isEmpty()) {
-				IntellisenseWindow.displayAtCaret(textPane, caret, suggestions);
+				IntellisenseWindow.displayAtCaret(Intellisense.input.textPane, Intellisense.input.caret, suggestions);
 			}
 			else {
 				IntellisenseWindow.hideWindow();
 			}
-			
-			return suggestions;
-		};
+		}
+		
+		// Reset input values.
+		Intellisense.input.reset();
 	}
 }

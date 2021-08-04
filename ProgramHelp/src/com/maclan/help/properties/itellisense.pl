@@ -42,11 +42,6 @@ get_suggestions(TOKENS, SUGGESTIONS) :-
                 ;
                 equal_sign = LAST_TOKEN,
                 setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY), value('')), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
-                ;
-                get_values(TOKENS, VALUES),
-                get_last(VALUES, LAST_VALUE),
-                property_value(LAST_VALUE) = LAST_TOKEN,
-                setof(SUGGESTION, statement_match(maclan(tag(TAG), property(LAST_PROPERTY), value(LAST_VALUE)), EXCLUDED_PROPERTIES, SUGGESTION), SUGGESTIONS), !
             )
         )
     ).
@@ -101,29 +96,21 @@ statement_match(maclan(tag(TAG_BEGIN)), maclan(tag(TAG))) :-
     begin_match(TAG_BEGIN, TAG).
 
 /* Tag and properties without value. */
-statement_match(maclan(tag(TAG_BEGIN), property), maclan(tag(TAG), property(PROPERTY))) :-
-    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
+statement_match(maclan(tag(TAG_BEGIN), property), maclan(tag(TAG), property(PROPERTY), type(TYPE))) :-
+    maclan(tag(TAG), property(PROPERTY), type(TYPE)),
     begin_match(TAG_BEGIN, TAG).
 
 /* Tag and properties without value. */
-statement_match(maclan(tag(TAG_BEGIN), property), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY))) :-
-    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
+statement_match(maclan(tag(TAG_BEGIN), property), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY), type(TYPE))) :-
+    maclan(tag(TAG), property(PROPERTY), type(TYPE)),
     begin_match(TAG_BEGIN, TAG),
     \+member(PROPERTY, EXCLUDED_PROPERTIES).
 
 /* Tag and property without value. */
-statement_match(maclan(tag(TAG_BEGIN), property(PROPERTY_BEGIN)), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY))) :-
-    maclan(tag(TAG), property(PROPERTY), type(_TYPE)),
+statement_match(maclan(tag(TAG_BEGIN), property(PROPERTY_BEGIN)), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY), type(TYPE))) :-
+    maclan(tag(TAG), property(PROPERTY), type(TYPE)),
     begin_match(TAG_BEGIN, TAG),
     begin_match(PROPERTY_BEGIN, PROPERTY),
-    \+member(PROPERTY, EXCLUDED_PROPERTIES).
-    
-/* Tag and property with value. */
-statement_match(maclan(tag(TAG_BEGIN), property(PROPERTY_BEGIN), value(VALUE_BEGIN)), EXCLUDED_PROPERTIES, maclan(tag(TAG), property(PROPERTY), value(VALUE))) :-
-    maclan(tag(TAG), property(PROPERTY), value(VALUE)),
-    begin_match(TAG_BEGIN, TAG),
-    begin_match(PROPERTY_BEGIN, PROPERTY),
-    begin_match(VALUE_BEGIN, VALUE),
     \+member(PROPERTY, EXCLUDED_PROPERTIES).
 
 /* Match leading part of the text. */

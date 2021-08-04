@@ -30,7 +30,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.j;
 
 import com.maclan.help.Intellisense.Suggestion;
-import java.awt.Color;
 
 /**
  * 

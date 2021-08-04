@@ -26,6 +26,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.util.LinkedList;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -305,7 +306,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	/**
 	 * Lambda function that returns text hints.
 	 */
-	public Function<String, Function<Integer, Function<Caret, Function<JTextPane, Object>>>> intellisenseLambda = null;
+	public Function<String, Function<Integer, Function<Caret, Consumer<JTextPane>>>> intellisenseLambda = null;
 
 	/**
 	 * Rich text buttons.
@@ -1282,7 +1283,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 			if (intellisenseLambda != null) {
 				
 				SwingUtilities.invokeLater(() -> {
-					intellisenseLambda.apply(plainText.ref).apply(selection).apply(caret).apply(plainTextPane);
+					intellisenseLambda.apply(plainText.ref).apply(selection).apply(caret).accept(plainTextPane);
 				});
 				
 			}
