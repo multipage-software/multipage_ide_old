@@ -11,7 +11,10 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
@@ -47,11 +50,21 @@ public class IntellisenseWindow extends JDialog {
 	 * Singleton dialog object.
 	 */
 	private static IntellisenseWindow dialog = null;
+
+	/**
+	 * The intellisense window is in display process.
+	 */
+	private static boolean displayingInProgress = false;
 	
 	/**
 	 * Window size.
 	 */
 	public Dimension windowSize = new Dimension(250, 100);
+	
+	/**
+	 * Scroll bars size in pixels.
+	 */
+	private static final int scrollbarSizePx = 5;
 
 	/**
 	 * List model.
@@ -73,7 +86,67 @@ public class IntellisenseWindow extends JDialog {
 		dialog.setFocusable(false);
 		dialog.setVisible(false);
 		
-		// Set parent window close handler.
+		// Add action listener for the list.
+		dialog.list.addMouseListener(new MouseAdapter() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				
+				// Check button bounds.
+				if (IntellisenseItemPanel.linkButtonSize != null) {
+				
+					// Try to get selected list item index.
+					int selectedIndex = dialog.list.getSelectedIndex();
+					if (selectedIndex >= 0) {
+						
+						// Get item bounds and the mouse pointer position.
+						Rectangle itemBounds = dialog.list.getCellBounds(selectedIndex, selectedIndex);
+						Point mousePoint = e.getPoint();
+						
+						// Trim boundaries to link button.
+						itemBounds.x = itemBounds.x + (itemBounds.width - IntellisenseItemPanel.linkButtonSize.width);
+						
+						// If the mouse pointer is on the link button, display help page.
+						boolean isOnLinkButton = itemBounds.contains(mousePoint);
+						if (isOnLinkButton) {
+							
+							// Get selected suggestion.
+							Suggestion selectedSuggestion = dialog.list.getSelectedValue();
+							Intellisense.displayHelpPage(selectedSuggestion);
+						}
+					}
+				}
+				
+				// Delegate call.
+				super.mouseClicked(e);
+			}
+		});
+		
+//		// Add focus listener.
+//		final WindowFocusListener focusListener = new WindowFocusListener() {
+//
+//			@Override
+//			public void windowGainedFocus(WindowEvent e) {
+//				// TODO Auto-generated method stub
+//				
+//			}
+//			
+//			@Override
+//			public void windowLostFocus(WindowEvent e) {
+//				
+//				// Check flag.
+//				if (displayingInProgress) {
+//					displayingInProgress = false;
+//					return;
+//				}
+//				
+//				// Hide the dialog.
+//				closeOld();
+//			}
+//		};
+//		parentWindow.addWindowFocusListener(focusListener);
+		
+		// Add parent window close handler.
 		parentWindow.addWindowListener(new WindowAdapter() {
 			
 			@Override
@@ -84,6 +157,9 @@ public class IntellisenseWindow extends JDialog {
 				
 				// Delegate the call.
 				super.windowClosed(e);
+				
+				// Remove listener.
+				//parentWindow.removeWindowFocusListener(focusListener);
 				
 				// Remove listener.
 				parentWindow.removeWindowListener(this);
@@ -110,6 +186,9 @@ public class IntellisenseWindow extends JDialog {
 	 * @param suggestions
 	 */
 	public static final void displayAtCaret(JTextPane textPane, Caret caret, LinkedList<Suggestion> suggestions) {
+		
+		// Set flag.
+		displayingInProgress = true;
 		
 		// Check dialog and possibly create new one.
 		if (dialog == null) {
@@ -141,8 +220,16 @@ public class IntellisenseWindow extends JDialog {
 		SwingUtilities.invokeLater(() -> dialog.setLocation(caretLocation));
 		
 		// Update the window.
-		SwingUtilities.invokeLater(() -> dialog.setVisible(false));
-		SwingUtilities.invokeLater(() -> dialog.setVisible(true));
+		SwingUtilities.invokeLater(() -> {
+			if (dialog != null) {
+				dialog.setVisible(false);
+			}
+		});
+		SwingUtilities.invokeLater(() -> {
+			if (dialog != null) {
+				dialog.setVisible(true);
+			}
+		});
 		
 		// Return focus.
 		SwingUtilities.invokeLater(() -> textPane.grabFocus());
@@ -185,6 +272,8 @@ public class IntellisenseWindow extends JDialog {
 		getContentPane().setLayout(new BorderLayout(0, 0));
 		
 		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(scrollbarSizePx, 0));
+		scrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(scrollbarSizePx, 10));
 		getContentPane().add(scrollPane, BorderLayout.CENTER);
 		
 		list = new JList<Suggestion>();

@@ -9,6 +9,7 @@ package com.maclan.help;
 import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -270,7 +271,7 @@ public class Intellisense {
 	private static Interpreter prologInterpreter;
 	
 	/**
-	 * Regular enum and expressions for the tokenizer.
+	 * States and regular expressions for input string tokenizer.
 	 */
 	private static enum TokenType { initial, tag_start, white_space_separator, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
 	
@@ -278,19 +279,27 @@ public class Intellisense {
 	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\G\\s");
 	private static final Pattern tagPropertyNameRegex = Pattern.compile("\\G\\s*(\\w+)");
 	private static final Pattern tagEqualSignRegex = Pattern.compile("\\G\\s*=");
-	private static final Pattern tagPropertyValueRegex = Pattern.compile("\\G\\s*([^\\s\\]]*|\"\\S*\")");
+	private static final Pattern tagPropertyValueRegex = Pattern.compile("\\G\\s*([^,\\s\\]]*|\"\\S*\")");
 	private static final Pattern tagPropertySeparatorRegex = Pattern.compile("\\G(?:\\s*,|\\s)");
 	private static final Pattern tagClosingRegex = Pattern.compile("\\G\\s*\\]");
 	private static final Pattern tagTextRegex = Pattern.compile("\\G(.+?)(?=\\[\\s*\\/?\\s*@)");
 	private static final Pattern endTagRegex = Pattern.compile("\\G\\s*\\[\\s*\\/\\s*@\\s*(\\w*)");
-	
+
+	/**
+	 * Maclan help lambda.
+	 */
+	private static Consumer<String> maclanHelpLambda = null;
+
 	/**
 	 * Intellisense timer.
 	 */
 	private static Timer intellisenseTimer;
 
+	/**
+	 * Intellisense input.
+	 */
 	private static Input input = new Input();
-
+	
 	/**
 	 * Initialization.
 	 */
@@ -569,8 +578,9 @@ public class Intellisense {
 	/**
 	 * Apply intellisense to the text.
 	 * @param textEditorPanel
+	 * @param maclanHelpLambda
 	 */
-	public static void applyTo(TextEditorPane textEditorPanel) {
+	public static void applyTo(TextEditorPane textEditorPanel, Consumer<String> maclanHelpLambda) {
 		
 		// Set intellisense lambda function.
 		textEditorPanel.intellisenseLambda = sourceCode -> cursorPosition -> caret -> textPane -> {
@@ -584,6 +594,9 @@ public class Intellisense {
 			// Restart the intellisense timer.
 			intellisenseTimer.start();
 		};
+		
+		// Set Maclan help lambda.
+		Intellisense.maclanHelpLambda  = maclanHelpLambda;
 	}
 	
 	/**
@@ -608,5 +621,22 @@ public class Intellisense {
 		
 		// Reset input values.
 		Intellisense.input.reset();
+	}
+	
+	/**
+	 * Display help page for the input intellisense suggestion.
+	 * @param suggestion
+	 */
+	public static void displayHelpPage(Suggestion suggestion) {
+		
+		// Invoke Maclan help lambda function.
+		if (maclanHelpLambda != null) {
+			
+			// Get suggestion ID.
+			String maclanHelpId = suggestion.sourceTerm.toString();
+			
+			// Invoke Maclan help on suggestion ID.
+			maclanHelpLambda.accept(maclanHelpId);
+		}
 	}
 }

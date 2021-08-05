@@ -56,6 +56,7 @@ import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.Slot;
@@ -436,7 +437,7 @@ public class TextSlotEditorPanel extends JPanel implements SlotValueEditorPanelI
 		setIcons();
 		
 		// Use intellisense for the text editor.
-		Intellisense.applyTo(textEditorPanel);
+		Intellisense.applyTo(textEditorPanel, maclanHelpId -> GeneratorMainFrame.displayMaclanHelp(maclanHelpId));
 		
 		// $hide<<$
 	}

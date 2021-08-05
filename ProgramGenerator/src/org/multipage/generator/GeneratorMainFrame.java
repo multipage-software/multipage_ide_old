@@ -3573,4 +3573,17 @@ public class GeneratorMainFrame extends JFrame {
 		ConditionalEvents.transmit(parentComponent, Signal.updateAll);
 		
 	}
+	
+	/**
+	 * Display help page for Maclan item designated by ID.
+	 * @param maclanHelpId
+	 */
+	public static void displayMaclanHelp(String maclanHelpId) {
+		
+		// Try to find area with alias set to Maclan help ID.
+		Area maclanHelpArea = ProgramGenerator.getAreasModel().getArea(maclanHelpId);
+		
+		// Add Maclan help page.
+		getFrame().displayOnlineArea(maclanHelpArea);
+	}
 }
