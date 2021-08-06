@@ -43,7 +43,7 @@ public class GeneratorMain {
 	/**
 	 * Default language and country.
 	 */
-	private static final String defaultLanguage = "en";
+	public static final String defaultLanguage = "en";
 	private static final String defaultCountry = "US";
 	
 	/**

@@ -1,59 +1,59 @@
-maclan(tag('AREA_NAME')).
-maclan(tag('AREA_ID')).
-maclan(tag('AREA_ALIAS')).
-maclan(tag('SUBAREAS')).
-maclan(tag('SUPERAREAS')).
-maclan(tag('TAG')).
-maclan(tag('LANG_FLAG')).
-maclan(tag('LANG_DESCRIPTION')).
-maclan(tag('LANG_ALIAS')).
-maclan(tag('LANG_ID')).
-maclan(tag('LANGUAGES')).
-maclan(tag('RESOURCE_ID')).
-maclan(tag('RESOURCE_EXT')).
-maclan(tag('RESOURCE_VALUE')).
-maclan(tag('VERSION_ANCHOR')).
-maclan(tag('VERSION_URL')).
-maclan(tag('VERSION_NAME')).
-maclan(tag('VERSION_ID')).
-maclan(tag('LIST')).
-maclan(tag('LAST')).
-maclan(tag('LOOP')).
-maclan(tag('IMAGE')).
-maclan(tag('VAR')).
-maclan(tag('SET')).
-maclan(tag('GET')).
-maclan(tag('A')).
-maclan(tag('ANCHOR')).
-maclan(tag('REM')).
-maclan(tag('IF')).
-maclan(tag('ELSEIF')).
-maclan(tag('ELSE')).
-maclan(tag('PROCEDURE')).
-maclan(tag('CALL')).
-maclan(tag('PACK')).
-maclan(tag('BLOCK')).
-maclan(tag('OUTPUT')).
-maclan(tag('TRACE')).
-maclan(tag('BREAK')).
-maclan(tag('PPTEXT')).
-maclan(tag('URL')).
-maclan(tag('USING')).
-maclan(tag('RENDER_CLASS')).
-maclan(tag('TIMOEOUT')).
-maclan(tag('BOOKMARK')).
-maclan(tag('REPLACE_BOOKMARK')).
-maclan(tag('INCLUDE_ONCE')).
-maclan(tag('LITERAL')).
-maclan(tag('PRAGMA')).
-maclan(tag('JAVASCRIPT')).
-maclan(tag('INDENT')).
-maclan(tag('NOINDENT')).
-maclan(tag('CSS_LOOKUP_TABLE')).
-maclan(tag('UNZIP')).
-maclan(tag('RUN')).
-maclan(tag('REDIRECT')).
-maclan(tag('TRAY_MENU')).
+maclan(tag('AREA_NAME'), type('Simple')).
+maclan(tag('AREA_ID'), type('Simple')).
+maclan(tag('AREA_ALIAS'), type('Simple')).
+maclan(tag('SUBAREAS'), type('Simple')).
+maclan(tag('SUPERAREAS'), type('Simple')).
+maclan(tag('TAG'), type('Simple')).
+maclan(tag('LANG_FLAG'), type('Simple')).
+maclan(tag('LANG_DESCRIPTION'), type('Simple')).
+maclan(tag('LANG_ALIAS'), type('Simple')).
+maclan(tag('LANG_ID'), type('Simple')).
+maclan(tag('LANGUAGES'), type('Complex')).
+maclan(tag('RESOURCE_ID'), type('Simple')).
+maclan(tag('RESOURCE_EXT'), type('Simple')).
+maclan(tag('RESOURCE_VALUE'), type('Simple')).
+maclan(tag('VERSION_ANCHOR'), type('Simple')).
+maclan(tag('VERSION_URL'), type('Simple')).
+maclan(tag('VERSION_NAME'), type('Simple')).
+maclan(tag('VERSION_ID'), type('Simple')).
+maclan(tag('LIST'), type('Complex')).
+maclan(tag('LAST'), type('Simple')).
+maclan(tag('LOOP'), type('Complex')).
+maclan(tag('IMAGE'), type('Simple')).
+maclan(tag('VAR'), type('Simple')).
+maclan(tag('SET'), type('Simple')).
+maclan(tag('GET'), type('Simple')).
+maclan(tag('A'), type('Complex')).
+maclan(tag('ANCHOR'), type('Complex')).
+maclan(tag('REM'), type('Complex')).
+maclan(tag('IF'), type('ComplexCondition')).
+maclan(tag('ELSEIF'), type('ComplexCondition')).
+maclan(tag('ELSE'), type('ComplexCondition')).
+maclan(tag('PROCEDURE'), type('Complex')).
+maclan(tag('CALL'), type('SimpleOrComplex')).
+maclan(tag('PACK'), type('Complex')).
+maclan(tag('BLOCK'), type('Complex')).
+maclan(tag('OUTPUT'), type('Complex')).
+maclan(tag('TRACE'), type('Simple')).
+maclan(tag('BREAK'), type('Simple')).
+maclan(tag('PPTEXT'), type('Complex')).
+maclan(tag('URL'), type('Simple')).
+maclan(tag('USING'), type('Simple')).
+maclan(tag('RENDER_CLASS'), type('Simple')).
+maclan(tag('TIMOEOUT'), type('Simple')).
+maclan(tag('BOOKMARK'), type('Simple')).
+maclan(tag('REPLACE_BOOKMARK'), type('Complex')).
+maclan(tag('INCLUDE_ONCE'), type('Complex')).
+maclan(tag('LITERAL'), type('Complex')).
+maclan(tag('PRAGMA'), type('Simple')).
+maclan(tag('JAVASCRIPT'), type('Complex')).
+maclan(tag('INDENT'), type('Complex')).
+maclan(tag('NOINDENT'), type('Complex')).
+maclan(tag('CSS_LOOKUP_TABLE'), type('Complex')).
+maclan(tag('UNZIP'), type('Simple')).
+maclan(tag('RUN'), type('Simple')).
+maclan(tag('REDIRECT'), type('Simple')).
+maclan(tag('TRAY_MENU'), type('Simple')).
 
 maclan(tag('AREA_NAME'), property('areaId'), type('AreaId')).
 maclan(tag('AREA_NAME'), property('areaAlias'), type('AreaAlias')).

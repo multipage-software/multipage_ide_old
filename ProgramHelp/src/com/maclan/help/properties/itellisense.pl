@@ -91,8 +91,8 @@ exclude_item([ITEM|T], ITEM, NEW_T) :-
     exclude_item(T, ITEM, NEW_T).
 
 /* Tag without property. */
-statement_match(maclan(tag(TAG_BEGIN)), maclan(tag(TAG))) :-
-    maclan(tag(TAG)),
+statement_match(maclan(tag(TAG_BEGIN)), maclan(tag(TAG), type(TYPE))) :-
+    maclan(tag(TAG), type(TYPE)),
     begin_match(TAG_BEGIN, TAG).
 
 /* Tag and properties without value. */

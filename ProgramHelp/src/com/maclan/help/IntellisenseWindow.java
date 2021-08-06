@@ -10,9 +10,13 @@ package com.maclan.help;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -52,9 +56,9 @@ public class IntellisenseWindow extends JDialog {
 	private static IntellisenseWindow dialog = null;
 
 	/**
-	 * The intellisense window is in display process.
+	 * The flag informs that intellisense window can be disposed.
 	 */
-	private static boolean displayingInProgress = false;
+	private static boolean canDispose = true;
 	
 	/**
 	 * Window size.
@@ -77,7 +81,7 @@ public class IntellisenseWindow extends JDialog {
 	public static void createNew(Component parent) {
 		
 		// Try to close old window.
-		closeOld();
+		closeIntellisense();
 		
 		// Create new hidden window.
 		Window parentWindow = Utility.findWindow(parent);
@@ -122,29 +126,56 @@ public class IntellisenseWindow extends JDialog {
 			}
 		});
 		
-//		// Add focus listener.
-//		final WindowFocusListener focusListener = new WindowFocusListener() {
-//
-//			@Override
-//			public void windowGainedFocus(WindowEvent e) {
-//				// TODO Auto-generated method stub
-//				
-//			}
-//			
-//			@Override
-//			public void windowLostFocus(WindowEvent e) {
-//				
-//				// Check flag.
-//				if (displayingInProgress) {
-//					displayingInProgress = false;
-//					return;
-//				}
-//				
-//				// Hide the dialog.
-//				closeOld();
-//			}
-//		};
-//		parentWindow.addWindowFocusListener(focusListener);
+		// Add focus listener.
+		dialog.list.addFocusListener(new FocusAdapter() {
+
+			@Override
+			public void focusLost(FocusEvent e) {
+				
+				// Close the intellisense window.
+				SwingUtilities.invokeLater(() -> closeIntellisense());
+				
+				// Delegate the call.
+				super.focusLost(e);
+			}
+		});
+		
+		// Add focus listener.
+		final FocusListener focusListener = new FocusListener() {
+
+			@Override
+			public void focusGained(FocusEvent e) {
+				
+				// Reset the flag.
+				canDispose = true;
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+				
+				// Check flag.
+				if (!canDispose) {
+					return;
+				}
+				
+				// Check dialog.
+				if (dialog == null) {
+					return;
+				}
+				
+				// Check if mouse pointer is on intellisense window.
+				Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
+				Rectangle intellisenseBoonds = dialog.getBounds();
+				
+				if (intellisenseBoonds.contains(mouseLocation)) {
+					return;
+				}
+				
+				// Hide the dialog.
+				SwingUtilities.invokeLater(() -> closeIntellisense());
+			}
+		};
+		parent.addFocusListener(focusListener);
 		
 		// Add parent window close handler.
 		parentWindow.addWindowListener(new WindowAdapter() {
@@ -153,13 +184,13 @@ public class IntellisenseWindow extends JDialog {
 			public void windowClosed(WindowEvent e) {
 				
 				// Hide the dialog.
-				closeOld();
+				SwingUtilities.invokeLater(() -> closeIntellisense());
 				
 				// Delegate the call.
 				super.windowClosed(e);
 				
 				// Remove listener.
-				//parentWindow.removeWindowFocusListener(focusListener);
+				parent.removeFocusListener(focusListener);
 				
 				// Remove listener.
 				parentWindow.removeWindowListener(this);
@@ -170,8 +201,9 @@ public class IntellisenseWindow extends JDialog {
 	/**
 	 * Try to dispose the window object.
 	 */
-	private static void closeOld() {
+	private static void closeIntellisense() {
 		
+
 		if (dialog != null) {
 			
 			dialog.dispose();
@@ -188,7 +220,7 @@ public class IntellisenseWindow extends JDialog {
 	public static final void displayAtCaret(JTextPane textPane, Caret caret, LinkedList<Suggestion> suggestions) {
 		
 		// Set flag.
-		displayingInProgress = true;
+		canDispose = false;
 		
 		// Check dialog and possibly create new one.
 		if (dialog == null) {
@@ -247,10 +279,11 @@ public class IntellisenseWindow extends JDialog {
 	}
 	
 	/**
-	 * Control.
+	 * Controls.
 	 */
+	private JScrollPane scrollPane = null;
 	private JList<Suggestion> list = null;
-
+	
 	/**
 	 * Create the dialog.
 	 * @param parent 
@@ -271,7 +304,7 @@ public class IntellisenseWindow extends JDialog {
 		setMinimumSize(windowSize );
 		getContentPane().setLayout(new BorderLayout(0, 0));
 		
-		JScrollPane scrollPane = new JScrollPane();
+		scrollPane = new JScrollPane();
 		scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(scrollbarSizePx, 0));
 		scrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(scrollbarSizePx, 10));
 		getContentPane().add(scrollPane, BorderLayout.CENTER);

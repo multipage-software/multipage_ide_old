@@ -165,7 +165,11 @@ public class Intellisense {
 			
 			// Try to get Maclan property.
 			String maclanPropertyName = null;
+			String maclanTagType = null;
 			if (termArity >= 2) {
+				
+				// Try to get second argument as a tag type.
+				maclanTagType = getTermArgumentStringValue(compundTerm, 1, "type");
 
 				// Get second argument value.
 				maclanPropertyName = getTermArgumentStringValue(compundTerm, 1, "property");
@@ -193,7 +197,14 @@ public class Intellisense {
 					}
 				}
 				else {
-					caption = String.format("<b>%s</b>", maclanTagName);
+					
+					if (maclanTagType != null) {
+						
+						caption = String.format("<b>%s</b><font %s><i> is %s</i></font>", maclanTagName, suggestionExtensionFont, maclanTagType);
+					}
+					else {
+						caption = String.format("<b>%s</b>", maclanTagName);
+					}
 				}
 			}
 			

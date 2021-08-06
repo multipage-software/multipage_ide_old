@@ -2611,34 +2611,25 @@ public class GeneratorMainFrame extends JFrame {
 			Utility.show(getFrame(), "org.multipage.generator.messagePlatformDesktopClassNotSupported");
 		}
 	}
+	
 
 	/**
 	 * Display online area.
 	 * @param area
 	 */
-	public void displayOnlineArea(Area area) {
+	public void displayOnlineArea(Area area, Language language, VersionObj version, Boolean showTextIds, String parametersOrUrl, Boolean externalBrowser) {
 		
 		if (Desktop.isDesktopSupported()) {
 			Desktop desktop = Desktop.getDesktop();
 			if (desktop.isSupported(Desktop.Action.BROWSE)) {
+				
 				try {
-					
-					// Get online display parameters.
-					Obj<Language> language = new Obj<Language>();
-					Obj<VersionObj> version = new Obj<VersionObj>();
-					Obj<Boolean> showTextIds = new Obj<Boolean>();
-					Obj<String> parametersOrUrl = new Obj<String>();
-					Obj<Boolean> externalBrowser = new Obj<Boolean>();
-					
-					if (!DisplayOnlineDialog.showDialog(getFrame(), language, version, showTextIds, parametersOrUrl, externalBrowser)) {
-						return;
-					}
 					
 					// Try to open URL.
 					String url = null;
 					URL urlObject = null;
 					try {
-						urlObject = Utility.tryUrl(parametersOrUrl.ref);
+						urlObject = Utility.tryUrl(parametersOrUrl);
 					}
 					catch (MalformedURLException e1) {
 						urlObject = null;
@@ -2652,8 +2643,8 @@ public class GeneratorMainFrame extends JFrame {
 					if (urlObject == null) {
 						
 						long areaId = area.getId();
-						Long languageId = language.ref.id;
-						long versionId = version.ref.getId();
+						Long languageId = language != null ? language.id : 0L;
+						long versionId = version != null ? version.getId() : 0L;
 						
 						// Load start language.
 						Properties login = ProgramBasic.getLoginProperties();
@@ -2668,20 +2659,23 @@ public class GeneratorMainFrame extends JFrame {
 							homeAreaId = homeArea.getId();
 						}
 						
-						if (!parametersOrUrl.ref.isEmpty()) {
-							parametersOrUrl.ref = '&' + parametersOrUrl.ref;
+						if (parametersOrUrl == null) {
+							parametersOrUrl = "";
+						}
+						if (!parametersOrUrl.isEmpty()) {
+							parametersOrUrl = '&' + parametersOrUrl;
 						}
 						
 						if (areaId == homeAreaId && versionId == 0L && languageId == startLanguageId.ref) {
-							url = String.format("http://localhost:%d/?%s%s", Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, parametersOrUrl.ref);
+							url = String.format("http://localhost:%d/?%s%s", Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, parametersOrUrl);
 						}
 						else {
 							url = String.format("http://localhost:%d/?%s&area_id=%d&lang_id=%d&ver_id=%d%s",
-									Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, areaId, languageId, version.ref.getId(), parametersOrUrl.ref);
+									Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, areaId, languageId, versionId, parametersOrUrl);
 						}
 						
 						// Display localized text.
-						if (showTextIds.ref) {
+						if (showTextIds != null && showTextIds) {
 							url += "&l";
 						}
 					}
@@ -2689,7 +2683,7 @@ public class GeneratorMainFrame extends JFrame {
 						url = urlObject.toString();
 					}
 					
-					if (externalBrowser.ref) {
+					if (externalBrowser != null & externalBrowser) {
 						// Show external browser.
 						BareBonesBrowserLaunch.openURL(url);
 					}
@@ -2710,7 +2704,78 @@ public class GeneratorMainFrame extends JFrame {
 			Utility.show(getFrame(), "org.multipage.generator.messagePlatformDesktopClassNotSupported");
 		}
 	}
+	
+	/**
+	 * Display online area.
+	 * @param area
+	 */
+	public void displayOnlineArea(Area area) {
+		
+		if (Desktop.isDesktopSupported()) {
+			Desktop desktop = Desktop.getDesktop();
+			if (desktop.isSupported(Desktop.Action.BROWSE)) {
+					
+				// Get online display parameters.
+				Obj<Language> language = new Obj<Language>();
+				Obj<VersionObj> version = new Obj<VersionObj>();
+				Obj<Boolean> showTextIds = new Obj<Boolean>();
+				Obj<String> parametersOrUrl = new Obj<String>();
+				Obj<Boolean> externalBrowser = new Obj<Boolean>();
+				
+				if (!DisplayOnlineDialog.showDialog(getFrame(), language, version, showTextIds, parametersOrUrl, externalBrowser)) {
+					return;
+				}
+				
+				// Delegate the call.
+				displayOnlineArea(area, language.ref, version.ref, showTextIds.ref, parametersOrUrl.ref, externalBrowser.ref);
+			}
+		}
+	}
 
+	/**
+	 * Display IDE helper area.
+	 * @param area
+	 */
+	public void displayIdeHelperArea(Area area) {
+		
+		// Get current IDE language alias.
+		String languageAlias = GeneratorMain.defaultLanguage;
+		
+		Language pageLanguage = null;
+		
+		try {
+			// Login middle layer.
+			Middle middle = ProgramBasic.loginMiddle();
+			
+			// Load languages.
+			LinkedList<Language> languages = new LinkedList<Language>();
+			
+			MiddleResult result = middle.loadLanguages(languages);
+			result.throwPossibleException();
+			
+			// Find language with given alias.
+			for (Language language : languages) {
+				
+				// Return found language
+				if (language.alias.equals(languageAlias)) {
+					pageLanguage = language;
+					break;
+				}
+			}
+		}
+		catch (Exception e) {
+			// Display error message.
+			Utility.show2(getFrame(), e.getLocalizedMessage());
+		}
+		finally {
+			// Logout middle layer.
+			ProgramBasic.logoutMiddle();
+		}
+		
+		// Delegate the call.
+		displayOnlineArea(area, pageLanguage, null, null, null, false);
+	}
+	
 	/**
 	 * Get start language.
 	 * @return
@@ -3583,7 +3648,13 @@ public class GeneratorMainFrame extends JFrame {
 		// Try to find area with alias set to Maclan help ID.
 		Area maclanHelpArea = ProgramGenerator.getAreasModel().getArea(maclanHelpId);
 		
+		// Check the area.
+		if (maclanHelpArea == null) {
+			Utility.show(getFrame(), "org.multipage.generator.messageStatementDescriptionIsNotAvailable");
+			return;
+		}
+		
 		// Add Maclan help page.
-		getFrame().displayOnlineArea(maclanHelpArea);
+		getFrame().displayIdeHelperArea(maclanHelpArea);
 	}
 }
