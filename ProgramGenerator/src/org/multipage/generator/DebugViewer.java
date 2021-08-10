@@ -59,7 +59,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.maclan.server.XdebugClient;
+import com.maclan.server.XdebugListener;
 import com.maclan.server.XdebugPacket;
 
 /**
@@ -388,7 +388,7 @@ public class DebugViewer extends JFrame {
 	protected void onOpen() {
 		
 		// Start debugger
-		XdebugClient.getSingleton().startDebugging();
+		XdebugListener.getSingleton().startDebugging();
 	}
 	
 	/**
@@ -397,7 +397,7 @@ public class DebugViewer extends JFrame {
 	protected void onClose() {
 		
 		// Stop debugger
-		XdebugClient.getSingleton().stopDebugging();
+		XdebugListener.getSingleton().stopDebugging();
 		
 		saveDialog();
 		dispose();
@@ -612,7 +612,7 @@ public class DebugViewer extends JFrame {
 			return;
 		}
 		try {
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommand(command);
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
 			String resultText = responsePacket.getPacketText();
 			consolePrint(resultText);
 		}
@@ -642,7 +642,7 @@ public class DebugViewer extends JFrame {
 	private void startDebugging() throws Exception {
 		
 		// Start debug viewer.
-		boolean accepted = XdebugClient.getSingleton().startDebugging();
+		boolean accepted = XdebugListener.getSingleton().startDebugging();
 		//pageReloadException(!accepted);
 	}
 	
@@ -668,7 +668,7 @@ public class DebugViewer extends JFrame {
 		// Process run command
 		try {
 			startDebugging();
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommand("run");
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand("run");
 			String resultText = responsePacket.getPacketText();
 			consolePrint(resultText);
 		}
@@ -690,7 +690,7 @@ public class DebugViewer extends JFrame {
 		// Process step into command
 		try {
 			startDebugging();
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommand(command);
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
 			if (responsePacket.isEmpty()) {
 				return;
 			}
@@ -732,7 +732,7 @@ public class DebugViewer extends JFrame {
 	private void showOutput() {
 		
 		try {
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommandT("eval", "ob_get_contents()");
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommandT("eval", "ob_get_contents()");
 			if (!responsePacket.isEmpty()) {
 				String base64 = responsePacket.getString("/response/property/text()");
 				if (base64 != null) {
@@ -754,7 +754,7 @@ public class DebugViewer extends JFrame {
 		
 		// Process run command
 		try {
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommand("stack_get");
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand("stack_get");
 			if (!responsePacket.isEmpty()) {
 				
 				String resultText = responsePacket.getPacketText();
@@ -863,7 +863,7 @@ public class DebugViewer extends JFrame {
 		// Process context_get command
 		try {
 			String command = String.format("context_get -c %s", number);
-			XdebugPacket responsePacket = XdebugClient.getSingleton().postCommand(command);
+			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
 			if (responsePacket.isEmpty()) {
 				return;
 			}
@@ -1060,7 +1060,7 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onExit() {
 		
-		XdebugClient client = XdebugClient.getSingleton();
+		XdebugListener client = XdebugListener.getSingleton();
 		if (client == null) {
 			return;
 		}
@@ -1074,7 +1074,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void establishWatchDog() {
 		
-		XdebugClient client = XdebugClient.getSingleton();
+		XdebugListener client = XdebugListener.getSingleton();
 		if (client == null) {
 			return;
 		}
@@ -1099,7 +1099,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void setCallbacks() {
 		
-		XdebugClient client = XdebugClient.getSingleton();
+		XdebugListener client = XdebugListener.getSingleton();
 		if (client == null) {
 			return;
 		}

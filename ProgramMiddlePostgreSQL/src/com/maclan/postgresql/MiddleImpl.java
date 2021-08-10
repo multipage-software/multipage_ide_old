@@ -8,7 +8,6 @@
 package com.maclan.postgresql;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -9640,6 +9639,17 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			}
 		}
 		
+		// Load start resource IDs located in areas.
+		for (AreaData areaData : areaTreeData.areaDataList) {
+			
+			// Add ID only when it is not yet included in list.
+			Long startResourceId = areaData.startResourceId;
+			if (startResourceId != null && !resourcesIds.contains(startResourceId)) {
+				
+				resourcesIds.add(startResourceId);
+			}
+		}
+		
 		LinkedList<Long> mimeIds = new LinkedList<Long>();
 		
 		progressStep = 100.0F / (float) resourcesIds.size();
@@ -10957,27 +10967,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			return result;
 		}
 		
-		boolean copied = areaTreeData.isCopied();
-		
-		// If the resource is visible and data are copied, return resource ID (it will be linked to new area).
-		if (copied && resourceRef.isVisible) {
-			
-			resourceId.ref = resourceRef.resourceId;
-			return MiddleResult.OK;
-		}
-		
-		// If the resource is copied and is binary, read resource data.
-		ByteArrayOutputStream copiedResourceOutputStream = null;
-		if (copied && resourceRef.existsBlob()) {
-				
-			copiedResourceOutputStream = new ByteArrayOutputStream();
-			
-			result = loadResourceBlobToStream(resourceRef.resourceId, copiedResourceOutputStream);
-			if (result.isNotOK()) {
-				return result;
-			}
-		}
-		
 		PreparedStatement statement = null;
 		
 		try {
@@ -10985,7 +10974,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			// INSERT statement.
 			statement = connection.prepareStatement(insertResourceProperties);
 
-			Long newMimeId = copied ? resourceRef.mimeTypeId : areaTreeData.getNewMimeId(resourceRef.mimeTypeId);
+			Long newMimeId = areaTreeData.getNewMimeId(resourceRef.mimeTypeId);
 			if (newMimeId != null) {
 			
 				statement.setString(1, resourceRef.description);
@@ -11128,21 +11117,24 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		
 		return result;
 	}
-
+	
 	/**
 	 * Insert areas' start resources.
 	 * @param areaTreeData
+	 * @param datBlocks 
 	 * @param swingWorkerHelper
 	 * @return
 	 */
 	public MiddleResult updateStartResourcesData(AreaTreeData areaTreeData,
-			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
+			LinkedList<DatBlock> datBlocks, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
 		MiddleResult result = checkConnection();
 		if (result.isNotOK()) {
 			return result;
 		}
+		
+		boolean isCloned = areaTreeData.isCloned();
 		
 		double progress2Step = 100.0f / (double) areaTreeData.areaDataList.size();
 		double progress2 = progress2Step;
@@ -11161,23 +11153,43 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				
 			}
 			
-			if (areaData.startResourceId == null) {
+			Long oldStartResourceId = areaData.startResourceId;
+			
+			if (oldStartResourceId == null) {
 				continue;
 			}
 			
-			// Get new resource ID.
-			Long newStartResourceId = areaTreeData.getNewResourceRefId(areaData.startResourceId);
-			if (newStartResourceId == null) {
+			// Get resource ID.
+			Obj<Long> newStartResourceId = new Obj<Long>(null);
+			
+			if (isCloned) {
+				newStartResourceId.ref = oldStartResourceId;
+			}
+			else {
+				newStartResourceId.ref = areaTreeData.getNewResourceRefId(oldStartResourceId);
+				if (newStartResourceId.ref == null) {
+					
+					// Get start resource reference.
+					ResourceRef startResourceRef = areaTreeData.getResourceRef(oldStartResourceId);
+					if (startResourceRef == null) {
+						return MiddleResult.RESOURCE_NOT_FOUND;
+					}
+					
+					// Insert start resource into the database.	
+					result = insertResourceData(startResourceRef, areaTreeData, datBlocks, newStartResourceId,
+							swingWorkerHelper);
 				
-				result = MiddleResult.RESOURCE_NOT_FOUND;
-				break;
+					if (result.isNotOK()) {
+						return result;
+					}
+				}
 			}
 			
 			// Get new version ID.
 			Long versionId = areaData.versionId;
 			Long newVersionId = null;
 			if (versionId != null) {
-				newVersionId = areaTreeData.getNewVersionId(versionId);
+				newVersionId = isCloned ? versionId : areaTreeData.getNewVersionId(versionId);
 			}
 			else {
 				newVersionId = 0L;
@@ -11188,7 +11200,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			}
 			
 			// Update area start resource.
-			result = updateStartResource(areaData.newId, newStartResourceId, newVersionId,
+			result = updateStartResource(areaData.newId, newStartResourceId.ref, newVersionId,
 					notLocalized);
 			if (result.isNotOK()) {
 				break;

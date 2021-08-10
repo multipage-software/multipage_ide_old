@@ -1377,11 +1377,12 @@ public interface Middle extends MiddleLight {
 	/**
 	 * Insert areas' start resources.
 	 * @param areaTreeData
+	 * @param datBlocks 
 	 * @param swingWorkerHelper
 	 * @return
 	 */
 	public MiddleResult updateStartResourcesData(AreaTreeData areaTreeData,
-			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
+			LinkedList<DatBlock> datBlocks, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
 	 * Insert area sources from area tree data into the database.

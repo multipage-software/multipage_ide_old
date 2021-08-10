@@ -38,7 +38,7 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.maclan.MiddleUtility;
-import com.maclan.server.DebugClient;
+import com.maclan.server.DebugListener;
 
 /**
  * 
@@ -96,7 +96,7 @@ public class Settings extends JDialog {
 		enableDebugging = enable;
 		
 		// Switch on or off debugging of code
-		DebugClient.setDebugPhpListener(new CallbackNoArg() {
+		DebugListener.setDebugPhpListener(new CallbackNoArg() {
 			@Override
 			public Object run() {
 				return enableDebugging;

@@ -7,31 +7,40 @@
 package com.maclan.server;
 
 import java.io.IOException;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.util.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedList;
+
+import org.multipage.gui.Callback;
+import org.multipage.gui.Utility;
+import org.multipage.util.Lock;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
 /**
  * @author user
  *
  */
-public class XdebugClient extends DebugClient {
+public class XdebugListener extends DebugListener {
 	
 	/**
-	 * Xdebug client singleton object
+	 * Xdebug listener singleton object
 	 */
-	private static XdebugClient xdebugClientSingleton;
+	private static XdebugListener xdebugListenerSingleton;
 
 	/**
 	 * Gets the Xdebug client singleton
 	 * @return
 	 */
-	public static XdebugClient getSingleton() {
+	public static XdebugListener getSingleton() {
 		
-		return xdebugClientSingleton;
+		return xdebugListenerSingleton;
 	}
 	
 	/**
@@ -319,11 +328,11 @@ public class XdebugClient extends DebugClient {
 	/**
 	 * Creates singleton
 	 */
-	public static XdebugClient createInstance() throws Exception {
+	public static XdebugListener createInstance() throws Exception {
 		
 		// Use default port number 9001 because 9000 uses JVM Xdebug
-		xdebugClientSingleton = new XdebugClient(9001);
-		return xdebugClientSingleton;
+		xdebugListenerSingleton = new XdebugListener(9001);
+		return xdebugListenerSingleton;
 	}
 	
 	/**
@@ -502,7 +511,7 @@ public class XdebugClient extends DebugClient {
 	/**
 	 * Constructor
 	 */
-	public XdebugClient(int port) throws Exception {
+	public XdebugListener(int port) throws Exception {
 		
 		this.port = port;
 	}
@@ -513,7 +522,7 @@ public class XdebugClient extends DebugClient {
 	public void activate() throws Exception {
 			
 		// Start main thread that accepts socket connection
-		socketChannelThread = new Thread("IDE-Xdebug-Client") {
+		socketChannelThread = new Thread("IDE-Xdebug-Listener") {
 
 			/**
 			 * Thread entry

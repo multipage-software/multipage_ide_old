@@ -94,16 +94,21 @@ public class MiddleLightImpl implements MiddleLight {
 	 */
 	private static void addMiddleResultExtension() {
 		
-		MiddleResult.sqlToResultLambdas.add(e -> {
+		MiddleResult.sqlToResultLambdas.add(exception -> {
 			
-			if (e instanceof SQLException) {
-				SQLException sqlException = (SQLException)e;
-				
-				// When the database is already opened.
-				if (sqlException.getNextException().getErrorCode() ==  45000) {
-	                return MiddleResult.DATABASE_ALREADY_OPENED;
-	            }
+			try {
+				if (exception instanceof SQLException) {
+					SQLException sqlException = (SQLException) exception;
+					
+					// When the database is already opened.
+					if (sqlException.getNextException().getErrorCode() ==  45000) {
+		                return MiddleResult.DATABASE_ALREADY_OPENED;
+		            }
+				}
 			}
+			catch (Exception e) {
+			}
+			
 			return null;
 		});
 	}

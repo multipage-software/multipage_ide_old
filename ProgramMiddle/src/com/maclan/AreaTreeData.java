@@ -154,7 +154,7 @@ public class AreaTreeData {
 	/**
 	 * Data copied (not imported) flag.
 	 */
-	private boolean copied = false;
+	private boolean cloned = false;
 
 	/**
 	 * Set root area ID.
@@ -1855,7 +1855,7 @@ public class AreaTreeData {
 			if (result.isOK()) {
 				
 				// Update default language.
-				if (importLanguages && !copied && isNewDefaultLanguage()) {
+				if (importLanguages && !cloned && isNewDefaultLanguage()) {
 					result = middle.updateDefaultLanguageData(this);
 				}
 				if (result.isOK()) {
@@ -1989,7 +1989,7 @@ public class AreaTreeData {
 																					}
 																					
 																					// Update areas' start resources.
-																					result = middle.updateStartResourcesData(this, swingWorkerHelper);
+																					result = middle.updateStartResourcesData(this, datBlocks, swingWorkerHelper);
 																					if (result.isOK()) {
 																						
 																						if (swingWorkerHelper != null) {
@@ -3055,21 +3055,21 @@ public class AreaTreeData {
 	}
 
 	/**
-	 * Set data copied (not imported) flag.
+	 * Set flag that informs about area data that are cloned (not imported).
 	 * @param copied
 	 */
-	public void setCopied(boolean copied) {
+	public void setCloned(boolean copied) {
 		
-		this.copied = copied;
+		this.cloned = cloned;
 	}
 	
 	/**
-	 * Returns true value if data are copied (not imported).
+	 * Returns true value if area data are cloned (not imported).
 	 * @return
 	 */
-	public boolean isCopied() {
+	public boolean isCloned() {
 		
-		return copied;
+		return cloned;
 	}
 
 	/**

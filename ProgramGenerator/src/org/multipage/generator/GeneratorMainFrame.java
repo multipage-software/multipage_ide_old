@@ -74,7 +74,7 @@ import com.maclan.MiddleUtility;
 import com.maclan.Slot;
 import com.maclan.VersionObj;
 import com.maclan.server.BrowserParameters;
-import com.maclan.server.DebugClient;
+import com.maclan.server.DebugListener;
 import com.maclan.server.DebugViewerCallback;
 import com.maclan.server.ProgramServlet;
 import com.maclan.server.TextRenderer;
@@ -644,7 +644,7 @@ public class GeneratorMainFrame extends JFrame {
 		debugViewer = new DebugViewer(this);
 		
 		// Set debug viewer listener
-		DebugClient debugger = ProgramBasic.getHttpServer().getDebugger();
+		DebugListener debugger = ProgramBasic.getHttpServer().getDebugger();
 		if (debugger != null) {
 			debugger.setDebugViewerListener(new DebugViewerCallback() {
 
@@ -3312,7 +3312,7 @@ public class GeneratorMainFrame extends JFrame {
 						return area != null;
 					}
 				};
-				areaTreeDataToCopy.setCopied(true);
+				areaTreeDataToCopy.setCloned(true);
 			
 				Long parentAreaId = parentArea != null ? parentArea.getId() : null;
 				

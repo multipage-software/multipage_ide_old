@@ -14,10 +14,10 @@ import org.multipage.gui.CallbackNoArg;
  * @author user
  *
  */
-public abstract class DebugClient {
+public abstract class DebugListener {
 	
 	/**
-	 * Listener that determines if PHP should be debugged
+	 * Listener that determines if code should be debugged
 	 */
 	protected static CallbackNoArg enableListener = null;
 	
@@ -36,7 +36,7 @@ public abstract class DebugClient {
 	public abstract void setDebugViewerListener(DebugViewerCallback callback);
 	
 	/**
-	 * Activates debugger. The method creates a main thread that communicates with browser
+	 * Activates debugger. The method creates a main thread that communicates with client.
 	 */
 	protected abstract void activate() throws Exception;
 	

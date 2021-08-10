@@ -10,7 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Properties;
 
-import com.maclan.server.XdebugClient.ChannelBreakDownException;
+import com.maclan.server.XdebugListener.ChannelBreakDownException;
 
 /**
  * Holds negatiated Xdebug features
@@ -27,7 +27,7 @@ public class XdebugFeatures {
 	/**
 	 * References to prerequisites
 	 */
-	private XdebugClient xdebugClient;
+	private XdebugListener xdebugClient;
 	private SocketChannel socketChannel;
 
 	/**
@@ -42,7 +42,7 @@ public class XdebugFeatures {
 	 * @throws ChannelBreakDownException 
 	 * @throws Exception 
 	 */
-	public void initialLoad(XdebugClient xdebugClient, SocketChannel socketChannel) throws ChannelBreakDownException {
+	public void initialLoad(XdebugListener xdebugClient, SocketChannel socketChannel) throws ChannelBreakDownException {
 		
 		// Set prerequisites
 		this.xdebugClient = xdebugClient;
@@ -52,7 +52,7 @@ public class XdebugFeatures {
 		features.clear();
 		
 		// Transact features
-		xdebugClient.beginTransaction(XdebugClient.BREAK_ON_FIRST_EXCEPTION);
+		xdebugClient.beginTransaction(XdebugListener.BREAK_ON_FIRST_EXCEPTION);
 		
 		loadStringFeature("language_supports_threads");
 		loadStringFeature("language_name");
@@ -94,7 +94,7 @@ public class XdebugFeatures {
 		}
 		
 		// Post a command to Xdebug server using new transaction
-		xdebugClient.beginTransaction(XdebugClient.BREAK_ON_FIRST_EXCEPTION);
+		xdebugClient.beginTransaction(XdebugListener.BREAK_ON_FIRST_EXCEPTION);
 		
 		String command = String.format("feature_set -n %s -v %s", feature, newValue);
 		XdebugPacket packet = xdebugClient.command(socketChannel, command);
