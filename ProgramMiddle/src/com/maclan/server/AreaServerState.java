@@ -236,7 +236,6 @@ public class AreaServerState {
 	 * New line characters
 	 */
 	public String newLine = "\n";
-	
 
 	/**
 	 * Update server state.

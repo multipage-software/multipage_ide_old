@@ -332,6 +332,7 @@ public class ProgramServlet extends FastCGIServlet {
 			});
 			
 			// Initialize flags
+			boolean skipResponse = false;
 			boolean processResponse = true;
 			boolean isError = false;
 			
@@ -396,14 +397,32 @@ public class ProgramServlet extends FastCGIServlet {
 							processResponse = areaServer.loadAreaPage(middle, blocks, analysis, request, response);
 						}
 						
-						// Set URI for running web application
-						Redirection redirection = areaServer.getRedirection();
-						if (redirection.isActive()) {
-							uri = redirection.getUri();
-						}
-						
 						// Set error flag
 						isError = isProgramError.ref;
+						
+						// Set URI for running web application
+						if (!isError) {
+							
+							Redirection redirection = areaServer.getRedirection();
+							if (redirection.isActive()) {
+								uri = "/" + redirection.getUri();
+								
+								// If this is an area server redirection (or rather forwarding), make it.
+								if (!redirection.isDirect()) {
+									
+									RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(uri);
+									if (dispatcher != null) {
+										dispatcher.forward(_request, _response);
+										
+										skipResponse = true;
+									}
+									else {
+										isError = true;
+										memoryOutputStream.write(Resources.getString("server.messageErrorForwardingToNeUri").getBytes("UTF-8"));
+									}
+								}
+							}
+						}
 					}
 					
 					// Logout from the database
@@ -424,6 +443,13 @@ public class ProgramServlet extends FastCGIServlet {
 				// Output an error
 				isError = true;
 				memoryOutputStream.write(Resources.getString("server.messageNoLoginInformation").getBytes("UTF-8"));
+			}
+			
+			// If the response must be skipped, do so.
+			if (skipResponse) {
+				
+				_response.getOutputStream().close();
+				return;
 			}
 			
 			// If a PHP commands exist and should be interpreted, use the PHP/JavaBridge.

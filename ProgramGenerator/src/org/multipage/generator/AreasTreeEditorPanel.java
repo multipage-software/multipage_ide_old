@@ -650,7 +650,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 			protected Area getCurrentArea() {
 				// Get selected area.
 				TreePath [] selectedPaths = tree.getSelectionPaths();
-				if (selectedPaths.length != 1) {
+				if (selectedPaths == null || selectedPaths.length != 1) {
 					return null;
 				}
 				DefaultMutableTreeNode node = (DefaultMutableTreeNode) selectedPaths[0].getLastPathComponent();

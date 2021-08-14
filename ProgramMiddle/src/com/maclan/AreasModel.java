@@ -605,7 +605,7 @@ public class AreasModel {
 	 */
 	public Area getStartArea(Area area, long versionId) {
 		
-		if (area.isStartArea() && (area.containsVersion(versionId))) {
+		if (area.isSource(versionId)) {
 			return area;
 		}
 		

@@ -89,6 +89,11 @@ public class LoggingDialog extends JDialog {
 	 */
 	private static final long serialVersionUID = 1L;
 	
+	/**
+	 * Enable/disable logging.
+	 */
+	private static Boolean enabled = false;
+	
 	//$hide>>$
 	
 	/**
@@ -307,6 +312,30 @@ public class LoggingDialog extends JDialog {
 	 * Break point matching object.
 	 */
 	private static HashSet<Object> breakPointMatchObjects = new HashSet<Object>();
+	
+	/**
+	 * Set enable/disable logging.
+	 * @param flag
+	 */
+	public static void enableLogging(boolean flag) {
+		
+		synchronized (LoggingDialog.enabled) {
+			
+			LoggingDialog.enabled = flag;
+		}
+	}
+	
+	/**
+	 * Returns true if the logging is enabled.
+	 * @return
+	 */
+	public static boolean isLoggingEnabled() {
+		
+		synchronized (LoggingDialog.enabled) {
+			
+			return LoggingDialog.enabled;
+		}	
+	}
 	
 	/**
 	 * Initialize this dialog.
@@ -1284,6 +1313,11 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void log(String logText) {
 		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return;
+		}
+		
 		// Add new message.
 		LoggedMessage log = new LoggedMessage(logText);
 		
@@ -1311,6 +1345,11 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void log(Message incomingMessage) {
 		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return;
+		}
+		
 		synchronized (events) {
 			
 			// Delegate the call.
@@ -1325,6 +1364,11 @@ public class LoggingDialog extends JDialog {
 	 * @param executionTime
 	 */
 	public static void log(Message message, EventHandle eventHandle, long executionTime) {
+		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return;
+		}
 		
 		synchronized (events) {
 			
@@ -1402,6 +1446,11 @@ public class LoggingDialog extends JDialog {
 	 * @param incomingMessage
 	 */
 	public static LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>> addMessage(Message incomingMessage) {
+		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return null;
+		}
 		
 		// Get message signal.
 		Signal signal = incomingMessage.signal;
@@ -1602,6 +1651,11 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void addMessageQueueSnapshot(LinkedList<Message> messageQueueSnapshot, Long timeMoment) {
 		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return;
+		}
+		
 		synchronized (messageQueueSnapshots) {
 			
 			// Check input.
@@ -1644,7 +1698,7 @@ public class LoggingDialog extends JDialog {
 	/**
 	 * Update message queue tree.
 	 */
-	public void updateMessageQueueTree() {
+	protected void updateMessageQueueTree() {
 		
 		synchronized (messageQueueSnapshots) {
 			
@@ -2329,6 +2383,11 @@ public class LoggingDialog extends JDialog {
 	 * @param breakPointObject
 	 */
 	public static void breakPoint(Object breakPointObject) {
+		
+		// Check switch.
+		if (!isLoggingEnabled()) {
+			return;
+		}
 		
 		boolean isBreakPoint = false;
 		

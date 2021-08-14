@@ -2222,6 +2222,24 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		
 		return startResourceId != null || !areaSources.isEmpty() || isStartResource;
 	}
+	
+	/**
+	 * Check of this area has a start resource.
+	 */
+	public boolean isSource(long versionId) {
+		
+		// Old style start resource.
+		if (startResourceId != null) {
+			return true;
+		}
+		
+		// Check area source.
+		if (areaSources.get(versionId) != null) {
+			return true;
+		}
+		
+		return false;
+	}
 
 	/**
 	 * Add area source. The area has to be a start area.
@@ -2233,17 +2251,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 		AreaSource areaSource = new AreaSource(id, resourceId, versionId, notLocalized);
 		areaSources.put(versionId, areaSource);
 	}
-
-	/**
-	 * Returns true value if the area contains given version.
-	 * @param versionId
-	 * @return
-	 */
-	public boolean containsVersion(long versionId) {
-		
-		return areaSources.get(versionId) != null;
-	}
-
+	
 	/**
 	 * Get area sources.
 	 * @return

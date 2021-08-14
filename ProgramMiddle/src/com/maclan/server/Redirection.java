@@ -15,6 +15,11 @@ public class Redirection {
 	private String uri = "";
 	
 	/**
+	 * Flag "direct".
+	 */
+	private boolean direct = false;
+	
+	/**
 	 * Redirection active
 	 */
 	private boolean active = false;
@@ -22,10 +27,12 @@ public class Redirection {
 	/**
 	 * Set URI
 	 * @param uri
+	 * @param direct 
 	 */
-	public void setUri(String uri) {
+	public void setUri(String uri, boolean direct) {
 		
 		this.uri = uri;
+		this.direct = direct;
 		active = true;
 	}
 
@@ -36,6 +43,15 @@ public class Redirection {
 	public String getUri() {
 		
 		return uri;
+	}
+	
+	/**
+	 * Returns true if this is a direct URL redirection.
+	 * @return
+	 */
+	public boolean isDirect() {
+		
+		return direct;
 	}
 	
 	/**

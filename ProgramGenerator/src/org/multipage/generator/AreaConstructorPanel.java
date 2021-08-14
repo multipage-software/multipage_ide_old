@@ -151,11 +151,14 @@ public class AreaConstructorPanel extends JPanel {
 			MiddleResult result = middle.loadAreaConstructor(areaId, constructorId);
 			result.throwPossibleException();
 			
-			result = middle.loadConstructorHolder(constructorId.ref, constructor);
-			result.throwPossibleException();
-			
-			// Set the constructor.
-			this.constructor = constructor;
+			if (constructorId.ref != null) {
+				
+				result = middle.loadConstructorHolder(constructorId.ref, constructor);
+				result.throwPossibleException();
+				
+				// Set the constructor.
+				this.constructor = constructor;
+			}
 		}
 		catch (Exception e) {
 			
@@ -185,6 +188,11 @@ public class AreaConstructorPanel extends JPanel {
 			
 			long areaId = this.constructor.getAreaId();
 			constructorArea = ProgramGenerator.getArea(areaId);
+		}
+		
+		// Check if constructor area exists.
+		if (constructorArea == null) {
+			return;
 		}
 		
 		// Load slot values.

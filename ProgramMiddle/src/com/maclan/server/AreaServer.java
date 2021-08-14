@@ -238,7 +238,7 @@ public class AreaServer {
 		clonedState.area = area;
 		clonedState.requestedArea = state.requestedArea;
 		clonedState.startArea = state.startArea;
-		clonedState.position =0;
+		clonedState.position = 0;
 		clonedState.tagStartPosition = 0;
 		clonedState.currentLanguage = state.currentLanguage;
 		clonedState.currentVersionId = state.currentVersionId;
@@ -1035,14 +1035,22 @@ public class AreaServer {
 						slotTextValue = slot.ref.getTextValue();
 					}
 
-					
 					// Return text value.
+					String returnedText = null;
 					if (local) {
-						return textId + server.processTextCloned((Area) slot.ref.getHolder(), slotTextValue);
+						
+						// Process the text with an area server clone.
+						returnedText =  textId + server.processTextCloned((Area) slot.ref.getHolder(), slotTextValue);
 					}
 					else {
-						return textId + slotTextValue;
+						returnedText =  textId + slotTextValue;
 					}
+					
+					// Add meta information about tags source (which is current slot).
+					TagsSource source = TagsSource.newSlot(slot.ref.getId());
+					returnedText = server.addMetaInformation(returnedText, source, server.state);
+					
+					return returnedText;
 				}
 				else {
 					throwError("server.messageMissingSlotNameInTag");
@@ -1442,8 +1450,11 @@ public class AreaServer {
 				// Process properties texts.
 				server.processPropertiesTexts(properties);
 
-				// Get properties.
+				// Get URL string.
 				String href = properties.getProperty("href");
+				
+				// Evaluate the URL string.
+				href = server.evaluateText(href, String.class, false);
 				
 				// Get extra properties.
 				String extraProperties = getExtraProperties(properties,
@@ -2647,6 +2658,9 @@ public class AreaServer {
 				// Get global flag.
 				boolean isGlobal = properties.containsKey("global") || properties.containsKey("$global");
 				
+				// Strip meta information.
+				innerText = stripMetaInformation(innerText);
+				
 				// Get process inner text flag.
 				boolean isPitext = properties.containsKey("pitext") || properties.containsKey("$pitext");
 				if (isPitext) {
@@ -2966,18 +2980,77 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties) throws Exception {
 				
-				// Get "uri" property.
-				String uri = properties.getProperty("uri");
-				if (uri == null) {
-					throwError("server.messageMissingUriSpecification");
-				}
-				uri = server.evaluateText(uri, String.class, true);
-				if (uri == null) {
-					throwError("server.messageUriStringIsNull");
-				}
+				// Process property texts.
+				server.processPropertiesTexts(properties);
 				
-				// Set redirection.
-				server.state.redirection.setUri(uri);
+				// Try to get area specification for redirection.
+				Obj<Boolean> existsArea = new Obj<Boolean>();
+				Area area = getAreaFromProperties(server, properties, existsArea);
+				
+				// Set area for redirection.
+				if (existsArea.ref == true && area != null) {
+					
+					// Get language ID and evaluate it.
+					Long languageId = null;
+					
+					String languageIdText = properties.getProperty("langId");
+					if (languageIdText != null) {
+						languageId = server.evaluateText(languageIdText, Long.class, true);
+					}
+					
+					// Try to get ID from a language alias.
+					if (languageId == null) {
+						
+						String languageAlias = properties.getProperty("langAlias");
+						if (languageAlias != null) {
+							
+							languageAlias = server.evaluateText(languageAlias, String.class, false);
+							Language language = server.getLanguage(languageAlias);
+							
+							languageId = language.id;
+						}
+					}
+					
+					if (languageId == null) {
+						languageId = server.state.middle.getCurrentLanguageId();
+					}
+					
+					// Get version ID.
+					Long versionId = null;
+					String versionAlias = properties.getProperty("versionAlias");
+					if (versionAlias != null) {
+						
+						versionAlias = server.evaluateText(versionAlias, String.class, false);
+						
+						VersionObj version = server.getVersion(versionAlias);
+						versionId = version.getId();
+					}
+					
+					if (versionId == null) {
+						versionId = server.state.currentVersionId;
+					}
+					
+					// Get other properties.
+					Properties otherProperties = excludeProperties(properties, areaPropertiesArray, "uri", "langId", "langAlias", "versionAlias");
+					
+					// Get area URI.
+					String areaUri = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, versionId, false, otherProperties);
+					server.state.redirection.setUri(areaUri, false);
+				}
+				else {
+					// Get "uri" tag property.
+					String uri = properties.getProperty("uri");
+					if (uri == null) {
+						throwError("server.messageMissingUriSpecification");
+					}
+					uri = server.evaluateText(uri, String.class, true);
+					if (uri == null) {
+						throwError("server.messageUriStringIsNull");
+					}
+					
+					// Set redirection URI.
+					server.state.redirection.setUri(uri, true);
+				}
 				
 				return "";
 			}
@@ -3818,11 +3891,13 @@ public class AreaServer {
 		
 		return processTextCloned(area1, textValue, false);
 	}
-	
+
 	/**
 	 * Process text.
 	 * @param area
 	 * @param textValue
+	 * @param propagateErrors
+	 * @param source
 	 * @return
 	 */
 	public String processTextCloned(Area area1, String textValue, boolean propagateErrors)
@@ -4215,7 +4290,11 @@ public class AreaServer {
 						if (result.isOK()) {
 							
 							// Initialize level number.
-							state.level = 1;
+							state.level = 1L;
+							
+							// Add meta information.
+							TagsSource source = TagsSource.newResource(startResourceId);
+							resourceText.ref = addMetaInformation(resourceText.ref, source, state);
 						
 							// Process page text for the area.
 							state.text = new StringBuilder(resourceText.ref);
@@ -4309,7 +4388,7 @@ public class AreaServer {
 		
 		// Finalize page loading
 		finalizeAreaPageLoading(result, response2);
-
+		
 		return true;
 	}
 	
@@ -5355,8 +5434,8 @@ public class AreaServer {
 			int tagNameStart = positionOut.ref;
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
-			// Decrement tag name.
-			if (!tagName.isEmpty()) {
+			// Decrement tag name except META tag.
+			if (!tagName.isEmpty() && !"@META".equals(tagName)) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5395,8 +5474,8 @@ public class AreaServer {
 			int tagNameStart = positionOut.ref;
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
-			// Decrement tag name.
-			if (!tagName.isEmpty()) {
+			// Decrement tag name except META tag.
+			if (!tagName.isEmpty() && !"@META".equals(tagName)) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5452,6 +5531,103 @@ public class AreaServer {
 	}
 	
 	/**
+	 * Add meta information regarding the source of resulting text.
+	 * @param replacement 
+	 * @param source
+	 * @return
+	 */
+	protected String addMetaInformation(String replacement, TagsSource source, AreaServerState state) {
+		
+		// Add meta info for each line of code.
+		StringBuilder replacementLines = new StringBuilder();
+		Obj<Long> line = new Obj<Long>(0L);
+		replacement.lines().forEachOrdered(lineText -> replacementLines.append(!lineText.strip().isEmpty() ? String.format("[@@META line=%d]%s[/@@META]\n", line.ref++, lineText) : lineText));
+		
+		// Wrap text into META tag.
+		return String.format("[@@META source=#%s]%s[/@@META]", source,  replacementLines.toString());
+	}
+	
+	/**
+	 * Add meta information into the resulting text.
+	 * @param tagName
+	 * @param replaceent
+	 * @param state
+	 * @return
+	 */
+	private String addMetaInformation(String tagName, String replacement, AreaServerState state) {
+		
+		return String.format("[@@META tag=#%s]%s[/@@META]", tagName, replacement);
+	}
+	
+	/**
+	 * Strip meta information.
+	 * @param string
+	 * @return
+	 */
+	private static String stripMetaInformation(String string)
+			throws Exception {
+		
+		StringBuilder text = new StringBuilder(string);
+		
+		// META tag starts.
+		int position = 0;
+		while (true) {
+			
+			// Find tag start.
+			Obj<Integer> positionOut = new Obj<Integer>(position);
+			Obj<Integer> tagStartPositionOut = new Obj<Integer>();
+			
+			// Find next tag.
+			if (!ServerUtilities.findTagStartNextLevel(text, positionOut, tagStartPositionOut)) {
+				break;
+			}
+			
+			// Read tag name.
+			String tagName = ServerUtilities.readTagName(text, positionOut);
+			
+			// Remove META tag.
+			if ("@META".equals(tagName)) {
+				
+				// Parse properties.
+				Properties properties = new Properties();
+				Obj<Integer> endPosition = new Obj<Integer>(positionOut.ref);
+				MiddleResult result = ServerUtilities.parseTagProperties(text, endPosition, properties, true);
+				result.throwPossibleException();
+				
+				text.replace(tagStartPositionOut.ref, endPosition.ref, "");
+				
+				position = tagStartPositionOut.ref;
+			}
+		}
+		
+		// META tag ends.
+		position = 0;
+		while (true) {
+			
+			// Find tag start.
+			Obj<Integer> positionOut = new Obj<Integer>(position);
+			Obj<Integer> tagStartPositionOut = new Obj<Integer>();
+			
+			// Find next tag.
+			if (!ServerUtilities.findTagEndNextLevel(text, positionOut, tagStartPositionOut)) {
+				break;
+			}
+			
+			// Read tag name.
+			String tagName = ServerUtilities.readTagName(text, positionOut);
+			
+			// Remove META tag.
+			if ("@META".equals(tagName)) {
+				
+				text.replace(tagStartPositionOut.ref, positionOut.ref + 1, "");
+				positionOut.ref = tagStartPositionOut.ref;
+			}
+		}
+		
+		return text.toString();
+	}
+
+	/**
 	 * Process area single tags.
 	 * @param tagName 
 	 * @param area
@@ -5472,6 +5648,10 @@ public class AreaServer {
 		
 		// Call processor.
 		String replace = processor.processTag(this);
+		
+		// Wrap into meta information.
+		replace = addMetaInformation(tagName, replace, state);
+		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		
@@ -5511,6 +5691,10 @@ public class AreaServer {
 		
 		// Call processor.
 		String replace = processor.processTag(this, properties);
+		
+		// Wrap into meta information.
+		replace = addMetaInformation(tagName, replace, state);
+		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		
 		state.position = state.tagStartPosition;

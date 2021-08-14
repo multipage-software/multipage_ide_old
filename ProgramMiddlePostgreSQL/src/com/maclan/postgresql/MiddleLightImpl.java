@@ -153,28 +153,28 @@ public class MiddleLightImpl implements MiddleLight {
 	
 	protected static final String selectAreaSlotValue = "SELECT alias, revision, get_localized_text(localized_text_value_id, ?) AS localized_text_value, text_value, integer_value, real_value, boolean_value, enumeration_value_id, color, area_value, is_default, value_meaning " +
 	                                                    "FROM area_slot " +
-	                                                    "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-		                                                "ON alias = slot_alias AND revision = last_revision " +
+		                                                "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
+		                                                "ON alias = slot_alias AND area_id = slot_area_id AND revision = last_revision " +
 	                                                    "WHERE alias = ? " +
 	                                                    "AND area_id = ?";
 
 	private static final String selectAreaSlotsRef = "SELECT alias, revision, access, is_default, special_value, external_provider, external_change, reads_input, writes_output, id " +
 	                                                 "FROM area_slot " +
-	                                                 "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-	                                                 "ON alias = slot_alias AND revision = last_revision " +
+		                                             "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
+		                                             "ON alias = slot_alias AND area_id = slot_area_id AND revision = last_revision " +
 	                                                 "WHERE area_id = ?";
 	
 	private static final String selectAreaSlotsRefEx = "SELECT alias, revision, access, special_value, external_provider, external_change, reads_input, writes_output, id " +
 													   "FROM area_slot " +
-													   "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-	                                                   "ON alias = slot_alias AND revision = last_revision " +
+		                                               "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
+		                                               "ON alias = slot_alias AND area_id = slot_area_id AND revision = last_revision " +
 													   "WHERE area_id = ? " +
 													   "AND is_default = ?";
 	
 	private static final String selectSlotTextDirectly = "SELECT alias, revision, text_value " +
 			 											 "FROM area_slot " +
-			 											 "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-			 											 "ON alias = slot_alias AND revision = last_revision " +
+			                                              "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
+			                                              "ON alias = slot_alias AND area_id = slot_area_id AND revision = last_revision " +
 			 											 "WHERE id = ? ";
 	
 	protected static final String selectStartArea = "SELECT area_id " +
@@ -2230,11 +2230,16 @@ public class MiddleLightImpl implements MiddleLight {
 		Obj<Slot> lastFoundDefaultSlot = new Obj<Slot>();
 		
 		MiddleResult result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
-				lastFoundDefaultSlot, LoadSlotHint.superAreas, false, null, parent, loadValue);
+				lastFoundDefaultSlot, LoadSlotHint.area, false, null, parent, loadValue);
 		if (result.isNotOK()) {
 			
 			result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
-				lastFoundDefaultSlot, LoadSlotHint.subAreas, false, null, parent, loadValue);
+					lastFoundDefaultSlot, LoadSlotHint.superAreas, false, null, parent, loadValue);
+			if (result.isNotOK()) {
+				
+				result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
+					lastFoundDefaultSlot, LoadSlotHint.subAreas, false, null, parent, loadValue);
+			}
 		}
 		
 		return MiddleResult.OK;
