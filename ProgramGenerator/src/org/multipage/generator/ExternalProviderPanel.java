@@ -16,13 +16,12 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
+import org.maclan.ExternalLinkParser;
+import org.maclan.Slot;
+import org.maclan.ExternalLinkParser.Type;
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
-import com.maclan.ExternalLinkParser;
-import com.maclan.ExternalLinkParser.Type;
-import com.maclan.Slot;
 
 /**
  * 

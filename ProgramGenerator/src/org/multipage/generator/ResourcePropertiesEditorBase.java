@@ -20,14 +20,13 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
+import org.maclan.AreaResource;
+import org.maclan.MimeType;
+import org.maclan.Resource;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.AreaResource;
-import com.maclan.MimeType;
-import com.maclan.Resource;
 
 /**
  * @author

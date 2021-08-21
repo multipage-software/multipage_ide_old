@@ -22,6 +22,6 @@ public class GeneratorFullMain {
 	public static void main(String[] args) {
 
 		// Use Derby middle layer.
-		GeneratorMain.main("Multipage Generator Network", args, "com.maclan.postgresql", true);
+		GeneratorMain.main("Multipage Generator Network", args, "org.maclan.postgresql", true);
 	}
 }

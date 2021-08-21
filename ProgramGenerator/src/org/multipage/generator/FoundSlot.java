@@ -9,9 +9,8 @@ package org.multipage.generator;
 
 import java.util.LinkedList;
 
+import org.maclan.Slot;
 import org.multipage.gui.FoundAttr;
-
-import com.maclan.Slot;
 
 
 /**

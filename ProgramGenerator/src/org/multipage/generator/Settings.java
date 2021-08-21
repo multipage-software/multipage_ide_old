@@ -30,15 +30,14 @@ import javax.swing.JSeparator;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
 
+import org.maclan.MiddleUtility;
+import org.maclan.server.DebugListener;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.MiddleUtility;
-import com.maclan.server.DebugListener;
 
 /**
  * 
@@ -708,7 +707,7 @@ public class Settings extends JDialog {
 			textDatabaseAccess.setText(databaseDirectory);
 		}
 		// On PostgreSQL database.
-		else if ("com.maclan.postgresql".equals(MiddleUtility.getPathToMiddle())) {
+		else if ("org.maclan.postgresql".equals(MiddleUtility.getPathToMiddle())) {
 			
 			
 		}

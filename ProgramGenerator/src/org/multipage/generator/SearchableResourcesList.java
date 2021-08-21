@@ -12,7 +12,7 @@ import java.util.LinkedList;
 
 import javax.swing.JList;
 
-import com.maclan.MimeType;
+import org.maclan.MimeType;
 
 /**
  * @author

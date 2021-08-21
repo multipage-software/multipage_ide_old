@@ -9,12 +9,11 @@ package org.multipage.translator;
 
 import javax.swing.*;
 
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
 import org.multipage.basic.*;
 import org.multipage.gui.*;
 import org.multipage.util.Resources;
-
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
 
 /**
  * @author
@@ -78,7 +77,7 @@ public class TranslatorMain {
 		}
 		
 		// Set path to middle objects.
-		MiddleUtility.setPathToMiddle("com.maclan.postgresql");
+		MiddleUtility.setPathToMiddle("org.maclan.postgresql");
 		
 		// Create serializer.
 		serializer = new StateSerializer(serilizedDataLocation);

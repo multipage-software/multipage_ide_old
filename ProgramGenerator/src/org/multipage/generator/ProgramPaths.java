@@ -8,9 +8,8 @@ package org.multipage.generator;
 
 import java.util.function.Supplier;
 
+import org.maclan.MiddleUtility;
 import org.multipage.util.Resources;
-
-import com.maclan.MiddleUtility;
 
 /**
  * @author user

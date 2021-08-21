@@ -46,6 +46,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.StyleSheet;
 
+import org.maclan.server.XdebugListener;
+import org.maclan.server.XdebugPacket;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.Callback;
 import org.multipage.gui.Images;
@@ -58,9 +60,6 @@ import org.multipage.util.j;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import com.maclan.server.XdebugListener;
-import com.maclan.server.XdebugPacket;
 
 /**
  * This is GUI for debugging

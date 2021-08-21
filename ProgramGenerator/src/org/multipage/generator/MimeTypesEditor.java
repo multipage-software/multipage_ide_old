@@ -42,6 +42,10 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableRowSorter;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.MimeType;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
@@ -49,11 +53,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.MimeType;
 
 /**
  * 

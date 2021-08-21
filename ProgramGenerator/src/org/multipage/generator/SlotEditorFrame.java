@@ -13,13 +13,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.maclan.Slot;
+import org.maclan.SlotType;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Slot;
-import com.maclan.SlotType;
 
 /**
  * 

@@ -17,14 +17,13 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Resource;
 
 /**
  * @author

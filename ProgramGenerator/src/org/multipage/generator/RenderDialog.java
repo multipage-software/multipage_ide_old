@@ -40,6 +40,11 @@ import javax.swing.JToolBar;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 
+import org.maclan.Language;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.VersionObj;
+import org.maclan.server.BrowserParameters;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
@@ -47,12 +52,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Language;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.VersionObj;
-import com.maclan.server.BrowserParameters;
 
 /**
  * 

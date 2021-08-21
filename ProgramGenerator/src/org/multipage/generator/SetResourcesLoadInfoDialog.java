@@ -29,12 +29,11 @@ import javax.swing.JToolBar;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
 
+import org.maclan.ResourceConstructor;
 import org.multipage.gui.Images;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.ResourceConstructor;
 
 /**
  * 

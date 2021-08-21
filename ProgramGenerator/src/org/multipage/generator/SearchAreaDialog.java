@@ -34,13 +34,12 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
 
 
 /**

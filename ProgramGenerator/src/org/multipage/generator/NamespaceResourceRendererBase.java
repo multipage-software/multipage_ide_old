@@ -15,10 +15,9 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import org.maclan.Resource;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Utility;
-
-import com.maclan.Resource;
 
 /**
  * @author

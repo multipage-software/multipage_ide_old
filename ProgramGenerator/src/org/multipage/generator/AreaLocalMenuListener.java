@@ -9,7 +9,7 @@ package org.multipage.generator;
 
 import java.awt.Component;
 
-import com.maclan.Area;
+import org.maclan.Area;
 
 /**
  * 

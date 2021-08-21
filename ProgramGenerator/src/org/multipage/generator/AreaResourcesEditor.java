@@ -36,6 +36,13 @@ import javax.swing.JToolBar;
 import javax.swing.SpringLayout;
 import javax.swing.TransferHandler;
 
+import org.maclan.Area;
+import org.maclan.AreaResource;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.MimeType;
+import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.ToolBarKit;
@@ -44,14 +51,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-
-import com.maclan.Area;
-import com.maclan.AreaResource;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.MimeType;
-import com.maclan.Resource;
 
 /**
  * 

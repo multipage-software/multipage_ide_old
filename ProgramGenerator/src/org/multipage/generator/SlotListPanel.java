@@ -59,6 +59,12 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Slot;
+import org.maclan.SlotHolder;
+import org.maclan.SlotType;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Callback;
 import org.multipage.gui.EditorPaneEx;
@@ -69,13 +75,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Slot;
-import com.maclan.SlotHolder;
-import com.maclan.SlotType;
 
 /**
  * 

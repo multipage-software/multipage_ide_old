@@ -33,15 +33,14 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.maclan.Area;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextPopupMenu;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.MiddleResult;
 
 /**
  * 

@@ -15,12 +15,11 @@ import java.util.Map;
 
 import javax.swing.JLabel;
 
+import org.maclan.ColorObj;
+import org.maclan.Slot;
+import org.maclan.SlotType;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Utility;
-
-import com.maclan.ColorObj;
-import com.maclan.Slot;
-import com.maclan.SlotType;
 
 /**
  * Alias renderer.

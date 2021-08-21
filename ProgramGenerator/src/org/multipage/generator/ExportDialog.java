@@ -30,17 +30,16 @@ import javax.swing.JTextField;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
+import org.maclan.Area;
+import org.maclan.AreaTreeData;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-
-import com.maclan.Area;
-import com.maclan.AreaTreeData;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * 

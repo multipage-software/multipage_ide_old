@@ -9,10 +9,9 @@ package org.multipage.translator;
 
 import javax.swing.*;
 
+import org.maclan.*;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.*;
-
-import com.maclan.*;
 
 import java.awt.*;
 import java.awt.event.*;

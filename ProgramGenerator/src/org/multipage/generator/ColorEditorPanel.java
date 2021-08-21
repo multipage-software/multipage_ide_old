@@ -26,13 +26,12 @@ import javax.swing.JTextPane;
 import javax.swing.SpringLayout;
 import javax.swing.border.BevelBorder;
 
+import org.maclan.ColorObj;
 import org.multipage.gui.Images;
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.TextPaneEx;
 import org.multipage.gui.Utility;
-
-import com.maclan.ColorObj;
 
 /**
  * 

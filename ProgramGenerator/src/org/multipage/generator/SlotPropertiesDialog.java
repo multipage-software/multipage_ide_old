@@ -23,13 +23,12 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.SpringLayout;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Slot;
 
 /**
  * 

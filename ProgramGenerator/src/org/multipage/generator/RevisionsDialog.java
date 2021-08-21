@@ -28,14 +28,13 @@ import javax.swing.ListCellRenderer;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Revision;
+import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.Utility;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Revision;
-import com.maclan.Slot;
 
 /**
  * 

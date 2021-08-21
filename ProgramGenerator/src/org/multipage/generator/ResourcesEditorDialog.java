@@ -38,14 +38,13 @@ import javax.swing.JTree;
 import javax.swing.SpringLayout;
 import javax.swing.TransferHandler;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Namespace;
+import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Namespace;
-import com.maclan.Resource;
 
 /**
  * 

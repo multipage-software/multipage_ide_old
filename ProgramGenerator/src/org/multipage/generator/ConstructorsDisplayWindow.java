@@ -22,10 +22,9 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
+import org.maclan.Area;
 import org.multipage.gui.ToolTipWindow;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
 
 /**
  * @author

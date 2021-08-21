@@ -43,14 +43,13 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.maclan.Area;
+import org.maclan.ConstructorHolder;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Area;
-import com.maclan.ConstructorHolder;
 
 /**
  * 

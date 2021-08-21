@@ -17,14 +17,13 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
+import org.maclan.AreaReference;
 import org.multipage.gui.Images;
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreaReference;
 
 /**
  * 

@@ -33,6 +33,10 @@ import javax.swing.SpringLayout;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.ProgressDialog;
@@ -40,11 +44,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
 
 /**
  * 

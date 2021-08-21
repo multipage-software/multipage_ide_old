@@ -29,12 +29,11 @@ import javax.swing.JSplitPane;
 import javax.swing.SpringLayout;
 import javax.swing.event.TreeSelectionEvent;
 
+import org.maclan.Area;
+import org.maclan.AreaResource;
+import org.maclan.Resource;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
-import com.maclan.AreaResource;
-import com.maclan.Resource;
 
 /**
  * 

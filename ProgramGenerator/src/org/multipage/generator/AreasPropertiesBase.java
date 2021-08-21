@@ -24,16 +24,15 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * @author

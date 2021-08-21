@@ -35,6 +35,8 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.maclan.Area;
+import org.maclan.AreaRelation;
 import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
@@ -42,9 +44,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreaRelation;
 
 /**
  * 

@@ -11,10 +11,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SpringLayout;
 
+import org.maclan.server.ServerUtilities;
 import org.multipage.generator.RevertExternalProvidersDialog.ListEntry;
 import org.multipage.gui.Utility;
-
-import com.maclan.server.ServerUtilities;
 
 import name.fraser.neil.plaintext.diff_match_patch;
 import name.fraser.neil.plaintext.diff_match_patch.Diff;

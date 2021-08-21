@@ -24,14 +24,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JToolBar;
 import javax.swing.SpringLayout;
 
+import org.maclan.Slot;
 import org.multipage.gui.CheckBoxList;
 import org.multipage.gui.CheckBoxListManager;
 import org.multipage.gui.Images;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Slot;
 
 /**
  * 

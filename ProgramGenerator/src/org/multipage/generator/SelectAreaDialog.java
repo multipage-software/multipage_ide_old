@@ -32,11 +32,10 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
 
 /**
  * @author

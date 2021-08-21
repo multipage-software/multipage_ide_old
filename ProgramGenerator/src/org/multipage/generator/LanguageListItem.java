@@ -16,9 +16,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Language;
 import org.multipage.gui.Utility;
-
-import com.maclan.Language;
 
 /**
  * 

@@ -25,14 +25,13 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 
+import org.maclan.MiddleResult;
+import org.maclan.Namespace;
+import org.maclan.NamespacesModel;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.MiddleResult;
-import com.maclan.Namespace;
-import com.maclan.NamespacesModel;
 
 /**
  * 

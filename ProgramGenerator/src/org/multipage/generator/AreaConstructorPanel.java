@@ -16,15 +16,14 @@ import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
+import org.maclan.ConstructorHolder;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Area;
-import com.maclan.ConstructorHolder;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * 

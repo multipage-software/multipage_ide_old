@@ -48,6 +48,21 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.maclan.Area;
+import org.maclan.AreaRelation;
+import org.maclan.AreaTreeData;
+import org.maclan.Language;
+import org.maclan.Middle;
+import org.maclan.MiddleListener;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.Slot;
+import org.maclan.VersionObj;
+import org.maclan.server.BrowserParameters;
+import org.maclan.server.DebugListener;
+import org.maclan.server.DebugViewerCallback;
+import org.maclan.server.ProgramServlet;
+import org.maclan.server.TextRenderer;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.BareBonesBrowserLaunch;
 import org.multipage.gui.Images;
@@ -62,22 +77,6 @@ import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
 import org.multipage.util.j;
-
-import com.maclan.Area;
-import com.maclan.AreaRelation;
-import com.maclan.AreaTreeData;
-import com.maclan.Language;
-import com.maclan.Middle;
-import com.maclan.MiddleListener;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.Slot;
-import com.maclan.VersionObj;
-import com.maclan.server.BrowserParameters;
-import com.maclan.server.DebugListener;
-import com.maclan.server.DebugViewerCallback;
-import com.maclan.server.ProgramServlet;
-import com.maclan.server.TextRenderer;
 
 /**
  * 

@@ -30,16 +30,15 @@ import javax.swing.SpringLayout;
 import javax.swing.UIManager;
 import javax.swing.text.JTextComponent;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Slot;
+import org.maclan.SlotHolder;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Slot;
-import com.maclan.SlotHolder;
 
 /**
  * 

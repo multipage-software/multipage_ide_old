@@ -54,6 +54,7 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 
+import org.maclan.MiddleUtility;
 import org.multipage.gui.Images;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -63,8 +64,6 @@ import org.w3c.dom.Node;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
-
-import com.maclan.MiddleUtility;
 
 /**
  * 

@@ -22,11 +22,10 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
 import org.multipage.generator.ProgramPaths.PathSupplier;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
 
 /**
  * 

@@ -37,16 +37,15 @@ import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 
+import org.maclan.Language;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.VersionObj;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.translator.LanguageRenderer;
 import org.multipage.util.Obj;
-
-import com.maclan.Language;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.VersionObj;
 
 /**
  * 

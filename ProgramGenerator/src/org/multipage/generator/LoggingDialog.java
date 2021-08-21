@@ -67,6 +67,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.maclan.help.ProgramHelp;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.TextAreaEx;
@@ -74,8 +75,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
-
-import com.maclan.help.ProgramHelp;
 
 /**
  * 

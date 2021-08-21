@@ -20,11 +20,10 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
 
 /**
  * 

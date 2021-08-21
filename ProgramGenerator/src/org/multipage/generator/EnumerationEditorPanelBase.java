@@ -10,10 +10,9 @@ package org.multipage.generator;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 
+import org.maclan.EnumerationValue;
+import org.maclan.Slot;
 import org.multipage.gui.StringValueEditor;
-
-import com.maclan.EnumerationValue;
-import com.maclan.Slot;
 
 /**
  * @author

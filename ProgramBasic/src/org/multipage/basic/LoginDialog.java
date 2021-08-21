@@ -58,12 +58,11 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
+import org.maclan.MiddleResult;
+import org.maclan.server.ProgramHttpServer;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.MiddleResult;
-import com.maclan.server.ProgramHttpServer;
 
 /**
  * 

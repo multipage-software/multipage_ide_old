@@ -12,13 +12,12 @@ import java.awt.Window;
 
 import javax.swing.JFrame;
 
+import org.maclan.Area;
+import org.maclan.Resource;
+import org.maclan.Slot;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.TextPopupMenuAddIn;
-
-import com.maclan.Area;
-import com.maclan.Resource;
-import com.maclan.Slot;
 
 /**
  * @author

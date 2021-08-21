@@ -35,14 +35,13 @@ import javax.swing.SpringLayout;
 import javax.swing.UIManager;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
+import org.maclan.Slot;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Slot;
 
 /**
  * 

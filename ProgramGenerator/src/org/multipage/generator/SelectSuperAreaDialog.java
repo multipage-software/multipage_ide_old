@@ -28,12 +28,11 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SpringLayout;
 import javax.swing.table.DefaultTableModel;
 
+import org.maclan.Area;
+import org.maclan.AreaRelation;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreaRelation;
 
 /**
  * 

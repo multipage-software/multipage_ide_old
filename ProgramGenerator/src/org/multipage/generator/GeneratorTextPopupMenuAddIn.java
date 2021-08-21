@@ -15,15 +15,14 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
+import org.maclan.Slot;
+import org.maclan.SlotHolder;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
-import com.maclan.Slot;
-import com.maclan.SlotHolder;
 
 /**
  * @author

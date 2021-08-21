@@ -20,11 +20,10 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Namespace;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Namespace;
 
 /**
  * 

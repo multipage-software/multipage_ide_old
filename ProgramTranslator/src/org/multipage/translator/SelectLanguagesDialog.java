@@ -11,10 +11,9 @@ import java.util.*;
 
 import javax.swing.*;
 
+import org.maclan.*;
 import org.multipage.gui.*;
 import org.multipage.util.*;
-
-import com.maclan.*;
 
 import java.awt.*;
 import java.awt.event.*;

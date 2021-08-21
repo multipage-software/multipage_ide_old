@@ -25,6 +25,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.SpringLayout;
 
+import org.maclan.Area;
 import org.multipage.gui.Images;
 import org.multipage.gui.InsertPanel;
 import org.multipage.gui.StringValueEditor;
@@ -32,8 +33,6 @@ import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.TextPopupMenu;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
 
 /**
  * 

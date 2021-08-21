@@ -23,12 +23,11 @@ import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 
+import org.maclan.EnumerationObj;
+import org.maclan.EnumerationValue;
+import org.maclan.Slot;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.Utility;
-
-import com.maclan.EnumerationObj;
-import com.maclan.EnumerationValue;
-import com.maclan.Slot;
 
 /**
  * 

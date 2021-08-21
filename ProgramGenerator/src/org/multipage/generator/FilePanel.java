@@ -24,6 +24,9 @@ import javax.swing.JLabel;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
+import org.maclan.Area;
+import org.maclan.ExternalLinkParser;
+import org.maclan.MiddleResult;
 import org.multipage.gui.Images;
 import org.multipage.gui.InsertPanel;
 import org.multipage.gui.StringValueEditor;
@@ -33,9 +36,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 import com.ibm.icu.text.CharsetMatch;
-import com.maclan.Area;
-import com.maclan.ExternalLinkParser;
-import com.maclan.MiddleResult;
 
 /**
  * 

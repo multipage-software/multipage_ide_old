@@ -34,6 +34,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
@@ -41,9 +43,6 @@ import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * 

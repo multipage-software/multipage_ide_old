@@ -30,13 +30,12 @@ import javax.swing.SwingConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import org.maclan.server.BrowserParameters;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
-
-import com.maclan.server.BrowserParameters;
 
 
 /**

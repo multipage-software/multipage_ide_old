@@ -15,7 +15,7 @@ import java.util.LinkedList;
 
 import javax.swing.JFrame;
 
-import com.maclan.Slot;
+import org.maclan.Slot;
 
 /**
  * @author

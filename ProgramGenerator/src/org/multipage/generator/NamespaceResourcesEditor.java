@@ -38,6 +38,11 @@ import javax.swing.KeyStroke;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.MimeType;
+import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
@@ -47,12 +52,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.MimeType;
-import com.maclan.Resource;
 
 /**
  * 

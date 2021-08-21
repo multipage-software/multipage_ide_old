@@ -21,6 +21,10 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
 
+import org.maclan.Area;
+import org.maclan.Slot;
+import org.maclan.help.Intellisense;
+import org.maclan.server.ServerUtilities;
 import org.multipage.gui.Callback;
 import org.multipage.gui.CssAnimationPanel;
 import org.multipage.gui.CssBackgroundImagesPanel;
@@ -57,11 +61,6 @@ import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
-
-import com.maclan.Area;
-import com.maclan.Slot;
-import com.maclan.help.Intellisense;
-import com.maclan.server.ServerUtilities;
 
 /**
  * 

@@ -32,12 +32,11 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.maclan.Area;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
 
 /**
  * 

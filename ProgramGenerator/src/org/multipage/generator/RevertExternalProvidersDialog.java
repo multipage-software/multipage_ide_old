@@ -30,15 +30,14 @@ import javax.swing.JScrollPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.Slot;
 
 /**
  * 

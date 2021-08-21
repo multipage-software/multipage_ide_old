@@ -18,6 +18,13 @@ import java.util.Properties;
 
 import javax.swing.JFrame;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Resource;
+import org.maclan.Slot;
+import org.maclan.server.TextRenderer;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
@@ -25,14 +32,6 @@ import org.multipage.gui.SerializeStateAdapter;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Resource;
-import com.maclan.Slot;
-import com.maclan.server.TextRenderer;
 
 import build_number.BuildNumber;
 

@@ -29,12 +29,11 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.SpringLayout;
 
+import org.maclan.MimeType;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.MimeType;
 
 /**
  * Option class.

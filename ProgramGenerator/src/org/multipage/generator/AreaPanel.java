@@ -32,6 +32,8 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.maclan.Area;
+import org.maclan.MiddleUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.InsertPanel;
 import org.multipage.gui.StringValueEditor;
@@ -39,9 +41,6 @@ import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.MiddleUtility;
 
 /**
  * 

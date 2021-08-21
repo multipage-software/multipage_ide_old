@@ -14,9 +14,8 @@ import java.awt.event.WindowAdapter;
 
 import javax.swing.JFrame;
 
+import org.maclan.Area;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
 
 /**
  * @author

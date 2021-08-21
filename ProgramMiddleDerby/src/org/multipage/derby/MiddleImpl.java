@@ -18,10 +18,9 @@ import java.util.regex.Pattern;
 
 import javax.sql.rowset.serial.SerialBlob;
 
+import org.maclan.*;
 import org.multipage.gui.Utility;
 import org.multipage.util.*;
-
-import com.maclan.*;
 
 /**
  * @author

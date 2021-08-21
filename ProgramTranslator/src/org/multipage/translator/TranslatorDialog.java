@@ -16,14 +16,13 @@ import javax.xml.transform.dom.*;
 import javax.xml.transform.stream.*;
 import javax.xml.validation.*;
 
+import org.maclan.*;
 import org.multipage.basic.*;
 import org.multipage.gui.*;
 import org.multipage.util.*;
 import org.w3c.dom.*;
 import org.w3c.dom.Element;
 import org.xml.sax.*;
-
-import com.maclan.*;
 
 import java.awt.*;
 import java.awt.event.*;

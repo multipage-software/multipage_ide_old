@@ -36,28 +36,27 @@ import java.util.function.Function;
 
 import javax.sql.DataSource;
 
+import org.maclan.Area;
+import org.maclan.AreaResource;
+import org.maclan.EnumerationObj;
+import org.maclan.EnumerationValue;
+import org.maclan.Language;
+import org.maclan.LoadSlotHint;
+import org.maclan.MiddleLight;
+import org.maclan.MiddleListener;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.MimeType;
+import org.maclan.Resource;
+import org.maclan.ServerCache;
+import org.maclan.Slot;
+import org.maclan.StartResource;
+import org.maclan.VersionData;
+import org.maclan.VersionObj;
 import org.multipage.gui.Utility;
 import org.multipage.util.ImgUtility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreaResource;
-import com.maclan.EnumerationObj;
-import com.maclan.EnumerationValue;
-import com.maclan.Language;
-import com.maclan.LoadSlotHint;
-import com.maclan.MiddleLight;
-import com.maclan.MiddleListener;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.MimeType;
-import com.maclan.Resource;
-import com.maclan.ServerCache;
-import com.maclan.Slot;
-import com.maclan.StartResource;
-import com.maclan.VersionData;
-import com.maclan.VersionObj;
 
 /**
  * @author
@@ -396,7 +395,7 @@ public class MiddleLightImpl implements MiddleLight {
 	public MiddleLightImpl() {
 
 		// Add resource.
-		Resources.loadResource("com.maclan.properties.messages");
+		Resources.loadResource("org.maclan.properties.messages");
 	}
 	
 	/**

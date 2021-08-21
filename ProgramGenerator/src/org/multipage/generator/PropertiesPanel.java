@@ -15,10 +15,9 @@ import java.util.LinkedList;
 
 import javax.swing.JPanel;
 
+import org.maclan.Area;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
 
 
 /**

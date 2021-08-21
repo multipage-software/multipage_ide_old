@@ -7,8 +7,8 @@
 
 package org.multipage.generator;
 
-import com.maclan.Area;
-import com.maclan.VersionObj;
+import org.maclan.Area;
+import org.maclan.VersionObj;
 
 /**
  * 

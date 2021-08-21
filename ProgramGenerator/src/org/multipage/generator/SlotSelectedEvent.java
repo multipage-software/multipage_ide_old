@@ -3,7 +3,7 @@
  */
 package org.multipage.generator;
 
-import com.maclan.Slot;
+import org.maclan.Slot;
 
 /**
  * @author vaclav

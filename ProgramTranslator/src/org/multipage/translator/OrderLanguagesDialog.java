@@ -12,11 +12,10 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.table.*;
 
+import org.maclan.*;
 import org.multipage.basic.*;
 import org.multipage.gui.*;
 import org.multipage.util.*;
-
-import com.maclan.*;
 
 import java.awt.event.*;
 import java.awt.image.BufferedImage;

@@ -28,13 +28,12 @@ import javax.swing.SpringLayout;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * 

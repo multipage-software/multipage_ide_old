@@ -7,7 +7,7 @@
 
 package org.multipage.generator;
 
-import com.maclan.Namespace;
+import org.maclan.Namespace;
 
 /**
  * 

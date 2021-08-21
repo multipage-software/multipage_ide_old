@@ -36,15 +36,14 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
+import org.maclan.MimeType;
+import org.maclan.Resource;
 import org.multipage.gui.BooleanTriState;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-
-import com.maclan.MimeType;
-import com.maclan.Resource;
 
 
 /**

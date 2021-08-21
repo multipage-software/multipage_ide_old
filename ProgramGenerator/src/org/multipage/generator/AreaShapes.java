@@ -26,14 +26,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import org.maclan.Area;
+import org.maclan.AreasModel;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreasModel;
 
 
 /**

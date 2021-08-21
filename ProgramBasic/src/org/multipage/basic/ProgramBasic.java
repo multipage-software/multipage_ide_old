@@ -17,6 +17,14 @@ import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.Properties;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.Slot;
+import org.maclan.help.ProgramHelp;
+import org.maclan.server.JettyHttpServer;
+import org.maclan.server.ProgramHttpServer;
 import org.multipage.gui.FindReplaceDialog;
 import org.multipage.gui.HelpDialog;
 import org.multipage.gui.SerializeStateAdapter;
@@ -24,15 +32,6 @@ import org.multipage.gui.StateSerializer;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.Slot;
-import com.maclan.help.ProgramHelp;
-import com.maclan.server.JettyHttpServer;
-import com.maclan.server.ProgramHttpServer;
 
 /**
  * @author

@@ -38,14 +38,13 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
+import org.maclan.EnumerationObj;
+import org.maclan.EnumerationValue;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.EnumerationObj;
-import com.maclan.EnumerationValue;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
 
 /**
  * 

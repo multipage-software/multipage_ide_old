@@ -22,10 +22,9 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.SpringLayout;
 
+import org.maclan.Slot;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.Slot;
 
 /**
  * 

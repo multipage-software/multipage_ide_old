@@ -28,10 +28,9 @@ import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import org.maclan.Resource;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
-
-import com.maclan.Resource;
 
 /**
  * 

@@ -12,9 +12,8 @@ import java.awt.LayoutManager;
 
 import javax.swing.JPanel;
 
+import org.maclan.Area;
 import org.multipage.gui.Utility;
-
-import com.maclan.Area;
 
 /**
  * @author

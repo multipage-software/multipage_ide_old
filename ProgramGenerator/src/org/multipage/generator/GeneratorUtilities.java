@@ -27,19 +27,18 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 
+import org.maclan.Area;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.MimeType;
+import org.maclan.Slot;
+import org.maclan.SlotType;
+import org.maclan.server.AreaServer;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.generator.ProgramPaths.PathSupplier;
 import org.multipage.gui.RendererPathItem;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Area;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.MimeType;
-import com.maclan.Slot;
-import com.maclan.SlotType;
-import com.maclan.server.AreaServer;
 
 /**
  * @author

@@ -15,6 +15,11 @@ import java.util.Properties;
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.help.Intellisense;
+import org.maclan.help.ProgramHelp;
+import org.maclan.server.AreaServer;
 import org.multipage.basic.GuiWatchDog;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.GeneralGui;
@@ -26,12 +31,6 @@ import org.multipage.translator.ProgramDictionary;
 import org.multipage.util.Obj;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.j;
-
-import com.maclan.MiddleResult;
-import com.maclan.MiddleUtility;
-import com.maclan.help.Intellisense;
-import com.maclan.help.ProgramHelp;
-import com.maclan.server.AreaServer;
 
 
 /**

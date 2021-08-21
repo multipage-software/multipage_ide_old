@@ -15,10 +15,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.VersionObj;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
-
-import com.maclan.VersionObj;
 
 /**
  * 

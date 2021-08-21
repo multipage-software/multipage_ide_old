@@ -12,14 +12,13 @@ import java.util.LinkedList;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.maclan.Area;
+import org.maclan.AreaReference;
+import org.maclan.Slot;
+import org.maclan.SlotHolder;
+import org.maclan.SlotType;
 import org.multipage.gui.StringValueEditor;
 import org.multipage.util.Resources;
-
-import com.maclan.Area;
-import com.maclan.AreaReference;
-import com.maclan.Slot;
-import com.maclan.SlotHolder;
-import com.maclan.SlotType;
 
 /**
  * 

@@ -11,9 +11,8 @@ import java.util.LinkedList;
 
 import javax.swing.JFrame;
 
+import org.maclan.Area;
 import org.multipage.translator.TranslatorDialog;
-
-import com.maclan.Area;
 
 /**
  * 

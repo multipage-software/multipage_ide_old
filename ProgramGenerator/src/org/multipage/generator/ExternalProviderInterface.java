@@ -6,7 +6,7 @@
  */
 package org.multipage.generator;
 
-import com.maclan.Area;
+import org.maclan.Area;
 
 /**
  * @author user

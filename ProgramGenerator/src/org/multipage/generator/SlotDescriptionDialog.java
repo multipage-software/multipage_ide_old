@@ -29,16 +29,15 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.EditorPaneEx;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.Slot;
 
 /**
  * 

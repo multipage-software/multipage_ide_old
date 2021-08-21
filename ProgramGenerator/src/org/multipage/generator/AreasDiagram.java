@@ -40,6 +40,14 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
+import org.maclan.Area;
+import org.maclan.AreaResource;
+import org.maclan.AreasModel;
+import org.maclan.ConstructorGroup;
+import org.maclan.ConstructorHolder;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.maclan.ResourceConstructor;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.Utility;
@@ -50,15 +58,6 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
 import org.multipage.util.j;
-
-import com.maclan.Area;
-import com.maclan.AreaResource;
-import com.maclan.AreasModel;
-import com.maclan.ConstructorGroup;
-import com.maclan.ConstructorHolder;
-import com.maclan.Middle;
-import com.maclan.MiddleResult;
-import com.maclan.ResourceConstructor;
 
 /**
  * @author
