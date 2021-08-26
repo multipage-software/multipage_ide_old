@@ -5564,7 +5564,7 @@ public class AreaServer {
 		// Add meta info for each line of code.
 		StringBuilder replacementLines = new StringBuilder();
 		Obj<Long> line = new Obj<Long>(0L);
-		replacement.lines().forEachOrdered(lineText -> replacementLines.append(!lineText.strip().isEmpty() ? String.format("[@@META line=%d]%s[/@@META]\n", line.ref++, lineText) : lineText));
+		replacement.lines().forEachOrdered(lineText -> replacementLines.append(!lineText.strip().isEmpty() ? String.format("\n[@@META line=%d]%s[/@@META]", line.ref++, lineText) : lineText));
 		
 		// Wrap text into META tag.
 		return String.format("[@@META source=#%s]%s[/@@META]", source,  replacementLines.toString());
@@ -5584,6 +5584,12 @@ public class AreaServer {
 			return replacement;
 		}
 		
+		// If the replacement is empty, return exit without changes.
+		if (replacement.strip().isEmpty()) {
+			return replacement;
+		}
+		
+		// Wrap result into a META tag.
 		return String.format("[@@META tag=#%s]%s[/@@META]", tagName, replacement);
 	}
 	
