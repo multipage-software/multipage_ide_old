@@ -5453,7 +5453,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !"@META".equals(tagName)) {
+			if (!tagName.isEmpty() && !("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5493,7 +5493,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !"@META".equals(tagName)) {
+			if (!tagName.isEmpty() && !("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5563,11 +5563,15 @@ public class AreaServer {
 		
 		// Add meta info for each line of code.
 		StringBuilder replacementLines = new StringBuilder();
-		Obj<Long> line = new Obj<Long>(0L);
-		replacement.lines().forEachOrdered(lineText -> replacementLines.append(!lineText.strip().isEmpty() ? String.format("\n[@@META line=%d]%s[/@@META]", line.ref++, lineText) : lineText));
+		Obj<Long> lineNumber = new Obj<Long>(0L);
+		replacement.lines().forEachOrdered(lineText -> {
+			
+			lineText = String.format("[@@META_LINE line=%d]%s[/@@META_LINE]", lineNumber.ref++, lineText);
+			replacementLines.append(lineText + '\n');
+		});
 		
 		// Wrap text into META tag.
-		return String.format("[@@META source=#%s]%s[/@@META]", source,  replacementLines.toString());
+		return String.format("[@@META_SOURCE source=#%s]%s[/@@META_SOURCE]", source,  replacementLines.toString());
 	}
 	
 	/**
@@ -5584,13 +5588,8 @@ public class AreaServer {
 			return replacement;
 		}
 		
-		// If the replacement is empty, return exit without changes.
-		if (replacement.strip().isEmpty()) {
-			return replacement;
-		}
-		
 		// Wrap result into a META tag.
-		return String.format("[@@META tag=#%s]%s[/@@META]", tagName, replacement);
+		return String.format("[@@META_TAG tag=#%s]%s[/@@META_TAG]", tagName, replacement);
 	}
 	
 	/**
@@ -5625,7 +5624,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META".equals(tagName)) {
+			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName)) {
 				
 				// Parse properties.
 				Properties properties = new Properties();
@@ -5656,7 +5655,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META".equals(tagName)) {
+			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName)) {
 				
 				text.replace(tagStartPositionOut.ref, positionOut.ref + 1, "");
 				positionOut.ref = tagStartPositionOut.ref;
