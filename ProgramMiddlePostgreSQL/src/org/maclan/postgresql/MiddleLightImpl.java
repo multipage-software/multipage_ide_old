@@ -2131,13 +2131,13 @@ public class MiddleLightImpl implements MiddleLight {
 	@Override
 	public MiddleResult loadSlotPrivate(Area area, String alias,
 			boolean inherit, boolean skipDefault, Obj<Slot> slot,
-			Obj<Slot> lastFoundDefaultSlot, LoadSlotHint hint, boolean isInheritance,
+			Obj<Slot> lastFoundDefaultSlot, int hint, boolean isInheritance,
 			Long inheritanceLevel, boolean skipCurrentArea, boolean loadValue) {
 		
 		MiddleResult result;
 		
 		// If not to skip current area...
-		if (!skipCurrentArea) {
+		if (((LoadSlotHint.area & hint) != 0) || skipCurrentArea) {
 			
 			result = loadAreaSlotsRefData(area);
 			if (result.isNotOK()) {
@@ -2185,11 +2185,14 @@ public class MiddleLightImpl implements MiddleLight {
 		
 		// Load super areas and call this method recursively for inherited areas.
 		result = MiddleResult.OK;
-		if (LoadSlotHint.superAreas.equals(hint)) {
+		if ((LoadSlotHint.superAreas & hint) != 0) {
 			result = loadSuperAreasData(area);
 		}
-		else if (LoadSlotHint.subAreas.equals(hint)) {
+		else if ((LoadSlotHint.subAreas & hint) != 0) {
 			result = loadSubAreasData(area);
+		}
+		else {
+			return MiddleResult.FOUND_NO_HINT;
 		}
 		if (result.isNotOK()) {
 			return result;
@@ -2229,19 +2232,9 @@ public class MiddleLightImpl implements MiddleLight {
 		Obj<Slot> lastFoundDefaultSlot = new Obj<Slot>();
 		
 		MiddleResult result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
-				lastFoundDefaultSlot, LoadSlotHint.area, false, null, parent, loadValue);
-		if (result.isNotOK()) {
-			
-			result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
-					lastFoundDefaultSlot, LoadSlotHint.superAreas, false, null, parent, loadValue);
-			if (result.isNotOK()) {
-				
-				result = loadSlotPrivate(area, alias, inherit, skipDefault, slot,
-					lastFoundDefaultSlot, LoadSlotHint.subAreas, false, null, parent, loadValue);
-			}
-		}
+				lastFoundDefaultSlot, LoadSlotHint.area | LoadSlotHint.superAreas | LoadSlotHint.subAreas, false, null, parent, loadValue);
 		
-		return MiddleResult.OK;
+		return result;
 	}
 	
 	/**
@@ -2256,7 +2249,7 @@ public class MiddleLightImpl implements MiddleLight {
 	 * @return
 	 */
 	@Override
-	public MiddleResult loadSlot(Area area, String alias, LoadSlotHint hint,
+	public MiddleResult loadSlot(Area area, String alias, int hint,
 			boolean inherit, boolean parent, boolean skipDefault, Obj<Slot> slot, boolean loadValue) {
 
 		Obj<Slot> lastFoundDefaultSlot = new Obj<Slot>();
@@ -2282,7 +2275,7 @@ public class MiddleLightImpl implements MiddleLight {
 	 * @return
 	 */
 	@Override
-	public MiddleResult loadSlotInheritanceLevel(Area area, String alias, LoadSlotHint hint, boolean skipDefault,
+	public MiddleResult loadSlotInheritanceLevel(Area area, String alias, int hint, boolean skipDefault,
 			boolean parent, Long inheritanceLevel, Obj<Slot> slot, boolean loadValue) {
 		
 		Obj<Slot> lastFoundDefaultSlot = new Obj<Slot>();

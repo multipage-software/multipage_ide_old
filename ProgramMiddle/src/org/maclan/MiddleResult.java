@@ -123,6 +123,7 @@ public class MiddleResult {
 	public static final MiddleResult NULL_INPUT_STREAM = new MiddleResult("middle.resultNullInputStream", null);
 	public static final MiddleResult BAD_TEMPLATE_DAT_STREAM = new MiddleResult("middle.resultBadTemplateDatStream", null);
 	public static final MiddleResult DATABASE_ALREADY_OPENED = new MiddleResult("middle.resultDatabaseAlreadyOpened", null);
+	public static final MiddleResult FOUND_NO_HINT = new MiddleResult("middle.resultFoundNoHint", null);
 	
 	/**
 	 * Extensions.

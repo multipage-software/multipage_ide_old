@@ -8,14 +8,14 @@ package org.maclan;
 
 /**
  * Tells area server how to load slot.
- * @author user
+ * @author vakol
  *
  */
-public enum LoadSlotHint {
+public class LoadSlotHint {
 	
-	area(1),			// Inherits from single area.
-	superAreas(2),		// Inherits from super areas.
-	subAreas(4);		// Inherits from sub areas.
+	public static final int area = 1;			// Inherits from single area.
+	public static final int superAreas = 2;		// Inherits from super areas.
+	public static final int subAreas = 4;		// Inherits from sub areas.
 	
 	/**
 	 * Hint code.

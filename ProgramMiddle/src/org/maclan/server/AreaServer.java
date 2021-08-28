@@ -1454,7 +1454,7 @@ public class AreaServer {
 				String href = properties.getProperty("href");
 				
 				// Evaluate the URL string.
-				href = server.evaluateText(href, String.class, false);
+				href = server.evaluateText(href, String.class, true);
 				
 				// Get extra properties.
 				String extraProperties = getExtraProperties(properties,
@@ -6785,15 +6785,12 @@ public class AreaServer {
 		throws Exception {
 
 		Obj<Slot> slot = new Obj<Slot>();
-		MiddleResult result = state.middle.loadSlotInheritanceLevel(area, slotAlias, LoadSlotHint.superAreas, skipDefault, parent, inheritanceLevel, slot, loadValue);
+		
+		MiddleResult result = state.middle.loadSlotInheritanceLevel(area, slotAlias, LoadSlotHint.area | LoadSlotHint.superAreas | LoadSlotHint.subAreas, skipDefault, parent, inheritanceLevel, slot, loadValue);
 		if (result.isNotOK()) {
-			
-			result = state.middle.loadSlotInheritanceLevel(area, slotAlias, LoadSlotHint.subAreas, skipDefault, parent, inheritanceLevel, slot, loadValue);
-			if (result.isNotOK()) {
-				throwError("server.messageSlotNotFoundOrNotInheritable");
-			}
+			throwError("server.messageSlotNotFoundOrNotInheritable");
 		}
-
+		
 		if (slot.ref == null) {
 			return null;
 		}

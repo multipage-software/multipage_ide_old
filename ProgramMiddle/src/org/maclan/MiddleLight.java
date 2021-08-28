@@ -328,7 +328,7 @@ public interface MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadSlotPrivate(Area area, String alias,
-			boolean inherit, boolean skipDefault, Obj<Slot> slot, Obj<Slot> lastFoundDefaultSlot, LoadSlotHint hint,
+			boolean inherit, boolean skipDefault, Obj<Slot> slot, Obj<Slot> lastFoundDefaultSlot, int hint,
 			boolean isInheritance, Long inheritanceLevel, boolean skipCurrentArea, boolean loadValue);
 	
 	/**
@@ -363,7 +363,7 @@ public interface MiddleLight {
 	 * @param loadValue 
 	 * @return
 	 */
-	public MiddleResult loadSlot(Area area, String alias, LoadSlotHint hint,
+	public MiddleResult loadSlot(Area area, String alias, int hint,
 			boolean inherit, boolean parent, boolean skipDefault, Obj<Slot> slot, boolean loadValue);
 
 	/**
@@ -377,7 +377,7 @@ public interface MiddleLight {
 	 * @param loadValue 
 	 * @return
 	 */
-	public MiddleResult loadSlotInheritanceLevel(Area area, String alias, LoadSlotHint hint, boolean skipDefault,
+	public MiddleResult loadSlotInheritanceLevel(Area area, String alias, int hint, boolean skipDefault,
 			boolean parent, Long inheritanceLevel, Obj<Slot> slot, boolean loadValue);
 	
 	/**
