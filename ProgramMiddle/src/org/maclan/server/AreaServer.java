@@ -261,7 +261,7 @@ public class AreaServer {
 		clonedState.defaultVersionId = state.defaultVersionId;
 		clonedState.trayMenu = state.trayMenu;
 		clonedState.newLine = state.newLine;
-		clonedState.enableMetaInfo = state.enableMetaInfo;
+		clonedState.enableMetaTags = state.enableMetaTags;
 		
 		return clonedState;
 	}
@@ -284,7 +284,7 @@ public class AreaServer {
 		
 		// Simple language tags processors.
 		simpleLanguagesTagsProcessors();
-		// Area procesor.
+		// Area processor.
 		areaProcessor();
 		// Resource processor.
 		resourceProcessor();
@@ -2647,13 +2647,13 @@ public class AreaServer {
 					
 					// Change current Area Server state.
 					if ("false".equals(metaInfo)) {
-						server.state.enableMetaInfo = AreaServerState.metaInfoFalse;
+						server.state.enableMetaTags = AreaServerState.metaInfoFalse;
 					}
 					else if ("true".equals(metaInfo)) {
-						server.state.enableMetaInfo = AreaServerState.metaInfoTrue;
+						server.state.enableMetaTags = AreaServerState.metaInfoTrue;
 					}
 					else if ("temporary".equals(metaInfo)) {
-						server.state.enableMetaInfo = AreaServerState.metaInfoTemporary;
+						server.state.enableMetaTags = AreaServerState.metaInfoTemporary;
 					}
 				}
 				
@@ -5358,14 +5358,14 @@ public class AreaServer {
 		throws Exception {
 
 		state.analysis.process_area_calls++;
-
+		
 		// Find tag start.
 		while (true) {
 			
 			// If an exception has been thrown, exit the loop.
 			if (state.exceptionThrown) {
 				break;
-			}
+			}	
 			
 			// Find tag start.
 			Obj<Integer> positionOut = new Obj<Integer>(state.position);
@@ -5551,13 +5551,13 @@ public class AreaServer {
 	/**
 	 * Add meta information regarding the source of resulting text.
 	 * @param replacement 
-	 * @param source
+	 * @param tagsSource
 	 * @return
 	 */
-	protected String addMetaInformation(String replacement, TagsSource source, AreaServerState state) {
+	protected String addMetaInformation(String replacement, TagsSource tagsSource, AreaServerState state) {
 		
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
-		if (state.enableMetaInfo == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
 			return replacement;
 		}
 		
@@ -5571,7 +5571,7 @@ public class AreaServer {
 		});
 		
 		// Wrap text into META tag.
-		return String.format("[@@META_SOURCE source=#%s]%s[/@@META_SOURCE]", source,  replacementLines.toString());
+		return String.format("[@@META_SOURCE source=#%s]%s[/@@META_SOURCE]", tagsSource,  replacementLines.toString());
 	}
 	
 	/**
@@ -5584,7 +5584,7 @@ public class AreaServer {
 	private String addMetaInformation(String tagName, String replacement, AreaServerState state) {
 		
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
-		if (state.enableMetaInfo == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
 			return replacement;
 		}
 		
@@ -5601,7 +5601,7 @@ public class AreaServer {
 			throws Exception {
 		
 		// If the PRAGMA "meta" property is set to false or , return the result without changes.
-		if (state.enableMetaInfo == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
 			return string;
 		}
 		

@@ -301,6 +301,7 @@ maclan(tag('PRAGMA'), property('php'), type('Boolean')).
 maclan(tag('PRAGMA'), property('tabulator'), type('String')).
 maclan(tag('PRAGMA'), property('webInterface'), type('FolderPath')).
 maclan(tag('PRAGMA'), property('metaCharset'), type('String')).
+maclan(tag('PRAGMA'), property('metaInfo'), type('String')).
 
 maclan(tag('UNZIP'), property('areaId'), type('AreaId')).
 maclan(tag('UNZIP'), property('areaAlias'), type('AreaAlias')).

@@ -248,7 +248,7 @@ public class AreaServerState {
 	/**
 	 * Enable or disable meta information in resulting texts.
 	 */
-	public int enableMetaInfo = AreaServerState.metaInfoFalse;
+	public int enableMetaTags = AreaServerState.metaInfoFalse;
 
 	/**
 	 * Update server state.

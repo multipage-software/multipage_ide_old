@@ -368,6 +368,19 @@ public class AreaServer implements BoxedObject {
 		
 		return new Area(server, server.getArea(alias));
 	}
+//	
+//	/**
+//	 * Returns area.
+//	 * @param undefined
+//	 * @return
+//	 * @throws Exception 
+//	 */
+//	//graalvm @HostAccess.Export
+//	public Area area(Object undefined) throws Exception {
+//		
+//		//return new Area(server, server.getArea(areaId));
+//		return null;
+//	}
 	
 	/**
 	 * Returns list of sub areas of this area.
