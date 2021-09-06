@@ -129,8 +129,8 @@ public class AreaLocalMenu {
 				Resources.getString("org.multipage.generator.menuEditArea"));
 		menuEditAreaSlots.setIcon(Images.getIcon("org/multipage/generator/images/list.png"));
 		
-		JMenuItem menuEditAreaResources = createMenuItem(
-				Resources.getString("org.multipage.generator.menuAreaEditResources"));
+		JMenuItem menuEditStartResources = createMenuItem(
+				Resources.getString("org.multipage.generator.menuEditStartResources"));
 		
 		JMenu menuFile = createMenu(Resources.getString("org.multipage.generator.menuFile"));
 		
@@ -245,7 +245,7 @@ public class AreaLocalMenu {
 		popupMenu.insert(menuSetHomeArea, index++);
 		popupMenu.insert(menuEditArea, index++);
 		popupMenu.insert(menuEditAreaSlots, index++);
-		popupMenu.insert(menuEditAreaResources, index++);
+		popupMenu.insert(menuEditStartResources, index++);
 		popupMenu.addSeparator(); index++;
 		popupMenu.insert(menuSetHomeArea, index++);
 		popupMenu.addSeparator(); index++;
@@ -427,10 +427,10 @@ public class AreaLocalMenu {
 				importArea();
 			}
 		});
-		menuEditAreaResources.addActionListener(new ActionListener() {
+		menuEditStartResources.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				onEditArea(AreaEditorFrame.RESOURCES);
+				editStartResource(true);
 			}
 		});
 		
@@ -751,6 +751,22 @@ public class AreaLocalMenu {
 
 		// Execute area editor.
 		AreaEditorFrame.showDialog(null, area, tabIdentifier);
+	}
+	
+	/**
+	 * Edit start resource.
+	 * @param inherits 
+	 */
+	protected void editStartResource(boolean inherits) {
+		
+		// Get selected areas.
+		Area area = getAreaInformUser();
+		if (area == null) {
+			return;
+		}
+		
+		// Edit start resource.
+		GeneratorMainFrame.editStartResource(area, inherits);
 	}
 
 	/**

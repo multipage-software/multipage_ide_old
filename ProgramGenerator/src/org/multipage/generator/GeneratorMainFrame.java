@@ -2473,6 +2473,74 @@ public class GeneratorMainFrame extends JFrame {
 
 		return true;
 	}
+	
+	/**
+	 * Edit start resource.
+	 * @param area
+	 * @param inherits 
+	 */
+	public static void editStartResource(Area area, boolean inherits) {
+		
+		Component parentComponent = GeneratorMainFrame.getFrame();
+		
+		Obj<Long> versionId = new Obj<Long>(0L);
+		
+		if (inherits) {
+			
+			// Select version.
+			Obj<VersionObj> version = new Obj<VersionObj>();
+			
+			if (!SelectVersionDialog.showDialog(parentComponent, version)) {
+				return;
+			}
+			
+			// Get selected version ID.
+			versionId.ref = version.ref.getId();
+			
+			// Get inherited area.
+			Area inheritedArea = ProgramGenerator.getAreasModel().getStartArea(area, versionId.ref);
+			if (inheritedArea != null) {
+				area = inheritedArea;
+			}
+		}
+		
+		// Load area source.
+		Middle middle = ProgramBasic.getMiddle();
+		Properties login = ProgramBasic.getLoginProperties();
+		Obj<Long> resourceId = new Obj<Long>(0L);
+		
+		MiddleResult result = middle.loadAreaSource(login, area.getId(), versionId.ref, resourceId);
+		if (result.isNotOK()) {
+			result.show(null);
+			return;
+		}
+		
+		// Load old style start resource if not loaded.
+		if (resourceId.ref == null) {
+			result = middle.loadContainerStartResource(login, area, resourceId, versionId, null);
+			if (result.isNotOK()) {
+				result.show(null);
+				return;
+			}
+		}
+		
+		if (resourceId.ref == 0L) {
+			Utility.show(null, "org.multipage.generator.messageAreaHasNoStartResource");
+			return;
+		}
+		
+		// Get saving method.
+		Obj<Boolean> savedAsText = new Obj<Boolean>();
+		result = middle.loadResourceSavingMethod(login, resourceId.ref, savedAsText);
+		if (result.isNotOK()) {
+			result.show(null);
+			return;
+		}
+
+		// Edit text resource.
+		TextResourceEditor.showDialog(parentComponent, resourceId.ref,
+				savedAsText.ref, false);
+	}
 
 	/**
 	 * Display area.
