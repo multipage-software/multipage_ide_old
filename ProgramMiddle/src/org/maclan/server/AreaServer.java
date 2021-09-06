@@ -5557,7 +5557,7 @@ public class AreaServer {
 	protected String addMetaInformation(String replacement, TagsSource tagsSource, AreaServerState state) {
 		
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
-		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return replacement;
 		}
 		
@@ -5584,7 +5584,7 @@ public class AreaServer {
 	private String addMetaInformation(String tagName, String replacement, AreaServerState state) {
 		
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
-		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return replacement;
 		}
 		
@@ -5601,7 +5601,7 @@ public class AreaServer {
 			throws Exception {
 		
 		// If the PRAGMA "meta" property is set to false or , return the result without changes.
-		if (state.enableMetaTags == AreaServerState.metaInfoFalse) {
+		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return string;
 		}
 		

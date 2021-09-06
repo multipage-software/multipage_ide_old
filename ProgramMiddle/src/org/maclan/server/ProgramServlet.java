@@ -80,6 +80,11 @@ public class ProgramServlet extends FastCGIServlet {
 	private static CallbackNoArg runningWebApp = null;
 	
 	/**
+	 * Enable META tags in result.
+	 */
+	private static boolean enableMetaTags = false;
+	
+	/**
 	 * Listener that is invoked whenever some of the slots are updated from external code providers.
 	 */
 	private static Consumer<LinkedList<Long>> updatedSlots = null;
@@ -140,6 +145,24 @@ public class ProgramServlet extends FastCGIServlet {
 		}
 		
 		return true;
+	}
+	
+	/**
+	 * Determines if the META tags are enabled in the resulting code.
+	 * @return
+	 */
+	public static boolean areMetaTagsEnabled() {
+		
+		return ProgramServlet.enableMetaTags;
+	}
+	
+	/**
+	 * Enable @META tags.
+	 * @param enable
+	 */
+	public static void enableMetaTags(boolean enable) {
+		
+		ProgramServlet.enableMetaTags = enable;
 	}
 	
 	/**

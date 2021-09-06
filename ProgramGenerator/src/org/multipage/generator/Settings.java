@@ -32,6 +32,7 @@ import javax.swing.SwingConstants;
 
 import org.maclan.MiddleUtility;
 import org.maclan.server.DebugListener;
+import org.maclan.server.ProgramServlet;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
 import org.multipage.gui.Images;
@@ -101,6 +102,9 @@ public class Settings extends JDialog {
 				return enableDebugging;
 			}
 		});
+		
+		// Enable @META tags in the area server.
+		ProgramServlet.enableMetaTags(enable);
 	}
 	
 	/**
