@@ -2816,6 +2816,9 @@ public class AreaServer {
 					server.state.cssLookupTable = new CssLookupTable();
 				}
 				
+				// Strip meta tags.
+				innerText = server.stripMetaInformation(innerText);
+				
 				// Create CSS slots lookup table.
 				server.createCssSlotsLookup(innerText);
 
@@ -5600,7 +5603,7 @@ public class AreaServer {
 	private String stripMetaInformation(String string)
 			throws Exception {
 		
-		// If the PRAGMA "meta" property is set to false or , return the result without changes.
+		// If the PRAGMA "metaInfo" property is set to false and meta tags are not enabled, return the result without changes.
 		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return string;
 		}
@@ -5624,7 +5627,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName)) {
+			if ("@META_LINE".equals(tagName) || "@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
 				
 				// Parse properties.
 				Properties properties = new Properties();
@@ -5655,7 +5658,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName)) {
+			if ("@META_LINE".equals(tagName) || "@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
 				
 				text.replace(tagStartPositionOut.ref, positionOut.ref + 1, "");
 				positionOut.ref = tagStartPositionOut.ref;
