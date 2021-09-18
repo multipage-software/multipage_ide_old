@@ -131,6 +131,7 @@ public class AreaLocalMenu {
 		
 		JMenuItem menuEditStartResources = createMenuItem(
 				Resources.getString("org.multipage.generator.menuEditStartResources"));
+		menuEditStartResources.setIcon(Images.getIcon("org/multipage/generator/images/start_resource.png"));
 		
 		JMenu menuFile = createMenu(Resources.getString("org.multipage.generator.menuFile"));
 		

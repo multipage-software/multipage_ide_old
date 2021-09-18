@@ -1172,9 +1172,9 @@ public class GeneratorMainFrame extends JFrame {
 			editResources.setAccelerator(KeyStroke.getKeyStroke("alt R"));
 			editResources.setIcon(Images.getIcon("org/multipage/generator/images/resources_icon.png"));
 			
-		JMenuItem editTranslator = new JMenuItem(Resources.getString("org.multipage.generator.menuEditTranslator"));
-			editTranslator.setAccelerator(KeyStroke.getKeyStroke("control T"));
-			editTranslator.setIcon(Images.getIcon("org/multipage/generator/images/translator_icon.png"));
+		JMenuItem editTranslators = new JMenuItem(Resources.getString("org.multipage.generator.menuEditTranslations"));
+			editTranslators.setAccelerator(KeyStroke.getKeyStroke("control T"));
+			editTranslators.setIcon(Images.getIcon("org/multipage/generator/images/translator_icon.png"));
 			
 		JMenuItem editFileNames = new JMenuItem(Resources.getString("org.multipage.generator.menuEditFileNames"));
 			editFileNames.setAccelerator(KeyStroke.getKeyStroke("alt F"));
@@ -1237,7 +1237,7 @@ public class GeneratorMainFrame extends JFrame {
 		window.add(closeAllWindows);
 		window.add(windowSelectionMenu);
 		
-		edit.add(editTranslator);
+		edit.add(editTranslators);
 		edit.add(editFileNames);
 		edit.add(editResources);
 		addEditEnumerationsMenuItem(edit);
@@ -1299,7 +1299,7 @@ public class GeneratorMainFrame extends JFrame {
 				onResources();
 			}
 		});
-		editTranslator.addActionListener(new ActionListener() {
+		editTranslators.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				onTranslator();
