@@ -93,10 +93,21 @@ public abstract class SlotHolder {
 	}
 
 	/**
-	 * .
+	 * Get description.
 	 * @return
 	 */
 	public String getDescriptionForced() {
+		
+		// Nothing to do.
+		return "";
+	}
+	
+	/**
+	 * Get description.
+	 * @param showId
+	 * @return
+	 */
+	public String getDescriptionForced(boolean showId) {
 		
 		// Nothing to do.
 		return "";

@@ -152,6 +152,12 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	                                              "AND hidden = false " +
 	                                              "ORDER BY alias ASC, revision DESC";
 	
+	private static final String selectAllSlotsNotHidden = "SELECT alias, area_id, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
+												            "FROM area_slot " +
+												            "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
+												            "WHERE hidden = false " +
+												            "ORDER BY alias ASC, revision DESC";
+	
 	private static final String selectAreaSlotTextValueId = "SELECT localized_text_value_id " +
 	                                                        "FROM area_slot " +
 	                                                        "WHERE alias = ? " +
@@ -6313,6 +6319,52 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				
 				// Add slot.
 				holder.addSlot(slot);
+			}
+
+			// Close statement.
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;
+	}
+	
+	/**
+	 * Load all slots.
+	 */
+	@Override
+	public MiddleResult loadSlots(LinkedList<Slot> allSlots) {
+
+		// Clear input set.
+		allSlots.clear();
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			// Select command.
+			PreparedStatement statement = connection.prepareStatement(selectAllSlotsNotHidden);
+			statement.setLong(1, currentLanguageId);
+			
+			ResultSet set = statement.executeQuery();
+			while (set.next()) {
+								
+				// Create new slot object.
+				Long areaId = set.getLong("area_id");
+				String alias = set.getString("alias");
+				Slot slot = new Slot(areaId, alias);
+				
+				// Load slot helper
+				loadSlotHelper(set, slot);
+				
+				// All slots.
+				allSlots.add(slot);
 			}
 
 			// Close statement.

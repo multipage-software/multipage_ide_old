@@ -130,16 +130,23 @@ public enum Signal implements EventCondition {
 			SignalType.guiChange
 			),
 	
+	// Focus on area.
+	focusArea(
+			SignalType.areaViewChange,
+			SignalType.guiChange
+			),
+	
 	// Focus on the Basic Area.
 	focusBasicArea(
+			SignalType.areaViewChange,
 			SignalType.guiChange
 			),
 	
 	// Focus on the tab area.
 	focusTabArea(
+			SignalType.areaViewChange,
 			SignalType.guiChange
 			),
-	
 	
 	// Focus on the home area.
 	focusHomeArea(

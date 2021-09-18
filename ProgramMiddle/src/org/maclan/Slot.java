@@ -197,6 +197,17 @@ public class Slot {
 	}
 	
 	/**
+	 * Constructor.
+	 * @param areaId
+	 * @param alias
+	 */
+	public Slot(Long areaId, String alias) {
+		
+		this.holder = new AreaId(areaId);
+		this.alias = alias;
+	}
+	
+	/**
 	 * Constructor hat sets holder and alias to values found in pattern slot
 	 * @param patternSlot
 	 */
@@ -333,6 +344,19 @@ public class Slot {
 		return holder;
 	}
 
+	/**
+	 * Get slot area.
+	 * @return
+	 */
+	public Area getArea() {
+		
+		if (holder instanceof Area) {
+			return (Area) holder;
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Set value.
 	 * @param value

@@ -925,6 +925,13 @@ public interface Middle extends MiddleLight {
 	public MiddleResult loadSlots(SlotHolder holder, boolean loadHiddenSlots);
 	
 	/**
+	 * Load all slots.
+	 * @param allSlots
+	 * @return
+	 */
+	public MiddleResult loadSlots(LinkedList<Slot> allSlots);
+	
+	/**
 	 * Remove slot.
 	 * @param slot
 	 * @return

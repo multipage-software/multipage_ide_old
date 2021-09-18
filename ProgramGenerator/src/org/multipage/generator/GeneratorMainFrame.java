@@ -478,7 +478,7 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Search dialog.
 	 */
-	private SearchAreaDialog searchDialog;
+	private SearchDialog searchDialog;
 
 	/**
 	 * User value.
@@ -727,6 +727,39 @@ public class GeneratorMainFrame extends JFrame {
 		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, message -> {
 			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
 		});
+		
+		// "Focus area" event receiver.
+		ConditionalEvents.receiver(this, Signal.focusArea, message -> {
+			
+			// Get diagram panel.
+			AreasDiagramPanel areasDiagramPanel = getFrame().getVisibleAreasEditor();
+			
+			// Try to focus area using coordinates.
+			try {
+				// Get coordinates.
+				AreaCoordinatesTableItem coordinatesItem = message.getRelatedInfo();
+				
+				// Focus coordinates.
+				if (coordinatesItem != null) {
+					areasDiagramPanel.getDiagram().focus(coordinatesItem.coordinate, null);
+				}
+			}
+			catch (Exception e) {
+			}
+			
+			// Try to focus area using area identifier.
+			try {
+				// Get area ID.
+				Long areaId = message.getRelatedInfo();
+				
+				// Focus coordinates.
+				if (areaId != null) {
+					areasDiagramPanel.focusArea(areaId);
+				}
+			}
+			catch (Exception e) {
+			}
+		});
  	}
 	
 	/**
@@ -886,7 +919,7 @@ public class GeneratorMainFrame extends JFrame {
 		splitDiagramProperties = new SplitProperties(tabPanel, propertiesPanel);
 		customizeColors = new CustomizedColors(this);
 		cutomizeControls = newCustomizedControls(this);
-		searchDialog = new SearchAreaDialog(this, ProgramGenerator.getAreasModel());
+		searchDialog = new SearchDialog(this, ProgramGenerator.getAreasModel());
 		
 		add(splitDiagramProperties, BorderLayout.CENTER);
 	}
@@ -1039,7 +1072,7 @@ public class GeneratorMainFrame extends JFrame {
 		JMenuBar menuBar = new JMenuBar();
 		
 		JMenu file = new JMenu(Resources.getString("org.multipage.generator.menuMainFile"));
-		JMenu edit = new JMenu(Resources.getString("org.multipage.generator.menuEdit"));
+		JMenu edit = new JMenu(Resources.getString("org.multipage.generator.menuEditors"));
 		JMenu tools = new JMenu(Resources.getString("org.multipage.generator.menuTools"));
 		JMenu window = new JMenu(Resources.getString("org.multipage.generator.menuWindow"));
 		windowSelectionMenu = new JMenu(Resources.getString("org.multipage.generator.menuWindowSelection"));
@@ -1115,9 +1148,9 @@ public class GeneratorMainFrame extends JFrame {
 			closeAllWindows.setAccelerator(KeyStroke.getKeyStroke("control shift A"));
 			closeAllWindows.setIcon(Images.getIcon("org/multipage/generator/images/close_all.png"));
 			
-		JMenuItem toolsSearchAreas = new JMenuItem(Resources.getString("org.multipage.generator.menuSearchAreas"));
-			toolsSearchAreas.setAccelerator(KeyStroke.getKeyStroke("control F"));
-			toolsSearchAreas.setIcon(Images.getIcon("org/multipage/generator/images/search2_icon.png"));
+		JMenuItem toolsSearch = new JMenuItem(Resources.getString("org.multipage.generator.menuFind"));
+			toolsSearch.setAccelerator(KeyStroke.getKeyStroke("control F"));
+			toolsSearch.setIcon(Images.getIcon("org/multipage/generator/images/search2_icon.png"));
 			
 		JMenuItem toolsCustomizeColors = new JMenuItem(Resources.getString("org.multipage.generator.menuToolsCustomizeColors"));
 			toolsCustomizeColors.setAccelerator(KeyStroke.getKeyStroke("alt C"));
@@ -1194,7 +1227,7 @@ public class GeneratorMainFrame extends JFrame {
 		help.add(helpMenuManualGmpl);
 		help.add(helpMenuAbout);
 		
-		tools.add(toolsSearchAreas);
+		tools.add(toolsSearch);
 		addSearchInTextResourcesMenuItem(tools);
 		tools.add(toolsCheckRenderedFiles);
 		tools.add(toolsCustomizeColors);
@@ -1297,7 +1330,7 @@ public class GeneratorMainFrame extends JFrame {
 				onEditFileNames();
 			}
 		});
-		toolsSearchAreas.addActionListener(new ActionListener() {
+		toolsSearch.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				onSearch();

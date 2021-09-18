@@ -119,6 +119,9 @@ import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.JViewport;
 import javax.swing.ListCellRenderer;
+import javax.swing.RowSorter;
+import javax.swing.RowSorter.SortKey;
+import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -126,6 +129,11 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.TextUI;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableModel;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -368,6 +376,39 @@ public class Utility {
 			boolean exactMatch) {
 		
 		String text = exactMatch ? title : titleWithIdAndAlias;
+		
+		return matches(text, searchText, caseSensitive, wholeWords, exactMatch);
+	}
+	
+	/**
+	 * Returns true if the texts matches the search text.
+	 * @param meansText
+	 * @param searchText 
+	 * @return
+	 */
+	public static boolean matches(String [] texts, String searchText, boolean caseSensitive,
+			boolean wholeWords, boolean exactMatch) {
+		
+		// Check input texts.
+		if (texts.length <= 0) {
+			return searchText.isEmpty();
+		}
+		
+		String text = null;
+		
+		if (exactMatch) {
+			text = texts[0];
+		}
+		else {
+			text = "";
+			for (String textItem : texts) {
+				
+				if (!text.isEmpty()) {
+					text += ' ';
+				}
+				text += textItem;
+			}
+		}
 		
 		return matches(text, searchText, caseSensitive, wholeWords, exactMatch);
 	}
@@ -4646,5 +4687,97 @@ public class Utility {
 		}
 
 		return equals;
+	}
+	
+	/**
+	 * Clear table.
+	 * @param table
+	 */
+	public static void clearTable(JTable table) {
+		
+		DefaultTableModel model = (DefaultTableModel) table.getModel();
+		model.setRowCount(0);
+	}
+	
+	/**
+	 * Sort table by column contents.
+	 * @param table
+	 * @param columnIndex
+	 */
+	public static void sortTable(JTable table, int columnIndex) {
+		
+		// Get column count.
+		javax.swing.table.TableModel tableModel = table.getModel();
+		int columnCount = tableModel.getColumnCount();
+		
+		// Get table sorter.
+		RowSorter<? extends TableModel> sorter = table.getRowSorter();
+		
+		// Check column index.
+		if (columnIndex < 0 && columnIndex >= columnCount) {
+			sorter.setSortKeys(null);
+			return;
+		}
+		
+		// Switch sorter.
+		try {
+			
+			// Get current sort order for the column
+			List<? extends SortKey> sortKeys = sorter.getSortKeys();
+			SortKey sortKey = sortKeys.get(columnIndex);
+			SortOrder sortOrder = sortKey.getSortOrder();
+			
+			// Switch the sort order.
+			SortOrder newSortOrder = sortOrder == SortOrder.ASCENDING ? SortOrder.DESCENDING : SortOrder.ASCENDING;
+			
+			// Create sort keys and set new sort order for the column.
+			LinkedList<SortKey> newSortKeys = new LinkedList<SortKey>();
+			newSortKeys.add(new RowSorter.SortKey(columnIndex, newSortOrder));
+			sorter.setSortKeys(sortKeys);
+		}
+		catch (Exception e) {
+		}
+	}
+	
+	/**
+	 * Set table cell rendeder.
+	 * @param table
+	 * @param columnIndex
+	 * @param parametersLambda
+	 */
+	public static void setTableCellRenderer(JTable table, int columnIndex, Function<Object, Function<Boolean, Function<Boolean, Function<Integer, Object>>>> parametersLambda) {
+		
+		// Get table column.
+		TableColumnModel columnModel = table.getColumnModel();
+		TableColumn column = columnModel.getColumn(columnIndex);
+		
+		// Set cell renderer.
+		TableCellRenderer cellRenderer = new TableCellRenderer() {
+			
+			private RendererJTextPane renderer = new RendererJTextPane();
+			
+			{
+				renderer.setContentType("text/html");
+				renderer.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+			}
+			
+			@Override
+			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+					boolean hasFocus, int row, int column) {
+				
+				value = parametersLambda.apply(value)
+						.apply(isSelected)
+						.apply(hasFocus)
+						.apply(row);
+				
+				renderer.set(isSelected, hasFocus, row);
+				renderer.setText(value.toString());
+				
+				return renderer;
+			}
+			
+		};
+		
+		column.setCellRenderer(cellRenderer);
 	}
 }

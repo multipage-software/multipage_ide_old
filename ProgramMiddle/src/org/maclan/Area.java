@@ -1331,6 +1331,24 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	}
 	
 	/**
+	 * Get description.
+	 * @param showIds
+	 * @return
+	 */
+	public String getDescriptionForcedAndDecorated(boolean showIds) {
+		
+		if (!description.isEmpty()) {
+			if (showIds) {
+				return "<html><font color=\"#777777\">[" + id + "]</font> " + description + "</html>";
+			}
+			else {
+				return description;
+			}
+		}
+		return alias;
+	}
+	
+	/**
 	 * Get description for diagram.
 	 * @return
 	 */

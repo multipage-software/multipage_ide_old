@@ -264,11 +264,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	private AreasDiagramPanel parentEditor;
 	
 	/**
-	 * Selected area IDs.
-	 */
-	private HashSet<Long> selectedAreaIds = new HashSet<Long>();
-	
-	/**
 	 * Constructor.
 	 * @param parent 
 	 */
@@ -2001,8 +1996,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		this.affectSubareas = affectSubareas;
 		
 		selectRecursive(area, selected, affectSubareas);
-		
-		this.selectedAreaIds = getSelectedAreaIds();
 	}
 	
 	/**
@@ -3249,5 +3242,10 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	public void setAreaId(Long topAreaId) {
 		
 		this.topAreaId = topAreaId;
+	}
+
+	public void focus(Area area) {
+		// TODO Auto-generated method stub
+		
 	}
 }

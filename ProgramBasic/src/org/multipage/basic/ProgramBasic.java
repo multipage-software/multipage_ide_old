@@ -420,7 +420,7 @@ public class ProgramBasic {
 	}
 	
 	/**
-	 * Insert an area to a superarea
+	 * Insert an area to a super area.
 	 * @param superarea
 	 * @param area
 	 * @throws Exception 
@@ -467,5 +467,22 @@ public class ProgramBasic {
 		}
 		
 		return textValue.ref;
+	}
+	
+	/**
+	 * Get all slots in the model.
+	 * @return
+	 */
+	public static LinkedList<Slot> getSlots() 
+			throws Exception {
+		
+		LinkedList<Slot> allSlots = new LinkedList<Slot>();
+		
+		// Load all slots.
+		MiddleResult result = middle.loadSlots(allSlots);
+		result.throwPossibleException();
+		
+		// Return result.
+		return allSlots;
 	}
 }

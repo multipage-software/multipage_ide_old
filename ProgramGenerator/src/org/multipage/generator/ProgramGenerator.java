@@ -19,6 +19,7 @@ import java.util.Properties;
 import javax.swing.JFrame;
 
 import org.maclan.Area;
+import org.maclan.AreaId;
 import org.maclan.AreasModel;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
@@ -149,7 +150,7 @@ public class ProgramGenerator {
 		TextRenderer.setDefaultData();
 		SelectNewTextResourceDialog.setDefaultData();
 		ResourceAreasDialog.setDefaultData();
-		SearchAreaDialog.setDefaultData();
+		SearchDialog.setDefaultData();
 		DisplayOnlineDialog.setDefaultData();
 		AreasPropertiesFrame.setDefaultData();
 		SlotListPanel.setDefaultData();
@@ -211,7 +212,7 @@ public class ProgramGenerator {
 		AreaHelpViewer.serializeData(inputStream);
 		SelectNewTextResourceDialog.serializeData(inputStream);
 		ResourceAreasDialog.serializeData(inputStream);
-		SearchAreaDialog.serializeData(inputStream);
+		SearchDialog.serializeData(inputStream);
 		DisplayOnlineDialog.serializeData(inputStream);
 		AreasPropertiesFrame.serializeData(inputStream);
 		SlotListPanel.serializeData(inputStream);
@@ -272,7 +273,7 @@ public class ProgramGenerator {
 		AreaHelpViewer.serializeData(outputStream);
 		SelectNewTextResourceDialog.serializeData(outputStream);
 		ResourceAreasDialog.serializeData(outputStream);
-		SearchAreaDialog.serializeData(outputStream);
+		SearchDialog.serializeData(outputStream);
 		DisplayOnlineDialog.serializeData(outputStream);
 		AreasPropertiesFrame.serializeData(outputStream);
 		SlotListPanel.serializeData(outputStream);
@@ -572,6 +573,17 @@ public class ProgramGenerator {
 	 */
 	public static Area getArea(long id) {
 		
+		return areasModel.getArea(id);
+	}
+	
+	/**
+	 * Get area from area ID holder.
+	 * @param areaIdHolder
+	 * @return
+	 */
+	public static Area getArea(AreaId areaIdHolder) {
+		
+		long id = areaIdHolder.getId();
 		return areasModel.getArea(id);
 	}
 	
