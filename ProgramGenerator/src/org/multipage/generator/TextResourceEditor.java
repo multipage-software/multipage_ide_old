@@ -36,6 +36,7 @@ import javax.swing.SpringLayout;
 
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
+import org.maclan.help.Intellisense;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
@@ -379,8 +380,8 @@ public class TextResourceEditor extends JFrame {
 		setIcons();
 		// Set title.
 		setTitle2(areaDescription);
-		// Initialize tool bar.
-		intializeToolBar();
+		// Initialize intellisens.
+		intellisense();
 		// Load resource data.
 		load();
 		// Set editor listeners.
@@ -518,12 +519,14 @@ public class TextResourceEditor extends JFrame {
 		
 		return result.isOK();
 	}
-
+	
 	/**
-	 * Initialize tool bar.
+	 * Enable intellisense.
 	 */
-	private void intializeToolBar() {
-
+	private void intellisense() {
+		
+		// Use intellisense for the text editor.
+		Intellisense.applyTo(editor, maclanHelpId -> GeneratorMainFrame.displayMaclanHelp(maclanHelpId));
 	}
 
 	/**
