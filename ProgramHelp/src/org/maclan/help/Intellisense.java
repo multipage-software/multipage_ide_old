@@ -107,7 +107,7 @@ public class Intellisense {
 		/**
 		 * Tag distance.
 		 */
-		public Integer tagDistance = null;
+		public Double tagDistance = null;
 		
 		/**
 		 * Replacement position for the tag.
@@ -128,7 +128,7 @@ public class Intellisense {
 		/**
 		 * Property distance.
 		 */
-		public Integer propertyDistance = null;
+		public Double propertyDistance = null;
 		
 		/**
 		 * Replacement for the property.
@@ -197,7 +197,7 @@ public class Intellisense {
 					if (resultTerm instanceof IntegerTerm) {
 						
 						integerTerm = (IntegerTerm) resultTerm;
-						suggestion.tagDistance = integerTerm.value;
+						suggestion.tagDistance = (double) integerTerm.value;
 						
 						// Get tag match.
 						resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/match/#1");
@@ -240,7 +240,7 @@ public class Intellisense {
 						if (resultTerm instanceof IntegerTerm) {
 							
 							integerTerm = (IntegerTerm) resultTerm;
-							suggestion.propertyDistance = integerTerm.value;
+							suggestion.propertyDistance = Double.valueOf(integerTerm.value);
 						
 							// Get property match.
 							resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/match/#1");
@@ -273,9 +273,9 @@ public class Intellisense {
 		 * Get distance.
 		 * @return
 		 */
-		private Integer getDistance() {
+		private Double getDistance() {
 			
-			int distance = propertyDistance != null ? propertyDistance : tagDistance;
+			Double distance = propertyDistance != null ? propertyDistance : tagDistance;
 			return distance;
 		}
 		
@@ -285,13 +285,13 @@ public class Intellisense {
 		 * @return
 		 */
 		public static void getMinMaxDistance(List<Suggestion> suggestions,
-				Obj<Integer> minimumDistance, Obj<Integer> maximumDistance) {
+				Obj<Double> minimumDistance, Obj<Double> maximumDistance) {
 			
 			// Traverse all input suggestions.
 			suggestions.forEach(suggestion -> {
 				
 				// Get suggestion distance.
-				int distance = suggestion.getDistance();
+				Double distance = suggestion.getDistance();
 				
 				// Update minimum distance.
 				if (minimumDistance.ref == null || distance < minimumDistance.ref) {
@@ -315,7 +315,7 @@ public class Intellisense {
 		 * @param maximumDistance
 		 * @param tresholdDistance 
 		 */
-		private static void saveNormalDistances(List<Suggestion> suggestions, Integer minimumDistance, Integer maximumDistance, Double tresholdDistance) {
+		private static void saveNormalDistances(List<Suggestion> suggestions, Double minimumDistance, Double maximumDistance, Double tresholdDistance) {
 			
 			final double L = 1.0;	 // Maximum normal distance.
 			final double x0 = 0.5;   // Midpoint normal distance.
@@ -326,24 +326,32 @@ public class Intellisense {
 				return;
 			}
 			
-			// Get delta.
-			int deltaDistance = maximumDistance - minimumDistance;
-			
 			// Save normalize distances.
 			suggestions.forEach(suggestion -> {
 				
-				int distance = suggestion.getDistance();
-				double normalDistance = (float) (distance - minimumDistance) / (float) deltaDistance;
-				
 				// Normalize distances.
-				suggestion.tagDistance = Utility.normalize(suggestion.tagDistance);
-				
-				// Apply logistic function to normal distance.
-				suggestion.distance = Utility.sigmoid(L, x0, k, normalDistance);
-				
-				// Exclude values below the treshold.
-				if (tresholdDistance != null && suggestion.distance > tresholdDistance) {
-					suggestion.distance = null;
+				Double distance = suggestion.getDistance();
+				if (distance != null) {
+					
+					suggestion.tagDistance = Utility.normalize(suggestion.tagDistance, minimumDistance, maximumDistance);
+					
+					// Apply logistic function to normal distance.
+					suggestion.distance = Utility.normalize(distance, minimumDistance, maximumDistance);
+					suggestion.distance = Utility.sigmoid(L, x0, k, distance);
+					
+					Double propertyDistance = suggestion.propertyDistance;
+					if (propertyDistance != null) {
+					
+						propertyDistance = Utility.normalize(propertyDistance, minimumDistance, maximumDistance);
+						
+						// Exclude values below the treshold.
+						if (tresholdDistance != null && suggestion.distance > tresholdDistance) {
+							suggestion.distance = null;
+						}
+					}
+				}
+				else {
+					suggestion.distance = distance;
 				}
 				
 			});
@@ -356,8 +364,8 @@ public class Intellisense {
 		public static void removeUnrelatedSuggestions(LinkedList<Suggestion> suggestions, Double treshold) {
 			
 			// Initialization.
-			Obj<Integer> minimumDistance = new Obj<Integer>();
-			Obj<Integer> maximumDistance = new Obj<Integer>();
+			Obj<Double> minimumDistance = new Obj<Double>();
+			Obj<Double> maximumDistance = new Obj<Double>();
 			
 			// Get minimum and maximum distance.
 			getMinMaxDistance(suggestions, minimumDistance, maximumDistance);
@@ -381,13 +389,10 @@ public class Intellisense {
 			String caption = this.caption != null ? this.caption : "unknown";
 			if (this.tagName != null) {
 				
-				BiFunction<Integer, Integer, String> getDistanceColor = (inputDistance, baseColor) -> {
-					
-					// Normalize input distance.
-					float normalizedDistance =  inputDistance < 5 ? inputDistance / 5.0f : 1.0f;
+				BiFunction<Double, Integer, String> getDistanceColor = (inputDistance, baseColor) -> {
 					
 					// Trim the base color intensity.
-					int newColor = Utility.toColorIntesity(baseColor, normalizedDistance);
+					int newColor = Utility.adjustColorIntesity(baseColor, inputDistance);
 					
 					// Create color string representation and return it.
 					String outputColorString = String.format("#%06X", newColor);

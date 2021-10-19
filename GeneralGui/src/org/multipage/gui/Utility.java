@@ -1602,13 +1602,13 @@ public class Utility {
 	 * @param intensity
 	 * @return
 	 */
-	public static int toColorIntesity(int rgbColor, float intensity) {
+	public static int adjustColorIntesity(int rgbColor, double intensity) {
 		
 		// Check input intesity.
-		if (intensity >= 1.0f) {
+		if (intensity >= 1.0) {
 			return rgbColor;
 		}
-		if (intensity <= 0.0f) {
+		if (intensity <= 0.0) {
 			return 0;
 		}
 		
@@ -4912,5 +4912,20 @@ public class Utility {
 		
 		double y = - Math.log( L / x - 1 ) / k + x0;
 		return y;
+	}
+	
+	/**
+	 * Normalize input value.
+	 * @param value
+	 * @param minimumValue
+	 * @param maximumValue
+	 * @return
+	 */
+	public static double normalize(double value, double minimumValue, double maximumValue) {
+		
+		double deltaValue = maximumValue - minimumValue;
+		double normalValue = value - minimumValue / deltaValue;
+		
+		return normalValue;
 	}
 }
