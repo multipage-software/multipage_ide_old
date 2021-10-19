@@ -100,7 +100,7 @@ public class IntellisenseItemPanel extends JPanel {
 	private void postCreation(IntellisenseWindow intellisenseWindow) {
 		
 		// Set icons.
-		ImageIcon icon = Images.getIcon("/org/maclan/help/images/intellisense_help.png");
+		ImageIcon icon = Images.getIcon("org/maclan/help/images/intellisense_help.png");
 		buttonLink.setIcon(icon);
 		
 		// Set width and height.

@@ -163,9 +163,15 @@ public class GeneratorMain {
 			return;
 		}
 		
+		// Initialize program help layer.
+		if (!ProgramHelp.initialize(language, country, serializer)) {
+			System.exit(7);
+			return;
+		}
+		
 		// Initialize program generator layer.
 		if (!ProgramGenerator.initialize(language, country, serializer)) {
-			System.exit(7);
+			System.exit(8);
 			return;
 		}
 		

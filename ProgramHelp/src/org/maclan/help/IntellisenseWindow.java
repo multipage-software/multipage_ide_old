@@ -109,13 +109,18 @@ public class IntellisenseWindow extends JDialog {
 						// Trim boundaries to link button.
 						itemBounds.x = itemBounds.x + (itemBounds.width - IntellisenseItemPanel.linkButtonSize.width);
 						
+						// Get selected suggestion.
+						Suggestion selectedSuggestion = dialog.list.getSelectedValue();
+						
 						// If the mouse pointer is on the link button, display help page.
 						boolean isOnLinkButton = itemBounds.contains(mousePoint);
 						if (isOnLinkButton) {
 							
-							// Get selected suggestion.
-							Suggestion selectedSuggestion = dialog.list.getSelectedValue();
 							Intellisense.displayHelpPage(selectedSuggestion);
+						}
+						// Else apply suggestion.
+						else {
+							Intellisense.acceptSuggestion(selectedSuggestion);
 						}
 					}
 				}
@@ -311,7 +316,7 @@ public class IntellisenseWindow extends JDialog {
 		list = new JList<Suggestion>();
 		scrollPane.setViewportView(list);
 	}
-	
+
 	/**
 	 * Post creation.
 	 */

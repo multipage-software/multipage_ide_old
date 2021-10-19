@@ -81,6 +81,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -1593,6 +1594,33 @@ public class Utility {
 				null);
 		colorDialog.setVisible(true);
 		return currentColor.ref;
+	}
+	
+	/**
+	 * Return input color with given intensity.
+	 * @param rgbColor
+	 * @param intensity
+	 * @return
+	 */
+	public static int toColorIntesity(int rgbColor, float intensity) {
+		
+		// Check input intesity.
+		if (intensity >= 1.0f) {
+			return rgbColor;
+		}
+		if (intensity <= 0.0f) {
+			return 0;
+		}
+		
+		// Compute components of the input color.
+		int newRed = (int) (((rgbColor >>> 16) & 0x0000FF) * intensity);
+		int newGreen = (int) (((rgbColor >>> 8) & 0x0000FF) * intensity);
+		int newBlue = (int) ((rgbColor & 0x0000FF) * intensity);
+		
+		
+		// Compute output color value and return it.
+		int outputColor = (newRed << 16) | (newGreen << 8) | newBlue;
+		return outputColor;
 	}
 	
 	/**
@@ -3332,12 +3360,26 @@ public class Utility {
 	/**
 	 * Show HTML message.
 	 * @param parentComponent
+	 * @param htmlText
+	 */
+	public static void showHtml(Component parentComponent,
+			String htmlText) {
+		
+		ShowHtmlMessageDialog.showDialog(parentComponent, htmlText);
+	}
+	
+	/**
+	 * Show HTML message.
+	 * @param parentComponent
 	 * @param htmlMessage
 	 */
 	public static void showHtml(Component parentComponent,
-			String htmlMessage) {
+			String htmlTextName, Object ... parameters) {
 		
-		ShowHtmlMessageDialog.showDialog(parentComponent, htmlMessage);
+		String htmlTextTemplate = Resources.getString(htmlTextName);
+		String htmlText = String.format(htmlTextTemplate, parameters);
+		
+		ShowHtmlMessageDialog.showDialog(parentComponent, htmlText);
 	}
 
 	/**
@@ -4779,5 +4821,96 @@ public class Utility {
 		};
 		
 		column.setCellRenderer(cellRenderer);
+	}
+	
+	/**
+	 * Get minimum integer value from input numbers.
+	 * @param numbers
+	 * @return
+	 */
+    public static int min(int... numbers) {
+        return Arrays.stream(numbers)
+          .min().orElse(Integer.MAX_VALUE);
+    }
+	
+	/**
+	 * Get Levenshtein distance between input text and its pattern.
+	 * @param text
+	 * @param pattern
+	 * @return 
+	 */
+	public static int getLeveshteinDistance(String x, String y) {
+
+		int[][] dp = new int[x.length() + 1][y.length() + 1];
+		
+		// Cost of substitution.
+		BiFunction<Character, Character, Integer> costOfSubstitution = (a, b) -> a == b ? 0 : 1;
+
+		// Main algorithm taken from Baeldung GitHub.
+		for (int i = 0; i <= x.length(); i++) {
+			for (int j = 0; j <= y.length(); j++) {
+				if (i == 0) {
+					dp[i][j] = j;
+				} 
+				else if (j == 0) {
+					dp[i][j] = i;
+				} 
+				else {
+					dp[i][j] = min(dp[i - 1][j - 1] + costOfSubstitution.apply(x.charAt(i - 1), y.charAt(j - 1)),
+							dp[i - 1][j] + 1);
+				}
+			}
+		}
+
+		return dp[x.length()][y.length()];
+	}
+	
+	/**
+	 * Repeat character.
+	 * @param c
+	 * @param length
+	 * @return
+	 */
+	public static String repeat(char c, int length) {
+
+		StringBuilder string = new StringBuilder();
+		
+		while (length-- >= 0) {
+			string.append(c);
+		}
+		
+		return string.toString();
+	}
+	
+	/**
+	 * Compute output value using sigmoid function (logistic function).
+	 * @param L - maximum value
+	 * @param x0 - midpoint value
+	 * @param k - grow rate
+	 * @param x - input value
+	 * @return
+	 */
+	public static double sigmoid(double L, double x0, double k, double x) {
+		
+		double y = L / ( 1 + Math.exp( -k * ( x - x0 ) ) );
+		return y;
+	}
+	
+	/**
+	 * Compute output value using invrerse sigmoid function.
+	 * @param L - maximum value
+	 * @param x0 - midpoint value
+	 * @param k - grow rate
+	 * @param x - input value
+	 * @return
+	 */
+	public static double invereseSigmoid(double L, double x0, double k, double x) {
+		
+		if ( x < 0.0 ) {
+			return Double.NaN;
+		}
+		
+		double y = - Math.log( L / x - 1 ) / k + x0;
+		return y;
 	}
 }

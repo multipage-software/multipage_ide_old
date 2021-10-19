@@ -6,31 +6,45 @@
  */
 package org.maclan.help;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.text.Caret;
 
 import org.maclan.help.gnu_prolog.PrologUtility;
 import org.multipage.gui.TextEditorPane;
+import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
-import org.multipage.util.j;
+import org.multipage.util.Resources;
 
 import gnu.prolog.term.AtomTerm;
 import gnu.prolog.term.CompoundTerm;
 import gnu.prolog.term.CompoundTermTag;
+import gnu.prolog.term.IntegerTerm;
 import gnu.prolog.term.Term;
 import gnu.prolog.term.VariableTerm;
 import gnu.prolog.vm.Environment;
 import gnu.prolog.vm.Interpreter;
 import gnu.prolog.vm.Interpreter.Goal;
 import gnu.prolog.vm.PrologCode;
+import gnu.prolog.vm.PrologException;
+import gnu.prolog.vm.interpreter.Tracer;
+import gnu.prolog.vm.interpreter.Tracer.TraceLevel;
 
 /**
  * 
@@ -43,11 +57,27 @@ public class Intellisense {
 	 * A delay in milliseconds between keystrokes that invoke intellisense window.
 	 */
 	private static final int intellisenseKeystrokeTimeSpanMs = 1000;
+
+	/**
+	 * Treshold for unrelated IntelliSense suggestions.
+	 */
+	private static final Double suggestionsTreshold = 0.3;
+	
+	/**
+	 * Colors for IntelliSense suggestions.
+	 */
+	private static final  int suggestionBaseColor = 0xDDDDDD;
+	private static final int extendedSuggestionColor = 0x999999;
 	
 	/**
 	 * Font used in extended suggestion.
 	 */
-	private static final String suggestionExtensionFont = "size=\"2\" color=\"#999999\"";
+	private static final String suggestionFontTemplate = "size=\"2\" color=\"%s\"";
+	
+	/**
+	 * Font used in extended suggestion.
+	 */
+	private static final String suggestionExtensionFontTemplate = "size=\"2\" color=\"%s\"";
 	
 	/**
 	 * Suggestion class.
@@ -65,64 +95,395 @@ public class Intellisense {
 		public String caption = null;
 		
 		/**
+		 * Tag name.
+		 */
+		public String tagName = null;
+		
+		/**
+		 * Tag type.
+		 */
+		public String tagType = null;
+		
+		/**
+		 * Tag distance.
+		 */
+		public Integer tagDistance = null;
+		
+		/**
+		 * Replacement position for the tag.
+		 */
+		public Integer tagReplacementStart = null;
+		public Integer tagReplacementEnd = null;
+		
+		/**
+		 * Property name.
+		 */
+		public String propertyName = null;
+		
+		/**
+		 * Property type.
+		 */
+		public String propertyType = null;
+		
+		/**
+		 * Property distance.
+		 */
+		public Integer propertyDistance = null;
+		
+		/**
+		 * Replacement for the property.
+		 */
+		public Integer propertytReplacementStart = null;
+		public Integer propertyReplacementEnd = null;
+		
+		/**
+		 * Value from 0.0 to 1.0 of a normalized distance for this suggestion.
+		 */
+		private Double distance = null;
+		
+		/**
+		 * Object factory.
+		 * @param term
+		 * @return
+		 */
+		private static Suggestion createInstance(Term term)
+				throws Exception {
+			
+			// Check referenced source term.
+			if (!(term instanceof CompoundTerm)) {
+				Utility.throwException("org.maclan.help.messageBadIntellisenseSuggestionTerm");
+			}
+			
+			// Create new instance.
+			Suggestion suggestion = new Suggestion();
+			// Set reference to the input term and text of displayed caption.
+			suggestion.sourceTerm = term;
+			
+			// Initialize exception message.
+			final String exceptionLocalizedMessage = "org.maclan.help.messageBadIntellisenseSuggestionTag";
+			
+			// Check Maclan term.
+			Term maclanTerm = PrologUtility.getTermElement(suggestion.sourceTerm, "/maclan");
+			if (maclanTerm == null) {
+				Utility.throwException(exceptionLocalizedMessage);
+			}
+
+			// Check Maclan tag term.
+			Term maclanTagTerm = PrologUtility.getTermElement(maclanTerm, "/maclan/tag");
+			if (maclanTagTerm == null) {
+				Utility.throwException(exceptionLocalizedMessage);
+			}
+			
+			Term resultTerm = null;
+			AtomTerm atomTerm = null;
+			IntegerTerm integerTerm = null;
+			
+			// Get Maclan tag name and match.
+			resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/#1");
+			if (resultTerm instanceof AtomTerm) {
+				
+				atomTerm = (AtomTerm) resultTerm;
+				suggestion.tagName = atomTerm.value;
+				
+				// Get the Maclan tag type.
+				resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/type/#1");
+				if (resultTerm instanceof AtomTerm) {
+					
+					atomTerm = (AtomTerm) resultTerm;
+					suggestion.tagType = atomTerm.value;
+					
+					// Get tag distance.
+					resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/distance/#1");
+					if (resultTerm instanceof IntegerTerm) {
+						
+						integerTerm = (IntegerTerm) resultTerm;
+						suggestion.tagDistance = integerTerm.value;
+						
+						// Get tag match.
+						resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/match/#1");
+						if (resultTerm instanceof IntegerTerm) {
+							
+							integerTerm = (IntegerTerm) resultTerm;
+							suggestion.tagReplacementStart = integerTerm.value;
+							
+							resultTerm = PrologUtility.getTermElement(maclanTagTerm, "/tag/match/#2");
+							if (resultTerm instanceof IntegerTerm) {
+								
+								integerTerm = (IntegerTerm) resultTerm;
+								suggestion.tagReplacementEnd = integerTerm.value;
+							}
+						}
+					}
+				}
+			}
+			
+			// Check Maclan property.
+			Term maclanPropertyTerm = PrologUtility.getTermElement(maclanTerm, "/maclan/property");
+			if (maclanPropertyTerm instanceof CompoundTerm) {
+				
+				// Get property name.
+				resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/#1");
+				if (resultTerm instanceof AtomTerm) {
+					
+					atomTerm = (AtomTerm) resultTerm;
+					suggestion.propertyName = atomTerm.value;
+					
+					// Get property type.
+					resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/type/#1");
+					if (resultTerm instanceof AtomTerm) {
+						
+						atomTerm = (AtomTerm) resultTerm;
+						suggestion.propertyType = atomTerm.value;
+						
+						// Get property distance.
+						resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/distance/#1");
+						if (resultTerm instanceof IntegerTerm) {
+							
+							integerTerm = (IntegerTerm) resultTerm;
+							suggestion.propertyDistance = integerTerm.value;
+						
+							// Get property match.
+							resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/match/#1");
+							if (resultTerm instanceof IntegerTerm) {
+								
+								integerTerm = (IntegerTerm) resultTerm;
+								suggestion.propertytReplacementStart = integerTerm.value;
+								
+								// Get property match.
+								resultTerm = PrologUtility.getTermElement(maclanPropertyTerm, "/property/match/#2");
+								if (resultTerm instanceof IntegerTerm) {
+									
+									integerTerm = (IntegerTerm) resultTerm;
+									suggestion.propertyReplacementEnd = integerTerm.value;
+								}
+							}
+						}
+					}
+				}
+			}
+						
+			// Create caption string.
+			suggestion.caption = suggestion.createCaption();
+			
+			// Return the new instance.
+			return suggestion;
+		}
+		
+		/**
+		 * Get distance.
+		 * @return
+		 */
+		private Integer getDistance() {
+			
+			int distance = propertyDistance != null ? propertyDistance : tagDistance;
+			return distance;
+		}
+		
+		/**
+		 * Get minimum and maximum distance.
+		 * @param suggestions
+		 * @return
+		 */
+		public static void getMinMaxDistance(List<Suggestion> suggestions,
+				Obj<Integer> minimumDistance, Obj<Integer> maximumDistance) {
+			
+			// Traverse all input suggestions.
+			suggestions.forEach(suggestion -> {
+				
+				// Get suggestion distance.
+				int distance = suggestion.getDistance();
+				
+				// Update minimum distance.
+				if (minimumDistance.ref == null || distance < minimumDistance.ref) {
+					minimumDistance.ref = distance;
+				}
+				
+				// Update maximum distance.
+				if (maximumDistance.ref == null || distance > maximumDistance.ref) {
+					maximumDistance.ref = distance;
+				}
+				
+			});
+		}
+		
+		/**
+		 * Save normal distances.
+		 * @param suggestions
+		 * @param maximumDistance 
+		 * @param minimumDistance 
+		 * @param minimumDistance
+		 * @param maximumDistance
+		 * @param tresholdDistance 
+		 */
+		private static void saveNormalDistances(List<Suggestion> suggestions, Integer minimumDistance, Integer maximumDistance, Double tresholdDistance) {
+			
+			final double L = 1.0;	 // Maximum normal distance.
+			final double x0 = 0.5;   // Midpoint normal distance.
+			final double k = 3.0;    // Grow rate. Unimportance of very distant suggestions.
+			
+			// Check marginal distances.
+			if (minimumDistance == null || maximumDistance == null || minimumDistance > maximumDistance) {
+				return;
+			}
+			
+			// Get delta.
+			int deltaDistance = maximumDistance - minimumDistance;
+			
+			// Save normalize distances.
+			suggestions.forEach(suggestion -> {
+				
+				int distance = suggestion.getDistance();
+				double normalDistance = (float) (distance - minimumDistance) / (float) deltaDistance;
+				
+				// Normalize distances.
+				suggestion.tagDistance = Utility.normalize(suggestion.tagDistance);
+				
+				// Apply logistic function to normal distance.
+				suggestion.distance = Utility.sigmoid(L, x0, k, normalDistance);
+				
+				// Exclude values below the treshold.
+				if (tresholdDistance != null && suggestion.distance > tresholdDistance) {
+					suggestion.distance = null;
+				}
+				
+			});
+		}
+		
+		/**
+		 * Remove unrelated suggestions.
+		 * @return
+		 */
+		public static void removeUnrelatedSuggestions(LinkedList<Suggestion> suggestions, Double treshold) {
+			
+			// Initialization.
+			Obj<Integer> minimumDistance = new Obj<Integer>();
+			Obj<Integer> maximumDistance = new Obj<Integer>();
+			
+			// Get minimum and maximum distance.
+			getMinMaxDistance(suggestions, minimumDistance, maximumDistance);
+			
+			// Normalize distances.
+			Suggestion.saveNormalDistances(suggestions, minimumDistance.ref, maximumDistance.ref, treshold);
+			
+			// Remove unrelated suggestions.
+			List<Suggestion> relatedSuggestions = suggestions.stream().filter(suggestion -> suggestion.distance != null).collect(Collectors.toList());
+			suggestions.clear();
+			suggestions.addAll(relatedSuggestions);
+		}
+
+		/**
+		 * Create caption string
+		 * @return
+		 */
+		public String createCaption() {
+			
+			// Compile caption.
+			String caption = this.caption != null ? this.caption : "unknown";
+			if (this.tagName != null) {
+				
+				BiFunction<Integer, Integer, String> getDistanceColor = (inputDistance, baseColor) -> {
+					
+					// Normalize input distance.
+					float normalizedDistance =  inputDistance < 5 ? inputDistance / 5.0f : 1.0f;
+					
+					// Trim the base color intensity.
+					int newColor = Utility.toColorIntesity(baseColor, normalizedDistance);
+					
+					// Create color string representation and return it.
+					String outputColorString = String.format("#%06X", newColor);
+					return outputColorString;
+				};
+				
+				String mainFont;
+				String extensionFont;
+				
+				// For a tag suggestion.
+				if (propertyName == null) {
+					if (tagType != null && tagDistance != null) {
+						
+						// Get main and extension CSS colors.
+						mainFont = String.format(suggestionFontTemplate, getDistanceColor.apply(tagDistance, suggestionBaseColor));
+						extensionFont = String.format(suggestionExtensionFontTemplate, getDistanceColor.apply(tagDistance, extendedSuggestionColor));
+						
+						// Create caption.
+						caption = String.format(Resources.getString("org.maclan.help.textIntellisenseTagHint"),
+								mainFont, tagName, extensionFont, tagType);
+					}
+				}
+				// For a property suggestion.
+				else if (propertyType != null) {
+					
+					// Get main and extension CSS colors.
+					mainFont = String.format(suggestionFontTemplate, getDistanceColor.apply(propertyDistance, suggestionBaseColor));
+					extensionFont = String.format(suggestionExtensionFontTemplate, getDistanceColor.apply(tagDistance, extendedSuggestionColor));
+					
+					// Create caption.
+					caption = String.format(Resources.getString("org.maclan.help.textIntellisensePropertyHint"),
+							mainFont, propertyName, extensionFont, propertyType, tagName);
+				}
+			}
+			
+			// Wrap caption into HTM tag and return resulting string.
+			caption = "<html>" + caption + "</html>";
+			return caption;
+		}
+		
+		/**
 		 * Add all suggestion terms.
 		 * @param suggestions
 		 * @param terms
 		 */
 		public static void addAll(LinkedList<Suggestion> suggestions, LinkedList<Term> terms) {
 			
+			// Load list of suggestions.
 			terms.forEach(term -> {
-					Suggestion suggestion = new Suggestion();
-					suggestion.sourceTerm = term;
-					suggestion.caption = term.toString();
-					suggestions.add(suggestion);
+				
+					try {
+						Suggestion suggestion = createInstance(term);
+						if (suggestion != null) {
+							suggestions.add(suggestion);
+						}
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+					
 				}); 
+			
+			// Sort suggestions by their distances.
+			suggestions.sort((suggestion1, suggestion2) -> {
+				
+				// Compare tag distancess.
+				int tagComparision = suggestion1.tagDistance.compareTo(suggestion2.tagDistance);
+				if (tagComparision != 0) {
+					return tagComparision;
+				}
+				
+				// If they are same, compare property distances.
+				if (suggestion1.propertyDistance == null || suggestion2.propertyDistance == null) {
+					return 0;
+				}
+				
+				int propertyDistances = suggestion1.propertyDistance.compareTo(suggestion2.propertyDistance);
+				return propertyDistances;
+			});
 		}
 		
 		/**
-		 * Get string value of term functor value.
-		 * @param compundTerm
-		 * @param argumentIndex
-		 * @param argumentTagName
+		 * Get area alias of the help page related to the suggestion.
 		 * @return
 		 */
-		public static String getTermArgumentStringValue(CompoundTerm compundTerm, int argumentIndex, String argumentTagName) {
+		public String getHelpAreaAlias() {
 			
-			// Get the argument.
-			Term maclanTagTerm = compundTerm.args[argumentIndex];
-			int termType = maclanTagTerm.getTermType();
+			// Format area alias form tag name.
+			String areaAlias = String.format("%s_%s", this.tagName, this.tagType);
 			
-			// Check argument type.
-			if (termType != Term.COMPOUND) {
-				return null;
+			// Try to use tag property.
+			if (this.propertyName != null) {
+				areaAlias += String.format("#%s_%s", this.propertyName, this.propertyType);
 			}
 			
-			// Convert reference type.
-			CompoundTerm maclanTagCompoundTerm = (CompoundTerm) maclanTagTerm;
-			
-			// Check tag value.
-			if (!argumentTagName.equals(maclanTagCompoundTerm.tag.functor.value)) {
-				return null;
-			}
-			
-			// Check arity.
-			if (maclanTagCompoundTerm.tag.arity != 1) {
-				return null;
-			}
-			
-			// Get Maclan token name.
-			Term maclanTagNameTerm = maclanTagCompoundTerm.args[0];
-			termType = maclanTagNameTerm.getTermType();
-			
-			if (termType != Term.ATOM) {
-				return null;
-			}
-			
-			// Get string value.
-			AtomTerm maclanTagAtomTerm = (AtomTerm) maclanTagNameTerm;
-			String stringValue = maclanTagAtomTerm.value;
-			
-			return stringValue;
+			return areaAlias;
 		}
 		
 		/**
@@ -130,84 +491,11 @@ public class Intellisense {
 		 */
 		@Override
 		public String toString() {
-			
-			// Check source term.
-			if (sourceTerm == null) {
-				return "null";
-			}
-			
-			// Check term type.
-			int termType = sourceTerm.getTermType();
-			if (termType != Term.COMPOUND) {
-				return "bad_term";
-			}
-			
-			CompoundTerm compundTerm = (CompoundTerm) sourceTerm;
-			
-			// Get term tag and arity.
-			CompoundTermTag termTag = compundTerm.tag;
-			int termArity = termTag.arity;
-			
-			// Check term tag.
-			String tag = termTag.functor.value;
-			if (!"maclan".equals(tag)) {
-				return "not_maclan";
-			}
-			
-			// Get Maclan tag name.
-			String maclanTagName = null;
-			if (termArity >= 1) {
-				
-				// Get first argument value.
-				maclanTagName = getTermArgumentStringValue(compundTerm, 0, "tag");
-			}
-			
-			// Try to get Maclan property.
-			String maclanPropertyName = null;
-			String maclanTagType = null;
-			if (termArity >= 2) {
-				
-				// Try to get second argument as a tag type.
-				maclanTagType = getTermArgumentStringValue(compundTerm, 1, "type");
 
-				// Get second argument value.
-				maclanPropertyName = getTermArgumentStringValue(compundTerm, 1, "property");
+			if (this.caption == null) {
+				this.caption = createCaption();
 			}
-			
-			// Try to get Maclan property type.
-			String maclanPropertyTypeName = null;
-			if (termArity >= 3) {
-
-				// Get third argument value.
-				maclanPropertyTypeName = getTermArgumentStringValue(compundTerm, 2, "type");
-			}
-			
-			// Compile caption.
-			String caption = this.caption;
-			if (maclanTagName != null) {
-				
-				if (maclanPropertyName != null) {
-					
-					if (maclanPropertyTypeName != null) {
-						caption = String.format("<b>%s</b><font %s><i> of type %s in %s</i></font>", maclanPropertyName, suggestionExtensionFont, maclanPropertyTypeName, maclanTagName);
-					}
-					else {
-						caption = String.format("<b>%s</b><font %s><i> in %s</i></font>", maclanPropertyName, suggestionExtensionFont, maclanTagName);
-					}
-				}
-				else {
-					
-					if (maclanTagType != null) {
-						
-						caption = String.format("<b>%s</b><font %s><i> is %s</i></font>", maclanTagName, suggestionExtensionFont, maclanTagType);
-					}
-					else {
-						caption = String.format("<b>%s</b>", maclanTagName);
-					}
-				}
-			}
-			
-			return "<html>" + caption + "</html>";
+			return this.caption;
 		}
 	}
 	
@@ -311,12 +599,90 @@ public class Intellisense {
 	private static Input input = new Input();
 	
 	/**
+	 * Helper regular expressions that enable to find replacement stop sign.
+	 */
+	private static Pattern tagDividerRegex = Pattern.compile("\\s+|\\s*\\]");
+	private static Pattern propertyDividersRegex = Pattern.compile("\\s+|\\s*(\\,|\\])");
+	
+	/**
+	 * Intellisense output callback.
+	 */
+	private static Consumer<Suggestion> output = null;
+	
+	/**
 	 * Initialization.
 	 */
 	public static void initialize() {
 		
+		final Hashtable<Integer, String> argumentTypes = new Hashtable<Integer, String>();
+		argumentTypes.put(-1, "UNKNOWN");
+		argumentTypes.put(1, "VARIABLE");
+		argumentTypes.put(2, "JAVA_OBJECT");
+		argumentTypes.put(3, "FLOAT");
+		argumentTypes.put(4, "INTEGER");
+		argumentTypes.put(5, "ATOM");
+		argumentTypes.put(6, "COMPOUND");
+		
 		// Construct the environment
-		prologEnvironment = new Environment();
+		prologEnvironment = new Environment() {
+			
+			
+			@Override
+			public synchronized PrologCode loadPrologCode(CompoundTermTag tag) throws PrologException {
+				
+				Tracer tracer = null;
+				
+				// Get flag.
+				boolean canLog = ProgramHelp.canLog();
+				
+				if (canLog) {
+					
+					ProgramHelp.log("PROLOG TRACER:");
+					tracer = prologInterpreter.getTracer();
+					tracer.setActive(true);
+					tracer.addTrace(tag, EnumSet.of(TraceLevel.CALL, TraceLevel.REDO, TraceLevel.FAIL, TraceLevel.EXIT));
+					tracer.addTracerEventListener(traceEvent -> {
+						
+						String argumentsText = "";
+						Term [] arguments = traceEvent.getArgs();
+						for (Term argument : arguments) {
+							
+							argumentsText += argumentsText.isEmpty() ? "" : ", ";
+							
+							argument = argument.dereference();
+							
+							String argumentText = argument.toString();
+							int type = argument.getTermType();
+							String typeText = argumentTypes.get(type);
+							
+							argumentsText += String.format("%s as %s", argumentText, typeText);
+							
+						}
+						
+						ProgramHelp.log("PROLOG EVENT: \t[l%s] %s, %s", traceEvent.getLevel().toString(), traceEvent.getTag(), argumentsText);
+					});
+				}
+				
+				// Delegate  call.
+				PrologCode code = super.loadPrologCode(tag);
+				
+				if (canLog) {
+					
+					CompoundTermTag[] stack = tracer.getCallStack();
+					
+					ProgramHelp.log("");
+					ProgramHelp.log("*******************************************************************************", tag);
+					ProgramHelp.log("PROLOG TAG: %s", tag);
+					ProgramHelp.log("PROLOG BYTECODE: \t%s\n", code);				
+					ProgramHelp.log("PROLOG STACK: \t%s", Arrays.toString(stack));
+					ProgramHelp.log("PROLOG STATUS:");
+					tracer.reportStatus();
+				}
+				
+				return code;
+			}
+
+		};
 
 		// Load definitions of external Java predicates in the "org.maclan.help.gnu_prolog" package.
 		URL builtInUrl = Intellisense.class.getResource("/org/maclan/help/properties/java_externals.pl");
@@ -360,7 +726,13 @@ public class Intellisense {
 			return null;
 		}
 		
-		j.log("TOKENS %s", inputTokens.toString());
+		// Get flag.
+		boolean canLog = ProgramHelp.canLog();
+		
+		if (canLog) {
+			ProgramHelp.log("\n---------------------------- PROLOG INTERPRETER START ----------------------------\n");
+			ProgramHelp.log("PROLOG INPUT TOKENS: %s", inputTokens.toString());
+		}
 		
 		// Initialization.
 		LinkedList<Suggestion> suggestions = new LinkedList<Suggestion>();
@@ -375,6 +747,11 @@ public class Intellisense {
 			try {
 				
 				Goal theGoal = prologInterpreter.prepareGoal(suggestionsGoal);
+				
+				if (canLog) {
+					ProgramHelp.log("PROLOG GOAL: %s", suggestionsGoal.toString());
+				}
+				
 				int result;
 				LinkedList<Term> terms = new LinkedList<Term>();
 				
@@ -386,6 +763,11 @@ public class Intellisense {
 					}
 					
 					Term resultingSuggestion = suggestionsAnswer.dereference();
+					
+					if (canLog) {
+						ProgramHelp.log("PROLOG OUTPUT TERM: %s", resultingSuggestion.toString());
+					}
+					
 					PrologUtility.addList(resultingSuggestion, terms);
 					
 					Suggestion.addAll(suggestions, terms);
@@ -397,6 +779,13 @@ public class Intellisense {
 				e.printStackTrace();
 			}
 		}
+		
+		if (canLog) {
+			ProgramHelp.log("\n---------------------------- PROLOG INTERPRETER STOP -----------------------------\n");
+		}
+		
+		// Remove unrelated suggestions.
+		Suggestion.removeUnrelatedSuggestions(suggestions, suggestionsTreshold);
 		
 		// Return suggestions.
 		return suggestions;
@@ -538,9 +927,11 @@ public class Intellisense {
 		// Create compound term.
 		Term tokensTerm = CompoundTerm.getList(terms.toArray(new Term [0]));
 		
-		if (ProgramHelp.logLambda != null) {
-			ProgramHelp.logLambda.accept(tokensTerm.toString());
+		boolean canLog = ProgramHelp.canLog();
+		if (canLog) {
+			ProgramHelp.log(tokensTerm.toString());
 		}
+		
 		return tokensTerm;
 	}
 	
@@ -561,17 +952,24 @@ public class Intellisense {
 			return null;
 		}
 		
+		// Get match start.
 		int start = matcher.start();
 		if (start != position.ref) {
 			return null;
 		}
 		
-		position.ref = matcher.end();
+		// Get match end.
+		int end = matcher.end();
 		
+		// Update position.
+		position.ref = end;
+		
+		// Check the number of matching elements.
 		int groupCount = matcher.groupCount();
 		if (groupCount <= 0) {
 			
-			resultingTerm = AtomTerm.get(termName);
+			// Return simple term.
+			resultingTerm = new CompoundTerm(CompoundTermTag.get(termName, 2), IntegerTerm.get(start), IntegerTerm.get(end));
 			return resultingTerm;
 		}
 		
@@ -581,7 +979,11 @@ public class Intellisense {
 		
 		String atomTerm = matcher.group(1);
 		
-		resultingTerm = new CompoundTerm(CompoundTermTag.get(termName, 1), AtomTerm.get(atomTerm));
+		start = matcher.start(1);
+		end = matcher.end();
+		
+		// Return extended term.
+		resultingTerm = new CompoundTerm(CompoundTermTag.get(termName, 3), AtomTerm.get(atomTerm), IntegerTerm.get(start), IntegerTerm.get(end));
 		return resultingTerm;
 	}
 	
@@ -601,6 +1003,43 @@ public class Intellisense {
 			// Set input values.
 			Intellisense.input.set(sourceCode, cursorPosition, caret, textPane);
 			
+			// Set output callback.
+			Intellisense.output = selectedSuggestion -> {
+				
+				// Replace source code in the text panel.
+				StringBuilder sourceCodeBuilder = new StringBuilder(sourceCode);
+				Integer newCursorPosition = replaceSourceCode(textPane, caret, sourceCodeBuilder, cursorPosition, selectedSuggestion);
+				if (newCursorPosition != null) {
+					
+					textPane.setText(sourceCodeBuilder.toString());
+					
+					// Close the IntelliSense window and set new cursor position with a delay.
+					SwingUtilities.invokeLater(() -> IntellisenseWindow.hideWindow());
+					
+					javax.swing.Timer timer = new javax.swing.Timer(250, new ActionListener() {
+						@Override
+						public void actionPerformed(ActionEvent event) {
+							
+							// Try to set new cursor position.
+							try {
+								textPane.setSelectionStart(newCursorPosition);
+								textPane.setSelectionEnd(newCursorPosition);
+							}
+							catch (Exception e) {
+							}
+						}
+					});
+					timer.setRepeats(false);
+					timer.start();
+				}
+				
+				// Write record into log.
+				boolean canLog = ProgramHelp.canLog();
+				if (canLog) {
+					ProgramHelp.log(selectedSuggestion.toString());
+				}
+			};
+			
 			// Restart the intellisense timer.
 			intellisenseTimer.start();
 		};
@@ -609,6 +1048,79 @@ public class Intellisense {
 		Intellisense.maclanHelpLambda  = maclanHelpLambda;
 	}
 	
+	/**
+	 * Replace source code with suggestion.
+	 * @param textPane
+	 * @param cursorPosition
+	 * @param sourceCode
+	 * @param caret
+	 * @param suggestion
+	 */
+	private static Integer replaceSourceCode(JTextPane textPane, Caret caret, StringBuilder sourceCode, Integer cursorPosition,
+			Suggestion suggestion) {
+		
+		Integer genuineSourceLength = sourceCode.length();
+		
+		// Replace tag.
+		cursorPosition = replaceSourceCode(sourceCode, cursorPosition,
+				suggestion.tagName, suggestion.tagReplacementStart, tagDividerRegex);
+		
+		if (cursorPosition != null) {
+			
+			// Compute shift of following characters in the source code.
+			int shift = sourceCode.length() - genuineSourceLength;
+			
+			// Try to replace property.
+			if (suggestion.propertyName != null) {
+				
+				Integer cursorPositionForProperty = replaceSourceCode(sourceCode, cursorPosition,
+						suggestion.propertyName, suggestion.propertytReplacementStart + shift, propertyDividersRegex);
+				
+				// Update resulting cursor position.
+				if (cursorPositionForProperty != null) {
+					cursorPosition = cursorPositionForProperty;
+				}
+			}
+		}
+		
+		return cursorPosition;
+	}
+	
+	/**
+	 * Replace source code element.
+	 * @param sourceCode
+	 * @param cursorPosition
+	 * @param relacement
+	 * @param startPosition
+	 * @param stopSignRegex
+	 * @return
+	 */
+	private static Integer replaceSourceCode(StringBuilder sourceCode, int cursorPosition, String relacement,
+			int startPosition, Pattern stopSignRegex) {
+		
+		// Try to find replacement end.
+		int genuineSourceLength = sourceCode.length();
+		int endPosition;
+		
+		Matcher matcher = stopSignRegex.matcher(sourceCode);
+		if (matcher.find(startPosition)) {
+			
+			endPosition = matcher.start();
+		}
+		else {
+			endPosition = genuineSourceLength;
+		}
+		
+		// Replace source code text element.
+		sourceCode.replace(startPosition, endPosition, relacement);
+		
+		// Compute text shift.
+		int shift = sourceCode.length() - genuineSourceLength;
+		
+		// Return updated position.
+		return endPosition + shift;
+	}
+
 	/**
 	 * On intellisense.
 	 */
@@ -643,10 +1155,21 @@ public class Intellisense {
 		if (maclanHelpLambda != null) {
 			
 			// Get suggestion ID.
-			String maclanHelpId = suggestion.sourceTerm.toString();
+			String maclanHelpId = suggestion.getHelpAreaAlias();
 			
 			// Invoke Maclan help on suggestion ID.
 			maclanHelpLambda.accept(maclanHelpId);
+		}
+	}
+	
+	/**
+	 * Try to accept selected suggestion.
+	 * @param selectedSuggestion
+	 */
+	public static void acceptSuggestion(Suggestion selectedSuggestion) {
+		
+		if (output != null) {
+			output.accept(selectedSuggestion);
 		}
 	}
 }

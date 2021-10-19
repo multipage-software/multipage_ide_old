@@ -3750,7 +3750,7 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// Check the area.
 		if (maclanHelpArea == null) {
-			Utility.show(getFrame(), "org.multipage.generator.messageStatementDescriptionIsNotAvailable");
+			Utility.showHtml(getFrame().getContentPane(), "org.multipage.generator.messageStatementDescriptionIsNotAvailable", maclanHelpId);
 			return;
 		}
 		

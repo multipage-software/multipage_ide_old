@@ -332,8 +332,19 @@ public class LoggingDialog extends JDialog {
 		
 		synchronized (LoggingDialog.enabled) {
 			
-			return LoggingDialog.enabled;
-		}	
+			if (LoggingDialog.enabled) {
+				return true;
+			}
+		}
+		
+		if (LoggingDialog.dialog == null) {
+			return false;
+		}
+		
+		synchronized (LoggingDialog.dialog) {
+			
+			return LoggingDialog.dialog.isVisible();
+		}
 	}
 	
 	/**
@@ -345,7 +356,8 @@ public class LoggingDialog extends JDialog {
 		dialog = new LoggingDialog(parentWindow);
 		
 		// Attach the help module.
-		ProgramHelp.logLambda = text -> log(text);
+		ProgramHelp.setLogLambda(text -> log(text));
+		ProgramHelp.setCanLogLambda(() -> isLoggingEnabled());
 		
 		// If the following flag was set, open the dialog.
 		if (openedWhenInitialized) {

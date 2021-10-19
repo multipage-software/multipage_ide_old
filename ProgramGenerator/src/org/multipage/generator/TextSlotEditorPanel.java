@@ -60,7 +60,6 @@ import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * 

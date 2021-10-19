@@ -30,7 +30,7 @@ public class ShowHtmlMessageDialog extends JDialog {
 	 */
 	private JButton buttonOk;
 	private JScrollPane scrollPane;
-	private JTextPane textPane;
+	private TextPaneEx textPane;
 
 	/**
 	 * Show dialog.
@@ -95,7 +95,7 @@ public class ShowHtmlMessageDialog extends JDialog {
 		springLayout.putConstraint(SpringLayout.EAST, scrollPane, -10, SpringLayout.EAST, getContentPane());
 		getContentPane().add(scrollPane);
 		
-		textPane = new JTextPane();
+		textPane = new TextPaneEx();
 		textPane.setEditable(false);
 		textPane.setContentType("text/html");
 		scrollPane.setViewportView(textPane);
