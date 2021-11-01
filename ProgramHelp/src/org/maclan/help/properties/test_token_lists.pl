@@ -15,13 +15,13 @@ test :-
     print('ALL DONE').
 
 my_test :-
-    print('my_test: '), get_suggestions([tag_start('TAGabcdef',2,11,11),whitespace_separator(11,12,12),property_name(h,12,12,13)],Suggestions), print(Suggestions), write('\n\n').
+    print('my_test: '), get_suggestions([tag_start('TAGabcdef', 2, 11),whitespace_separator(11, 12),property_name(h, 12, 13)],Suggestions), print(Suggestions), write('\n\n').
         
 test_tags :-
-    print('test_tags: '), get_suggestions([tag_start('AREAabcde',1,5,10)], Suggestions), print(Suggestions), write('\n\n').
+    print('test_tags: '), get_suggestions([tag_start('AREAabcde', 1, 10)], Suggestions), print(Suggestions), write('\n\n').
 
 test_good_tag :-
-    print('test_good_tag: '), get_suggestions([tag_start('AREA_NAME',1,10,10)], Suggestions), print(Suggestions), write('\n\n').
+    print('test_good_tag: '), get_suggestions([tag_start('AREA_NAME', 1, 10)], Suggestions), print(Suggestions), write('\n\n').
     
 test_good_tag_ws :-
     print('test_good_tag_ws: '), get_suggestions([tag_start('AREA_NAME', 1, 3), whitespace_separator(4, 5)], Suggestions), print(Suggestions), write('\n\n').

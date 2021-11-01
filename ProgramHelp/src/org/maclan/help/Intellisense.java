@@ -31,6 +31,7 @@ import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import gnu.prolog.term.AtomTerm;
 import gnu.prolog.term.CompoundTerm;
@@ -351,13 +352,14 @@ public class Intellisense {
 					}
 				}
 				else {
-					suggestion.distance = distance;
+					suggestion.distance = null;
 				}
 				
 			});
 		}
 		
 		/**
+		 * 
 		 * Remove unrelated suggestions.
 		 * @return
 		 */
@@ -372,6 +374,9 @@ public class Intellisense {
 			
 			// Normalize distances.
 			Suggestion.saveNormalDistances(suggestions, minimumDistance.ref, maximumDistance.ref, treshold);
+			
+			// TODO: debug list
+			suggestions.forEach(suggestion -> j.log("%s\t%f", suggestion.tagName, suggestion.distance != null ? suggestion.distance : "null"));
 			
 			// Remove unrelated suggestions.
 			List<Suggestion> relatedSuggestions = suggestions.stream().filter(suggestion -> suggestion.distance != null).collect(Collectors.toList());
@@ -578,6 +583,7 @@ public class Intellisense {
 	 */
 	private static enum TokenType { initial, tag_start, white_space_separator, property_name, equal_sign, property_value, property_separator, tag_closing, text, end_tag };
 	
+	private static final Pattern tagOpeningRegex = Pattern.compile("\\[\\s*@+", Pattern.MULTILINE);
 	private static final Pattern tagStartRegex = Pattern.compile("\\G\\s*\\[\\s*@\\s*(\\w*)");
 	private static final Pattern whiteSpaceSeparatorRegex = Pattern.compile("\\G\\s");
 	private static final Pattern tagPropertyNameRegex = Pattern.compile("\\G\\s*(\\w+)");
@@ -804,11 +810,9 @@ public class Intellisense {
 	 */
 	private static Term prepareForIntellisense(String sourceCode, int cursorPosition) {
 		
-		final Pattern tagOpeningRegex = Pattern.compile("\\[\\s*@+", Pattern.MULTILINE);
-		
 		Obj<String> preparedSourceCode = new Obj<String>(null);
 		
-		// Get text from last tag to the cursor position.
+		// Get text starting from tag start to current cursor position.
 		String leadingPart = sourceCode.substring(0, cursorPosition);
 		Integer tagStart = null;
 		

@@ -1056,7 +1056,6 @@ public class SearchDialog extends JDialog {
 /**
  * 
  * @author
- *
  */
 class AreaCoordinatesTableItem  {
 	

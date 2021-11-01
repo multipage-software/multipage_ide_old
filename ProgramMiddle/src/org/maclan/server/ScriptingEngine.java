@@ -9,7 +9,6 @@ package org.maclan.server;
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 
@@ -17,6 +16,7 @@ import javax.script.SimpleScriptContext;
 //graalvm import org.graalvm.polyglot.Value;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
+import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 
 /**
  * @author user
@@ -147,9 +147,14 @@ public class ScriptingEngine {
 		case nashorn:
 			
 			// Create Nashorn.
-			ScriptEngineManager jsEngineManager = new javax.script.ScriptEngineManager();
-			nashorn = jsEngineManager.getEngineByName("nashorn");
-			
+			try {
+				NashornScriptEngineFactory jsEngineManager = new NashornScriptEngineFactory();
+				nashorn = jsEngineManager.getScriptEngine("nashorn");
+			}
+			catch (Throwable e) {
+				e.printStackTrace();
+			}
+				
 			// Check the engine.
 			if (nashorn == null) {
 				j.logMessage("org.maclan.server.messageCannotGetNashornScritpingEngine");

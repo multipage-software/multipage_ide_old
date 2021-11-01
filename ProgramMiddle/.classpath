@@ -13,6 +13,11 @@
 	</classpathentry>
 	<classpathentry kind="src" path="/JavaBridge"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="C:/libraries/jetty-distribution-9.4.7.v20170914/lib/jetty-util-9.4.7.v20170914.jar">
 		<attributes>
 			<attribute name="org.eclipse.jst.component.dependency" value="../"/>
@@ -62,6 +67,6 @@
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-lang3-3.7-bin/commons-lang3-3.7/commons-lang3-3.7.jar"/>
 	<classpathentry kind="lib" path="C:/libraries/apache_commons/commons-text-1.9-bin/commons-text-1.9/commons-text-1.9.jar"/>
 	<classpathentry kind="lib" path="C:/libraries/nashorn-core-15.2.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/libraries/asm-all-5.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

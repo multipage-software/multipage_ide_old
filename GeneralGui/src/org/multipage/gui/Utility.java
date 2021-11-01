@@ -76,6 +76,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedMap;
@@ -154,6 +155,7 @@ import javax.swing.tree.TreePath;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -209,7 +211,29 @@ public class Utility {
 	 * Empty line REGEX pattern
 	 */
 	public static final Pattern emptyLineRegexPattern = Pattern.compile("(?m)^[ \t]*\r?\n", Pattern.MULTILINE);
-
+	
+	/**
+	 * Character distances. Characters on keyboard: position on keyboard and character topology.
+	 */
+	private final static char [][][] keyboard = 
+		{{{ 'Q' }, { 'W' }, { 'E' }, { 'R' }, { 'T' }, { 'Y' }, { 'U' }, { 'I' }, { 'O' }, { 'P' }},
+         {{ 'A' }, { 'S' }, { 'D' }, { 'F' }, { 'G' }, { 'H' }, { 'J' }, { 'K' }, { 'L' }, { '\0'}},
+         {{ '\0'}, { 'Z' }, { 'X' }, { 'C' }, { 'V' }, { 'B' }, { 'N' }, { 'M' }, { '\0'}, { '\0'}}};
+	
+	private static int keyboardHeight = -1;
+	private static int keyboardWidth = -1;
+	
+	private static Hashtable<Character, List<Character>> mapKeyNeighbours = null;
+	
+	/**
+	 * Initialization.
+	 */
+	static {
+		
+		// Initialize computation of text distances.
+		initTextDistanceComputation();
+	}
+	
 	/**
 	 * Load serialized data.
 	 * @param inputStream
@@ -4832,37 +4856,137 @@ public class Utility {
         return Arrays.stream(numbers)
           .min().orElse(Integer.MAX_VALUE);
     }
+    
+    /**
+     * Initialize computation of text and pattern distances.
+     */
+    public static void initTextDistanceComputation() {
+    	
+		// Create map of neighbours of a keyboard key.
+		mapKeyNeighbours = new Hashtable<Character, List<Character>>();
+		
+		// Set keyboard width and height.
+		keyboardHeight = keyboard.length;
+		keyboardWidth = keyboard[0].length;
+		
+		// Go throug the keyboard.
+		for (int i = 0; i < keyboardHeight; i++) {
+			for (int j = 0; j < keyboardWidth; j++) {
+				
+				// Get text key.
+				char textKey = keyboard[i][j][0];
+				
+				if (textKey == 0) {
+					continue;
+				}
+				
+				// Create empty neighbour list.
+				LinkedList<Character> neighbours = new LinkedList<Character>();
+				
+				// Compute distances for neigbhour keys.
+				for (int deltaI = -1; deltaI <= 1; deltaI++) {
+					for (int deltaJ = -1; deltaJ <= 1; deltaJ++) {
+						
+						// Compute neighbour indices.
+						Integer iNeigbourhood = i + deltaI;
+						Integer jNeighbourhood = j + deltaJ;
+						
+						// Apply keyboard constraints.
+						if (iNeigbourhood < 0 || iNeigbourhood >= keyboardHeight) {
+							continue;
+						}
+						
+						if (jNeighbourhood < 0 || jNeighbourhood >= keyboardWidth) {
+							continue;
+						}
+						
+						// Get pattern key.
+						char patternKey = (char) keyboard[iNeigbourhood][jNeighbourhood][0];
+						
+						if (patternKey == 0) {
+							continue;
+						}
+						
+						// Add new neighbour key.
+						neighbours.add(patternKey);
+					}
+				}
+				
+				// Map key to its neighbours.
+				mapKeyNeighbours.put(textKey, neighbours);
+			}
+		}
+    }
 	
 	/**
 	 * Get Levenshtein distance between input text and its pattern.
+	 * From https://web.stanford.edu/~jurafsky/slp3/slides/2_EditDistance.pdf.
 	 * @param text
 	 * @param pattern
 	 * @return 
 	 */
-	public static int getLeveshteinDistance(String x, String y) {
-
-		int[][] dp = new int[x.length() + 1][y.length() + 1];
+	public static int getLevenshteinDistance(String text, String pattern) {
 		
-		// Cost of substitution.
-		BiFunction<Character, Character, Integer> costOfSubstitution = (a, b) -> a == b ? 0 : 1;
-
-		// Main algorithm taken from Baeldung GitHub.
-		for (int i = 0; i <= x.length(); i++) {
-			for (int j = 0; j <= y.length(); j++) {
-				if (i == 0) {
-					dp[i][j] = j;
+		// Cost of substitution of character when typing an error on keyboard.
+		BiFunction<Character, Character, Integer> costOfSubstitutionLambda = (textCharacter, patternCharacter) -> {
+			
+			// Check equality.
+			if (textCharacter == patternCharacter) {
+				return 0;
+			}
+			
+			// Get neighbour characters.
+			List<Character> neighbourCharacters = mapKeyNeighbours.get(textCharacter);
+			if (neighbourCharacters == null) {
+				return 3;
+			}
+			
+			// Neighbour character distance.
+			Integer neigbourDistance = neighbourCharacters.contains(patternCharacter) ? 2 : 3;
+			return neigbourDistance;
+		};
+		
+		// Main algorithm.
+		int M = text.length();
+		int N = pattern.length();
+		int D[][] = new int[M + 1][N + 1];
+		
+		// Initialiation.
+        for(int i = 1;i <= M; i++)
+        {
+            D[i][0] = i;        
+        }
+        for(int j = 1; j <= N; j++)
+        {
+            D[0][j] = j;
+        }
+        
+		// Recurrence relations.
+		for (int j = 1; j <= N; j++) {
+			for (int i = 1; i <= M; i++) {
+				
+				char Xi = text.charAt(i - 1);
+				char Yj =  pattern.charAt(j - 1);
+				
+				// Base conditions.
+				if (Xi == Yj) {
+					D[i][j] = D[i - 1][j - 1];
 				} 
-				else if (j == 0) {
-					dp[i][j] = i;
-				} 
+				
 				else {
-					dp[i][j] = min(dp[i - 1][j - 1] + costOfSubstitution.apply(x.charAt(i - 1), y.charAt(j - 1)),
-							dp[i - 1][j] + 1);
+					// Compute cost of substitution.
+					int costOfSubstitution = costOfSubstitutionLambda.apply(Xi, Yj);
+					
+					// Compute subsequence distance.
+					D[i][j] = min(
+								D[i - 1][j] + 1,							// Deletion.
+								D[i][j - 1] + 1,							// Insertion.
+								D[i - 1][j - 1] + costOfSubstitution);		// Substitution.
 				}
 			}
 		}
 
-		return dp[x.length()][y.length()];
+		return D[M][N];
 	}
 	
 	/**

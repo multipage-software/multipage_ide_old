@@ -52,9 +52,9 @@ public class Predicate_levenshtein_distance extends ExecuteOnlyCode {
 		pattern = PrologUtility.removeApostrophes(pattern);
 		
 		// Get Levenshtein distance between two texts.
-		int distance = Utility.getLeveshteinDistance(text, pattern);
+		int distance = Utility.getLevenshteinDistance(text, pattern);
 		
-		j.log("Levenshtein distance between %s and %s id %d ", text, pattern, distance);
+		j.log("Levenshtein distance between %s and %s is %d ", text, pattern, distance);
 		
 		// Check the distance.
 		if (distance < 0) {

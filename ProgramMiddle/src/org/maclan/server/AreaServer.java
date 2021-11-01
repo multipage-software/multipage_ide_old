@@ -3980,9 +3980,9 @@ public class AreaServer {
 	private static ArrayList<ScriptingEngine> javaScriptingEnginePool;
 
 	/**
-	 * Create JavaScript engine.
+	 * Create JavaScript engines.
 	 */
-	private void createJavaScriptEngine() {
+	private void createJavaScriptEngines() {
 		
 		// Create scripting engine pool.
 		if (javaScriptingEnginePool == null) {
@@ -4068,7 +4068,7 @@ public class AreaServer {
 	synchronized public String loadAreaText(long areaId, long versionId, String text) throws Exception {
 		
 		// Create JavaScript engine.
-		createJavaScriptEngine();
+		createJavaScriptEngines();
 		
 		// Set current root area.
 		state.middle.setCurrentRootArea(state.area);
@@ -4178,7 +4178,7 @@ public class AreaServer {
 		Obj<Boolean> processResponse = new Obj<Boolean>(false);
 		
 		// Create JavaScript engine.
-		createJavaScriptEngine();
+		createJavaScriptEngines();
 		
 		// Set middle layer reference.
 		this.state.middle = middle;
