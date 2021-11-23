@@ -155,7 +155,6 @@ import javax.swing.tree.TreePath;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -4683,6 +4682,17 @@ public class Utility {
 	}
 	
 	/**
+	 * Encode Base 64 text.
+	 * @param string
+	 * @return
+	 */
+	public static String encodeBase64(String string) {
+		
+		String base64String = Base64.getEncoder().encodeToString(string.getBytes());
+		return base64String;
+	}
+	
+	/**
 	 * Helper function that creates a hash set from variable arguments.
 	 * @param setItems
 	 * @return
@@ -4920,7 +4930,7 @@ public class Utility {
 	
 	/**
 	 * Get Levenshtein distance between input text and its pattern.
-	 * From https://web.stanford.edu/~jurafsky/slp3/slides/2_EditDistance.pdf.
+	 * Reference: https://web.stanford.edu/~jurafsky/slp3/slides/2_EditDistance.pdf.
 	 * @param text
 	 * @param pattern
 	 * @return 
@@ -4938,11 +4948,11 @@ public class Utility {
 			// Get neighbour characters.
 			List<Character> neighbourCharacters = mapKeyNeighbours.get(textCharacter);
 			if (neighbourCharacters == null) {
-				return 3;
+				return 2;
 			}
 			
 			// Neighbour character distance.
-			Integer neigbourDistance = neighbourCharacters.contains(patternCharacter) ? 2 : 3;
+			Integer neigbourDistance = neighbourCharacters.contains(patternCharacter) ? 1 : 2;
 			return neigbourDistance;
 		};
 		

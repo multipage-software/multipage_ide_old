@@ -179,6 +179,10 @@ public enum Signal implements EventCondition {
 	removeToolTip(
 			SignalType.guiChange
 			),
+	// Enable or disable debugging.
+	debugging(
+			SignalType.serverStateChange
+			),
 	// Update of area sub relation.
 	updateAreaSubRelation,
 	// Update of area super relation.

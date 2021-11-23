@@ -4,7 +4,11 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
-	<classpathentry kind="lib" path="C:/libraries/db-derby-10.14.2.0-bin/lib/derby.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/libraries/db-derby-10.15.2.0-lib/lib/derbytools.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -437,7 +437,7 @@ public class SelectAreaResource extends JDialog {
 			area = startArea;
 		}
 		else {
-			area = ProgramGenerator.getAreasModel().getArea(areaAlias);
+			area = ProgramGenerator.getAreasModel().getAreaFromArea(this.area, areaAlias);
 		}
 		if (area == null) {
 			return;

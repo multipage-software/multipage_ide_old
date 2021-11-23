@@ -8,6 +8,7 @@
 package org.multipage.generator;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -32,7 +33,8 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.KeyStroke;
 import javax.swing.SpringLayout;
-import javax.swing.UIManager;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.LineBorder;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
 import org.maclan.Slot;
@@ -526,6 +528,8 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		panelAux.add(horizontalStrut_A);
 		
 		checkInterpretPhp = new JCheckBox("org.multipage.generator.textInterpretPhp");
+		checkInterpretPhp.setMargin(new Insets(4, 4, 4, 4));
+		checkInterpretPhp.setBorder(new CompoundBorder(new LineBorder(new Color(0, 0, 0)), new LineBorder(new Color(192, 192, 192))));
 		checkInterpretPhp.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				helper.onInterpretPhp();
@@ -582,7 +586,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 				helper.onToggleDebugging(toggleDebug.isSelected());
 			}
 		});
-		toggleDebug.setBorder(UIManager.getBorder("CheckBox.border"));
+		toggleDebug.setBorder(new CompoundBorder());
 		toggleDebug.setMargin(new Insets(0, 0, 0, 0));
 		panelAux.add(toggleDebug);
 		

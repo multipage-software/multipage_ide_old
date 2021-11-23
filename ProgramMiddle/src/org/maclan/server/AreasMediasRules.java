@@ -21,7 +21,7 @@ public class AreasMediasRules {
 	 * Insert new CSS rule.
 	 * @param area
 	 * @param media
-	 * @param selector
+	 * @param socketSelector
 	 * @param property
 	 * @param value
 	 * @param isImportant 

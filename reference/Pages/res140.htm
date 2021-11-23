@@ -1,0 +1,306 @@
+// Cookie name (you have to change it before loading tree).
+var _cookieName = "tree";
+function setCookieName(name) {
+    _cookieName = name;
+}
+
+// Area root.
+var _areaRoot;
+// HTML element.
+var _htmlElement;
+    
+// Load area.
+function loadArea(htmlElement, areaRoot) {
+
+    _areaRoot = areaRoot;
+    _htmlElement = htmlElement;
+
+    // Load area states.
+    loadAreaStates();
+    // Create HTML tables (tree).
+    _htmlElement.innerHTML = loadTables();
+    // Update areas images.
+    updateImages();
+}
+
+// Load tables.
+function loadTables() {
+
+    var innerHtml = "<table cellpadding='0' cellspacing='0'>";
+
+    for (var subareaIndex in _areaRoot.subareas) {
+        innerHtml += "<tr><td>" + loadAreaTable(_areaRoot.subareas[subareaIndex]) + "</td></tr>";
+    }
+
+    return innerHtml + "</table>";
+}
+
+// Reload areas table.
+function reloadAreasTable() {
+
+    _htmlElement.innerHTML = loadTables();
+    // Update areas images.
+    updateImages();
+}
+
+// Update images.
+function updateImages() {
+    
+     aplyToTree(_areaRoot, updateImage);
+}
+
+// Update image.
+function updateImage(area) {
+
+    // Set image depending on selection.
+    var image = document.getElementById("AREA_IMAGE" + area.id);
+    if (image != null) {
+        image.src = area.selection ? getResUrl(treePageSelectedId, treePageSelectedExt)
+         : getResUrl(treePageNotSelectedId, treePageNotSelectedExt);
+    }
+}
+
+// Set area selection.
+function setAreaSelectionExpand(area) {
+
+    area.selection = true;
+    area.expanded = false;
+}
+
+// Apply to tree.
+function aplyToTree(area, method, parameters) {
+
+    // Apply method to the area.
+    method(area, parameters);
+    
+    // Apply to subareas.
+    var subareas = area.subareas;
+    for (var index = 0; index < subareas.length; index++) {
+        aplyToTree(subareas[index], method, parameters);
+    }
+}
+
+// Get area from ID.
+function getAreaFromId(areaId) {
+
+    return _getAreaFromId(_areaRoot, areaId);
+}
+
+// Get area from ID (recursive).
+function _getAreaFromId(area, areaId) {
+
+    if (area.id == areaId) {
+        return area;
+    }
+    
+    // Try to find in subareas.
+    var subareas = area.subareas;
+    for (var index = 0; index < subareas.length; index++) {
+    
+        var subarea = subareas[index];
+        var foundArea = _getAreaFromId(subarea, areaId);
+        
+        if (foundArea != null) {
+            return foundArea;
+        }
+    }
+    
+    return null;
+}
+
+// Load area table.
+function loadAreaTable(area) {
+
+    var areaHTML = getAreaHTML(area);
+    var areaImage = getAreaImage(area);
+    var expandImage = getAreaExpandImage(area);
+    
+    // Do loop for super areas.
+    var subareas = area.subareas;
+    var hasSubareas = subareas.length > 0;
+    expandImage = hasSubareas ? expandImage : "";
+    
+    // Create table HTML.
+    var tableText = "<table cellpadding='0' cellspacing='0' border='0'><tr><td>" + expandImage + "</td><td>" + areaImage + "</td><td nowrap>" + areaHTML; + "</td></tr>";
+
+    // Expand subareas.
+    if (area.expanded) {
+        for (var index = 0; index < subareas.length; index++) {
+        
+            var subarea = subareas[index];
+            var subareaTableText = loadAreaTable(subarea);
+            
+            // Insert sub table.
+            tableText += "<tr><td></td><td></td><td>" + subareaTableText + "</td></tr>";
+        }
+    }
+    
+    // Set HTML table end.
+    tableText += "</table>";
+    
+    return tableText;
+}
+
+// Gets area HTML.
+function getAreaHTML(area) {
+    
+    var background = (area.id == currentAreaId ? "blue" : treeBackground);
+    var foreground = (area.id == currentAreaId ? "white" : "default");
+    var areaUrl = getAreaUrl(area.id);
+    var html = "<a onclick='clickExpand(" + area.id + ")' href='" + areaUrl + "' style='font-size: 12px', style='background:" + background + ";color:" + foreground + "'>" + area.name + "</a>";
+    return html;
+}
+
+// Get area image.
+function getAreaImage(area) {
+
+    return "<div onclick='clickImage(" + area.id + ")'><img id=AREA_IMAGE" + area.id + " src=''></div>";
+}
+
+// Get area expand image.
+function getAreaExpandImage(area) {
+
+    if (area.expanded) {
+        return "<div onclick='clickCollapse(" + area.id + ")'><img src='" + getResUrl(treeMinusId, treeMinusExt) + "'></div>";
+    }
+    else {
+        return "<div onclick='clickExpand(" + area.id + ")'><img src='" + getResUrl(treePlusId, treePlusExt) + "'></div>";
+    }
+}
+
+// On click collapse.
+function clickCollapse(areaId) {
+
+    var area = getAreaFromId(areaId);
+    if (area == null) {
+        alert("Unexpected null area.");
+        return;
+    }
+    
+    area.expanded = false;
+    
+    // Reload areas table.
+    reloadAreasTable(); 
+}
+
+// On click expand.
+function clickExpand(areaId) {
+
+    var area = getAreaFromId(areaId);
+    if (area == null) {
+        alert("Unexpected null area.");
+        return;
+    }
+    
+    area.expanded = true;
+    
+    // Reload areas table.
+    reloadAreasTable(); 
+}
+
+// On click image.
+function clickImage(areaId) {
+
+    var area = getAreaFromId(areaId);
+    if (area == null) {
+        alert("Unexpected null area.");
+        return;
+    }
+    
+    var newSelection = !area.selection;
+    area.selection = newSelection;
+    
+    // Select / unselect subtree.
+    aplyToTree(area, function (area, selection) {
+            // Select area.
+            area.selection = selection;
+        }, newSelection);
+    
+    // Update areas images.
+    updateImages();
+}
+
+// Save area states.
+function saveAreaStates() {
+
+    var textValue = "[";
+    aplyToTree(_areaRoot, function (area) {
+        // Save area state.
+        textValue += "{id:" + area.id + ",state:{selection:" + area.selection + ",expanded:" + area.expanded + "}},";
+    });
+    
+    textValue += "]";
+
+    var cookieText = escape(textValue);
+    addToWindowName(_cookieName, cookieText);
+}
+
+// Get area state.
+function _getAreaState(areaStates, area) {
+
+    for (var index = 0; index < areaStates.length; index++) {
+        var _area = areaStates[index];
+        if (_area.id == area.id) {
+            return _area.state;
+        }
+    }
+    return null;
+}
+
+// Load area states.
+function loadAreaStates() {
+
+    var cookieValue = getCookie(window.name, _cookieName);
+    if (cookieValue != null) {
+        
+        var sourceCode = "var _areaStates=" + cookieValue;
+        eval(sourceCode);
+        if (_areaStates != undefined) {
+            try {
+            // Load states.
+            aplyToTree(_areaRoot, function (area) {
+                    // Get area state.
+                    var state = _getAreaState(_areaStates, area);
+                    if (state != null) {
+                        area.selection = state.selection;
+                        area.expanded = state.expanded;
+                    }
+                });
+            }
+            catch(e) {
+            }
+        }
+    }
+    else {       
+        // Select all areas and expand them.
+        aplyToTree(_areaRoot, setAreaSelectionExpand);
+        _areaRoot.expanded = true;
+    }
+}
+
+// On leave tree.
+function onLeaveTree() {
+    TREE.style.width = treeWidth;
+    TREE.style.height = treeHeight;
+    if (TREE.offsetHeight < CONTENT.offsetHeight) {
+        TREE.style.height = CONTENT.offsetHeight;
+    }
+    TREE.style.overflow = "hidden";
+}
+
+// On enter tree.
+function onEnterTree() {
+    TREE.style.width = "auto";
+    TREE.style.height = "auto";
+    if (TREE.offsetHeight < treeHeight) {
+        TREE.style.height = treeHeight;
+    }
+    if (TREE.offsetHeight < CONTENT.offsetHeight) {
+        TREE.style.height = CONTENT.offsetHeight;
+    }
+    TREE.style.overflow = "visible";
+
+    if (TREE.offsetWidth <= treeWidth) {
+        onLeaveTree();
+    }
+}

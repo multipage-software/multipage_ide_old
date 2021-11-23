@@ -37,6 +37,7 @@ import javax.swing.SpringLayout;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.maclan.help.Intellisense;
+import org.maclan.help.HelpUtility;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
@@ -526,7 +527,7 @@ public class TextResourceEditor extends JFrame {
 	private void intellisense() {
 		
 		// Use intellisense for the text editor.
-		Intellisense.applyTo(editor, maclanHelpId -> GeneratorMainFrame.displayMaclanHelp(maclanHelpId));
+		Intellisense.applyTo(editor, (helpPageAlias, fragmentAlias) -> GeneratorMainFrame.displayOnlineArea(HelpUtility.maclanReference, helpPageAlias, fragmentAlias));
 	}
 
 	/**

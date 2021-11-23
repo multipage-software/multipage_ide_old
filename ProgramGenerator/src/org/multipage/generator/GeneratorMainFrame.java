@@ -51,6 +51,7 @@ import javax.swing.event.ChangeListener;
 import org.maclan.Area;
 import org.maclan.AreaRelation;
 import org.maclan.AreaTreeData;
+import org.maclan.AreasModel;
 import org.maclan.Language;
 import org.maclan.Middle;
 import org.maclan.MiddleListener;
@@ -58,6 +59,7 @@ import org.maclan.MiddleResult;
 import org.maclan.MiddleUtility;
 import org.maclan.Slot;
 import org.maclan.VersionObj;
+import org.maclan.help.HelpUtility;
 import org.maclan.server.BrowserParameters;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugViewerCallback;
@@ -760,6 +762,24 @@ public class GeneratorMainFrame extends JFrame {
 			catch (Exception e) {
 			}
 		});
+		
+		// Receive the "debugging" signal.
+		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+			
+			// Avoid receiving the signal from current dialog window.
+			if (this.equals(message.source)) {
+				return;
+			}
+			
+			// Get flag value.
+			Boolean debuggingEnabled = message.getRelatedInfo();
+			if (debuggingEnabled == null) {
+				return;
+			}
+			
+			// Select or unselect the debug button.
+			toggleDebug.setSelected(debuggingEnabled);
+		});
  	}
 	
 	/**
@@ -1196,13 +1216,13 @@ public class GeneratorMainFrame extends JFrame {
 			helpMenuManualGui.setAccelerator(KeyStroke.getKeyStroke("alt shift M"));
 			helpMenuManualGui.setIcon(Images.getIcon("org/multipage/generator/images/manual.png"));
 			
-		JMenuItem  helpMenuManualGmpl = new JMenuItem(Resources.getString("org.multipage.generator.menuMainHelpManualGmpl"));
-		helpMenuManualGmpl.setAccelerator(KeyStroke.getKeyStroke("alt shift G"));
-		helpMenuManualGmpl.setIcon(Images.getIcon("org/multipage/generator/images/manual.png"));
+		JMenuItem  helpMenuManualMaclan = new JMenuItem(Resources.getString("org.multipage.generator.menuMainHelpManualGmpl"));
+		helpMenuManualMaclan.setAccelerator(KeyStroke.getKeyStroke("alt shift G"));
+		helpMenuManualMaclan.setIcon(Images.getIcon("org/multipage/generator/images/manual.png"));
 			
-		JMenuItem  helpMenuVideo = new JMenuItem(Resources.getString("org.multipage.generator.menuMainHelpVideo"));
-			helpMenuVideo.setAccelerator(KeyStroke.getKeyStroke("alt shift V"));
-			helpMenuVideo.setIcon(Images.getIcon("org/multipage/generator/images/video.png"));
+		JMenuItem  helpMenuIntroductoryVideo = new JMenuItem(Resources.getString("org.multipage.generator.menuMainHelpVideo"));
+			helpMenuIntroductoryVideo.setAccelerator(KeyStroke.getKeyStroke("alt shift V"));
+			helpMenuIntroductoryVideo.setIcon(Images.getIcon("org/multipage/generator/images/video.png"));
 			
 		// Set size.
 		fileMenuExit.setPreferredSize(preferredMenuSize);
@@ -1222,9 +1242,9 @@ public class GeneratorMainFrame extends JFrame {
 		file.add(updateData);
 		file.add(fileMenuExit);
 		
-		help.add(helpMenuVideo);
+		help.add(helpMenuIntroductoryVideo);
+		help.add(helpMenuManualMaclan);
 		help.add(helpMenuManualGui);
-		help.add(helpMenuManualGmpl);
 		help.add(helpMenuAbout);
 		
 		tools.add(toolsSearch);
@@ -1349,13 +1369,13 @@ public class GeneratorMainFrame extends JFrame {
 				onManualGui();
 			}
 		});
-		helpMenuManualGmpl.addActionListener(new ActionListener() {
+		helpMenuManualMaclan.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				onManualMaclan();
+				onManualForMaclan();
 			}
 		});
-		helpMenuVideo.addActionListener(new ActionListener() {
+		helpMenuIntroductoryVideo.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				onVideo();
@@ -1513,13 +1533,8 @@ public class GeneratorMainFrame extends JFrame {
 		// Switch on or off debugging of PHP code
 		Settings.setEnableDebugging(selected);
 		
-		// Refresh slot editors buttons
-		SlotEditorHelper.refreshAll((SlotEditorHelper helper) -> {
-			JToggleButton toggleDebug = helper.editor.getToggleDebug();
-			if (toggleDebug != null) {
-				toggleDebug.setSelected(selected);
-			}
-		});
+		// Transmit the "enable / disable" signal.
+		ConditionalEvents.transmit(this, Signal.debugging, selected);
 	}
 
 	/**
@@ -2717,7 +2732,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Display online area.
 	 * @param area
 	 */
-	public void displayOnlineArea(Area area, Language language, VersionObj version, Boolean showTextIds, String parametersOrUrl, Boolean externalBrowser) {
+	public void displayOnlineArea(Area area, Language language, VersionObj version, Boolean showTextIds, String parametersOrUrl, String fragment, Boolean externalBrowser) {
 		
 		if (Desktop.isDesktopSupported()) {
 			Desktop desktop = Desktop.getDesktop();
@@ -2778,6 +2793,11 @@ public class GeneratorMainFrame extends JFrame {
 						if (showTextIds != null && showTextIds) {
 							url += "&l";
 						}
+						
+						// Add fragment identifier.
+						if (fragment != null && !fragment.isEmpty()) {
+							url += '#' + fragment;
+						}
 					}
 					else {
 						url = urlObject.toString();
@@ -2807,6 +2827,57 @@ public class GeneratorMainFrame extends JFrame {
 	
 	/**
 	 * Display online area.
+	 * @param areaAlias
+	 * @param fragmentAreaAlias 
+	 */
+	public static boolean displayOnlineArea(String projectAlias, String areaAlias, String fragmentAreaAlias) {
+		
+		// Check alias.
+		if (areaAlias == null || areaAlias.isEmpty()) {
+			return false;
+		}
+		
+		// Try to find project area.
+		Area projectArea = ProgramGenerator.getAreasModel().getArea(0L, projectAlias, AreasModel.AreaHint.last);
+		if (projectArea == null || !projectArea.isProjectRoot()) {
+			Utility.showHtml(getFrame().getContentPane(), "org.multipage.generator.messageAreaShouldBeProjectRoot", projectAlias);
+			return false;
+		}
+		
+		long projectAreaId = projectArea.getId();
+		
+		// Try to find area with alias.
+		Area area = ProgramGenerator.getAreasModel().getArea(projectAreaId, areaAlias, AreasModel.AreaHint.first);
+		
+		// Check the area.
+		if (area == null) {
+			Utility.showHtml(getFrame().getContentPane(), "org.multipage.generator.messageAreaPageIsNotAvailable", areaAlias);
+			return false;
+		}
+		
+		// Try to find area for the page fragment.
+		String fragment = null;
+		
+		if (fragmentAreaAlias != null) {
+			Area fragmentArea = ProgramGenerator.getAreasModel().getArea(projectAreaId, fragmentAreaAlias, AreasModel.AreaHint.first);
+			
+			// Check the area.
+			if (fragmentArea == null) {
+				Utility.showHtml(getFrame().getContentPane(), "org.multipage.generator.messageAreaPageIsNotAvailable", fragmentAreaAlias);
+				return false;
+			}
+			
+			// Get fragment ID.
+			fragment = fragmentArea.getAlias();
+		}
+		
+		// Add Maclan help page.
+		getFrame().displayAreaInIDE(area, fragment);
+		return true;
+	}
+	
+	/**
+	 * Display online area.
 	 * @param area
 	 */
 	public void displayOnlineArea(Area area) {
@@ -2827,16 +2898,17 @@ public class GeneratorMainFrame extends JFrame {
 				}
 				
 				// Delegate the call.
-				displayOnlineArea(area, language.ref, version.ref, showTextIds.ref, parametersOrUrl.ref, externalBrowser.ref);
+				displayOnlineArea(area, language.ref, version.ref, showTextIds.ref, parametersOrUrl.ref, null, externalBrowser.ref);
 			}
 		}
 	}
 
 	/**
-	 * Display IDE helper area.
+	 * Display area in IDE.
 	 * @param area
+	 * @param fragment 
 	 */
-	public void displayIdeHelperArea(Area area) {
+	public void displayAreaInIDE(Area area, String fragment) {
 		
 		// Get current IDE language alias.
 		String languageAlias = GeneratorMain.defaultLanguage;
@@ -2873,7 +2945,7 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		// Delegate the call.
-		displayOnlineArea(area, pageLanguage, null, null, null, false);
+		displayOnlineArea(area, pageLanguage, null, null, null, fragment, false);
 	}
 	
 	/**
@@ -3305,7 +3377,13 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * On Maclan manual event.
 	 */
-	protected void onManualMaclan() {
+	protected void onManualForMaclan() {
+		
+		// Try to display area with help index.
+		boolean success = GeneratorMainFrame.displayOnlineArea(HelpUtility.maclanReference, HelpUtility.maclanReferenceIndex, null);
+		if (success) {
+			return;
+		}
 		
 		// Get directory.
 		String manualDirectory = MiddleUtility.getManualDirectory() + File.separatorChar + "Maclan";
@@ -3318,11 +3396,10 @@ public class GeneratorMainFrame extends JFrame {
 		String indexFilePath = manualDirectory + File.separatorChar + "index.htm";
 		
 		String url = String.format("file://%s", indexFilePath);
-		//Utility.show2(this, url);
 		
 		File indexFile = new File(indexFilePath);
-		
 		if (!indexFile.exists()) {
+			
 			Utility.show(this, "org.multipage.generator.messageManualIndexNotFound", indexFilePath);
 			return;
 		}
@@ -3737,24 +3814,5 @@ public class GeneratorMainFrame extends JFrame {
 		// Propagate update all event.
 		ConditionalEvents.transmit(parentComponent, Signal.updateAll);
 		
-	}
-	
-	/**
-	 * Display help page for Maclan item designated by ID.
-	 * @param maclanHelpId
-	 */
-	public static void displayMaclanHelp(String maclanHelpId) {
-		
-		// Try to find area with alias set to Maclan help ID.
-		Area maclanHelpArea = ProgramGenerator.getAreasModel().getArea(maclanHelpId);
-		
-		// Check the area.
-		if (maclanHelpArea == null) {
-			Utility.showHtml(getFrame().getContentPane(), "org.multipage.generator.messageStatementDescriptionIsNotAvailable", maclanHelpId);
-			return;
-		}
-		
-		// Add Maclan help page.
-		getFrame().displayIdeHelperArea(maclanHelpArea);
 	}
 }

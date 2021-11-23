@@ -55,11 +55,11 @@ public class TagsSource {
 	public String toString() {
 		
 		if (slotId != null) {
-			return "s" + String.valueOf(slotId);
+			return "S" + String.valueOf(slotId);
 		}
 		
 		if (resourceId != null) {
-			return "r" + String.valueOf(resourceId);
+			return "R" + String.valueOf(resourceId);
 		}
 		
 		return "unknown";

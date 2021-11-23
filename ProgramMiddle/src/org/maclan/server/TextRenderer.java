@@ -394,7 +394,7 @@ public class TextRenderer {
 	 */
 	private String getListFileName(Language language) {
 		
-		return listFileName + "_" + language.id + ".list";
+		return listFileName + "_" + language.id + ".txt";
 	}
 	
 	/**

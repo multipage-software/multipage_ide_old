@@ -24,15 +24,15 @@ class MediaRules {
 	}
 
 	/**
-	 * Insert selector rules.
-	 * @param selector
+	 * Insert socketSelector rules.
+	 * @param socketSelector
 	 * @param property
 	 * @param value
 	 * @param isImportant 
 	 */
 	public void insert(String selector, String property, String value, boolean isImportant) {
 		
-		// Find selector rules.
+		// Find socketSelector rules.
 		SelectorRules selectorRules = null;
 		
 		for (SelectorRules selectorRulesItem : selectorsRules) {

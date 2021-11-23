@@ -29,6 +29,8 @@ public enum SignalType implements EventCondition {
 	areaViewChange,
 	// Change of slot view.
 	slotViewChange,
+	// Server state change.
+	serverStateChange,
 	// Change of GUI.
 	guiChange;
 	

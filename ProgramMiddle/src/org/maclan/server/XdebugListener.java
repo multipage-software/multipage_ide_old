@@ -6,6 +6,8 @@
  */
 package org.maclan.server;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -16,6 +18,8 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedList;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Supplier;
 
 import org.multipage.gui.Callback;
 import org.multipage.gui.Utility;
@@ -30,10 +34,25 @@ import org.multipage.util.Resources;
 public class XdebugListener extends DebugListener {
 	
 	/**
+	 * Xdebug port number. Set default port number to 9001, because JVM Xdebug already uses the port numer 9000.
+	 */
+	public static final int xdebugPort = 9001;
+	
+	/**
+	 * Reuqred IDE key for coomunication in the Xdebug protocol.
+	 */
+	public static final String requiredIdeKey = "multipage-xdebug";
+	
+	/**
+	 * Tiout in milliseconds for client connections with Xdebug protocol.
+	 */
+	public final static long xdebugClientTimeoutMs = 1000;
+	
+	/**
 	 * Xdebug listener singleton object
 	 */
 	private static XdebugListener xdebugListenerSingleton;
-
+	
 	/**
 	 * Gets the Xdebug client singleton
 	 * @return
@@ -87,11 +106,6 @@ public class XdebugListener extends DebugListener {
 	 * Socket service thread
 	 */
 	private Thread socketChannelThread;
-	
-	/**
-	 * Command receiver flag
-	 */
-	private boolean readyToProcessCommand = false;
 
 	/**
 	 * Bad Xdebug message exception constant
@@ -138,7 +152,7 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Returns true value if the debugger is enabled
 	 */
-	public static boolean enabled() {
+	public static boolean debuggingEnabled() {
 		
 		if (enableListener != null) {
 			Object returned =  enableListener.run();
@@ -296,6 +310,23 @@ public class XdebugListener extends DebugListener {
 	private final static String stop = "stop";
 	
 	/**
+	 * Xdebug idle state in milliseconds.
+	 */
+	protected final static int xdebugIdleMs = 200;
+	
+	/**
+	 * Input buffer size.
+	 */
+	private static final int inputBufferSize = 256;
+	
+	/**
+	 * Xdebug connection.
+	 */
+	private static class Connection {
+		
+	}
+	
+	/**
 	 * Xdebug name
 	 */
 	private XdebugCommand command = new XdebugCommand(nop, null);
@@ -304,6 +335,11 @@ public class XdebugListener extends DebugListener {
 	 * A channel for communication with Xdebug client
 	 */
 	protected SocketChannel connection = null;
+	
+	/**
+	 * List of pending connections.
+	 */
+	private ConcurrentLinkedQueue<Connection> pendingConnections = null;
 
 	/**
 	 * Callbacks
@@ -330,8 +366,8 @@ public class XdebugListener extends DebugListener {
 	 */
 	public static XdebugListener createInstance() throws Exception {
 		
-		// Use default port number 9001 because 9000 uses JVM Xdebug
-		xdebugListenerSingleton = new XdebugListener(9001);
+		// Use default Xdebug port number.
+		xdebugListenerSingleton = new XdebugListener(xdebugPort);
 		return xdebugListenerSingleton;
 	}
 	
@@ -466,16 +502,6 @@ public class XdebugListener extends DebugListener {
 	}
 	
 	/**
-	 * Returns true value if a command can be processed
-	 * @return
-	 */
-	@SuppressWarnings("unused")
-	private boolean readyToProcessCommand() {
-		
-		return this.command.isEmpty() && readyToProcessCommand;
-	}
-	
-	/**
 	 * Gets result of a command
 	 * @param command
 	 * @return
@@ -539,44 +565,41 @@ public class XdebugListener extends DebugListener {
 				// Enter loop with rules and process incoming commands
 				while (!terminate) {
 					
-					// Set flag
-					readyToProcessCommand = true;
-					
 					// Check connection status with watch dog
 					watchDogCheckStatusOf(connection);
 					
-					// Rule: process stop command
+					// Rule: Process stop command
 					if (isStop(command)) {
 						endOfSession();
 						continue;
 					}
 					
-					// Rule: do nothing if the session is stopping
+					// Rule: Wait for a while if the session is stopping
 					if (isStopping(status)) {
 						sleepFor(200);
 						continue;
 					}
 					
-					// Rule: accept incoming connection
-					if (mustAcceptNewConnection()) {
-						connection = waitForConnectionFrom();
+					// Rule: Accept incoming connection
+					if (shouldAcceptNewConnection()) {
+						connection = waitForConnection();
 						continue;
 					}
 					
-					// Rule: initialize communication
+					// Rule: Initialize communication
 					if (shouldBeInitialized(connection)) {
 						initializeCommunication(connection);
 						continue;
 					}
 					
-					// Rule: wait for a new command
+					// Rule: Wait for a new command
 					if (isInitialized(connection) && !is(command)) {
 						Lock.notify(sessionReady);
 						Lock.waitFor(commandSet, 50000);
 						continue;
 					}
 					
-					// Rule: process other commands
+					// Rule: Process other commands
 					if (is(command)) {
 						sendThrough(connection, command);
 						endOfTransaction();
@@ -607,11 +630,11 @@ public class XdebugListener extends DebugListener {
 			}
 			
 			/**
-			 * Returns true if the loop has to accept a new connection
+			 * Returns true if the loop should accept a new connection
 			 * @param channel
 			 * @return
 			 */
-			private boolean mustAcceptNewConnection() {
+			private boolean shouldAcceptNewConnection() {
 				
 				return !isConnected(connection);
 			}
@@ -750,38 +773,45 @@ public class XdebugListener extends DebugListener {
 			 * @return
 			 * @throws Exception 
 			 */
-			private SocketChannel waitForConnectionFrom() {
+			private SocketChannel waitForConnection() {
 				
 				try {
 					// Reset connection
 					connection = null;
 					Selector selector = Selector.open();
 					
-					while (!terminate && !isStop(command)) {
+					Supplier<Boolean> terminationLambda = () -> terminate || isStop(command);
+					
+					while (!terminationLambda.get()) {
 						
 						// If debugging is disabled, close listening port and wait for enable event
-						if (!enabled()) {
+						if (!debuggingEnabled()) {
 							
 							// Close port
 							close(connection);
 							closeChannel();
 							selector.selectNow();
 							
-							// Wait for enabled debugging
-							while (!enabled()) {
-								sleepFor(200);
+							// Wait for debugging enabled. On termination exit the method.
+							while (!debuggingEnabled()) {
+								
+								sleepFor(xdebugIdleMs);
+								
+								if (terminationLambda.get()) {
+									return null;
+								}
 							}
 							
-							// Bind port again
+							// Bind current port again
 							channel = listenTo(port);
 							if (channel == null) {
 								return null;
 							}
 						}
 						
-						// Create selector for non-blocking mode and register it on given channel
+						// Create socket selector for non-blocking mode and register it on given channel
 						// Wait for some amount of time
-						final int timeout = 1000;
+						final int timeout = 5 * xdebugIdleMs;
 						
 						channel.register(selector, SelectionKey.OP_ACCEPT);
 						selector.select(timeout);
@@ -823,15 +853,13 @@ public class XdebugListener extends DebugListener {
 			 */
 			private void initializeCommunication(SocketChannel connection) {
 				
-				final String requiredIdeKey = "multipage-xdebug";
-				
 				try {
 					
 					// Initialize transaction counter
 					transaction = 1;
 					
 					// Read initial message
-					String [] message = readMessage(connection, null);
+					String [] message = readMessages(connection, null);
 					
 					// Communication breakdown
 					if (message.length < 2) {
@@ -1235,52 +1263,46 @@ public class XdebugListener extends DebugListener {
 	}
 
 	/**
-	 * Reads Xdebug message from channel
+	 * Read Xdebug messages separated by '\0' character from the channel
 	 * @param socketChannel
 	 * @return
 	 */
-	private String [] readMessage(SocketChannel socketChannel, String encoding) throws Exception {
-		
-		final int bufferSize = 100;
-		
-		ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-		ArrayList<Byte> messageBytes = new ArrayList<Byte>(bufferSize);
-		
-		try {
+	private String [] readMessages(SocketChannel socketChannel, String encoding)
+			throws Exception {
 			
-			int bytesRead;
-
-			while (true) {
-				
-				final int timeout = 1000;
-				if (!isReadable(socketChannel, timeout)) {
-					break;
-				}
-				
-				if ((bytesRead = socketChannel.read(buffer)) <= 0) {
-					break;
-				}
-				
-				for (int i = 0; i < bytesRead; i++) {
-					messageBytes.add(buffer.get(i));
-				}
-				if (bytesRead < bufferSize) {
-					break;
-				}
-				buffer.clear();
+		ByteArrayOutputStream messageData = new ByteArrayOutputStream();
+		ByteBuffer buffer = ByteBuffer.allocate(inputBufferSize);
+		
+		int bytesRead;
+		
+		// Read bytes from the socket channel.
+		while (true) {
+			
+			if (!isReadable(socketChannel, xdebugIdleMs)) {
+				break;
 			}
 			
-			Byte [] bytes = new Byte [messageBytes.size()];
-			messageBytes.toArray(bytes);
-			String messageText = encoding != null ? new String(Utility.toPrimitives(bytes), encoding)
-													: new String(Utility.toPrimitives(bytes));
+			if ((bytesRead = socketChannel.read(buffer)) <= 0) {
+				break;
+			}
 			
-			String [] messages = messageText.split("\0");
-			return messages;
+			byte [] byteArray = buffer.array();
+			messageData.write(byteArray);
+
+			if (bytesRead < inputBufferSize) {
+				break;
+			}
+			
+			buffer.clear();
 		}
-		catch (Exception e) {
-			throw e;
-		}
+		
+		// Coverts input bytes to messages.
+		byte [] bytes = messageData.toByteArray();
+		String messageText = encoding != null ? new String(bytes, encoding)	: new String(bytes);
+		
+		// Split the input string and create array of input messages.
+		String [] messages = messageText.split("\0");
+		return messages;
 	}
 
 	/**
@@ -1386,7 +1408,7 @@ public class XdebugListener extends DebugListener {
 			writeMessage(socketChannel, command, data);
 			
 			// Get response
-			String [] message = readMessage(socketChannel, null);
+			String [] message = readMessages(socketChannel, null);
 			
 			// Bad Xdebug message
 			if (message.length < 2) {

@@ -20,7 +20,7 @@ class MediasRules {
 	/**
 	 * Insert media rules.
 	 * @param media
-	 * @param selector
+	 * @param socketSelector
 	 * @param property
 	 * @param value
 	 * @param isImportant 
@@ -42,7 +42,7 @@ class MediasRules {
 			mediasRules.add(mediaRules);
 		}
 		
-		// Insert selector rules.
+		// Insert socketSelector rules.
 		mediaRules.insert(selector, property, value, isImportant);
 	}
 }

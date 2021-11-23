@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.LinkedList;
-import java.util.function.Consumer;
 
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -86,11 +85,6 @@ public class SlotEditorHelper {
 	 * List of created panels
 	 */
 	private static LinkedList<SlotEditorHelper> helpers;
-	
-	/**
-	 * Enable events
-	 */
-	private static boolean enabledEvents = true;
 	
 	/**
 	 * Slot copy.
@@ -501,76 +495,11 @@ public class SlotEditorHelper {
 	 */
 	public void onToggleDebugging(boolean buttonSelected) {
 		
-		if (!enabledEvents) {
-			return;
-		}
-		
 		// Set flag
 		Settings.setEnableDebugging(buttonSelected);
 		
-		// Notify other panels
-		refresh((SlotEditorHelper helper) -> {
-			helper.setDebugging(buttonSelected);
-		});
-		
-		// Notify area trace frames
-		AreaTraceFrame.refreshAll((AreaTraceFrame frame) -> {
-			frame.setEnableDebugging(buttonSelected);
-		});
-	}
-	
-	/**
-	 * Enable or disable debugging
-	 * @param enabled
-	 */
-	private void setDebugging(boolean enabled) {
-		
-		JToggleButton button = editor.getToggleDebug();
-		if (button != null) {
-			button.setSelected(enabled);
-		}
-	}
-	
-	/**
-	 * Notify other created helpers
-	 * @param callback
-	 */
-	public static void refreshAll(Consumer<SlotEditorHelper> callback) {
-		
-		if (callback == null || helpers == null) {
-			return;
-		}
-		
-		enabledEvents = false;
-		
-		for (SlotEditorHelper helper : helpers) {
-			if (helper != null) {
-				callback.accept(helper);
-			}
-		}
-		
-		enabledEvents = true;
-	}
-
-	/**
-	 * Notify other created helpers
-	 * @param callback
-	 */
-	private void refresh(Consumer<SlotEditorHelper> callback) {
-		
-		if (callback == null || helpers == null) {
-			return;
-		}
-		
-		enabledEvents = false;
-		
-		for (SlotEditorHelper helper : helpers) {
-			if (helper != this) {
-				callback.accept(helper);
-			}
-		}
-		
-		enabledEvents = true;
+		// Transmit the "enable / disable" signal.
+		ConditionalEvents.transmit(this, Signal.debugging, buttonSelected);
 	}
 
 	/**
@@ -578,32 +507,12 @@ public class SlotEditorHelper {
 	 */
 	public void onInterpretPhp() {
 		
-		if (!enabledEvents) {
-			return;
-		}
 		JCheckBox checkBox = editor.getCheckInterpretPhp();
 		if (checkBox == null) {
 			return;
 		}
 		
 		final boolean selected = checkBox.isSelected();
-		
-		// Notify other panels
-		refresh((SlotEditorHelper helper) -> {
-			helper.setInterpretPhp(selected);
-		});
-	}
-	
-	/**
-	 * Enable interpret PHP code
-	 * @param selected
-	 */
-	private void setInterpretPhp(boolean selected) {
-		
-		JCheckBox checkBox = editor.getCheckInterpretPhp();
-		if (checkBox != null) {
-			checkBox.setSelected(selected);
-		}
 	}
 
 	/**
@@ -1033,13 +942,32 @@ public class SlotEditorHelper {
 			onSpecialValueChanged();
 		});
 		
-		// Switch on or off interpreting of PHP code
+		// Set servlet listener that determines whether to interpret PHP code.
 		ProgramServlet.setInterpretPhpListener(new CallbackNoArg() {
 			@Override
 			public Object run() {
 				JCheckBox checkBox = editor.getCheckInterpretPhp();
 				return checkBox == null ? true : checkBox.isSelected();
 			}
+		});
+		
+		// Receive the "debugging" signal.
+		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+			
+			// Avoid receiving the signal from current dialog window.
+			if (this.equals(message.source)) {
+				return;
+			}
+			
+			// Get flag value.
+			Boolean debuggingEnabled = message.getRelatedInfo();
+			if (debuggingEnabled == null) {
+				return;
+			}
+			
+			// Select or unselect the debug button.
+			JToggleButton toggleDebug = editor.getToggleDebug();
+			toggleDebug.setSelected(debuggingEnabled);
 		});
 	}
 	

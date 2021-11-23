@@ -9,6 +9,8 @@ package org.maclan.server;
 
 import java.util.LinkedList;
 
+import org.multipage.util.Obj;
+
 /**
  * @author
  *
@@ -40,7 +42,6 @@ public class AreaServerListener {
 	 */
 	public void onError(String message) {
 		// You can override this method.
-		
 	}
 	
 	/**
@@ -49,6 +50,13 @@ public class AreaServerListener {
 	 */
 	public void updatedSlots(LinkedList<Long> slotIds) {
 		// You can override this method.
-		
+	}
+	
+	/**
+	 * Get Xdebug protocol host and port (for the IDE with GUI for the debugger) .
+	 */
+	public boolean getXdebugHostPort(Obj<String> ideHost, Obj<Integer> xdebugPort) {
+		// You can override this method.
+		return false;
 	}
 }

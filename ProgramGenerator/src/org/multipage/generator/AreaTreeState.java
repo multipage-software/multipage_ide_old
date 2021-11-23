@@ -109,8 +109,20 @@ public class AreaTreeState {
 		
 		long areaId = areaIdPath[index];
 		
-		Long currentAreaId = (Long) node.getUserObject();
-		Area currentArea = ProgramGenerator.getArea(currentAreaId);
+		Area currentArea = null;
+		
+		Object userObject = node.getUserObject();
+		if (userObject instanceof Long) {
+			
+			long currentAreaId = (Long) userObject;
+			currentArea = ProgramGenerator.getArea(currentAreaId);
+		}
+		else if (userObject instanceof Area) {
+			currentArea = (Area) userObject;
+		}
+		else {
+			return false;
+		}
 		
 		// If current area ID doesn't match, exit with false.
 		if (currentArea.getId() != areaId) {
@@ -266,9 +278,20 @@ public class AreaTreeState {
 		for (int index = 0; index < count; index++) {
 			
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getPathComponent(index);
-			Long areaId = (Long) node.getUserObject();
+			Object userObject = node.getUserObject();
 			
-			idPath[index] = areaId;
+			Long areaId = null;
+			if (userObject instanceof Long) {
+				areaId = (Long) userObject;
+			}
+			else if (userObject instanceof Area) {
+				Area area = (Area) userObject;
+				areaId = area.getId();
+			}
+			
+			if (areaId != null) {
+				idPath[index] = areaId;
+			}
 		}
 		
 		return idPath;

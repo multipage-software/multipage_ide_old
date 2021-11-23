@@ -809,7 +809,7 @@ public class AreaServer implements BoxedObject {
 	/**
 	 * Insert CSS rules.
 	 * @param area
-	 * @param selector
+	 * @param socketSelector
 	 * @param mediaSlotName
 	 * @param importantSlotName
 	 */
@@ -821,7 +821,7 @@ public class AreaServer implements BoxedObject {
 	
 	/**
 	 * Deprecated function name.
-	 * @param selector
+	 * @param socketSelector
 	 * @param mediaSlotName
 	 * @param importantSlotName
 	 * @throws Exception

@@ -15,6 +15,7 @@ import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -376,7 +377,7 @@ public class Intellisense {
 			Suggestion.saveNormalDistances(suggestions, minimumDistance.ref, maximumDistance.ref, treshold);
 			
 			// TODO: debug list
-			suggestions.forEach(suggestion -> j.log("%s\t%f", suggestion.tagName, suggestion.distance != null ? suggestion.distance : "null"));
+			suggestions.forEach(suggestion -> j.log("%s\t%f", suggestion.tagName, suggestion.distance != null ? suggestion.distance : -1.0));
 			
 			// Remove unrelated suggestions.
 			List<Suggestion> relatedSuggestions = suggestions.stream().filter(suggestion -> suggestion.distance != null).collect(Collectors.toList());
@@ -480,20 +481,38 @@ public class Intellisense {
 		}
 		
 		/**
-		 * Get area alias of the help page related to the suggestion.
+		 * Get alias for the tag help related to current suggestion.
 		 * @return
 		 */
-		public String getHelpAreaAlias() {
+		public String getTagHelpAlias() {
 			
-			// Format area alias form tag name.
-			String areaAlias = String.format("%s_%s", this.tagName, this.tagType);
-			
-			// Try to use tag property.
-			if (this.propertyName != null) {
-				areaAlias += String.format("#%s_%s", this.propertyName, this.propertyType);
+			// Check tag name and type.
+			if (tagName == null || tagType == null) {
+				return null;
 			}
 			
-			return areaAlias;
+			// Create page alias using tag name and tag type.
+			String pageAlias = String.format("%s_%s", tagName, tagType);
+			return pageAlias;
+		}
+		
+		/**
+		 * Get help alias for the tag property.
+		 * @return
+		 */
+		public String getPropertyHelpAlias() {
+			
+			// Get tag alias.
+			String tagAlias = getTagHelpAlias();
+						
+			// Check tag alias, property name and type.
+			if (tagAlias == null && propertyName == null || propertyType == null) {
+				return "";
+			}
+			
+			// Create fragment ID from property name and type.
+			String alias = String.format("%s_%s_%s", tagAlias, propertyName, propertyType);
+			return alias;
 		}
 		
 		/**
@@ -597,7 +616,7 @@ public class Intellisense {
 	/**
 	 * Maclan help lambda.
 	 */
-	private static Consumer<String> maclanHelpLambda = null;
+	private static BiConsumer<String, String> maclanHelpLambda = null;
 
 	/**
 	 * Intellisense timer.
@@ -1001,7 +1020,7 @@ public class Intellisense {
 	 * @param textEditorPanel
 	 * @param maclanHelpLambda
 	 */
-	public static void applyTo(TextEditorPane textEditorPanel, Consumer<String> maclanHelpLambda) {
+	public static void applyTo(TextEditorPane textEditorPanel, BiConsumer<String, String> maclanHelpLambda) {
 		
 		// Set intellisense lambda function.
 		textEditorPanel.intellisenseLambda = sourceCode -> cursorPosition -> caret -> textPane -> {
@@ -1054,7 +1073,7 @@ public class Intellisense {
 		};
 		
 		// Set Maclan help lambda.
-		Intellisense.maclanHelpLambda  = maclanHelpLambda;
+		Intellisense.maclanHelpLambda = maclanHelpLambda;
 	}
 	
 	/**
@@ -1142,7 +1161,7 @@ public class Intellisense {
 			LinkedList<Suggestion> suggestions = makeSuggestions(Intellisense.input.sourceCode, Intellisense.input.cursorPosition);
 			
 			// Display the suggestions.
-			if (suggestions != null &&!suggestions.isEmpty()) {
+			if (suggestions != null && !suggestions.isEmpty()) {
 				IntellisenseWindow.displayAtCaret(Intellisense.input.textPane, Intellisense.input.caret, suggestions);
 			}
 			else {
@@ -1163,11 +1182,12 @@ public class Intellisense {
 		// Invoke Maclan help lambda function.
 		if (maclanHelpLambda != null) {
 			
-			// Get suggestion ID.
-			String maclanHelpId = suggestion.getHelpAreaAlias();
+			// Get help page and frament aliases.
+			String tagAlias = suggestion.getTagHelpAlias();
+			String propertyAlias = suggestion.getPropertyHelpAlias();
 			
 			// Invoke Maclan help on suggestion ID.
-			maclanHelpLambda.accept(maclanHelpId);
+			maclanHelpLambda.accept(tagAlias, propertyAlias);
 		}
 	}
 	

@@ -24,6 +24,7 @@ import javax.swing.JTextPane;
 import org.maclan.Area;
 import org.maclan.Slot;
 import org.maclan.help.Intellisense;
+import org.maclan.help.HelpUtility;
 import org.maclan.server.ServerUtilities;
 import org.multipage.gui.Callback;
 import org.multipage.gui.CssAnimationPanel;
@@ -435,7 +436,7 @@ public class TextSlotEditorPanel extends JPanel implements SlotValueEditorPanelI
 		setIcons();
 		
 		// Use intellisense for the text editor.
-		Intellisense.applyTo(textEditorPanel, maclanHelpId -> GeneratorMainFrame.displayMaclanHelp(maclanHelpId));
+		Intellisense.applyTo(textEditorPanel, (helpPageAlias, fragmentAlias) -> GeneratorMainFrame.displayOnlineArea(HelpUtility.maclanReference, helpPageAlias, fragmentAlias));
 		
 		// $hide<<$
 	}

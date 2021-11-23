@@ -1061,25 +1061,13 @@ public class AreaTraceFrame extends JFrame {
 		if (toggleDebug == null) {
 			return;
 		}
-		final boolean selected = toggleDebug.isSelected();
+		final boolean enable = toggleDebug.isSelected();
 		
 		// Switch on or off debugging of PHP code
-		Settings.setEnableDebugging(selected);
+		Settings.setEnableDebugging(enable);
 		
-		// Refresh buttons in other frames
-		refresh((AreaTraceFrame frame) -> {
-			if (frame != this) {
-				frame.setEnableDebugging(selected);
-			}
-		});
-	
-		// Refresh slot editors buttons
-		SlotEditorHelper.refreshAll((SlotEditorHelper helper) -> {
-			JToggleButton toggleDebug = helper.editor.getToggleDebug();
-			if (toggleDebug != null) {
-				toggleDebug.setSelected(selected);
-			}
-		});
+		// Transmit the "enable / disable" signal.
+		ConditionalEvents.transmit(this, Signal.debugging, enable);
 	}
 	
 	/**
@@ -1200,6 +1188,24 @@ public class AreaTraceFrame extends JFrame {
 		    	splitPane.setDividerLocation(location);
 		    	splitPaneProviders.setDividerLocation(location2);
 		    }
+		});
+		
+		// Receive the "debugging" signal.
+		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+			
+			// Avoid receiving the signal from current dialog window.
+			if (this.equals(message.source)) {
+				return;
+			}
+			
+			// Get flag value.
+			Boolean debuggingEnabled = message.getRelatedInfo();
+			if (debuggingEnabled == null) {
+				return;
+			}
+			
+			// Select or unselect the debug button.
+			toggleDebug.setSelected(debuggingEnabled);
 		});
 	}
 

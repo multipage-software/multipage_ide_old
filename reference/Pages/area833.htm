@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script language=javascript type="text/javascript">
+    var currentLanguageId = 0;
+    var currentAreaId = 833;
+</script>
+<script language="javascript">
+    // Add to window name.
+    function addToWindowName(name, text) {
+        // Create associative array.
+        var assocArray = new Array();
+        if (window.name.length > 0) {
+            // Split text to array of items.
+            var items = window.name.split(";");
+            for (var index = 0; index < items.length; index++) {
+                var item = items[index];
+                if (item.length > 0) {
+                    // Split item.
+                    var splitItem = item.split("=");
+                    // Insert associative array item.
+                    assocArray[splitItem[0]] = splitItem[1];
+                }
+            }
+        }
+        // Set associative array item.
+        assocArray[name] = text;
+        // Convert the array to string.
+        var newText = ""
+        for (var key in assocArray) {
+            newText += key + "=" + assocArray[key] + ";";
+        }
+        window.name = newText;
+    }
+    // Get cookie.
+    function getCookie(cookiesText, name) {
+        var allcookies = cookiesText;
+        var pos = allcookies.indexOf(name + "=");
+        if (pos != -1) {
+            var start = pos + name.length + 1;
+            var end = allcookies.indexOf(";", start);
+            if (end == -1) end = allcookies.length;
+            var value = allcookies.substring(start, end);
+            value = unescape(value);
+            return value;
+        }
+        return null;
+    }
+</script>
+<script language=javascript>    
+    function getAreaUrl(areaId, areaFile) {
+        var languageId = 0;
+            if (areaId == 279 && languageId == 0) {
+                return "index.htm";
+            }
+            if (areaFile != null) {
+                if (areaFile != "null") {
+                    return areaFile + "_def" + ".htm";
+                }
+            }
+            if (languageId != 0) {
+                return "area" + areaId + "_" + languageId + ".htm";
+            }
+            else {
+                return "area" + areaId + ".htm";
+            }
+    }
+    function getResUrl(resourceId, extension) {
+            return "res" + resourceId + "." + extension;
+    }
+</script>
+    <script language=javascript src="res140.htm">
+    </script>
+    <script language=javascript type="text/javascript">
+        var treeDescription = 
+    {name:'Dokumentace k jazyku Maclan',id:279,subareas:[{name:'URL adresy',id:280,subareas:[{name:'Adresa oblasti',id:281,subareas:[]},{name:'Adresa oblasti v daném jazyce',id:282,subareas:[]},{name:'Adresa internetového souboru',id:283,subareas:[]},{name:'Adresa vlajky jazyka',id:284,subareas:[]},{name:'Adresa verze oblasti',id:759,subareas:[]}]},{name:'Značky metajazyka',id:285,subareas:[{name:'Značky oblastí',id:286,subareas:[{name:'[@AREA_NAME]',id:288,subareas:[]},{name:'[@AREA_ID]',id:289,subareas:[]},{name:'[@AREA_ALIAS]',id:290,subareas:[]},{name:'[@SUBAREAS]',id:291,subareas:[]},{name:'[@SUPERAREAS]',id:292,subareas:[]},{name:'[@TAG]',id:307,subareas:[]}]},{name:'Značky jazyků',id:287,subareas:[{name:'[@LANG_FLAG]',id:301,subareas:[]},{name:'[@LANG_DESCRIPTION]',id:302,subareas:[]},{name:'[@LANG_ALIAS]',id:303,subareas:[]},{name:'[@LANG_ID]',id:304,subareas:[]},{name:'[@LANGUAGES] ... [/@LANGUAGES]',id:305,subareas:[]}]},{name:'Značky internetových prvků',id:768,subareas:[{name:'[@RESOURCE_ID]',id:502,subareas:[]},{name:'[@RESOURCE_EXT]',id:504,subareas:[]},{name:'[@RESOURCE_VALUE]',id:755,subareas:[]}]},{name:'Značky verzí',id:769,subareas:[{name:'[@VERSION_ANCHOR]',id:756,subareas:[]},{name:'[@VERSION_URL]',id:757,subareas:[]},{name:'[@VERSION_NAME]',id:758,subareas:[]},{name:'[@VERSION_ID]',id:832,subareas:[]}]},{name:'Ostatní značky',id:313,subareas:[{name:'[@LIST] ... [/@LIST]',id:309,subareas:[]},{name:'[@LAST]',id:439,subareas:[]},{name:'[@LOOP] ... [/@LOOP]',id:314,subareas:[]},{name:'[@IMAGE]',id:316,subareas:[]},{name:'[@VAR]',id:318,subareas:[]},{name:'[@SET]',id:319,subareas:[]},{name:'[@GET]',id:320,subareas:[]},{name:'[@A] nebo [@ANCHOR]',id:322,subareas:[]},{name:'[@REM] ... [/@REM]',id:323,subareas:[]},{name:'[@IF] ... [@ELSEIF] ... [@ELSE] ... [/@IF]',id:326,subareas:[]},{name:'[@PROCEDURE] ... [/@PROCEDURE]',id:328,subareas:[]},{name:'[@CALL] nebo [@MojeProcedura]',id:330,subareas:[]},{name:'[@PACK]...[/@PACK]',id:437,subareas:[]},{name:'[@BLOCK]...[/@BLOCK]',id:438,subareas:[]},{name:'[@OUTPUT] ... [/@OUTPUT]',id:902,subareas:[]},{name:'[@TRACE]',id:459,subareas:[]},{name:'[@BREAK]',id:775,subareas:[]},{name:'[@PPTEXT]',id:463,subareas:[]},{name:'[@URL]',id:496,subareas:[]},{name:'[@USING]',id:498,subareas:[]},{name:'[@RENDER_CLASS]',id:751,subareas:[]},{name:'[@TIMOEOUT]',id:794,subareas:[]},{name:'[@BOOKMARK]',id:802,subareas:[]},{name:'[@REPLACE_BOOKMARK]',id:803,subareas:[]},{name:'[@INCLUDE_ONCE]',id:833,subareas:[]},{name:'[@LITERAL]',id:842,subareas:[]},{name:'[@PRAGMA]',id:844,subareas:[]},{name:'[@JAVASCRIPT]',id:855,subareas:[]},{name:'[@INDENT] ... [/@INDENT]',id:862,subareas:[]},{name:'[@NOINDENT] ... [/@NOINDENT]',id:873,subareas:[]},{name:'[@CSS_LOOKUP_TABLE]',id:866,subareas:[]},{name:'[@UNZIP]',id:877,subareas:[]},{name:'[@RUN]',id:889,subareas:[]},{name:'[@REDIRECT]',id:895,subareas:[]},{name:'@lb;',id:324,subareas:[]},{name:'@rb;',id:325,subareas:[]},{name:'@at;',id:332,subareas:[]},{name:'@l;',id:492,subareas:[]},{name:'@r;',id:493,subareas:[]},{name:'[@TRAY_MENU]',id:979,subareas:[]}]}]},{name:'Výrazy, funkce a knihovny',id:298,subareas:[{name:'Operátory',id:333,subareas:[]},{name:'Operátor <b>is</b>',id:410,subareas:[]},{name:'Operátor <b>as</b>',id:409,subareas:[]},{name:'Knihovna math',id:334,subareas:[{name:'sin',id:335,subareas:[]},{name:'cos',id:336,subareas:[]},{name:'tan',id:337,subareas:[]},{name:'asin',id:338,subareas:[]},{name:'acos',id:339,subareas:[]},{name:'atan',id:340,subareas:[]},{name:'toRadians',id:341,subareas:[]},{name:'E',id:342,subareas:[]},{name:'PI',id:343,subareas:[]},{name:'toDegrees',id:344,subareas:[]},{name:'exp',id:345,subareas:[]},{name:'log',id:346,subareas:[]},{name:'log10',id:347,subareas:[]},{name:'sqrt',id:348,subareas:[]},{name:'cbrt',id:349,subareas:[]},{name:'IEEEremainder',id:350,subareas:[]},{name:'ceil',id:351,subareas:[]},{name:'floor',id:352,subareas:[]},{name:'rint',id:353,subareas:[]},{name:'atan2',id:354,subareas:[]},{name:'pow',id:355,subareas:[]},{name:'round',id:356,subareas:[]},{name:'random',id:357,subareas:[]},{name:'abs',id:358,subareas:[]},{name:'max',id:359,subareas:[]},{name:'min',id:360,subareas:[]},{name:'ulp',id:361,subareas:[]},{name:'signum',id:362,subareas:[]},{name:'sinh',id:363,subareas:[]},{name:'cosh',id:364,subareas:[]},{name:'tanh',id:365,subareas:[]},{name:'hypot',id:366,subareas:[]},{name:'expm1',id:367,subareas:[]},{name:'log1p',id:368,subareas:[]},{name:'copySign',id:369,subareas:[]},{name:'getExponent',id:370,subareas:[]},{name:'nextAfter',id:371,subareas:[]},{name:'nextUp',id:372,subareas:[]}]},{name:'Knihovna text',id:373,subareas:[{name:'text.format',id:374,subareas:[]},{name:'length',id:375,subareas:[]},{name:'isEmpty',id:376,subareas:[]},{name:'charAt',id:377,subareas:[]},{name:'codePointAt',id:378,subareas:[]},{name:'codePointBefore',id:379,subareas:[]},{name:'codePointCount',id:380,subareas:[]},{name:'offsetByCodePoints',id:381,subareas:[]},{name:'equalsIgnoreCase',id:382,subareas:[]},{name:'compareTo',id:383,subareas:[]},{name:'compareToIgnoreCase',id:384,subareas:[]},{name:'regionMatches',id:385,subareas:[]},{name:'regionMatches',id:386,subareas:[]},{name:'startsWith',id:387,subareas:[]},{name:'startsWith',id:686,subareas:[]},{name:'endsWith',id:388,subareas:[]},{name:'hashCode',id:389,subareas:[]},{name:'indexOf',id:390,subareas:[]},{name:'indexOf',id:391,subareas:[]},{name:'lastIndexOf',id:392,subareas:[]},{name:'lastIndexOf',id:393,subareas:[]},{name:'indexOf',id:394,subareas:[]},{name:'indexOf',id:395,subareas:[]},{name:'lastIndexOf',id:396,subareas:[]},{name:'lastIndexOf',id:397,subareas:[]},{name:'substring',id:398,subareas:[]},{name:'substring',id:399,subareas:[]},{name:'concat',id:400,subareas:[]},{name:'matches',id:401,subareas:[]},{name:'replaceFirst',id:402,subareas:[]},{name:'replaceAll',id:403,subareas:[]},{name:'toLowerCase',id:404,subareas:[]},{name:'toUpperCase',id:405,subareas:[]},{name:'trim',id:406,subareas:[]}]},{name:'parse()',id:407,subareas:[]},{name:'evaluate()',id:411,subareas:[]},{name:'if()',id:408,subareas:[]},{name:'typeof()',id:762,subareas:[]},{name:'defined()',id:466,subareas:[]},{name:'process()',id:488,subareas:[]},{name:'Volání procedury @PROCEDURE',id:841,subareas:[]},{name:'print()',id:848,subareas:[]},{name:'println()',id:849,subareas:[]},{name:'box()',id:850,subareas:[]},{name:'unbox()',id:851,subareas:[]},{name:'variable()',id:852,subareas:[]},{name:'set()',id:853,subareas:[]},{name:'get()',id:854,subareas:[]},{name:'trace()',id:903,subareas:[]}]},{name:'Objekty a funkce, typy',id:412,subareas:[{name:'Objekt server',id:413,subareas:[]},{name:'newObject()',id:778,subareas:[]},{name:'newList()',id:448,subareas:[]},{name:'newMap()',id:479,subareas:[]},{name:'newSet()',id:821,subareas:[]},{name:'area()',id:433,subareas:[]},{name:'subareas()',id:785,subareas:[]},{name:'superareas()',id:786,subareas:[]},{name:'slot(), slotParent()',id:440,subareas:[]},{name:'slotd(), slotdParent()',id:818,subareas:[]},{name:'slotv(), slotvParent()',id:812,subareas:[]},{name:'slotdv(), slotdvParent()',id:819,subareas:[]},{name:'slotDefined(), slotDefinedParent()',id:748,subareas:[]},{name:'slotdDefined(), slotdDefinedParent()',id:820,subareas:[]},{name:'slotFull()',id:856,subareas:[]},{name:'resource(), areaResource()',id:472,subareas:[]},{name:'getResourceUrl()',id:499,subareas:[]},{name:'getAreaUrl()',id:834,subareas:[]},{name:'createTree()',id:434,subareas:[]},{name:'enum(), getEnumeration()',id:790,subareas:[]},{name:'stopWatchingAll()',id:908,subareas:[]},{name:'insertGlobalCss(selector) a getGlobalCss()',id:865,subareas:[]},{name:'Typ AreaServer',id:414,subareas:[{name:'request',id:416,subareas:[]},{name:'response',id:469,subareas:[]},{name:'thisArea',id:415,subareas:[]},{name:'startArea',id:458,subareas:[]},{name:'homeArea',id:464,subareas:[]},{name:'requestedArea',id:761,subareas:[]},{name:'isRendering()',id:497,subareas:[]},{name:'getStartLanguageId()',id:500,subareas:[]}]},{name:'Typ Area',id:417,subareas:[{name:'name',id:418,subareas:[]},{name:'id',id:419,subareas:[]},{name:'alias',id:420,subareas:[]},{name:'inherits()',id:457,subareas:[]},{name:'getSubRelation()',id:746,subareas:[]},{name:'getSuperRelation()',id:747,subareas:[]},{name:'getPureName()',id:501,subareas:[]},{name:'isCurrent()',id:421,subareas:[]},{name:'isHome()',id:422,subareas:[]},{name:'isVisible()',id:451,subareas:[]},{name:'isRequested()',id:838,subareas:[]},{name:'isConstructor()',id:839,subareas:[]},{name:'isStartArea()',id:867,subareas:[]},{name:'getFileName()',id:506,subareas:[]},{name:'getRelatedArea()',id:831,subareas:[]},{name:'getSlots()',id:837,subareas:[]},{name:'getConstructorArea()',id:840,subareas:[]},{name:'getFirstVisibleSuperArea()',id:860,subareas:[]},{name:'getVersionUrl()',id:874,subareas:[]}]},{name:'Typ AreaRelation',id:442,subareas:[{name:'getSubName()',id:443,subareas:[]},{name:'getSuperName()',id:454,subareas:[]},{name:'isInheritance()',id:444,subareas:[]}]},{name:'Typ LinkedList',id:423,subareas:[{name:'size()',id:424,subareas:[]},{name:'isEmpty()',id:425,subareas:[]},{name:'isNotEmpty()',id:813,subareas:[]},{name:'add()',id:449,subareas:[]},{name:'addFirst()',id:462,subareas:[]},{name:'get()',id:446,subareas:[]},{name:'getFirst()',id:452,subareas:[]},{name:'getLast()',id:453,subareas:[]},{name:'sort()',id:456,subareas:[]},{name:'contains()',id:799,subareas:[]},{name:'remove()',id:465,subareas:[]},{name:'removeIndex()',id:489,subareas:[]},{name:'removeFirst()',id:490,subareas:[]},{name:'removeLast()',id:491,subareas:[]},{name:'indexOf()',id:800,subareas:[]},{name:'addAll()',id:801,subareas:[]}]},{name:'Typ Map',id:480,subareas:[{name:'put()',id:481,subareas:[]},{name:'get()',id:482,subareas:[]},{name:'isEmpty()',id:811,subareas:[]},{name:'isNotEmpty',id:814,subareas:[]}]},{name:'Typ Entry',id:782,subareas:[{name:'key',id:783,subareas:[]},{name:'value',id:784,subareas:[]}]},{name:'Typ ListBlockDescriptor',id:426,subareas:[{name:'item',id:427,subareas:[]},{name:'index',id:428,subareas:[]},{name:'getCount()',id:429,subareas:[]},{name:'isFirst()',id:430,subareas:[]},{name:'isLast()',id:431,subareas:[]},{name:'isMiddle()',id:432,subareas:[]}]},{name:'Typ Request',id:435,subareas:[{name:'getParameter()',id:436,subareas:[]}]},{name:'Typ Response',id:470,subareas:[{name:'setHeader()',id:471,subareas:[]},{name:'setRenderClass()',id:749,subareas:[]},{name:'getRenderClass()',id:750,subareas:[]}]},{name:'Typ Resource',id:473,subareas:[{name:'id',id:495,subareas:[]},{name:'mime',id:475,subareas:[]},{name:'getLength()',id:474,subareas:[]},{name:'getImageSize()',id:806,subareas:[]},{name:'getDescription()',id:810,subareas:[]}]},{name:'Typ MimeType',id:476,subareas:[{name:'type',id:477,subareas:[]},{name:'extension',id:478,subareas:[]}]},{name:'Typ RenderClass',id:752,subareas:[{name:'name',id:753,subareas:[]},{name:'text',id:754,subareas:[]}]},{name:'Typ Slot',id:763,subareas:[{name:'value',id:764,subareas:[]},{name:'alias',id:864,subareas:[]},{name:'getArea()',id:765,subareas:[]},{name:'isDefault()',id:815,subareas:[]},{name:'isNotDefault()',id:816,subareas:[]},{name:'isExternalChange()',id:904,subareas:[]},{name:'getSpecialValue()',id:861,subareas:[]},{name:'getType()',id:868,subareas:[]},{name:'getAreaIdValue()',id:869,subareas:[]},{name:'getPath()',id:905,subareas:[]},{name:'input()',id:906,subareas:[]},{name:'watch()',id:907,subareas:[]}]},{name:'Typ Variable',id:779,subareas:[{name:'name',id:780,subareas:[]},{name:'value',id:781,subareas:[]}]},{name:'Typ EnumerationValue',id:787,subareas:[{name:'id',id:788,subareas:[]},{name:'value',id:789,subareas:[]}]},{name:'Typ EnumerationObj',id:795,subareas:[{name:'id',id:796,subareas:[]},{name:'getDescription()',id:797,subareas:[]},{name:'getValues()',id:798,subareas:[]}]},{name:'Typ Dimension',id:807,subareas:[{name:'getWidth()',id:808,subareas:[]},{name:'getHeight()',id:809,subareas:[]}]},{name:'Typ SetObj',id:822,subareas:[{name:'add()',id:823,subareas:[]},{name:'clear()',id:824,subareas:[]},{name:'contains()',id:825,subareas:[]},{name:'isEmpty()',id:826,subareas:[]},{name:'isNotEmpty()',id:827,subareas:[]},{name:'remove()',id:828,subareas:[]},{name:'size()',id:829,subareas:[]},{name:'toList()',id:830,subareas:[]},{name:'addAll()',id:843,subareas:[]}]}]},{name:'Poznámka k renderování',id:760,subareas:[]}]}
+;
+        var treeBackground = "white";
+        var currentAreaId = 833;
+        var treeWidth = 200;
+        var treeHeight = 500;
+        var treePageSelectedId = 137;
+        var treePageSelectedExt = "png";
+        var treePageNotSelectedId = 136;
+        var treePageNotSelectedExt = "png";
+        var treeMinusId = 139;
+        var treeMinusExt = "png";
+        var treePlusId = 138;
+        var treePlusExt = "png";
+    </script>
+</HEAD>
+<BODY onload="setCookieName('documentation'); loadArea(TREE, treeDescription); onLeaveTree();", onunload="saveAreaStates()" bgcolor="black">
+    <table cellpadding="0" cellspacing="0" width="1000" align="center" style="margin-top: 30px">
+        <tr>
+            <td>
+                <table cellpadding="0" cellspacing="0" width="100%", style="background-color:DarkCyan; color: #FFFFFF;">
+                <tr>
+                    <td width="1px">
+                        <img src="res135.png">
+                    </td>
+                    <td style="text-align: center; font-size: 36px">
+                        [@INCLUDE_ONCE]</td>
+                    <td align=right width="1px">
+                        <table cellspacing="5">
+    <tr><td>
+    <a  this=""><img src="flag0.png" title="Default"></a>
+    </td></tr>
+</table>
+                    </td>
+                </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+        <tr style="height: 500px" valign="top">
+            <td>
+                <table width="100%">
+                    <tr>
+                        <td valign="top"; bgcolor="white" width="1px">
+                            <div id="TREE", onmouseout="onLeaveTree();", onmouseover="onEnterTree();"></div>
+                            </td>
+                        <td  id="CONTENT", valign="top", style="padding: 10px;" bgcolor="white">
+                            <div>
+                                <p style="margin-top: 0">
+  Vkládá obsažený text do výsledné stránky pouze jednou za celou dobu 
+  jejího zpracování. Parametrem je identifikátor, který jednoznačně určuje 
+  daný text. Je-li ve zpracovávání skriptu nalezen další blok se stejným 
+  identifikátorem, je přeskočen. Identifikátor může být také uveden pomocí 
+  parametru <b>name</b>. Použití ilustruje následující program:
+</p>
+<p style="margin-top: 0">
+<code>
+<pre>
+    [@INCLUDE_ONCE muj_program]
+        toto je oblast "[@AREA_NAME homeArea]"
+    [/@INCLUDE_ONCE]
+        [@INCLUDE_ONCE muj_program]
+        toto je druhý text
+    [/@INCLUDE_ONCE]
+</pre>
+</code>
+</p>
+<p style="margin-top: 0">
+  - vypíše na stránku text:
+        toto je oblast "Dokumentace k jazyku Maclan"
+        .
+  Druhý text nebude vypsán, protože se nachází ve značce s již použitým identifikátorem.
+</p>
+<p style="margin-top: 0">
+  V případě použití parametru <b>name</b> bude program vypadat takto:
+</p>
+<p style="margin-top: 0">
+<code>
+<pre>
+    [@INCLUDE_ONCE name=#muj_program]
+        toto je oblast "[@AREA_NAME homeArea]"
+    [/@INCLUDE_ONCE]
+        [@INCLUDE_ONCE name=#muj_program]
+        toto je druhý text
+    [/@INCLUDE_ONCE]
+</pre>
+</code>
+</p>
+<p style="margin-top: 0">
+  - vypíše na stránku opět text:
+        toto je oblast "Dokumentace k jazyku Maclan"
+</p>
+                            </div>
+                            <p style="margin-top: 0">
+                            <html>
+  <head>
+  </head>
+  <body>
+  </body>
+</html>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</BODY>
+</HTML>

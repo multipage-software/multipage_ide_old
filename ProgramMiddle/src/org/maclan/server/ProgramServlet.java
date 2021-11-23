@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -88,6 +89,11 @@ public class ProgramServlet extends FastCGIServlet {
 	 * Listener that is invoked whenever some of the slots are updated from external code providers.
 	 */
 	private static Consumer<LinkedList<Long>> updatedSlots = null;
+	
+	/**
+	 * A lambda function that checks whether a debugging is enabled or disabled.
+	 */
+	private static Supplier<Boolean> debuggingEnabled = null;
 
 	/**
 	 * Script data socket channel (nonblocking)
@@ -123,12 +129,35 @@ public class ProgramServlet extends FastCGIServlet {
 	}
 	
 	/**
-	 * Set listener that is invoked whenever some of the slots are updated from external code providers.
-	 * @param slotIds
+	 * Set a listener which is invoked whenever some of the slots are updated from external code providers.
+	 * @param listener
 	 */
 	public static void setUpdatedSlotsListener(Consumer<LinkedList<Long>> listener) {
 		
 		updatedSlots = listener;
+	}
+	
+	/**
+	 * Set a listener which is invoked whenever the debugger is enabled or disabled by parent application.
+	 * @param listener
+	 */
+	public static void setDebuggingEnabledListener(Supplier<Boolean> listener) {
+		
+		debuggingEnabled = listener;
+	}
+	
+	/**
+	 * Returns true, if debugging is enabled.
+	 * @return
+	 */
+	public static boolean isDebuggingEnabled() {
+		
+		if (debuggingEnabled == null) {
+			return false;
+		}
+		
+		boolean enabled = debuggingEnabled.get();
+		return enabled;
 	}
 	
 	/**
@@ -401,6 +430,20 @@ public class ProgramServlet extends FastCGIServlet {
 							// Set listener.
 							areaServer.setListener(new AreaServerListener() {
 								
+								@Override
+								public boolean getXdebugHostPort(Obj<String> ideHost, Obj<Integer> xdebugPort) {
+									
+									// Check if the debugger is enabled or disabled.
+									if (!isDebuggingEnabled()) {
+										return false;
+									}
+									
+									// Set connection properties.
+									ideHost.ref = "localhost";
+									xdebugPort.ref = XdebugListener.xdebugPort;
+									return true;
+								}
+
 								@Override
 								public void onError(String message) {
 									isProgramError.ref = true;

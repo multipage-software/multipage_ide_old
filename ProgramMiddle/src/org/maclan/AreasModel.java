@@ -8,15 +8,28 @@
 package org.maclan;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.BiFunction;
 
+import org.graalvm.collections.Pair;
 import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
 
 /**
  * @author
  *
  */
 public class AreasModel {
+	
+	/**
+	 * Area hints.
+	 */
+	public static enum AreaHint { first, last };
 
 	/**
 	 * Areas.
@@ -115,7 +128,77 @@ public class AreasModel {
 		
 		return areas;
 	}
-
+	
+	/**
+	 * Go through all areas.
+	 * @param rootAreaId
+	 * @param duplicated
+	 * @param useAreaLambda
+	 */
+	public void forEachArea(long rootAreaId, boolean duplicated, BiFunction<Area, LinkedList<Area>, Boolean> useAreaLambda) {
+		
+		// Check lambda  function.
+		if (useAreaLambda == null) {
+			return;
+		}
+		
+		// Get basic area.
+		Area basicArea = getArea(rootAreaId);
+		
+		// Helper lists.
+		HashSet<Long> passedIds = new HashSet<Long>();
+		LinkedList<Area> projects = new LinkedList<Area>(); // Hierarchy of area projects from macro to micro project.
+		
+		// Delegate this call to recursive method.
+		forEachAreaRecursively(basicArea, duplicated, useAreaLambda, passedIds, projects);
+	}
+	
+	/**
+	 * Go through all areas.
+	 * @param currentArea
+	 * @param duplicated
+	 * @param useAreaLambda
+	 * @param passedIds
+	 * @param projects
+	 */
+	private void forEachAreaRecursively(Area currentArea, boolean duplicated, BiFunction<Area, LinkedList<Area>, Boolean> useAreaLambda,
+			HashSet<Long> passedIds, LinkedList<Area> projects) {
+		
+		// Check if current area is a project root. If so, add the area to the end of the new projects list.
+		boolean projectRoot = currentArea.isProjectRoot();
+		if (projectRoot) {
+			
+			projects = (LinkedList<Area>) projects.clone();
+			projects.add(currentArea);
+		}
+		
+		// On not duplicated flag, check if current area was processed. If so, do not proceed with the method.
+		long currentId = currentArea.getId();
+		boolean areaAlreadyProcessed = passedIds.contains(currentId);
+		
+		if (!duplicated && areaAlreadyProcessed) {
+			return;
+		}
+		
+		passedIds.add(currentId);
+		
+		// Invoke lambda function that may use current area. Pass list of projects with second parameter.
+		boolean continuePassage = useAreaLambda.apply(currentArea, projects);
+		if (!continuePassage) {
+			return;
+		}
+		
+		// Call this method recursively for all subareas of current area.
+		List<Area> subareas = currentArea.getSubareas();
+		if (subareas.isEmpty()) {
+			return;
+		}
+		
+		for (Area currentSubarea : subareas) {
+			forEachAreaRecursively(currentSubarea, duplicated, useAreaLambda, passedIds, projects);
+		}
+	}
+	
 	/**
 	 * Get child areas.
 	 */
@@ -437,20 +520,96 @@ public class AreasModel {
 		area.addSlotName(slotName);
 	}
 
-
 	/**
-	 * Get area with given alias.
+	 * Get last area with given alias.
+	 * @param rootAreaId
 	 * @param alias
 	 * @return
 	 */
-	public Area getArea(String alias) {
-
-		for (Area area : areas) {
-			if (alias.equals(area.getAlias())) {
+	public Area getArea(long rootAreaId, String alias, AreaHint hint) {
+		
+		// Get areas in projects.
+		LinkedList<Pair<Area, LinkedList<Area>>> areasInProjects = getAreasInProjects(rootAreaId, alias, false);
+		
+		// Check areas.
+		if (areasInProjects == null || areasInProjects.isEmpty()) {
+			return null;
+		}
+		
+		// Get last area.
+		Pair<Area, LinkedList<Area>> areaInProject = AreaHint.first.equals(hint) ? areasInProjects.getFirst() : areasInProjects.getLast();
+		Area area = areaInProject.getLeft();
+		
+		// Return the area.
+		return area;
+	}
+	
+	/**
+	 * Get area by alias. Search in current project of the current input area.
+	 * @param currentArea
+	 * @param areaAlias
+	 * @return
+	 */
+	public Area getAreaFromArea(Area currentArea, String areaAlias) {
+		
+		// Get project roots.
+		LinkedList<Area> projectAreas = getProjectRootAreas(currentArea);
+		
+		// Try to search area with input alias in each project.
+		for (Area projectArea : projectAreas) {
+			
+			long projectAreaId = projectArea.getId();
+			
+			// Get area with alias and return the reference.
+			Area area = getArea(projectAreaId, areaAlias, AreasModel.AreaHint.first);
+			if (area != null) {
+				
 				return area;
 			}
 		}
+		
+		// Nothing has been found.
 		return null;
+	}
+	
+	/**
+	 * Get areas with given alias which are parts of some projects.
+	 * @param rootAreaId
+	 * @param alias
+	 * @param duplicated - areas can be duplicated when they or theirs superareas has been connected
+	 * @return
+	 */
+	public LinkedList<Pair<Area, LinkedList<Area>>> getAreasInProjects(long rootAreaId, String alias, boolean duplicated) {
+		
+		// Check input alias.
+		if (alias == null) {
+			return null;
+		}
+		
+		// Initialize index and return value.
+		final Obj<Integer> index = new Obj<Integer>(0);
+		final LinkedList<Pair<Area, LinkedList<Area>>> foundAreasInProjects = new LinkedList<Pair<Area, LinkedList<Area>>>();
+		
+		// Go through all areas and find those with given alias.
+		forEachArea(rootAreaId, duplicated, (currentArea, projects) -> {
+			
+			// Get current alias and check it.
+			String currentAlias = currentArea.getAlias();
+			if (!alias.equals(currentAlias)) {
+				return true;
+			}
+			
+			// Increment index value.
+			index.ref++;
+			
+			// If the index value mathes input value, return the area.
+			foundAreasInProjects.add(Pair.create(currentArea, projects));
+			
+			return true;
+		});
+		
+		// Return resulting list.
+		return foundAreasInProjects;
 	}
 
 	/**

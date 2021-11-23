@@ -61,7 +61,7 @@ public class Settings extends JDialog {
 	private static boolean isRemovePartiallyRenderedPages;
 	private static int httpPortNumber;
 	private static boolean commonResourceFileNames;
-	private static boolean enableDebugging;
+	private static boolean enableDebugging = false;
 	
 	/**
 	 * Set maximum text resource size.
@@ -105,6 +105,9 @@ public class Settings extends JDialog {
 		
 		// Enable @META tags in the area server.
 		ProgramServlet.enableMetaTags(enable);
+		
+		// Set servlet listener that can check if debugging is enabled.
+		ProgramServlet.setDebuggingEnabledListener(() -> enableDebugging);
 	}
 	
 	/**
@@ -168,7 +171,7 @@ public class Settings extends JDialog {
 		//MiddleUtility.databaseAccess = inputStream.readUTF();
 		commonResourceFileNames = inputStream.readBoolean();
 		enableDebugging = inputStream.readBoolean();
-		setEnableDebugging(enableDebugging);  // This command sets a listener for servlet
+		setEnableDebugging(false);  // This command sets a listener for servlet
 	}
 
 	/**

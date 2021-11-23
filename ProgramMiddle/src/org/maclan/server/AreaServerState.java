@@ -6,10 +6,17 @@
  */
 package org.maclan.server;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.TreeSet;
 
-import org.maclan.*;
-import org.multipage.util.*;
+import org.maclan.Area;
+import org.maclan.AreaVersion;
+import org.maclan.Language;
+import org.maclan.MiddleLight;
+import org.multipage.util.Obj;
 
 /**
  * @author user
@@ -18,16 +25,26 @@ import org.multipage.util.*;
 public class AreaServerState {
 	
 	/**
+	 * Default timeout value in milliseconds.
+	 */
+	public static final Long defaultTimeoutValue = 60000L;
+	
+	/**
 	 * Constants used in the area server state properties.
 	 */
 	public static final int metaInfoFalse = 0;
 	public static final int metaInfoTrue = 1;
 	public static final int metaInfoTemporary = 2;
+	
+	/**
+	 * Reference to parent state.
+	 */
+	public AreaServerState parentState = null;
 
 	/**
 	 * Area server response timeout in milliseconds.
 	 */
-	public long responseTimeoutMilliseconds = 60000L;
+	public long responseTimeoutMilliseconds = defaultTimeoutValue;
 	
 	/**
 	 * Response start time.
@@ -249,6 +266,11 @@ public class AreaServerState {
 	 * Enable or disable meta information in resulting texts.
 	 */
 	public int enableMetaTags = AreaServerState.metaInfoFalse;
+	
+	/**
+	 * Xdebug client.
+	 */
+	public XdebugClient debugClient = null;
 
 	/**
 	 * Update server state.

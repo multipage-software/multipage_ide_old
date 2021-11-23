@@ -220,6 +220,7 @@ public class AreaServer {
 	protected AreaServerState cloneServerState(Area area, String textValue) {
 		
 		AreaServerState clonedState = new AreaServerState();
+		clonedState.parentState = state.parentState;
 		clonedState.responseTimeoutMilliseconds = state.responseTimeoutMilliseconds;
 		clonedState.responseStartTime = state.responseStartTime;
 		clonedState.rendering = state.rendering;
@@ -262,6 +263,7 @@ public class AreaServer {
 		clonedState.trayMenu = state.trayMenu;
 		clonedState.newLine = state.newLine;
 		clonedState.enableMetaTags = state.enableMetaTags;
+		clonedState.debugClient = state.debugClient;
 		
 		return clonedState;
 	}
@@ -670,10 +672,14 @@ public class AreaServer {
 				Long resourceId = server.getResourceFromProperties(properties).getId();
 				
 				// Get coding.
-				String coding = properties.getProperty("coding");
+				String encoding = properties.getProperty("coding");
+				if (encoding == null) {
+					encoding = properties.getProperty("encoding");
+				}
+				
 				
 				// Get resource text.
-				return server.getResourceContentText(resourceId, coding);
+				return server.getResourceContentText(resourceId, encoding);
 			}
 		});
 		
@@ -727,7 +733,8 @@ public class AreaServer {
 		}
 		
 		// If there is an use parameter.
-		if (state.renderingResources != null && properties.containsKey("render")) {
+		boolean render = evaluateFlag(properties, "render", true);
+		if (state.renderingResources != null && render) {
 			
 			setRenderingResourceExt(resource);
 		}
@@ -752,7 +759,7 @@ public class AreaServer {
 	 * Area properties array.
 	 */
 	private static final String [] areaPropertiesArray = {
-		"areaId", "areaAlias", "area", "startArea", "homeArea", "requestedArea", "thisArea"};
+		"areaId", "areaAlias", "projectAlias", "area", "startArea", "homeArea", "requestedArea", "thisArea"};
 	
 	/**
 	 * Get area from properties.
@@ -790,9 +797,15 @@ public class AreaServer {
 				String alias = server.evaluateText(aliasText, String.class, true);
 				if (alias != null) {
 					
+					// Get project alias and evaluate it.
+					String projectAlias = properties.getProperty(propertyStart + "projectAlias");
+					if (projectAlias != null) {
+						projectAlias = server.evaluateText(projectAlias, String.class, true);
+					}
+					
 					// Try to get area.
 					Obj<Area> outputArea = new Obj<Area>();
-					result = server.state.middle.loadAreaWithAlias(alias, outputArea);
+					result = server.state.middle.loadProjectAreaWithAlias(projectAlias, alias, outputArea);
 					if (result.isNotOK()) {
 						AreaServer.throwError("server.messageAreaAliasNotFound", alias);
 					}
@@ -991,13 +1004,13 @@ public class AreaServer {
 				if (slotAlias != null && !slotAlias.isEmpty()) {
 
 					// Get local modifier.
-					boolean local = properties.getProperty("local") != null;
+					boolean local = server.evaluateFlag(properties, "local", true);
 					// Get "skip_default" modifier.
-					boolean skipDefault = properties.getProperty("skipDefault") != null;
+					boolean skipDefault = server.evaluateFlag(properties, "skipDefault", true);
 					// Parent flag.
-					boolean parent = properties.containsKey("parent");
+					boolean parent = server.evaluateFlag(properties, "parent", true);
 					// Get "enableSpecialValue" modifier.
-					boolean enableSpecialValue = properties.containsKey("enableSpecialValue");
+					boolean enableSpecialValue = server.evaluateFlag(properties, "enableSpecialValue", true);
 					
 					if (slotArea == null) {
 						slotArea = server.state.area;
@@ -2410,32 +2423,84 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// Get timeout in milliseconds.
-				Enumeration<Object> items = properties.keys();
+				// initialization.
+				Long timeoutMilliseconds = null;
 				
-				if (items.hasMoreElements()) {
-					Object item = items.nextElement();
+				try {
 					
-					if (item instanceof String) {
-						String timeoutText = (String) item;
+					// Get timeout in milliseconds.
+					Enumeration<Object> items = properties.keys();
+					
+					// Check parameters.
+					if (items.hasMoreElements()) {
 						
-						try {
-							long timeoutMilliseconds = Long.parseLong(timeoutText);
+						// Try to get timeout value in milliseconds drirectly.
+						Object item = items.nextElement();
+						if (item instanceof String) {
+							String timeoutText = (String) item;
+						
+							timeoutMilliseconds = Long.parseLong(timeoutText);
 							
 							// Set milliseconds.
 							server.state.responseTimeoutMilliseconds = timeoutMilliseconds;
-							
-							// Return empty string.
-							return "";
 						}
-						catch (Exception e) {
+						
+						// Iniialize constants.
+						final String msConstant = "ms";
+						final String defaultConstant = "default";
+						
+						boolean useDefaultValue = false;
+						
+						// Try to get "ms" property value specifying timout milliseconds.
+						boolean msPropertyExists = properties.containsKey(msConstant);
+						if (timeoutMilliseconds == null && msPropertyExists) {
+							
+							// Get property value.
+							String msPropertyText = properties.getProperty(msConstant);
+							
+							// Try to set default tmieout when the "ms" property has null or the "default" string value.
+							useDefaultValue = (msPropertyText == null);
+							if (!useDefaultValue) {
+								
+								useDefaultValue = (defaultConstant.equals(msPropertyText));
+								if (!useDefaultValue) {
+									
+									String defaultText = server.evaluateText(msPropertyText, String.class, true);
+									if (defaultConstant.equals(defaultText)) {
+										
+										useDefaultValue = true;
+									}
+								}
+							}
+							
+							// Set default timeout.
+							if (useDefaultValue) {
+								timeoutMilliseconds = AreaServerState.defaultTimeoutValue;
+							}
+							// Else set user timeout value.
+							else {
+								try {
+									// Try to get 
+									timeoutMilliseconds = server.evaluateText(msPropertyText, Long.class, true);
+									if (timeoutMilliseconds == null) {
+										timeoutMilliseconds = AreaServerState.defaultTimeoutValue;
+									}
+								}
+								catch (Exception e) {
+								}
+							}
 						}
 					}
 				}
+				catch (Exception e) {
+				}
 				
 				// Throw error.
-				throwError("server.messageExpectingTimoutInMilliseconds");
-
+				if (timeoutMilliseconds == null) {
+					throwError("server.messageExpectingTimoutInMilliseconds");
+				}
+				
+				// Return empty string.
 				return "";
 			}
 		});
@@ -3260,9 +3325,9 @@ public class AreaServer {
 				+ "function getEnumeration(description) { return _.getEnumeration(description); }; "
 				+ "function getCurrentLangId() { return _.getCurrentLangId(); }; "
 				+ "function clearCssRules() { _.clearCssRules(); }; "
-				+ "function insertCssRules(area, selector, media, important) { _.insertCssRules(area, selector, media, important); }; "
+				+ "function insertCssRules(area, socketSelector, media, important) { _.insertCssRules(area, socketSelector, media, important); }; "
 				+ "function getCssRules() { return _.getCssRules(); }; "
-				+ "function trace(object) { var dbg = new org.maclan._.JavaScriptDebugger(); dbg.display(typeof object, object); }; ";
+				+ "function trace(object) { var dbg = new org.maclan.server.JavaScriptDebugger(); dbg.display(typeof object, object); }; ";
 		
 		// Prepare the above code in the scripting engine so that all listed functions are defined in the script context.
 		server.state.scriptingEngine.preparePrerequisites(javaScriptFunctionsDefinition);
@@ -3533,15 +3598,84 @@ public class AreaServer {
 					return "";
 				}
 				
-				if (breakName != null) {
-					AreaServer.throwError("server.messageProgramBreakName", breakName);
+				// Check debug flag.
+				Obj<String> ideHost = new Obj<String>();
+				Obj<Integer> xdebugPort = new Obj<Integer>();
+				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
+				if (debugging) {
+					
+					// Connect to debugger via Xdebug protocol
+					if (server.state.debugClient == null) {
+						server.connectViaXdebug(ideHost.ref, xdebugPort.ref);
+					}
+					// ... or accept Xdebug statements.
+					else {
+						server.acceptXdebugStatements();
+					}
 				}
 				else {
-					AreaServer.throwError("server.messageProgramBreak");
+					if (breakName != null) {
+						AreaServer.throwError("server.messageProgramBreakName", breakName);
+					}
+					else {
+						AreaServer.throwError("server.messageProgramBreak");
+					}
 				}
 				
 				return "";
 			}
+		});
+	}
+	
+	/**
+	 * Connect to debugger via Xdebug protocol.
+	 * @param - ideHost
+	 * @param - xdebugPort
+	 */
+	protected void connectViaXdebug(String ideHostName, int xdebugPort)
+			throws Exception {
+		
+		// Get current process and its parent process IDs.
+		ProcessHandle processHandle = ProcessHandle.current();
+		long processId = processHandle.pid();
+		
+		// Get current thread ID.
+		long threadId = Thread.currentThread().getId();
+		
+		// Create Xdebug client.
+		state.debugClient = XdebugClient.connect(ideHostName, xdebugPort);
+		
+		// Initialize Xdebug protocol communication.
+		String initialXmlPacket = String.format(
+				"<init appid=\"Area Server pid(%d)\" " +
+				"idekey=\"%s\" " +
+				"session=\"\" " +
+				"thread=\"%d\" " +
+				"parent=\"\" " +
+				"language=\"Maclan\" " +
+				"protocol_version=\"1.0\" " +
+				"fileuri=\"\">",
+				processId,
+				XdebugListener.requiredIdeKey,
+				threadId);
+		
+		state.debugClient.write(initialXmlPacket);
+	}
+	
+	/**
+	 * Accept incomming Xdebug statements.
+	 */
+	protected void acceptXdebugStatements()
+			throws Exception {
+		
+		// Check debugger connection state.
+		if (!state.debugClient.checkActive()) {
+			AreaServer.throwError("org.maclan.server.messageXdebugConnectionInterrupted");
+		}
+		
+		// Enter main loop for communication with debugger window.
+		state.debugClient.communicate((socketChannel, statement) -> {
+			return true;
 		});
 	}
 
@@ -3777,16 +3911,17 @@ public class AreaServer {
 			selectedAreas.addAll(areas);
 		}
 
-		// If there is a "reverse" flag, reverse the list items.
-		if (properties.getProperty("reversed") != null) {
+		// If there is a "reversed" flag, reverse the list items.
+		boolean reversed = server.evaluateFlag(properties, "reversed", true);
+		if (reversed) {
 			
 			LinkedList<Area> reversedAreas = new LinkedList<Area>();
 			for (Area selectedArea : selectedAreas) {
 				reversedAreas.addFirst(selectedArea);
 			}
-			
 			selectedAreas = reversedAreas;
 		}
+			
 		// Create variables.
 		if (variableName != null) {
 			server.state.blocks.createVariable(variableName, selectedAreas);
@@ -3850,6 +3985,27 @@ public class AreaServer {
 		}
 
 		return (T) value;
+	}
+	
+	/**
+	 * Evaluate boolaen flag.
+	 * @param properties
+	 * @param flagName
+	 * @param enableNoValue
+	 * @return
+	 */
+	public boolean evaluateFlag(Properties properties, String flagName, boolean enableNoValue)
+		throws Exception {
+		
+		Boolean flag = properties.contains(flagName);
+		if (!enableNoValue && flag) {
+			
+			String flagValueString = properties.getProperty(flagName);
+			if (flagValueString != null) {
+				flag = evaluateText(flagValueString, Boolean.class, false);
+			}
+		}
+		return flag;
 	}
 
 	/**
@@ -3927,6 +4083,7 @@ public class AreaServer {
 		// Save original server state and clone server state.
 		AreaServerState originalState = this.state;
 		AreaServerState subState = cloneServerState(area1, textValue);
+		subState.parentState = originalState;
 		
 		// Get current block reference.
 		BlockDescriptor currentBlock = originalState.blocks.getCurrentBlockDescriptor();
@@ -3939,6 +4096,7 @@ public class AreaServer {
 			processAreaServerTextAndTags();
 			
 			// Get back old state.
+			this.state.parentState = null;
 			this.state = originalState;
 			this.state.progateFrom(subState);
 		}
@@ -3975,58 +4133,87 @@ public class AreaServer {
 	private static final int javaScriptEnginesCount = 10;
 	
 	/**
-	 * JavaScript engine pool.
+	 * Synchronized container for future JavaScript engine pool.
 	 */
-	private static ArrayList<ScriptingEngine> javaScriptingEnginePool;
+	private static Obj<ArrayList<ScriptingEngine>> javaScriptEnginePool = new Obj<ArrayList<ScriptingEngine>>(null);
 
 	/**
 	 * Create JavaScript engines.
 	 */
 	private void createJavaScriptEngines() {
 		
-		// Create scripting engine pool.
-		if (javaScriptingEnginePool == null) {
-			javaScriptingEnginePool = new ArrayList<ScriptingEngine>();
-			
-			for (int index = 0; index < javaScriptEnginesCount; index++) {
+		// Fill the pool with scripting engines.
+		new Thread(() -> {
+			synchronized (javaScriptEnginePool) {
 				
-				ScriptingEngine engine = new ScriptingEngine();
-				engine.create();
+				// Create a new pool, if it doesn't exist.
+				if (javaScriptEnginePool.ref == null) {
+					javaScriptEnginePool.ref = new ArrayList<ScriptingEngine>();
+				}
 				
-				engine.setUsed(false);
+				// Find out current pool content.
+				int count = javaScriptEnginePool.ref.size();
 				
-				javaScriptingEnginePool.add(engine);
+				// Refill the pool.
+				for (int index = count; index < javaScriptEnginesCount; index++) {
+					
+					// Create scripting engine.
+					ScriptingEngine engine = new ScriptingEngine();
+					engine.create();
+					
+					// Set it unused.
+					engine.setUsed(false);
+					
+					// Add the engine to the pool.
+					synchronized (javaScriptEnginePool.ref) {
+						javaScriptEnginePool.ref.add(engine);
+					}
+				}
 			}
-		}
+		}).start();
 		
-		ScriptingEngine engine = null;
+		ScriptingEngine scriptingEngine = null;
 		
-		// Get not used scripting engine from the pool.
+		// Main loop that searches for unused scripting engine in the pool.
 		while (true) {
 			
-			int index = 0;
-			
-			for (; index < javaScriptEnginesCount; index++) {
+			// Get single scripting engine from the pool which is currently not used.
+			synchronized (javaScriptEnginePool) {
 				
-				ScriptingEngine scriptingEngine = javaScriptingEnginePool.get(index);
+				// Check if the pool was created.
+				if (javaScriptEnginePool.ref != null) {
 				
-				if (!scriptingEngine.isUsed()) {
-					engine = scriptingEngine;
-					break;
+					int count = javaScriptEnginePool.ref.size();
+					for (int index = 0; index < count; index++) {
+						
+						synchronized (javaScriptEnginePool.ref) {
+						ScriptingEngine engine = javaScriptEnginePool.ref.get(index);
+							synchronized (engine) {
+								
+								if (!engine.isUsed()) {
+									
+									scriptingEngine = engine;
+									break;
+								}
+							}
+						}
+					}
+					
+					// If some engine was selected, exit the main loop.
+					if (scriptingEngine != null) {
+						break;
+					}
 				}
 			}
 			
-			if (engine != null) {
-				break;
-			}
-			
-			// Wait, if no Nashorn is available.
+			// Wait for released engine.
 			try {
-				synchronized (javaScriptingEnginePool) {
+				synchronized (javaScriptEnginePool) {
 					
-					//System.err.format("Waiting in thread #%d\n", Thread.currentThread().getId());
 					while (!ScriptingEngine.signalReleased) {
-						javaScriptingEnginePool.wait(20);
+						
+						// Wait for 20 ms.
+						javaScriptEnginePool.wait(20);
 					}
 				}
 			}
@@ -4034,10 +4221,13 @@ public class AreaServer {
 			}
 		}
 		
-		// Use scripting engine and initialize it.
-		state.scriptingEngine = engine;
-		engine.setUsed(true);
-		state.scriptingEngine.initialize();
+		// Initialize the scripting engine and assing it to current Area Server.
+		synchronized (scriptingEngine) {
+			
+			state.scriptingEngine = scriptingEngine;
+			scriptingEngine.setUsed(true);
+			state.scriptingEngine.initialize();
+		}
 	}
 
 	/**
@@ -4448,12 +4638,12 @@ public class AreaServer {
 		invokeFinalListeners();
 		
 		// Notify scripting engine pool that this engine was signalReleased.
-		synchronized (javaScriptingEnginePool) {
+		synchronized (javaScriptEnginePool) {
 			
 			state.scriptingEngine.setUsed(false);
 			ScriptingEngine.signalReleased = true;
 			try {
-				javaScriptingEnginePool.notify();
+				javaScriptEnginePool.notify();
 			}
 			catch (Exception e) {
 				e.printStackTrace();
@@ -5456,7 +5646,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName))) {
+			if (!tagName.isEmpty() && !("@META".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5496,7 +5686,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName) || "@META_LINE".equals(tagName))) {
+			if (!tagName.isEmpty() && !("@META".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5552,7 +5742,7 @@ public class AreaServer {
 	}
 	
 	/**
-	 * Add meta information regarding the source of resulting text.
+	 * Add meta information about the source of resulting text.
 	 * @param replacement 
 	 * @param tagsSource
 	 * @return
@@ -5564,35 +5754,62 @@ public class AreaServer {
 			return replacement;
 		}
 		
-		// Add meta info for each line of code.
-		StringBuilder replacementLines = new StringBuilder();
-		Obj<Long> lineNumber = new Obj<Long>(0L);
-		replacement.lines().forEachOrdered(lineText -> {
-			
-			lineText = String.format("[@@META_LINE line=%d]%s[/@@META_LINE]", lineNumber.ref++, lineText);
-			replacementLines.append(lineText + '\n');
-		});
+		// If the Area Server is in break state, create break command in each meta tag.
+		String breakCommand = state.debugClient != null ? "[@BREAK $name=_xdebug]" : "";
 		
 		// Wrap text into META tag.
-		return String.format("[@@META_SOURCE source=#%s]%s[/@@META_SOURCE]", tagsSource,  replacementLines.toString());
+		return String.format("[@@META source=#%s]%s%s[/@@META]", tagsSource, replacement, breakCommand);
 	}
 	
 	/**
 	 * Add meta information into the resulting text.
 	 * @param tagName
+	 * @param tagEnd 
+	 * @param tagStart 
 	 * @param replaceent
 	 * @param state
 	 * @return
 	 */
-	private String addMetaInformation(String tagName, String replacement, AreaServerState state) {
+	private String addMetaInformation(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state) {
 		
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
 		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return replacement;
 		}
 		
+		// Create properties string.
+		StringBuilder propertiesString = new StringBuilder();
+		for (Entry<Object, Object> entry : properties.entrySet()) {
+			
+			Object key = entry.getKey();
+			Object value = entry.getValue();
+			
+			String valueBase64 = null;
+			if (value != null) {
+				
+				valueBase64 = value.toString();
+				if (!valueBase64.isEmpty()) {
+					valueBase64 = Utility.encodeBase64(valueBase64);
+				}
+				else {
+					valueBase64 = null;
+				}
+			}
+			
+			propertiesString.append(' ');
+			propertiesString.append(key);
+			
+			if (valueBase64 != null) {
+				propertiesString.append("=#");
+				propertiesString.append(valueBase64);
+			}
+		}
+		
+		// If the Area Server is in break state, create break command in each meta tag.
+		String breakCommand = state.debugClient != null ? "[@BREAK $name=_xdebug]" : "";
+		
 		// Wrap result into a META tag.
-		return String.format("[@@META_TAG tag=#%s]%s[/@@META_TAG]", tagName, replacement);
+		return String.format("[@@META $tag=#%s $start=%d $stop=%d%s]%s%s[/@@META]", tagName, start, stop, propertiesString, replacement, breakCommand);
 	}
 	
 	/**
@@ -5627,7 +5844,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META_LINE".equals(tagName) || "@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
+			if ("@META".equals(tagName)) {
 				
 				// Parse properties.
 				Properties properties = new Properties();
@@ -5658,7 +5875,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META_LINE".equals(tagName) || "@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
+			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
 				
 				text.replace(tagStartPositionOut.ref, positionOut.ref + 1, "");
 				positionOut.ref = tagStartPositionOut.ref;
@@ -5691,7 +5908,7 @@ public class AreaServer {
 		String replace = processor.processTag(this);
 		
 		// Wrap into meta information.
-		replace = addMetaInformation(tagName, replace, state);
+		replace = addMetaInformation(tagName, null, state.tagStartPosition, state.position, replace, state);
 		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -5734,7 +5951,7 @@ public class AreaServer {
 		String replace = processor.processTag(this, properties);
 		
 		// Wrap into meta information.
-		replace = addMetaInformation(tagName, replace, state);
+		replace = addMetaInformation(tagName, properties, state.tagStartPosition, state.position, replace, state);
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		
@@ -5938,7 +6155,7 @@ public class AreaServer {
 		}
 
 		// Get local property.
-		boolean local = properties.getProperty("local") != null;
+		boolean local = evaluateFlag(properties, "local", true);
 		
 		int count = list.size();
 		
@@ -6018,8 +6235,13 @@ public class AreaServer {
 			}
 		}
 
+		// Get flags used when releasing the block.
+		boolean transparent = evaluateFlag(properties, "transparent", true);
+		boolean transparentProcedures = evaluateFlag(properties, "transparentProc", true);
+		boolean transparentVariables = evaluateFlag(properties, "transparentVar", true);
+		
 		// Pop list from the stack.
-		state.blocks.popBlockDescriptor(false, false);
+		state.blocks.popBlockDescriptor(transparent || transparentProcedures, transparent || transparentVariables);
 		
 		// Replace text.
 		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
@@ -6222,8 +6444,14 @@ public class AreaServer {
 			isFirstIteration = false;
 		}
 		
+		// Get replacement string.
+		String replace = compiledText.toString();
+		
+		// Wrap into meta information.
+		replace = addMetaInformation(tagName, properties, state.tagStartPosition, state.position, replace, state);
+		
 		// Replace text.
-		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
+		state.text.replace(state.tagStartPosition, parser.getPosition(), replace);
 		
 		state.position = state.tagStartPosition;
 
@@ -6559,8 +6787,13 @@ public class AreaServer {
 		// Restore current language.
 		state.middle.setCurrentLanguageId(state.currentLanguage.id);
 		
+		// Get flags used when releasing the block.
+		boolean transparent = evaluateFlag(properties, "transparent", true);
+		boolean transparentProcedures = evaluateFlag(properties, "transparentProc", true);
+		boolean transparentVariables = evaluateFlag(properties, "transparentVar", true);
+		
 		// Pop block descriptor.
-		state.blocks.popBlockDescriptor(properties.containsKey("transparent"));
+		state.blocks.popBlockDescriptor(transparent || transparentProcedures, transparent || transparentVariables);
 		
 		// Replace text.
 		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
@@ -8162,7 +8395,7 @@ public class AreaServer {
 	
 	/**
 	 * Insert CSS rules. (Used for optimization purpose.)
-	 * @param selector 
+	 * @param socketSelector 
 	 */
 	public void insertCssRules(String selector, String mediaSlotName, String importantSlotName)
 			throws Exception {
@@ -8173,7 +8406,7 @@ public class AreaServer {
 
 	/**
 	 * Insert CSS rules. (Used for optimization purpose.)
-	 * @param selector 
+	 * @param socketSelector 
 	 */
 	public void insertCssRules(Area area, String selector, String mediaSlotName, String importantSlotName)
 			throws Exception {

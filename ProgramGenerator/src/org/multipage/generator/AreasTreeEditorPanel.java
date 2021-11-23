@@ -1121,19 +1121,24 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				Object transferredObject = transferedDndNode.getUserObject();
 				Object droppedObject = droppedDndNode.getUserObject();
 				
-				if (!(transferredObject instanceof Area && droppedObject instanceof Area)) {
+				if (!(transferredObject instanceof Long && droppedObject instanceof Long)) {
 					e.rejectDrop();
 					return;
 				}
 				
+				// Get areas from the model.
+				Area transferredArea = ProgramGenerator.getArea((long) transferredObject);
+				Area droppedArea = ProgramGenerator.getArea((long) droppedObject);
+				
+				// Get parent areas.
 				Area transferredParentArea = null;
 				if (transferredNodeParent instanceof DefaultMutableTreeNode) {
 					
 					DefaultMutableTreeNode transferredMutableNodeParent = (DefaultMutableTreeNode) transferredNodeParent;
-					Object userObject = transferredMutableNodeParent.getUserObject();
+					Object parentObject = transferredMutableNodeParent.getUserObject();
 					
-					if (userObject instanceof Area) {
-						transferredParentArea = (Area) userObject;
+					if (parentObject instanceof Long) {
+						transferredParentArea = ProgramGenerator.getArea((long)parentObject);
 					}
 				}
 				
@@ -1141,18 +1146,19 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				if (droppedNodeParent instanceof DefaultMutableTreeNode) {
 					
 					DefaultMutableTreeNode droppedMutableNodeParent = (DefaultMutableTreeNode) droppedNodeParent;
-					Object userObject = droppedMutableNodeParent.getUserObject();
+					Object parentObject = droppedMutableNodeParent.getUserObject();
 					
-					if (userObject instanceof Area) {
-						droppedParentArea = (Area) userObject;
+					if (parentObject instanceof Long) {
+						droppedParentArea = ProgramGenerator.getArea((long)parentObject);
 					}
 				}
 				
+				// Make drop and reload the diagrams.
 				int action = e.getDropAction();
 				
 				GeneratorMainFrame.transferArea(
-						(Area)transferredObject, transferredParentArea,
-						(Area)droppedObject, droppedParentArea,
+						transferredArea, transferredParentArea,
+						droppedArea, droppedParentArea,
 						action, thisComponent);
 				
 				reload();
@@ -1403,8 +1409,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				list.setSelectedIndices(selectedIndices);
 			}
 			
-			// Redraw the editor.
-			redrawInformation();
+			// Transmit the "update all" signal.
+			ConditionalEvents.transmit(this, Signal.updateAll);
 		});
 	}
 	
@@ -1560,23 +1566,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				}
 			}
 			
-		});
-	}
-
-	/**
-	 * Redraw information.
-	 */
-	public static void redrawInformation() {
-		
-		Utility.traverseUI((component) -> {
-			
-			if (component instanceof AreasTreeEditorPanel) {
-				AreasTreeEditorPanel traceFrame = (AreasTreeEditorPanel) component;
-				
-				traceFrame.tree.repaint();
-				traceFrame.list.repaint();
-			}
-			return true;
 		});
 	}
 	

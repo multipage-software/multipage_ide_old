@@ -127,5 +127,4 @@ head_match(TEXT, TEXT_PATTERN, DISTANCE) :-
     DISTANCE is 0, !;
     
     /* Otherwise use Levenshtein distance to decide. */
-    text_padding(TEXT, TEXT_PATTERN),
     levenshtein_distance(TEXT, TEXT_PATTERN, DISTANCE).
