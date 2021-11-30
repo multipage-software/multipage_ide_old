@@ -128,15 +128,19 @@ public class IntellisenseItemPanel extends JPanel {
 	
 	/**
 	 * Set suggestion.
-	 * @param cellHasFocus 
-	 * @param isSelected 
+	 * @param suggestion 
 	 * @param index 
-	 * @param suggestion2 
+	 * @param isSelected 
+	 * @param cellHasFocus 
 	 */
 	public void setSuggestion(Suggestion suggestion, int index, boolean isSelected, boolean cellHasFocus) {
 		
+		// Replaces whitespaces with non-breaking spaces.
+		String suggestionHtml = suggestion.toString();
+		suggestionHtml = suggestionHtml.replaceAll("\\s+", "&nbsp;");
+		
 		// Set the caption and flags.
-		labelCaption.setText(suggestion.toString());
+		labelCaption.setText(suggestionHtml);
 		this.isSelected = isSelected;
 		this.hasFocus = cellHasFocus;
 	}

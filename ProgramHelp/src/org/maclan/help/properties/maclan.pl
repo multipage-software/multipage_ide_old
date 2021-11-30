@@ -360,11 +360,41 @@ maclan(tag('REPLACE_BOOKMARK'), property('transparent'), type('Boolean')).
 maclan(tag('REPLACE_BOOKMARK'), property('transparentProc'), type('Boolean')).
 maclan(tag('REPLACE_BOOKMARK'), property('transparentVar'), type('Boolean')).
 
+maclan(tag('INCLUDE_ONCE'), property('name'), type('BookmarkName')).
+maclan(tag('INCLUDE_ONCE'), property('transparent'), type('Boolean')).
+maclan(tag('INCLUDE_ONCE'), property('transparentProc'), type('Boolean')).
+maclan(tag('INCLUDE_ONCE'), property('transparentVar'), type('Boolean')).
+
+maclan(tag('LITERAL'), property('transparent'), type('Boolean')).
+maclan(tag('LITERAL'), property('transparentProc'), type('Boolean')).
+maclan(tag('LITERAL'), property('transparentVar'), type('Boolean')).
+
 maclan(tag('PRAGMA'), property('php'), type('Boolean')).
 maclan(tag('PRAGMA'), property('tabulator'), type('String')).
 maclan(tag('PRAGMA'), property('webInterface'), type('FolderPath')).
 maclan(tag('PRAGMA'), property('metaCharset'), type('String')).
 maclan(tag('PRAGMA'), property('metaInfo'), type('String')).
+
+maclan(tag('JAVASCRIPT'), property('global'), type('Boolean')).
+maclan(tag('JAVASCRIPT'), property('pitext'), type('Boolean')).
+maclan(tag('JAVASCRIPT'), property('transparent'), type('Boolean')).
+maclan(tag('JAVASCRIPT'), property('transparentProc'), type('Boolean')).
+maclan(tag('JAVASCRIPT'), property('transparentVar'), type('Boolean')).
+
+maclan(tag('INDENT'), property('level'), type('Boolean')).
+maclan(tag('INDENT'), property('tab'), type('String')).
+maclan(tag('INDENT'), property('transparent'), type('Boolean')).
+maclan(tag('INDENT'), property('transparentProc'), type('Boolean')).
+maclan(tag('INDENT'), property('transparentVar'), type('Boolean')).
+
+maclan(tag('NOINDENT'), property('transparent'), type('Boolean')).
+maclan(tag('NOINDENT'), property('transparentProc'), type('Boolean')).
+maclan(tag('NOINDENT'), property('transparentVar'), type('Boolean')).
+
+maclan(tag('CSS_LOOKUP_TABLE'), property('collect'), type('Boolean')).
+maclan(tag('CSS_LOOKUP_TABLE'), property('transparent'), type('Boolean')).
+maclan(tag('CSS_LOOKUP_TABLE'), property('transparentProc'), type('Boolean')).
+maclan(tag('CSS_LOOKUP_TABLE'), property('transparentVar'), type('Boolean')).
 
 maclan(tag('UNZIP'), property('areaId'), type('AreaId')).
 maclan(tag('UNZIP'), property('areaAlias'), type('AreaAlias')).
@@ -377,10 +407,23 @@ maclan(tag('UNZIP'), property('res'), type('ResourceAlias')).
 maclan(tag('UNZIP'), property('folder'), type('FolderPath')).
 
 maclan(tag('RUN'), property('cmd'), type('SystemCommand')).
+maclan(tag('RUN'), property('workdir'), type('FolderPath')).
 maclan(tag('RUN'), property('output'), type('Boolean')).
-maclan(tag('RUN'), property('exception'), type('Void')).
+maclan(tag('RUN'), property('escape'), type('Boolean')).
+maclan(tag('RUN'), property('error'), type('Boolean')).
 
-maclan(tag('REDIRECT'), property('uri'), type('Uri')).
+maclan(tag('REDIRECT'), property('areaId'), type('AreaId')).
+maclan(tag('REDIRECT'), property('areaAlias'), type('AreaAlias')).
+maclan(tag('REDIRECT'), property('area'), type('Area')).
+maclan(tag('REDIRECT'), property('startArea'), type('Area')).
+maclan(tag('REDIRECT'), property('homeArea'), type('Area')).
+maclan(tag('REDIRECT'), property('requestedArea'), type('Area')).
+maclan(tag('REDIRECT'), property('thisArea'), type('Area')).
+maclan(tag('REDIRECT'), property('areaSlot'), type('Slot')).
+maclan(tag('REDIRECT'), property('uri'), type('uri')).
+maclan(tag('REDIRECT'), property('langId'), type('uri')).
+maclan(tag('REDIRECT'), property('langAlias'), type('uri')).
+maclan(tag('REDIRECT'), property('versionAlias'), type('uri')).
 
 maclan(tag('TRAY_MENU'), property('name'), type('String')).
 maclan(tag('TRAY_MENU'), property('url'), type('Url')).

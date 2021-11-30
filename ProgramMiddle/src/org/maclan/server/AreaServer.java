@@ -3002,7 +3002,7 @@ public class AreaServer {
 					
 					Boolean output = true;
 					
-					// Disable operation text result if needed.
+					// Enable insertion of the command output.
 					String outputText = properties.getProperty("output");
 					if (outputText != null) {
 						output = server.evaluateText(outputText, Boolean.class, true);
