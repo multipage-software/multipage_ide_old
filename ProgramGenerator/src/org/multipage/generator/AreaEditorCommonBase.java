@@ -14,8 +14,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Hashtable;
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -36,6 +34,8 @@ import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -85,7 +85,7 @@ public abstract class AreaEditorCommonBase {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		Object data = inputStream.readObject();
@@ -103,7 +103,7 @@ public abstract class AreaEditorCommonBase {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);

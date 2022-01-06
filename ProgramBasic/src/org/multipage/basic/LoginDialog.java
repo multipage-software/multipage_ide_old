@@ -28,8 +28,6 @@ import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.text.DecimalFormat;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -61,6 +59,8 @@ import javax.swing.SwingWorker;
 import org.maclan.MiddleResult;
 import org.maclan.server.ProgramHttpServer;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -163,7 +163,7 @@ public class LoginDialog extends JDialog {
 	 * Save dialog data.
 	 * @param outputStream 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Save user name.
@@ -171,8 +171,7 @@ public class LoginDialog extends JDialog {
 		// Save serverText name.
 		outputStream.writeUTF(serverName);
 		// Save portText number.
-		outputStream.writeInt(
-				isPortValid(portNumber) ? portNumber : defaultPortNumber );
+		outputStream.writeInt(isPortValid(portNumber) ? portNumber : defaultPortNumber );
 		// Save SSL flag.
 		outputStream.writeBoolean(sslFlag);
 		// Save database name.
@@ -185,7 +184,7 @@ public class LoginDialog extends JDialog {
 	 * Load dialog data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load user name.
@@ -203,7 +202,7 @@ public class LoginDialog extends JDialog {
 		if (!(object instanceof LinkedList<?>)) {
 			throw new ClassNotFoundException();
 		}
-		databaseNames = (LinkedList) object;
+		databaseNames = (LinkedList<String>) object;
 		for (Object name : databaseNames) {
 			if (!(name instanceof String)) {
 				throw new ClassNotFoundException();

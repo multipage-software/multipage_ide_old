@@ -94,23 +94,11 @@ public class LocalizerFrame extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	@SuppressWarnings("unchecked")
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
-		Object object = inputStream.readObject();
-		if (!(object instanceof Rectangle)) {
-			throw new ClassNotFoundException();
-		}
-		bounds = (Rectangle) object;
-		
-		object = inputStream.readObject();
-		if (!(object instanceof LinkedList)) {
-			throw new ClassNotFoundException();
-		}
-		
-		localizerItems = (LinkedList<LocalizerItem>) object;
-		
+		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		localizerItems = Utility.readInputStreamObject(inputStream, new LinkedList<LocalizerItem>().getClass());
 		selectedTabIndex = inputStream.readInt();
 	}
 
@@ -119,7 +107,7 @@ public class LocalizerFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

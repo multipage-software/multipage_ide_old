@@ -19,13 +19,13 @@ public class j {
 	/**
 	 * Display time stamp switch
 	 */
-	private static final boolean displayTimespan = true;
+	private static boolean logTimeSpan = true;
 	
 	/**
 	 * Last time stamp.
 	 */
 	private static long lastTimeStampMs = System.currentTimeMillis();
-
+	
 	/**
 	 * Enable logging time delta.
 	 */
@@ -43,7 +43,7 @@ public class j {
 	 * @param strings
 	 */
 	@SuppressWarnings("resource")
-	synchronized public static void log(boolean displayDelta, Object parameter, Object ...strings) {
+	synchronized public static void log(Object parameter, Object ... strings) {
 		
 		synchronized (synclog) {
 			
@@ -54,10 +54,10 @@ public class j {
 			long timeDeltaMs = currentTimeMs - lastTimeStampMs;
 			
 			Timestamp timeStamp = new Timestamp(lastTimeStampMs);
-			String timestamp = displayTimespan ? timeStamp.toString() + ": " : "";
+			String timestamp = logTimeSpan ? timeStamp.toString() + ": " : "";
 			lastTimeStampMs = currentTimeMs;
 			
-			if (displayDelta) {
+			if (logTimeDelta) {
 				System.err.format("delta %dms ", timeDeltaMs);
 			}
 			
@@ -99,16 +99,13 @@ public class j {
 	}
 	
 	/**
-	 * Log formatted message on stdout or stderr or on "test"
-	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
-	 * @param strings
+	 * Log time stamp next time the message is displayed.
 	 */
-	synchronized public static void log(Object parameter, Object ...strings) {
+	public static void enableTimeSpan(boolean enable) {
 		
-		// Delegate the call.
-		log(logTimeDelta , parameter, strings);
+		logTimeSpan = enable;
 	}
-
+	
 	/**
 	 * Log time delta next time the message is displayed.
 	 */

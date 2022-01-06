@@ -8,8 +8,6 @@
 package org.multipage.gui;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 /**
  * @author
@@ -20,7 +18,7 @@ public class SerializeStateAdapter {
 	/**
 	 * On read state.
 	 */
-	protected void onReadState(ObjectInputStream inputStream)
+	protected void onReadState(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Override this method.
@@ -38,7 +36,7 @@ public class SerializeStateAdapter {
 	 * On write state.
 	 * @param saveStateOutputStream 
 	 */
-	protected void onWriteState(ObjectOutputStream outputStream)
+	protected void onWriteState(StateOutputStream outputStream)
 		throws IOException {
 
 		// Override this method.

@@ -7,18 +7,40 @@
 
 package org.multipage.gui;
 
-import java.awt.*;
-
-import javax.swing.*;
-import javax.swing.text.*;
-
-import org.multipage.util.*;
-
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
+
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JRadioButton;
+import javax.swing.JRootPane;
+import javax.swing.JSeparator;
+import javax.swing.KeyStroke;
+import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+import javax.swing.text.JTextComponent;
+
+import org.multipage.util.Resources;
 
 /**
  * 
@@ -96,7 +118,7 @@ public class FindReplaceDialog extends JDialog {
 	 * @throws IOException 
 	 * @throws ClassNotFoundException 
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws ClassNotFoundException, IOException {
 		
 		listFoundItems = Utility.readInputStreamObject(inputStream, listFoundItems.getClass());
@@ -111,7 +133,7 @@ public class FindReplaceDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(listFoundItems);

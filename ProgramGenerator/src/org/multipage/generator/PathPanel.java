@@ -16,8 +16,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -28,6 +26,8 @@ import javax.swing.SpringLayout;
 import org.maclan.Area;
 import org.multipage.gui.Images;
 import org.multipage.gui.InsertPanel;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.StringValueEditor;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.TextPopupMenu;
@@ -68,7 +68,7 @@ public class PathPanel extends InsertPanel implements StringValueEditor, SlotVal
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -80,7 +80,7 @@ public class PathPanel extends InsertPanel implements StringValueEditor, SlotVal
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

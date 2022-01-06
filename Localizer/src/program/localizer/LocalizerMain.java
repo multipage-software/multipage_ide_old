@@ -69,6 +69,7 @@ public class LocalizerMain {
 
 		// Create serializer.
 		serializer = new StateSerializer(serilizedDataLocation);
+		serializer.setAllowedTypesByWildcard("program.localizer.**");
 		
 		// Initialize modules.
 		GeneralGui.initialize(language, country, serializer);

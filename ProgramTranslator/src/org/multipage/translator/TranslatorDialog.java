@@ -940,7 +940,7 @@ public class TranslatorDialog extends JDialog {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save selected language.
@@ -958,7 +958,7 @@ public class TranslatorDialog extends JDialog {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load selected language.

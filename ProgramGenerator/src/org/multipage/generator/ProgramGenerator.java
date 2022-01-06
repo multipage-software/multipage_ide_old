@@ -10,8 +10,6 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Window;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -30,6 +28,8 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.SerializeStateAdapter;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.util.Resources;
@@ -102,14 +102,14 @@ public class ProgramGenerator {
 			serializer.add(new SerializeStateAdapter() {
 				// On read state.
 				@Override
-				protected void onReadState(ObjectInputStream inputStream)
+				protected void onReadState(StateInputStream inputStream)
 						throws IOException, ClassNotFoundException {
 					// Serialize program dictionary.
 					seriliazeData(inputStream);
 				}
 				// On write state.
 				@Override
-				protected void onWriteState(ObjectOutputStream outputStream)
+				protected void onWriteState(StateOutputStream outputStream)
 						throws IOException {
 					// Serialize program dictionary.
 					serializeData(outputStream);
@@ -188,7 +188,7 @@ public class ProgramGenerator {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		GeneratorMainFrame.serializeData(inputStream);
@@ -249,7 +249,7 @@ public class ProgramGenerator {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		GeneratorMainFrame.serializeData(outputStream);

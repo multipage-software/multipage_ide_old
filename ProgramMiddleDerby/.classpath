@@ -9,6 +9,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/libraries/db-derby-10.15.2.0-lib/lib/derbytools.jar"/>
+	<classpathentry kind="lib" path="C:/library/db-derby-10.15.2.0-lib/lib/derbytools.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

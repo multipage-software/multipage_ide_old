@@ -17,8 +17,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.AbstractAction;
 import javax.swing.ButtonGroup;
@@ -32,6 +30,8 @@ import javax.swing.SpringLayout;
 
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 
@@ -77,7 +77,7 @@ public class SearchSlotDialog extends JDialog {
 	 * @throws IOException 
 	 * @throws ClassNotFoundException 
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		searchText = inputStream.readUTF();
@@ -93,7 +93,7 @@ public class SearchSlotDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeUTF(searchText);

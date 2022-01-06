@@ -9,8 +9,6 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Font;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
 import javax.swing.JCheckBox;
@@ -31,6 +29,8 @@ import org.maclan.server.ProgramServlet;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
 import org.multipage.gui.FoundAttr;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -58,15 +58,10 @@ public class SlotEditorHelper {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
-		Object data = inputStream.readObject();
-		if (!(data instanceof Font)) {
-			throw new ClassNotFoundException();
-		}
-		fontState = (Font) data;
-		
+		fontState = Utility.readInputStreamObject(inputStream, Font.class);
 		TextSlotEditorPanel.openHtmlEditor = inputStream.readBoolean();
 	}
 
@@ -74,7 +69,7 @@ public class SlotEditorHelper {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(fontState);

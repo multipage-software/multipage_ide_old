@@ -26,8 +26,6 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -50,6 +48,8 @@ import org.maclan.MiddleResult;
 import org.maclan.ResourceConstructor;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Progress2Dialog;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.gui.ZoomListener;
 import org.multipage.gui.ZoomShape;
@@ -139,7 +139,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Read states.
@@ -156,7 +156,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Write states.

@@ -149,7 +149,6 @@ public class SyncMain {
 	 */
 	public static void unitialize() {
 		
-		serializer.startSavingSerializedStates();
 	}
 	
 	/**

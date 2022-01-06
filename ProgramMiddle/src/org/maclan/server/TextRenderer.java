@@ -7,17 +7,41 @@
 
 package org.maclan.server;
 
-import java.io.*;
-
-import java.util.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.maclan.*;
+import org.maclan.Area;
+import org.maclan.AreaVersion;
+import org.maclan.Language;
+import org.maclan.MiddleLight;
+import org.maclan.MiddleResult;
+import org.maclan.MiddleUtility;
+import org.maclan.VersionObj;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
-import org.multipage.util.*;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+import org.multipage.util.SwingWorkerHelper;
 
 /**
  * @author
@@ -46,7 +70,7 @@ public class TextRenderer {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException {
 		
 		serializedTarget = inputStream.readUTF();
@@ -56,7 +80,7 @@ public class TextRenderer {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeUTF(serializedTarget);

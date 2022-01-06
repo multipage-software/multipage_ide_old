@@ -17,8 +17,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
@@ -36,6 +34,8 @@ import org.maclan.MiddleUtility;
 import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 
@@ -136,7 +136,7 @@ public class RevertExternalProvidersDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -151,7 +151,7 @@ public class RevertExternalProvidersDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

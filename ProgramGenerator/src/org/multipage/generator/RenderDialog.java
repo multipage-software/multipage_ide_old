@@ -20,8 +20,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.Properties;
 
@@ -47,6 +45,8 @@ import org.maclan.VersionObj;
 import org.maclan.server.BrowserParameters;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
@@ -100,7 +100,7 @@ public class RenderDialog extends JDialog {
 	 * Read serialized data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		serializedCreateList = inputStream.readBoolean();
@@ -115,7 +115,7 @@ public class RenderDialog extends JDialog {
 	 * Write serialized data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeBoolean(serializedCreateList);

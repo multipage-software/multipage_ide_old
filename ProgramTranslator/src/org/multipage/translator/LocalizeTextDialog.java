@@ -7,18 +7,35 @@
 
 package org.multipage.translator;
 
-import javax.swing.*;
-
-import org.maclan.*;
-import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.*;
-
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
+import java.util.Properties;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.SpringLayout;
+import javax.swing.SwingConstants;
+
+import org.maclan.Language;
+import org.maclan.Middle;
+import org.maclan.MiddleResult;
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.TextEditorPane;
+import org.multipage.gui.Utility;
 
 /**
  * 
@@ -107,7 +124,7 @@ public class LocalizeTextDialog extends JDialog {
 	 * Save dialog data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save bounds.
@@ -120,7 +137,7 @@ public class LocalizeTextDialog extends JDialog {
 	 * Load dialog data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load bounds.

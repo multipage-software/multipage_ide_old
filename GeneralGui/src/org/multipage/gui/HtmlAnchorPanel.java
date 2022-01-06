@@ -14,21 +14,18 @@ import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JRadioButton;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
 import org.multipage.util.Resources;
-
-import javax.swing.JRadioButton;
-import javax.swing.ButtonGroup;
 
 /**
  * @author user
@@ -142,7 +139,7 @@ public class HtmlAnchorPanel extends InsertPanel implements StringValueEditor {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -154,7 +151,7 @@ public class HtmlAnchorPanel extends InsertPanel implements StringValueEditor {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

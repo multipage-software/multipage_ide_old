@@ -16,8 +16,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.font.TextAttribute;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -37,6 +35,8 @@ import javax.swing.text.StyledDocument;
 
 import org.multipage.gui.HttpException;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
@@ -101,7 +101,7 @@ public class MessageDialog extends JDialog {
 	 * Read data
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -111,7 +111,7 @@ public class MessageDialog extends JDialog {
 	 * Write data
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeObject(bounds);

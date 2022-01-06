@@ -13,8 +13,6 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -24,6 +22,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 
@@ -56,7 +56,7 @@ public class ConfirmAreasConnect extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		inheritState = inputStream.readBoolean();
@@ -68,7 +68,7 @@ public class ConfirmAreasConnect extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException{
 		
 		outputStream.writeBoolean(inheritState);

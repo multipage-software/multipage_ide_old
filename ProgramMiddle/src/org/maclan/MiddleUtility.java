@@ -766,7 +766,7 @@ public class MiddleUtility {
 	 * Save servers settings.
 	 */
 	@SuppressWarnings("deprecation")
-	public static void saveServersProperties() {
+	public static void saveServerProperties() {
 		
 		// Get user directory.
 		String userDirectory = getUserDirectory();

@@ -9,12 +9,12 @@ package org.maclan.help;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.multipage.gui.SerializeStateAdapter;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.StateSerializer;
 import org.multipage.util.Resources;
 
@@ -67,14 +67,14 @@ public class ProgramHelp {
 			serializer.add(new SerializeStateAdapter() {
 				// On read state.
 				@Override
-				protected void onReadState(ObjectInputStream inputStream)
+				protected void onReadState(StateInputStream inputStream)
 						throws IOException, ClassNotFoundException {
 					// Serialize program dictionary.
 					seriliazeData(inputStream);
 				}
 				// On write state.
 				@Override
-				protected void onWriteState(ObjectOutputStream outputStream)
+				protected void onWriteState(StateOutputStream outputStream)
 						throws IOException {
 					// Serialize program dictionary.
 					serializeData(outputStream);
@@ -104,7 +104,7 @@ public class ProgramHelp {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 	}
@@ -114,7 +114,7 @@ public class ProgramHelp {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 	}

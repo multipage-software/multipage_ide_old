@@ -12,8 +12,6 @@ import java.awt.Component;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -37,6 +35,8 @@ import org.maclan.server.AreaServer;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.generator.ProgramPaths.PathSupplier;
 import org.multipage.gui.RendererPathItem;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 
@@ -58,7 +58,7 @@ public class GeneratorUtilities {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		GeneratorUtilities.currentResourcePathName = inputStream.readUTF();
@@ -70,7 +70,7 @@ public class GeneratorUtilities {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Write current paths.

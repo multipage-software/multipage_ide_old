@@ -16,7 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import org.graalvm.collections.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 
@@ -603,7 +603,7 @@ public class AreasModel {
 			index.ref++;
 			
 			// If the index value mathes input value, return the area.
-			foundAreasInProjects.add(Pair.create(currentArea, projects));
+			foundAreasInProjects.add(Pair.of(currentArea, projects));
 			
 			return true;
 		});

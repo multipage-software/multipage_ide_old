@@ -286,8 +286,8 @@ public class GeneratorMain {
 		ProgramBasic.stopHttpServer();
 		// Stop Sync.
 		SyncMain.stop();
-		// Save servers properties.
-		MiddleUtility.saveServersProperties();
+		// Save server properties.
+		MiddleUtility.saveServerProperties();
 		// Save serialized data.
 		serializer.startSavingSerializedStates();
 		// Stop GUI watch dog.

@@ -13,8 +13,6 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -27,6 +25,8 @@ import org.maclan.EnumerationObj;
 import org.maclan.EnumerationValue;
 import org.maclan.Slot;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 /**
@@ -60,7 +60,7 @@ public class EnumerationEditorPanel extends EnumerationEditorPanelBase {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeBoolean(displayEnumerationValuesState);
@@ -72,7 +72,7 @@ public class EnumerationEditorPanel extends EnumerationEditorPanelBase {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		displayEnumerationValuesState = inputStream.readBoolean();

@@ -15,8 +15,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -24,6 +22,8 @@ import javax.swing.SpringLayout;
 
 import org.maclan.Slot;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 /**
@@ -63,7 +63,7 @@ public class ExternalProviderDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream) 
+	public static void serializeData(StateInputStream inputStream) 
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -78,7 +78,7 @@ public class ExternalProviderDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

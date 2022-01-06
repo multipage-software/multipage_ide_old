@@ -17,8 +17,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -32,6 +30,8 @@ import javax.swing.event.DocumentListener;
 
 import org.maclan.server.BrowserParameters;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
@@ -68,7 +68,7 @@ public class BrowserParametersDialog extends JDialog {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		serializedBrowserParameters = (BrowserParameters) inputStream.readObject();
@@ -78,7 +78,7 @@ public class BrowserParametersDialog extends JDialog {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeObject(serializedBrowserParameters);

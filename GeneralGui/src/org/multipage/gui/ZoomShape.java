@@ -8,6 +8,7 @@
 package org.multipage.gui;
 
 import java.awt.*;
+import java.lang.Math;
 
 /**
  * @author

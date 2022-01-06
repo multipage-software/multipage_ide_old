@@ -22,8 +22,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.Properties;
 
@@ -36,11 +34,13 @@ import javax.swing.SpringLayout;
 
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
-import org.maclan.help.Intellisense;
 import org.maclan.help.HelpUtility;
+import org.maclan.help.Intellisense;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextEditorPane;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -112,27 +112,18 @@ public class TextResourceEditor extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
-		Object data = inputStream.readObject();
-		if (!(data instanceof Rectangle)) {
-			throw new ClassNotFoundException();
-		}
-		bounds = (Rectangle) data;
-		
-		data = inputStream.readObject();
-		if (!(data instanceof Font)) {
-			throw new ClassNotFoundException();
-		}
-		fontState = (Font) data;
+		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		fontState = Utility.readInputStreamObject(inputStream, Font.class);
 	}
 
 	/**
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);

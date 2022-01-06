@@ -24,8 +24,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -70,6 +68,8 @@ import org.multipage.gui.BareBonesBrowserLaunch;
 import org.multipage.gui.Images;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.sync.SyncMain;
@@ -151,7 +151,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load dialog bounds.
@@ -191,7 +191,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save dialog boundaries.
@@ -243,7 +243,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * @throws ClassNotFoundException
 	 */
 	private static LinkedList<TabState> readTabStates(
-			ObjectInputStream inputStream)
+			StateInputStream inputStream)
 					throws IOException, ClassNotFoundException {
 		
 		LinkedList<TabState> list = new LinkedList<TabState>();

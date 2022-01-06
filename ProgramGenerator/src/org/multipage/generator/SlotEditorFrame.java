@@ -10,14 +10,14 @@ import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import org.maclan.Slot;
 import org.maclan.SlotType;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 /**
@@ -45,7 +45,7 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		SlotEditorBaseFrame.seriliazeData(inputStream);
@@ -55,7 +55,7 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		SlotEditorBaseFrame.seriliazeData(outputStream);

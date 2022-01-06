@@ -1656,7 +1656,7 @@ class FavoritesRenderer implements ListCellRenderer {
  * @author
  *
  */
-class FavoritesModel extends AbstractListModel {
+class FavoritesModel extends AbstractListModel<Object> {
 
 	/**
 	 * Version.

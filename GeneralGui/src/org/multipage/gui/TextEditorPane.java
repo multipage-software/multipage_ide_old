@@ -19,11 +19,10 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.print.PrinterException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -81,7 +80,6 @@ import javax.swing.undo.UndoManager;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
-import java.awt.event.KeyAdapter;
 
 /**
  * 
@@ -156,13 +154,13 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		wordWrapState = inputStream.readBoolean();
 	}
 
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeBoolean(wordWrapState);

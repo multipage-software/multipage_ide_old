@@ -22,8 +22,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -74,6 +72,8 @@ import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
@@ -116,7 +116,7 @@ public class AreaTraceFrame extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		loadSubAreasState = inputStream.readBoolean();
@@ -145,7 +145,7 @@ public class AreaTraceFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeBoolean(loadSubAreasState);

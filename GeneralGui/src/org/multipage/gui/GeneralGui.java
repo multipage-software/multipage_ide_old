@@ -8,8 +8,6 @@
 package org.multipage.gui;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.UIManager;
 
@@ -66,14 +64,14 @@ public class GeneralGui {
 			serializer.add(new SerializeStateAdapter() {
 				// On read state.
 				@Override
-				protected void onReadState(ObjectInputStream inputStream)
+				protected void onReadState(StateInputStream inputStream)
 						throws IOException, ClassNotFoundException {
 					// Serialize program dictionary.
 					seriliazeData(inputStream);
 				}
 				// On write state.
 				@Override
-				protected void onWriteState(ObjectOutputStream outputStream)
+				protected void onWriteState(StateOutputStream outputStream)
 						throws IOException {
 					// Serialize program dictionary.
 					serializeData(outputStream);
@@ -165,7 +163,7 @@ public class GeneralGui {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load utility data.
@@ -211,7 +209,7 @@ public class GeneralGui {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save utility data.

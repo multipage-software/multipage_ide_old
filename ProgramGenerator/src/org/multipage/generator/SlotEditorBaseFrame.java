@@ -9,13 +9,13 @@ package org.multipage.generator;
 
 import java.awt.Rectangle;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
 import javax.swing.JFrame;
 
 import org.maclan.Slot;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 
 /**
  * @author
@@ -45,7 +45,7 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	protected static void seriliazeData(ObjectInputStream inputStream)
+	protected static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object data = inputStream.readObject();
@@ -61,7 +61,7 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	protected static void seriliazeData(ObjectOutputStream outputStream)
+	protected static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);

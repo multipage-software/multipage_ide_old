@@ -18,8 +18,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
 import javax.swing.ButtonGroup;
@@ -44,6 +42,8 @@ import org.maclan.Slot;
 import org.maclan.SlotHolder;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
@@ -107,36 +107,13 @@ public class SearchDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
-		Object object = inputStream.readObject();
-		if (!(object instanceof Rectangle)) {
-			throw new ClassNotFoundException();
-		}
-		bounds = (Rectangle) object;
-		
+		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
 		searchType = inputStream.readInt();
-		
-		object = inputStream.readObject();
-		if (!(object instanceof int [])) {
-			throw new ClassNotFoundException();
-		}
-		columnsWidthsForAreas = (int []) object;
-		int columnCountForAreas = columnsWidthsForAreas.length;
-		if (columnsWidthsForAreas.length != columnCountForAreas) {
-			throw new ClassNotFoundException();
-		}
-		
-		object = inputStream.readObject();
-		if (!(object instanceof int [])) {
-			throw new ClassNotFoundException();
-		}
-		columnsWidthsForSlots = (int []) object;
-		int columnCountForSlots = columnsWidthsForSlots.length;
-		if (columnsWidthsForSlots.length != columnCountForSlots) {
-			throw new ClassNotFoundException();
-		}
+		columnsWidthsForAreas = Utility.readInputStreamObject(inputStream, Integer [].class);
+		columnsWidthsForSlots = Utility.readInputStreamObject(inputStream, Integer [].class);
 	}
 
 	/**
@@ -144,7 +121,7 @@ public class SearchDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

@@ -43,8 +43,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
@@ -167,6 +166,11 @@ import com.ibm.icu.text.CharsetMatch;
 public class Utility {
 	
 	/**
+	 * Standard headers.
+	 */
+	public static final String xmlHeaderTemplate = "<?xml version=\"1.0\" encoding=\"%s\"?>";
+	
+	/**
 	 * Colors
 	 */
 	private static final Color colorLight = new Color(250, 250, 250);
@@ -238,7 +242,7 @@ public class Utility {
 	 * @param inputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load path name.
@@ -250,7 +254,7 @@ public class Utility {
 	 * @param outputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Save path name.
@@ -2647,14 +2651,25 @@ public class Utility {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static <T> T readInputStreamObject(ObjectInputStream inputStream, Class type)
+	@SuppressWarnings("unchecked")
+	public static <T> T readInputStreamObject(StateInputStream inputStream, Class<?> type)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
+		
 		if (object == null) {
-			throw new ClassNotFoundException();
+			return null;
 		}
+		
 		if (!object.getClass().equals(type)) {
+			
+			// Try to use type conversion.
+			try {
+				T typedObject = (T) object;
+				return typedObject;
+			}
+			catch (Exception e) {
+			}
 			
 			throw new ClassNotFoundException();
 		}
@@ -3984,6 +3999,15 @@ public class Utility {
 	}
 	
 	/**
+	 * Throw no operation exception.
+	 * @throws IOException
+	 */
+	public static void throwIoOperationException() throws IOException {
+			
+		throw new IOException("I/O operation not supported!");
+	}
+	
+	/**
 	 * Creates new exception with given message
 	 * @param messageResourceId
 	 * @param parameters
@@ -5061,5 +5085,73 @@ public class Utility {
 		double normalValue = value - minimumValue / deltaValue;
 		
 		return normalValue;
+	}
+	
+	/**
+	 * Write text with given encoding into the output stream.
+	 * @param outputStream
+	 * @param text
+	 * @param charset
+	 */
+	public static void writeString(OutputStream outputStream, String text, Charset charset) 
+			throws Exception {
+		
+		byte [] bytes = text.getBytes(charset);
+		outputStream.write(bytes);
+	}
+	
+	/**
+	 * Write XML header to the output stream.
+	 * @param outputStream
+	 * @param charset
+	 * @param newLine 
+	 */
+	public static void writeXmlHeader(OutputStream outputStream, Charset charset, boolean newLine)
+			throws Exception {
+		
+		String xmlHeader = String.format(xmlHeaderTemplate, charset.toString());
+		writeString(outputStream, xmlHeader, charset);
+		
+		if (newLine) {
+			outputStream.write('\n');
+		}
+	}
+	
+	/**
+	 * Check occurrence of input string in the input stream.
+	 * @param inputStream
+	 * @param text
+	 * @param charset
+	 * @param caseSensitive
+	 */
+	public static void checkString(InputStream inputStream, String text, Charset charset, boolean caseSensitive)
+			throws Exception {
+		
+		// Convert input text to a byte array.
+		byte [] bytesToFind = text.getBytes(charset);
+		
+		
+		// Read bytes from the input stream. If there is any mismatch, throw an exception.
+		for (byte checkByte : bytesToFind) {
+			byte readByte = (byte) inputStream.read();
+			
+			boolean mismatch = caseSensitive ? readByte != checkByte : Character.toUpperCase(readByte) != Character.toUpperCase(checkByte);
+			if (mismatch) {
+				Utility.throwException("org.multipage.gui.messageStringNotFoundInInputStream", text);
+			}
+		}
+	}
+	
+	/**
+	 * Check occurrence of XML header in the input stream.
+	 * @param inputStream
+	 * @param charset
+	 * @throws Exception
+	 */
+	public static void checkXmlHeader(InputStream inputStream, Charset charset)
+			throws Exception {
+		
+		String xmlHeader = String.format(xmlHeaderTemplate, charset.toString());
+		checkString(inputStream, xmlHeader, charset, false);
 	}
 }
