@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 import javax.swing.JOptionPane;
 
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.Converter;
@@ -41,7 +42,7 @@ public class StateSerializer {
 	/**
 	 * Root tag name within the settings file.
 	 */
-	private static final String settingsTagName = "settings";
+	private static final String settingsRootTagName = "settings";
 	
 	/**
 	 * Specify character set for a text file.
@@ -406,10 +407,12 @@ public class StateSerializer {
 	
 	/**
 	 * Open input stream.
+	 * @param settingsFileName 
 	 */
-	public StateInputStreamImpl openStateInputStream() {
+	public StateInputStreamImpl openStateInputStream(String settingsFileName) {
 		
 		try {
+			
 			// Open settings file and create input stream.
 			StateInputStreamImpl stateInputStream = StateInputStreamImpl.newXStreamInstance(settingsFileName);
 			XStream xStream = stateInputStream.getXStream();
@@ -450,14 +453,15 @@ public class StateSerializer {
 
 	/**
 	 * Opens output stream which can save application settings.
+	 * @param settingsFileName 
 	 * @return - true if the file can be found, otherwise returns a false value
 	 */
-	public StateOutputStreamImpl openStateOutputStream() {
+	public StateOutputStreamImpl openStateOutputStream(String settingsFileName) {
 		
 		try {
 			
 			// Opens the settings file and creates output stream of objects.
-			StateOutputStreamImpl stateOutputStream = StateOutputStreamImpl.newXStreamInstance(settingsFileName, settingsTagName);
+			StateOutputStreamImpl stateOutputStream = StateOutputStreamImpl.newXStreamInstance(settingsFileName, settingsRootTagName);
 			XStream xStream = stateOutputStream.getXStream();
 			
 			// Registers all known XML converters.
@@ -514,9 +518,10 @@ public class StateSerializer {
 	public void startLoadingSerializedStates() {
 		
 		// Open input stream.
-		stateInputStream = openStateInputStream();
+		stateInputStream = openStateInputStream(settingsFileName);
 		if (stateInputStream != null) {
 			
+			j.log("Loading application settings form \"%s\"", settingsFileName);
 			try {
 				// Do loop for all known listeners. Invoke events that can read the settings.
 				for (SerializeStateAdapter listener : serializeStateListenersRef) {
@@ -549,9 +554,10 @@ public class StateSerializer {
 	public void startSavingSerializedStates() {
 		
 		// Open new output stream.
-		stateOutputStream = openStateOutputStream();
+		stateOutputStream = openStateOutputStream(settingsFileName);
 		if (stateOutputStream != null) {
 			
+			j.log("Saving application settings to \"%s\"", settingsFileName);
 			try {
 				// Get direct output stream and write a BOM in the beginning.
 				OutputStream rawOutputStream = stateOutputStream.getRawOutputStream();
