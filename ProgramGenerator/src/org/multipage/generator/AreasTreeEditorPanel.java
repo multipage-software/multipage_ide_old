@@ -496,10 +496,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		// Clear selection
 		tree.clearSelection();
 		
-		// Traverse tree elements starting from the root element
+		// Traverse through all tree elements, starting from the root element.
 		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
 			
-			// If the node hold home area and select it
+			// If the node holds the home area, select it.
 			if (userObject instanceof Area) {
 				Area area = (Area) userObject;
 				
@@ -511,6 +511,57 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				}
 			}
 		});
+	}
+	
+	/**
+	 * Select area.
+	 * @param coordinatesItem
+	 */
+	private void selectArea(final Long areaId) {
+		
+		// Check the input value.
+		if (areaId == null) {
+			return;
+		}
+		
+		// Clear selection
+		tree.clearSelection();
+		
+		// Traverse all tree elements starting from the root element.
+		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
+			
+			// If the node holds input area, select it.
+			if (userObject instanceof Long) {
+				
+				long treeAreaId = (Long) userObject;
+				if (treeAreaId == areaId) {
+					
+					TreePath areaNodePath = new TreePath(node.getPath());
+					tree.addSelectionPath(areaNodePath);
+				}
+			}
+		});
+		
+		// Clear list selection.
+		list.clearSelection();
+		
+		// Select the area by its ID.
+		int count = listModel.getSize();
+		for (int index = 0; index < count; index++) {
+			
+			Object item = listModel.get(index);
+			if (item instanceof Area) {
+				
+				Area area = (Area) item;
+				long listAreaId = area.getId();
+				
+				if (areaId == listAreaId) {
+					list.setSelectedIndex(index);
+					list.ensureIndexIsVisible(index);
+					return;
+				}
+			}
+		}
 	}
 
 	/**
@@ -875,8 +926,17 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				selectHomeArea();
 			}
 		});
+		
+		// "Focus area" event receiver.
+		ConditionalEvents.receiver(this, Signal.focusArea, action -> {
+			
+			if (isShowing()) {
+				Long areaId = action.getAdditionalInfo(0);
+				selectArea(areaId);
+			}
+		});
 	}
-
+	
 	/**
 	 * Removes attached listeners.
 	 */

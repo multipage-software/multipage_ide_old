@@ -112,7 +112,7 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	}
 
 	/**
-	 * Write BOM (byte ourder mark for UTF-8 encoding into the output file.
+	 * Write BOM (byte order mark for UTF-8 encoding into the output file.
 	 * @throws IOException 
 	 */
 	public void writeBom() throws IOException {
@@ -144,7 +144,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void useProtocolVersion(int version) throws IOException {
 		
 		checkInitialization();
-		objectOutputStream.useProtocolVersion(version);
+		try {
+			objectOutputStream.useProtocolVersion(version);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -154,8 +159,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeUnshared(Object obj) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeUnshared(obj);
+		try {
+			objectOutputStream.writeUnshared(obj);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -165,8 +174,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void defaultWriteObject() throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.defaultWriteObject();
+		try {
+			objectOutputStream.defaultWriteObject();
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -176,8 +189,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public PutField putFields() throws IOException {
 
 		checkInitialization();
-
-		return objectOutputStream.putFields();
+		try {
+			return objectOutputStream.putFields();
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -187,8 +204,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeFields() throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeFields();
+		try {
+			objectOutputStream.writeFields();
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -198,8 +219,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void reset() throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.reset();
+		try {
+			objectOutputStream.reset();
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -209,8 +234,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void write(int val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.write(val);
+		try {
+			objectOutputStream.write(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -220,8 +249,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void write(byte[] buf) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.write(buf);
+		try {
+			objectOutputStream.write(buf);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -231,8 +264,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void write(byte[] buf, int off, int len) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.write(buf, off, len);
+		try {
+			objectOutputStream.write(buf, off, len);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -242,8 +279,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void flush() throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.flush();
+		try {
+			objectOutputStream.flush();
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -253,8 +294,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeBoolean(boolean val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeBoolean(val);
+		try {
+			objectOutputStream.writeBoolean(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -264,8 +309,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeByte(int val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeByte(val);
+		try {
+			objectOutputStream.writeByte(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -275,8 +324,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeShort(int val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeShort(val);
+		try {
+			objectOutputStream.writeShort(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -286,8 +339,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeChar(int val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeChar(val);
+		try {
+			objectOutputStream.writeChar(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -297,8 +354,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeInt(int val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeInt(val);
+		try {
+			objectOutputStream.writeInt(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -308,8 +369,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeLong(long val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeLong(val);
+		try {
+			objectOutputStream.writeLong(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -319,8 +384,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeFloat(float val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeFloat(val);
+		try {
+			objectOutputStream.writeFloat(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -330,8 +399,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeDouble(double val) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeDouble(val);
+		try {
+			objectOutputStream.writeDouble(val);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -341,8 +414,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeBytes(String str) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeBytes(str);
+		try {
+			objectOutputStream.writeBytes(str);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -352,8 +429,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeChars(String str) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeChars(str);
+		try {
+			objectOutputStream.writeChars(str);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 
 	/**
@@ -363,8 +444,12 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeUTF(String str) throws IOException {
 
 		checkInitialization();
-
-		objectOutputStream.writeUTF(str);
+		try {
+			objectOutputStream.writeUTF(str);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 	
 	/**
@@ -374,7 +459,11 @@ public class StateOutputStreamImpl implements StateOutputStream {
 	public void writeObject(Object object) throws IOException {
 		
 		checkInitialization();
-
-		objectOutputStream.writeObject(object);
+		try {
+			objectOutputStream.writeObject(object);
+		}
+		catch (Exception e) {
+			throw new IOException(e.getLocalizedMessage());
+		}
 	}
 }

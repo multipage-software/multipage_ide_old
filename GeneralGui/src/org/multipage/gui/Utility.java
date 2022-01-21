@@ -4655,11 +4655,15 @@ public class Utility {
 			void consume(TreeNode node, TreeNode parent) {
 				
 				// Check the node type
-				if (node instanceof DefaultMutableTreeNode && parent instanceof DefaultMutableTreeNode) {
+				if (node instanceof DefaultMutableTreeNode) {
 					
 					// Call input consumer for the userObject and its parent node
 					DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) node;
-					DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) parent;
+					DefaultMutableTreeNode parentNode = null;
+					
+					if (parent instanceof DefaultMutableTreeNode) {
+						parentNode = (DefaultMutableTreeNode) parent;
+					}
 					
 					Object userObject = treeNode.getUserObject();
 					callbackFunctions.apply(userObject).apply(treeNode).accept(parentNode);
@@ -4676,7 +4680,7 @@ public class Utility {
 					TreeNode child = childrenEnumerator.nextElement();
 					consume(child, parentNode);
 					
-					// Do recursion fo the child node
+					// Do recursion for the child node
 					traverseRecursively(child);
 				}
 			};

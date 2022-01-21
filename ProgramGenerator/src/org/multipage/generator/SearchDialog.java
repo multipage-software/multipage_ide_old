@@ -83,6 +83,11 @@ public class SearchDialog extends JDialog {
 	private static int[] columnsWidthsForSlots;
 	
 	/**
+	 * Flag that enables to open slots or areas editor.
+	 */
+	private static boolean openEditorFlag = true;
+	
+	/**
 	 * Column names.
 	 */
 	private String[] columnNamesForAreas;
@@ -99,6 +104,8 @@ public class SearchDialog extends JDialog {
 		
 		columnsWidthsForAreas = new int [] {250, 100, 30, 30, 250};
 		columnsWidthsForSlots = new int [] {250, 100, 30, 30};
+		
+		openEditorFlag = false;
 	}
 
 	/**
@@ -114,6 +121,7 @@ public class SearchDialog extends JDialog {
 		searchType = inputStream.readInt();
 		columnsWidthsForAreas = Utility.readInputStreamObject(inputStream, Integer [].class);
 		columnsWidthsForSlots = Utility.readInputStreamObject(inputStream, Integer [].class);
+		openEditorFlag = inputStream.readBoolean();
 	}
 
 	/**
@@ -128,6 +136,7 @@ public class SearchDialog extends JDialog {
 		outputStream.writeInt(searchType);
 		outputStream.writeObject(columnsWidthsForAreas);
 		outputStream.writeObject(columnsWidthsForSlots);
+		outputStream.writeObject(openEditorFlag);
 	}
 
 	/**
@@ -194,6 +203,7 @@ public class SearchDialog extends JDialog {
     private javax.swing.JLabel searchResultsLabel;
     private javax.swing.JTextField searchStringText;
     private javax.swing.JCheckBox wholeWordsButton;
+	private javax.swing.JCheckBox openEditor;
 
 	/**
 	 * Initialize components. Created with NetBeans.
@@ -217,6 +227,10 @@ public class SearchDialog extends JDialog {
         clearButton.setPreferredSize(new Dimension(24, 24));
         exactMatch = new javax.swing.JCheckBox();
         exactMatch.setOpaque(false);
+        exactMatch = new javax.swing.JCheckBox();
+        exactMatch.setOpaque(false);
+        openEditor = new javax.swing.JCheckBox();
+        openEditor.setOpaque(false);
         globalAreaButton = new javax.swing.JButton();
 
         setTitle("org.multipage.generator.textSearchDialogTitle");
@@ -234,6 +248,8 @@ public class SearchDialog extends JDialog {
         jScrollPane1.setViewportView(resultsTable);
 
         caseSensitive.setText("org.multipage.generator.textCaseSensitive");
+        
+        openEditor.setText("org.multipage.generator.textOpenEditor");
 
         wholeWordsButton.setText("org.multipage.generator.textWholeWords");
 
@@ -263,6 +279,8 @@ public class SearchDialog extends JDialog {
         SpringLayout springLayout = new SpringLayout();
         springLayout.putConstraint(SpringLayout.WEST, radioAreas, 180, SpringLayout.WEST, getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, caseSensitive, 130, SpringLayout.WEST, radioAreas);
+        springLayout.putConstraint(SpringLayout.WEST, openEditor, 20, SpringLayout.EAST, caseSensitive);
+        springLayout.putConstraint(SpringLayout.NORTH, openEditor, 0, SpringLayout.NORTH, caseSensitive);
         springLayout.putConstraint(SpringLayout.WEST, exactMatch, 0, SpringLayout.WEST, wholeWordsButton);
         springLayout.putConstraint(SpringLayout.SOUTH, searchStringText, 0, SpringLayout.SOUTH, clearButton);
         springLayout.putConstraint(SpringLayout.SOUTH, jScrollPane1, -10, SpringLayout.SOUTH, getContentPane());
@@ -301,6 +319,7 @@ public class SearchDialog extends JDialog {
         getContentPane().add(radioSlots);
         getContentPane().add(exactMatch);
         getContentPane().add(caseSensitive);
+        getContentPane().add(openEditor);
         getContentPane().add(wholeWordsButton);
         getContentPane().add(searchStringText);
 
@@ -359,9 +378,15 @@ public class SearchDialog extends JDialog {
 		Utility.localize(radioSlots);
 		Utility.localize(searchResultsLabel);
 		Utility.localize(caseSensitive);
+		Utility.localize(openEditor);
 		Utility.localize(wholeWordsButton);
 		Utility.localize(exactMatch);
 		Utility.localize(globalAreaButton);
+	}
+	
+	public SearchDialog() {
+		
+		initComponents();
 	}
 	
 	/**
@@ -472,6 +497,8 @@ public class SearchDialog extends JDialog {
 		else {
 			setBounds(bounds);
 		}
+		
+		openEditor.setSelected(openEditorFlag);
 	}
 	
     /**
@@ -734,6 +761,8 @@ public class SearchDialog extends JDialog {
 		
 		// Save column widths.
 		saveColumnWidths();
+		
+		openEditorFlag = openEditor.isSelected();
 	}
 	
 	/**
@@ -841,14 +870,26 @@ public class SearchDialog extends JDialog {
 		}
 		selectedRow = resultsTable.getRowSorter().convertRowIndexToModel(selectedRow);
 		
+		// Get flag.
+		boolean openEditoFlag = openEditor.isSelected();
+		
 		// Do action depending on search type.
 		switch (searchType) {
 		
 		case SLOTS:
 			
+			// Get selected slot.
+			Object item = tableModelForSlots.getValueAt(selectedRow, 0);
+			if (item == null) {
+				return;
+			}
+			
+			Slot selectedSlot = (Slot) item;
+			
 			// Open slot editor.
-			Slot selectedSlot = (Slot) tableModelForSlots.getValueAt(selectedRow, 0);
-			SlotEditorFrame.showDialog(this, selectedSlot, false, true, null);
+			if (openEditoFlag) {
+				SlotEditorFrame.showDialog(this, selectedSlot, false, true, null);
+			}
 			
 			// Focus area.
 			AreaId areaIdHolder = (AreaId) selectedSlot.getHolder();
@@ -865,12 +906,30 @@ public class SearchDialog extends JDialog {
 			
 		case AREAS:
 		default:
-		
+			
+			// Get selected coordinates.
+			item = tableModelForAreas.getValueAt(selectedRow, 4);
+			if (item == null) {
+				return;
+			}
+			
+			// Get selected area.
+			Area area = getSelectedArea();
+			if (area == null) {
+				return;
+			}
+			long areaId = area.getId();
+			
 			// Get selected area and shapes.
-			AreaCoordinatesTableItem coordinatesItem = (AreaCoordinatesTableItem) tableModelForAreas.getValueAt(selectedRow, 4);
+			AreaCoordinatesTableItem coordinatesItem = (AreaCoordinatesTableItem) item;
+			
+			// Open area editor.
+			if (openEditoFlag) {
+				AreaEditorFrame.showDialog(this, area);
+			}
 			
 			// Transmit focus area signal.
-			ConditionalEvents.transmit(this, Signal.focusArea, coordinatesItem);
+			ConditionalEvents.transmit(this, Signal.focusArea, coordinatesItem, areaId);
 		}
 	}
 
@@ -1046,7 +1105,7 @@ class AreaCoordinatesTableItem  {
 		
 		this.coordinate = coordinate;
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
@@ -1065,7 +1124,6 @@ class AreaCoordinatesTableItem  {
 		return "";
 	}
 	
-
 	/**
 	 * Convert to decorated string.
 	 */

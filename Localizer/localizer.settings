@@ -300,12 +300,12 @@
       </columns>
     </program.localizer.LocalizerItem>
   </linked-list>
-  <int>7</int>
+  <int>2</int>
   <java.awt.Rectangle>
-    <x>0</x>
-    <y>0</y>
-    <width>0</width>
-    <height>0</height>
+    <x>606</x>
+    <y>289</y>
+    <width>707</width>
+    <height>502</height>
   </java.awt.Rectangle>
-  <int>-1</int>
+  <int>152</int>
 </settings>
