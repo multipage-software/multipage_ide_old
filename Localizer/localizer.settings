@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
   <string>C:\from_master\multipage_ide\ProgramMiddle\src\org\maclan\properties</string>
-  <boolean>false</boolean>
+  <boolean>true</boolean>
   <java.awt.Rectangle>
     <x>0</x>
     <y>0</y>

@@ -28,6 +28,8 @@ import java.util.Properties;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -128,6 +130,97 @@ public class AreaServer {
 	public static void dontShowSourceCode() {
 		
 		showSourceCodeForAreaId = null;
+	}
+	
+	/**
+	 * Can log lambda function.
+	 */
+	private static Supplier<Boolean> canLogLambda = null;
+	
+	/**
+	 * Log lambda function.
+	 */
+	private static Consumer<String> logLambda = null;
+	
+	/**
+	 * Involve user action in the logging process. A lambda function.
+	 */
+	private static Runnable logInvolveUserLambda = null;
+	
+	/**
+	 * Set "can log" lambda function.
+	 * @param logLambda
+	 */
+	public static void setCanLogLambda(Supplier<Boolean> canLogLambda) {
+		
+		AreaServer.canLogLambda = canLogLambda;
+	}
+
+	/**
+	 * Set logging lambda function.
+	 * @param logLambda
+	 */
+	public static void setLogLambda(Consumer<String> logLambda) {
+		
+		AreaServer.logLambda = logLambda;
+	}
+	
+	/**
+	 * Set a lambda function that enables user actions in the logging process.
+	 * @param logInvolveUserLambda
+	 */
+	public static void setLogInvolveUserLambda(Runnable logInvolveUserLambda) {
+		
+		AreaServer.logInvolveUserLambda = logInvolveUserLambda;
+	}
+	
+	/**
+	 * Check if the application can log messages.
+	 * @return
+	 */
+	public static boolean canLog() {
+		
+		if (logLambda != null && canLogLambda != null) {
+			
+			boolean canLog =  canLogLambda.get();
+			return canLog;
+		}
+		return false;
+	}
+	
+	/**
+	 * Log text.
+	 */
+	public static void log(String logText) {
+		
+		if (logLambda != null) {
+			logLambda.accept(logText);
+		}
+	}
+	
+	/**
+	 * Log parametrized text.
+	 */
+	public static void log(String logText, Object ... textParameters) {
+		
+		if (logLambda != null) {
+			
+			if (textParameters.length > 0) {
+				logText = String.format(logText, textParameters);
+			}
+			
+			logLambda.accept(logText);
+		}
+	}
+	
+	/**
+	 * Involve user action in the logging process.
+	 */
+	public static void logInvolveUser() {
+		
+		if (logInvolveUserLambda != null) {
+			logInvolveUserLambda.run();
+		}
 	}
 	
 	/**
@@ -4079,6 +4172,18 @@ public class AreaServer {
 	 */
 	public String processTextCloned(Area area1, String textValue, boolean propagateErrors)
 		throws Exception {
+		
+		// TODO: debug
+		Area requestedArea = this.getRequestedArea();
+		Long versionId = this.getCurrentVersionId();
+		VersionObj version = this.getVersion(versionId);
+		String requestedAreaName = requestedArea.getDescriptionForced(true);
+		String currentAreaName = area1.getDescriptionForced(true);
+		String versionName = version.getDescription();
+		log("\nA cur = %s, ver = %s, A req = %s\n" +
+		    "---------------------------------------------------------------------\n%s",
+		    requestedAreaName, versionName, currentAreaName, textValue);
+		logInvolveUser();
 		
 		// Save original server state and clone server state.
 		AreaServerState originalState = this.state;

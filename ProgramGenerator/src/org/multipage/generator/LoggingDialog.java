@@ -66,6 +66,7 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import org.maclan.help.ProgramHelp;
+import org.maclan.server.AreaServer;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.StateInputStream;
@@ -73,6 +74,7 @@ import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextAreaEx;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
 
@@ -87,6 +89,12 @@ public class LoggingDialog extends JDialog {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * List of state constants.
+	 */
+	public static final int RUNNING = 0;
+	public static final int BREAKED = 1;
 	
 	/**
 	 * Enable/disable logging.
@@ -355,9 +363,15 @@ public class LoggingDialog extends JDialog {
 		Window parentWindow = Utility.findWindow(parent);
 		dialog = new LoggingDialog(parentWindow);
 		
+		// Attach the Area Server.
+		AreaServer.setCanLogLambda(() -> isLoggingEnabled());
+		AreaServer.setLogLambda(text -> log(text));
+		AreaServer.setLogInvolveUserLambda(() -> LoggingDialog.involveUserAction());
+		
 		// Attach the help module.
-		ProgramHelp.setLogLambda(text -> log(text));
 		ProgramHelp.setCanLogLambda(() -> isLoggingEnabled());
+		ProgramHelp.setLogLambda(text -> log(text));
+		ProgramHelp.setLogInvolveUserLambda(() -> LoggingDialog.involveUserAction());
 		
 		// If the following flag was set, open the dialog.
 		if (openedWhenInitialized) {
@@ -404,7 +418,22 @@ public class LoggingDialog extends JDialog {
 	 * Recently selected event tree object.
 	 */
 	private Object lastSelectedTreeObject;
-
+	
+	/**
+	 * State of the dialog.
+	 */
+	private int  state = RUNNING;
+	
+	/**
+	 * Synchronization object for the dialog state. Used while accessing the state.
+	 */
+	private Object stateSynchronizaton = new Object();
+	
+	/**
+	 * Lock of logging process.
+	 */
+	private Lock logLock = new Lock();
+	
 	//$hide<<$
 	
 	/**
@@ -449,6 +478,9 @@ public class LoggingDialog extends JDialog {
 	private JToggleButton buttonListOrSingleItem;
 	private JComboBox<Integer> comboFontSize;
 	private JLabel labelLogFontSize;
+	private JButton buttonStepSingleItem;
+	private JButton buttonRunItems;
+	private JButton buttonBreakItems;
 	
 	/**
 	 * Show dialog.
@@ -722,6 +754,7 @@ public class LoggingDialog extends JDialog {
 		createEventTree();
 		createOmittedSignalList();
 		createBreakPointsList();
+		setListeners();
 	}
 	
 	/**
@@ -731,7 +764,12 @@ public class LoggingDialog extends JDialog {
 		
 		// Add tool bar for log.
 		buttonListOrSingleItem = ToolBarKit.addToggleButton(toolBarLog, "org/multipage/generator/images/list.png", "org.multipage.generator.tooltipLogListOrSingleItem", () -> onListOrSingleItem());
-		buttonListOrSingleItem.setSelected(true);
+		buttonStepSingleItem = ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/step_item.png", "org.multipage.generator.tooltipLogStepSingleItem", () -> onStepSingleMessage());
+		buttonRunItems = ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/run.png", "org.multipage.generator.tooltipLogRunSingleItem", () -> onRunMessages());
+		buttonBreakItems = ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/break.png", "org.multipage.generator.tooltipLogBreakItems", () -> onBreakMessages());
+		ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/clear.png", "org.multipage.generator.tooltipLogClearItems", () -> onClearMessages());
+		
+		// Load font size.
 		loadFontSizes(comboFontSize);
 		
 		// A tool bar for message queue.
@@ -745,7 +783,7 @@ public class LoggingDialog extends JDialog {
 		// A tool bar for break points.
 		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png", "org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
 	}
-
+	
 	/**
 	 * Localize components.
 	 */
@@ -812,8 +850,76 @@ public class LoggingDialog extends JDialog {
 		tabbedPane.setSelectedIndex(selectedTab);
 		checkOmitOrChooseSignals.setSelected(omitChooseSignals);
 		buttonListOrSingleItem.setSelected(logList);
+		showUserButtons(true);
 	}
 	
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
+		
+		// Receive the "step log" signal.
+		ConditionalEvents.receiver(this, Signal.stepLog, message -> {
+			
+			// Notify the log process lock.
+			Lock.notify(logLock);
+		});
+	}
+
+	
+	/**
+	 * Show or hide user buttons.
+	 * @param show
+	 */
+	private void showUserButtons(boolean show) {
+		
+		// Show or hide buttons with respect to the input flag.
+		buttonStepSingleItem.setVisible(show);
+		buttonRunItems.setVisible(show);
+		buttonBreakItems.setVisible(show);
+		
+		// Apply current state to the GUI controls of this dialog.
+		if (show) {
+			applyDialogState();
+		}
+	}
+	
+	/**
+	 * Clear messages in the log view.
+	 */
+	private void clearMessages() {
+		
+		logTexts.clear();
+		compileLog();
+	}
+	
+	/**
+	 * Apply dialog state to GUI controls.
+	 */
+	private void applyDialogState() {
+		
+		switch (state) {
+		
+		case RUNNING:
+			
+			buttonStepSingleItem.setEnabled(false);
+			buttonRunItems.setVisible(false);
+			buttonBreakItems.setVisible(true);
+			
+			// If a single message is logged, clear the view box.
+			if (!logList) {
+				clearMessages();
+			}
+			break;
+			
+		case BREAKED:
+			
+			buttonStepSingleItem.setEnabled(true);
+			buttonRunItems.setVisible(true);
+			buttonBreakItems.setVisible(false);
+		}
+	}
+
 	/**
 	 * Save dialog.
 	 */
@@ -1324,7 +1430,7 @@ public class LoggingDialog extends JDialog {
 	 */
 	public static void log(String logText) {
 		
-		// Check switch.
+		// Check the "enable/disable" switch.
 		if (!isLoggingEnabled()) {
 			return;
 		}
@@ -1338,7 +1444,7 @@ public class LoggingDialog extends JDialog {
 		
 		logTexts.add(log);
 		
-		// Message limit.
+		// Compute message limit.
 		int extraMessagesCount = logTexts.size() - logLimit;
 
 		// Remove extra messages from the list beginning.
@@ -1348,6 +1454,36 @@ public class LoggingDialog extends JDialog {
 		
 		// Compile logged messages.
 		compileLog();
+	}
+	
+	/**
+	 * Involve user action in the log process based on dialog state.
+	 */
+	public static void involveUserAction() {
+		
+		// Initialize auxiliary flag.
+		boolean lockThisThread = false;
+		
+		synchronized (dialog.stateSynchronizaton) {
+			
+			// If the log should run, do not stop it.
+			if (dialog.state == RUNNING) {
+				return;
+			}
+			
+			// If the log is braked, wait for user action.
+			if (dialog.state == BREAKED) {
+				lockThisThread = true;
+			}
+		}
+		
+		// Lock the thread and wait for user action.
+		if (lockThisThread) {
+			Lock.waitFor(dialog.logLock);
+			
+			// TODO: debug
+			j.log("THE LOG LOCK HAS BEEN RELEASED BY USER ACTION");
+		}
 	}
 	
 	/**
@@ -1477,19 +1613,22 @@ public class LoggingDialog extends JDialog {
 		
 		return messageMap;
 	}
-		
+	
 	/**
 	 * Compile messages.
 	 */
 	private static void compileLog() {
 		
-		String resultingText = "";
-		
-		for (LoggedMessage message : logTexts) {
-			resultingText += message.getText() + '\n';
+		if (dialog != null) {
+			
+			String resultingText = "";
+			
+			for (LoggedMessage message : logTexts) {
+				resultingText += message.getText() + '\n';
+			}
+			
+			dialog.textLog.setText(resultingText);
 		}
-		
-		dialog.textLog.setText(resultingText);
 	}
 	
 	/**
@@ -2281,11 +2420,80 @@ public class LoggingDialog extends JDialog {
 	
 	/**
 	 * List or single item switch.
-	 * @return
 	 */
 	private void onListOrSingleItem() {
 		
-		LoggingDialog.logList = buttonListOrSingleItem.isSelected();
+		// Set flag.
+		boolean logList = buttonListOrSingleItem.isSelected();
+		LoggingDialog.logList = logList;
+	}
+	
+	/**
+	 * On [Step] button pressed.
+	 */
+	private void onStepSingleMessage() {
+		
+		// Check state.
+		if (state == RUNNING) {
+			applyDialogState();
+			return;
+		}
+		
+		// Transmit the "step log" signal.
+		ConditionalEvents.transmit(this, Signal.stepLog);
+	}
+	
+	/**
+	 * On [Run] button pressed.
+	 */
+	private void onRunMessages() {
+		
+		// Check state.
+		if (state == RUNNING) {
+			applyDialogState();
+			return;
+		}
+			
+		synchronized (dialog.stateSynchronizaton) {
+			state = RUNNING;
+		}
+		
+		// Apply dialog state to GUI.
+		applyDialogState();
+		
+		// Transmit the "run logging" signal.
+		ConditionalEvents.transmit(this, Signal.runLogging);
+	}
+	
+	/**
+	 * On [Break] button pressed.
+	 */
+	private void onBreakMessages() {
+		
+		// Check state.
+		if (state == BREAKED) {
+			applyDialogState();
+			return;
+		}
+		
+		// Transmit the "break logging" signal.
+		ConditionalEvents.transmit(this, Signal.breakLogging);
+		
+		synchronized (dialog.stateSynchronizaton) {
+			state = BREAKED;
+		}
+		
+		// Apply dialog state to GUI.
+		applyDialogState();
+	}
+	
+	/**
+	 * On [Clear] button pressed.
+	 */
+	private void onClearMessages() {
+		
+		// Clear the log view.
+		clearMessages();
 	}
 	
 	/**
@@ -2314,6 +2522,10 @@ public class LoggingDialog extends JDialog {
 	 * On close dialog.
 	 */
 	protected void onClose() {
+		
+		// Switch dialog into the running state and release the log lock.
+		state = RUNNING;
+		Lock.notify(logLock);
 		
 		// Save dialog state.
 		saveDialog();

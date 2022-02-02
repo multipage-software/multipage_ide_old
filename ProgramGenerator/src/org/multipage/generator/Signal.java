@@ -183,6 +183,18 @@ public enum Signal implements EventCondition {
 	debugging(
 			SignalType.serverStateChange
 			),
+	stepLog(
+			SignalType.guiStateChange,
+			SignalType.guiChange
+			),
+	runLogging(
+			SignalType.guiStateChange,
+			SignalType.guiChange
+			),
+	breakLogging(
+			SignalType.guiStateChange,
+			SignalType.guiChange
+			),
 	// Update of area sub relation.
 	updateAreaSubRelation,
 	// Update of area super relation.

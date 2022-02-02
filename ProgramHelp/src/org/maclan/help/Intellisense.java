@@ -796,6 +796,9 @@ public class Intellisense {
 					
 					if (canLog) {
 						ProgramHelp.log("PROLOG OUTPUT TERM: %s", resultingSuggestion.toString());
+						
+						// Let user interrupt the logging process.
+						ProgramHelp.logInvolveUser();
 					}
 					
 					PrologUtility.addList(resultingSuggestion, terms);

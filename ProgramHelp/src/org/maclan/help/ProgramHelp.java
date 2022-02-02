@@ -35,14 +35,19 @@ public class ProgramHelp {
 	private static StateSerializer serializer;
 	
 	/**
+	 * Can log lambda function.
+	 */
+	private static Supplier<Boolean> canLogLambda = null;
+	
+	/**
 	 * Log lambda function.
 	 */
 	private static Consumer<String> logLambda = null;
 	
 	/**
-	 * Can log lambda function.
+	 * Involve user action in the logging process. A lambda function.
 	 */
-	private static Supplier<Boolean> canLogLambda = null;
+	private static Runnable logInvolveUserLambda = null;
 	
 	/**
 	 * Initialize program basic layer.
@@ -120,6 +125,15 @@ public class ProgramHelp {
 	}
 	
 	/**
+	 * Set "can log" lambda function.
+	 * @param logLambda
+	 */
+	public static void setCanLogLambda(Supplier<Boolean> canLogLambda) {
+		
+		ProgramHelp.canLogLambda = canLogLambda;
+	}
+	
+	/**
 	 * Set logging lambda function.
 	 * @param logLambda
 	 */
@@ -129,12 +143,12 @@ public class ProgramHelp {
 	}
 	
 	/**
-	 * Set "can log" lambda function.
-	 * @param logLambda
+	 * Set a lambda function that enables user actions in the logging process.
+	 * @param logInvolveUserLambda
 	 */
-	public static void setCanLogLambda(Supplier<Boolean> canLogLambda) {
+	public static void setLogInvolveUserLambda(Runnable logInvolveUserLambda) {
 		
-		ProgramHelp.canLogLambda = canLogLambda;
+		ProgramHelp.logInvolveUserLambda = logInvolveUserLambda;
 	}
 	
 	/**
@@ -162,7 +176,7 @@ public class ProgramHelp {
 	}
 	
 	/**
-	 * Log parametrized text.
+	 * Log parameterized text.
 	 */
 	public static void log(String logText, Object ... textParameters) {
 		
@@ -173,6 +187,16 @@ public class ProgramHelp {
 			}
 			
 			logLambda.accept(logText);
+		}
+	}
+	
+	/**
+	 * Involve user action in the logging process.
+	 */
+	public static void logInvolveUser() {
+		
+		if (logInvolveUserLambda != null) {
+			logInvolveUserLambda.run();
 		}
 	}
 	
