@@ -13,6 +13,8 @@ import java.util.HashSet;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
+import org.multipage.util.j;
+
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
@@ -25,7 +27,7 @@ import javafx.scene.web.WebView;
  * @author user
  *
  */
-public class MonitorPanel extends Panel implements TabItemInterface {
+public class MonitorPanel extends Panel implements TabItemInterface, Updated {
 
 	/**
 	 * Version
@@ -147,22 +149,22 @@ public class MonitorPanel extends Panel implements TabItemInterface {
 	private void setListeners() {
 		
 		// The "update all" request receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, message -> {
+		ConditionalEvents.receiver(this, Signal.updateMonitorPanel, message -> {
+			
+			// Check if the message is acceptable with receiving object.
+			if (!message.isAcceptableWith(MonitorPanel.this)) {
+				return;
+			}
 			
 			// Reload content of the monitor.
 			if (isShowing()) {
 				
-				// Disable the signal temporarily.
-				Signal.updateAll.disable();
-				
 				// Reload the content.
 				reloadContent();
-				
-				// Enable the signal.
-				SwingUtilities.invokeLater(() -> {
-					Signal.updateAll.enable();
-				});
 			}
+			
+			// TODO: debug
+			//ProgramGenerator.machineUpdate(ProgramGenerator.GUI_GROUP_ALL);
 		});
 	}
 	

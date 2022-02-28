@@ -10,6 +10,7 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Window;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -32,7 +33,9 @@ import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import build_number.BuildNumber;
 
@@ -125,6 +128,9 @@ public class ProgramGenerator {
 
 		// Create areas model.
 		areasModel = new AreasModel();
+		
+		// Initialize a map that maps update group to the list of signals.
+		Updated.initialize();
 		
 		return true;
 	}
@@ -588,7 +594,7 @@ public class ProgramGenerator {
 	}
 	
 	/**
-	 * Update ara.
+	 * Update area.
 	 * @param area
 	 * @return
 	 */

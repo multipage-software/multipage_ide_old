@@ -7,6 +7,7 @@
 
 package org.multipage.generator;
 
+import java.awt.Window;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -269,6 +270,7 @@ public class ConditionalEvents {
 											// Save the message key for debugging purposes.
 											incomingMessage.ref.key = key;
 											
+
 											// Invoke event actions matching the incoming message.
 											// Let survive messages for a time spans defined in event handlers.
 											invokeActions(currentTime, eventHandles, priority, key, incomingMessage.ref);

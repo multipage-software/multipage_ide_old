@@ -480,20 +480,20 @@ public abstract class AreaEditorCommonBase {
 		// Save current panel input.
 		saveData();
 		
-		// Transmit "update all" request.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
 	}
 
 	/**
-	 * On close dialog.
+	 * On save and close the dialog.
 	 */
-	protected void onClose() {
+	protected void onSaveAndClose() {
 		
 		// Save current panel input.
 		saveData();
 		
-		// Transmit "update all" request.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
 
 		// Save dialog.
 		saveDialog();

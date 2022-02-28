@@ -17,7 +17,7 @@ public enum SignalType implements EventCondition {
 	
 	// Change of area model.
 	areaModelChange,
-	// Change os slot model.
+	// Change of slot model.
 	slotModelChange,
 	// Change of area view state.
 	areaViewStateChange,
@@ -25,6 +25,8 @@ public enum SignalType implements EventCondition {
 	slotViewStateChange,
 	// Change of GUI state.
 	guiStateChange,
+	// Change of GUI state by the user.
+	guiStateChangeByUser,
 	// Change of area view.
 	areaViewChange,
 	// Change of slot view.
@@ -32,7 +34,9 @@ public enum SignalType implements EventCondition {
 	// Server state change.
 	serverStateChange,
 	// Change of GUI.
-	guiChange;
+	guiChange,
+	// Change of GUI by the user.
+	guiChangeByUser;
 	
 	/**
 	 * Priority of the signal.

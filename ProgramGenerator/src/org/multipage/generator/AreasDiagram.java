@@ -63,7 +63,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
+public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Updated {
 
 	/**
 	 * Version.
@@ -330,30 +330,18 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// Add redraw event listener.
-		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAll), message -> {
+		// Receive the "update areas' diagram" signal.
+		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAreasDiagram), message -> {
 			
-			// Disable the signal temporarily.
-			Signal.updateAll.disable();
+			// Check if the message is acceptable with receiving object.
+			if (!message.isAcceptableWith(AreasDiagram.this)) {
+				return;
+			}
 			
 			// Reload and repaint the diagram.
 			reload(false, false);
 			setOverview();
 			repaint();
-			
-			// Get selected area IDs.
-			HashSet<Long> selectedIds = getSelectedAreaIds();
-			
-			j.log("TRANSMITTED 4 showAreasProperties %s", selectedIds.toString());
-			// Propagate the "show areas' properties" signal.
-			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
-			// Propagate the "show areas' relations" signal.
-			ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedIds);
-			
-			// Enable the signal.
-			SwingUtilities.invokeLater(() -> {
-				Signal.updateAll.enable();
-			});
 		});
 		
 		// Add receiver for the "click areas in diagram" event.
@@ -404,6 +392,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			if (message.relatedInfo instanceof HashSet<?>) {
 				
 				// Pull set of area IDs.
+				@SuppressWarnings("unchecked")
 				HashSet<Long> selectedIds = (HashSet<Long>) message.relatedInfo;
 				// Remove selection.
 				removeSelection();
@@ -438,13 +427,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 				setOverview();
 				repaint();
 			}
-		});
-		
-		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, ConditionalEvents.MIDDLE_PRIORITY, message -> {
-			
-			// Render the areas diagram.
-			renderDiagram();
 		});
 		
 		// Add focus event receiver.
@@ -2705,9 +2687,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 			GeneratorMainFrame.getFrame().getVisibleAreasEditor().focusAreaNear(parentArea.getId());
 		}
 		
-		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.updateAll);
-		
 		return success;
 	}
 
@@ -2757,9 +2736,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface {
 		
 		// Reload area diagram.
 		updateInformation();
-		
-		// Propagate update all event.
-		ConditionalEvents.transmit(this, Signal.updateAll);
 	}
 
 	/**

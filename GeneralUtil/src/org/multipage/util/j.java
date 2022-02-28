@@ -8,6 +8,7 @@ package org.multipage.util;
 
 import java.io.PrintStream;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 
 /**
@@ -54,7 +55,7 @@ public class j {
 			long timeDeltaMs = currentTimeMs - lastTimeStampMs;
 			
 			Timestamp timeStamp = new Timestamp(lastTimeStampMs);
-			String timestamp = logTimeSpan ? timeStamp.toString() + ": " : "";
+			String timeStampText = logTimeSpan ? new SimpleDateFormat("kk:mm:ss.SSS").format(timeStamp) + ": " : "";
 			lastTimeStampMs = currentTimeMs;
 			
 			if (logTimeDelta) {
@@ -76,19 +77,19 @@ public class j {
 				if (strings.length > 0) {
 					if (os != null) {
 						Object [] parameters = Arrays.copyOfRange(strings, 1, strings.length);
-						os.format(indentation + timestamp + strings[0].toString() + '\n', parameters);
+						os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
 					}
 					else {
-						System.err.format(indentation + timestamp + type + '\n', strings);
+						System.err.format(indentation + timeStampText + type + '\n', strings);
 					}
 					
 				}
 				else {
 					if (os != null) {
-						os.format(indentation + timestamp + type);
+						os.format(indentation + timeStampText + type);
 					}
 					else {
-						System.err.format(indentation + timestamp + type + '\n');
+						System.err.format(indentation + timeStampText + type + '\n');
 					}
 				}
 			}

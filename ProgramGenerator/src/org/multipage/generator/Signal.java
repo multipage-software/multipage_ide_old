@@ -16,6 +16,25 @@ public enum Signal implements EventCondition {
 	// Enables target signal.
 	_enableTargetSignal,
 	
+	// Update areas' model for the GUI.
+	updateAreasModel(
+			SignalType.guiChangeByUser
+			),
+	// Update GUI components.
+	updateAreasDiagram(
+			SignalType.guiChangeByUser
+			),
+	updateAreasTreeEditor(
+			SignalType.guiChangeByUser
+			),
+	updateMonitorPanel(
+			SignalType.guiChangeByUser
+			),
+	
+	updateAreasProperties,
+	// TODO: remove it
+	updateAll,
+	
 	// Load diagrams on application start up.
 	loadDiagrams(
 			SignalType.areaViewStateChange,
@@ -108,19 +127,6 @@ public enum Signal implements EventCondition {
 	
 	// Show read only areas in areas diagram.
 	exposeReadOnlyAreas(
-			SignalType.guiChange
-			),
-	
-	// Request update of all information.
-	updateAll(
-			SignalType.areaModelChange,
-			SignalType.slotModelChange,
-			SignalType.areaViewStateChange,
-			SignalType.slotViewStateChange,
-			SignalType.guiStateChange,
-			SignalType.areaViewChange,
-			SignalType.slotViewChange,
-			SignalType.guiStateChange,
 			SignalType.guiChange
 			),
 	
@@ -271,8 +277,6 @@ public enum Signal implements EventCondition {
 	updateAreaFileNames,
 	// When area tree was created.
 	createAreasTree,
-	// Update whole model.
-	updateAreasModel,
 	// On new basic area (database changed).
 	newBasicArea,
 	// Transfer area with drag and drop.
@@ -451,5 +455,10 @@ public enum Signal implements EventCondition {
 	public HashSet<SignalType> getTypes() {
 		
 		return includedInTypes;
+	}
+
+	static Signal update(Class<AreasTreeEditorPanel> class1) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

@@ -1430,7 +1430,7 @@ public class MiddleLightImpl implements MiddleLight {
 	private MiddleResult loadAreaInheritedStartResource(
 			Area area, long versionId, Obj<StartResource> startResource,
 			HashSet<Long> visitedAreasIds) {
-
+		
 		// Check connection.
 		MiddleResult result = checkConnection();
 		if (result.isNotOK()) {

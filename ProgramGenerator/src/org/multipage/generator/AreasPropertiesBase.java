@@ -451,9 +451,6 @@ public class AreasPropertiesBase extends JPanel {
 				// On save event...
 				if (saving) {
 					
-					// Propagate update event
-					ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);
-					
 					// Call finished function on the event thread.
 					ConditionalEvents.invokeLater(() -> onSaveFinished.run());
 				}
@@ -469,7 +466,7 @@ public class AreasPropertiesBase extends JPanel {
 		Runnable updateEvent = () -> {
 			
 			// Propagate update event
-			ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.updateAll);
+			// TODO:
 		};
 		
 		textDescription.updateLambda = updateEvent;
@@ -519,10 +516,7 @@ public class AreasPropertiesBase extends JPanel {
 	private void setListeners() {
 				
 		// "Model updated" event receiver.
-		ConditionalEvents.receiver(AreasPropertiesBase.this, Signal.updateAll, message -> {
-	    	
-			// Disable the signal temporarily.
-			Signal.updateAll.disable();
+		ConditionalEvents.receiver(AreasPropertiesBase.this, Signal.updateAreasProperties, message -> {
 			
 			// Update the list of areas.
 			areas = ProgramGenerator.getUpdatedAreas(areas);
@@ -532,11 +526,6 @@ public class AreasPropertiesBase extends JPanel {
 			
 			// Enable editing in the main frame window.
 			enableEditing(true);
-			
-			// Enable the signal.
-			SwingUtilities.invokeLater(() -> {
-				Signal.updateAll.enable();
-			});
 		});
 	}
 	

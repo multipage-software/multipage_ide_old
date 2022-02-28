@@ -59,6 +59,7 @@ import org.maclan.Area;
 import org.maclan.AreasModel;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
@@ -73,7 +74,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
+public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Updated  {
 	
 	/**
 	 * Version.
@@ -849,7 +850,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		    	
 		    	onSelectedTreeItem();
 		    	
-		    	j.log("TRANSMITTED 9 showAreasProperties %s", selectedTreeAreaIds.toString());
 		    	// Propagate the "show areas' properties" event.
 		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedTreeAreaIds);
 		    }
@@ -873,10 +873,12 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 		});
 		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, message -> {
+		ConditionalEvents.receiver(this, Signal.updateAreasTreeEditor, message -> {
 			
-			// Disable the signal temporarily.
-			Signal.updateAll.disable();
+			// Check if the message is acceptable with receiving object.
+			if (!message.isAcceptableWith(AreasTreeEditorPanel.this)) {
+				return;
+			}
 			
 			// Reload editor.
 			reload();
@@ -888,10 +890,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface  {
 				setAllSelection(false);
 			}
 			
-			// Enable the signal.
-			SwingUtilities.invokeLater(() -> {
-				Signal.updateAll.enable();
-			});
+			// TODO: debug
+			//ProgramGenerator.machineUpdate(ProgramGenerator.GUI_GROUP_ALL);
 		});
 		
 		// "Update GUI" event receiver.

@@ -7,6 +7,7 @@
 
 package org.multipage.gui;
 
+import java.awt.Font;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -157,12 +158,7 @@ public class StateSerializer {
 			
 			// Check current node name with object type name.
 			String nodeName = reader.getNodeName();
-			String typeName = defaultObject.getClass().getName();
-			
-			if (!nodeName.equals(typeName)) {
-				return null;
-			}
-			
+
 			// Make initialization.
 			auxiliaryFieldMap = new HashMap<String, String>();
 			String value = null;
@@ -310,15 +306,32 @@ public class StateSerializer {
 				// Reader for the font object.
 				reader -> nodeName -> textValue -> auxiliaryFieldMap -> font -> {
 					
-					reader.moveDown();
-					auxiliaryFieldMap.put(nodeName, textValue);
-					reader.moveUp();
+					if (reader.hasMoreChildren()) {
+						
+						reader.moveDown();
+						auxiliaryFieldMap.put(nodeName, textValue);
+						reader.moveUp();
+					}
+					else {
+						
+						String readNodeName = reader.getNodeName();
+						String readTextValue = reader.getValue();
+						auxiliaryFieldMap.put(readNodeName, readTextValue);
+					}
 				},
 				// Finalize the font object.
-				auxiliaryFieldMap -> new java.awt.Font(
+				auxiliaryFieldMap -> {
+					
+					int size = Integer.parseInt(auxiliaryFieldMap.get("size"));
+					int style = Integer.parseInt(auxiliaryFieldMap.get("style"));
+					
+					Font font =  new java.awt.Font(
 						auxiliaryFieldMap.get("name"),
-						Integer.parseInt(auxiliaryFieldMap.get("size")),
-						Integer.parseInt(auxiliaryFieldMap.get("style")))
+						style,
+						size);
+					
+					return font;
+				}
 			);
 		
 		// Set permissions for all the converters above.

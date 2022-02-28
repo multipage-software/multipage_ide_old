@@ -81,6 +81,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -279,6 +280,17 @@ public class Utility {
 	}
 	
 	/**
+	 * Get current time stamp.
+	 * @return
+	 */
+	public static Timestamp getCurrentTimestamp() {
+
+		long currentTimeMs = System.currentTimeMillis();
+		Timestamp initialTimestamp = new Timestamp(currentTimeMs);
+		return initialTimestamp;
+	}
+	
+	/**
 	 * Set current path name
 	 * @param currentPathName
 	 */
@@ -313,7 +325,7 @@ public class Utility {
 		
 		return Utility.applicationMainWindow;
 	}
-
+	
 	/**
 	 * Compute union of given rectangles.
 	 */
@@ -1235,6 +1247,33 @@ public class Utility {
 
 	    // Convert array of nodes to TreePath
 	    return new TreePath(list.toArray());
+	}
+	
+	/**
+	 * Get JTable selection.
+	 * @param tableSlots
+	 * @return
+	 */
+	public static Object [][] getTableSelection(JTable table) {
+		
+		// Get selected rows.
+		TableModel model = table.getModel();
+		int [] selectedRowIndices = table.getSelectedRows();
+		
+		// Get the number of table columns.
+		int columnCount = table.getColumnCount();
+		
+		// Initialize array.
+		Object [][] tableSelection = new Object [selectedRowIndices.length][columnCount];
+		
+		// Get all selected table items.
+		for (int row : selectedRowIndices) {
+			for (int column = 0; column < columnCount; columnCount++) {
+			
+				tableSelection[row][column] = table.getValueAt(row, column);
+			}
+		}
+		return tableSelection;
 	}
 
 	/**
@@ -2517,6 +2556,35 @@ public class Utility {
 					
 					// Use callback for user object of the node
 					consumer.accept(nodeUserObject);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Traverse expanded elements info
+	 * @param tree
+	 * @return
+	 */
+	public static <T> void traverseExpandedElements(JTree tree, BiConsumer<DefaultMutableTreeNode, Object> consumer) {
+		
+		// Get list of expanded elements
+		int displayedRowCount = tree.getRowCount();
+		for (int displayedRow = 0; displayedRow < displayedRowCount; displayedRow++) {
+			
+			// Retrieve leaf component of the path
+			TreePath displayedPath = tree.getPathForRow(displayedRow);
+			Object leafComponent = displayedPath.getLastPathComponent();
+			
+			// Get corresponding element
+			if (leafComponent instanceof DefaultMutableTreeNode) {
+				DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) leafComponent;
+				
+				Object nodeUserObject = treeNode.getUserObject();
+				if (nodeUserObject != null) {
+					
+					// Use callback for user object of the node
+					consumer.accept(treeNode, nodeUserObject);
 				}
 			}
 		}

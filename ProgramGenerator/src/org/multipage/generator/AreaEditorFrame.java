@@ -152,7 +152,7 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				onClose();
+				onSaveAndClose();
 			}
 		});
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -172,7 +172,7 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 		buttonClose = new JButton("org.multipage.generator.textSaveAndClose");
 		buttonClose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onClose();
+				onSaveAndClose();
 			}
 		});
 		

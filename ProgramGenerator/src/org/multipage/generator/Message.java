@@ -294,8 +294,14 @@ public class Message {
 	 * @return
 	 */
 	public <T> T getRelatedInfo() {
-		
+				
 		try {
+			
+			if (relatedInfo == null) {
+				return null;
+			}
+			
+			@SuppressWarnings("unchecked")
 			T info = (T) relatedInfo;
 			return info;
 		}
@@ -313,11 +319,39 @@ public class Message {
 	public <T> T getAdditionalInfo(int index) {
 		
 		try {
+			
+			int length = additionalInfos.length;
+			if (index >= length || additionalInfos[index] == null) {
+				return null;
+			}
+			
+			@SuppressWarnings("unchecked")
 			T info = (T) additionalInfos[index];
 			return info;
 		}
 		catch (Throwable e) {
 			return null;
 		}
+	}
+	
+	/**
+	 * Check if the receiving object is acceptable with this message.
+	 * @param receivingObject
+	 * @return
+	 */
+	public boolean isAcceptableWith(Object receivingObject) {
+		
+		// Initialize output value.
+		boolean isAcceptable = false;
+		
+		// Try to get event source.
+		if (source instanceof EventSource) {
+			
+			// Delegate the call.
+			EventSource eventSource = (EventSource) source;
+			isAcceptable = eventSource.isAcceptableWith(receivingObject);
+		}
+		
+		return isAcceptable;
 	}
 }

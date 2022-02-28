@@ -79,6 +79,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * 
@@ -1013,7 +1014,8 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onUpdate() {
 		
-		ConditionalEvents.transmit(AreaTraceFrame.this, Signal.updateAll);
+		// Update GUI components with areas.
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_TRACE.userAction(this, null));
 	}
 	
 	/**
@@ -1188,6 +1190,23 @@ public class AreaTraceFrame extends JFrame {
 		    	splitPane.setDividerLocation(location);
 		    	splitPaneProviders.setDividerLocation(location2);
 		    }
+		});
+		
+		// Receive the "focus area" signal.
+		ConditionalEvents.receiver(this, Signal.focusArea, message -> {
+			
+			// Avoid receiving the signal from current dialog window.
+			if (this.equals(message.source)) {
+				return;
+			}
+			
+			// Get area ID.
+			Long areaId = message.getAdditionalInfo(0);
+			
+			// Select the received area in appropriate GUI views.
+			if (areaId != null) {
+				selectArea(areaId);
+			}
 		});
 		
 		// Receive the "debugging" signal.
@@ -1735,8 +1754,31 @@ public class AreaTraceFrame extends JFrame {
 	 */
 	private void selectArea(long areaId) {
 		
+		// Clear list and tree selection.
 		list.clearSelection();
+		tree.clearSelection();
 		
+		// Select area in the tree view.
+		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
+			
+			if (!(userObject instanceof Area)) {
+				return;
+			}
+			
+			Area area = (Area) userObject;
+			if (area.getId() == areaId) {
+				
+				TreeNode [] nodes = node.getPath();
+				TreePath treePath = new TreePath(nodes);
+				
+				tree.setSelectionPath(treePath);
+				
+				// Expand parent item.
+			    tree.expandPath(treePath);
+			}
+		});
+		
+		// Select area in the list view.
 		int count = listModel.getSize();
 		for (int index = 0; index < count; index++) {
 			
@@ -1744,6 +1786,7 @@ public class AreaTraceFrame extends JFrame {
 			if (area.getId() == areaId) {
 				
 				list.setSelectedIndex(index);
+				list.ensureIndexIsVisible(index);
 				break;
 			}
 		}

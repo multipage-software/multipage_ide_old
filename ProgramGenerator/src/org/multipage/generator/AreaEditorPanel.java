@@ -159,7 +159,7 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 		buttonClose = new JButton("org.multipage.generator.textSaveAndClose");
 		buttonClose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onClose();
+				onSaveAndClose();
 			}
 		});
 		

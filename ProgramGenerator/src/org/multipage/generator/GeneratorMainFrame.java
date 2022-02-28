@@ -85,7 +85,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class GeneratorMainFrame extends JFrame {
+public class GeneratorMainFrame extends JFrame implements Updated {
 
 	/**
 	 * Version.
@@ -584,6 +584,7 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Set listeners.
 	 */
+	@SuppressWarnings("unchecked")
 	private void setListeners() {
 
 		tabPanel.addChangeListener(new ChangeListener() {
@@ -710,19 +711,16 @@ public class GeneratorMainFrame extends JFrame {
 			invokeReactivationOfGui(focusedComponent);
 		});
 		
-		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, Signal.updateAll, ConditionalEvents.HIGH_PRIORITY, message -> {
+		// Receive the "update updateAreasModel" signal.
+		ConditionalEvents.receiver(this, Signal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
 			
-			// Disable the signal temporarily.
-			Signal.updateAll.disable();
+			// Check if the message is acceptable with receiving object.
+			if (!message.isAcceptableWith(GeneratorMainFrame.this)) {
+				return;
+			}
 			
 			// Reload areas model.
 			ProgramGenerator.reloadModel();
-			
-			// Enable the signal.
-			SwingUtilities.invokeLater(() -> {
-				Signal.updateAll.enable();
-			});
 		});
 		
 		// "Expose read only areas" event receiver.
@@ -1794,7 +1792,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUpdate() {
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAll);
+		Updated.update(Updated.GUI_GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
 	}
 
 	/**
@@ -2977,15 +2975,8 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	protected void onTest() {
 		
-		// Get selected areas.
-		LinkedList<Area> areas = getSelectedAreas();
-		if (areas.size() != 1) {
-			Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
-			return;
-		}
-		
-		// Generate areas.
-		GenerateAreasDialog.showDialog(this, areas.getFirst());
+		// TODO: test the update statement.
+		Updated.update(Updated.GUI_GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
 	}
 
 	/**

@@ -21,6 +21,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -638,7 +640,24 @@ public class SlotListPanel extends JPanel {
 	 */
 	private void setListeners() {
 		
-		// Create "update all" request event.
+		// Receive the"show area properties" event.
+		ConditionalEvents.receiver(SlotListPanel.this, Signal.showAreasProperties, message -> {
+			
+			Object relatedInfo = message.getRelatedInfo();
+			
+			// On a hash set.
+			if (relatedInfo instanceof Collection) {
+				
+				// Set areas.
+				@SuppressWarnings("unchecked")
+				Collection<Object> areaCollection = (Collection<Object>) relatedInfo;
+				
+				setAreas(areaCollection);
+				return;
+			}
+		});
+		
+		// Receive the "update all" event.
 		ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAll, message -> {
 			
 			// Disable the signal temporarily.
@@ -653,7 +672,7 @@ public class SlotListPanel extends JPanel {
 			});
 		});
 		
-		// Create "area slot saved" event listener.
+		// Receive the "area slot saved" event.
 		ConditionalEvents.receiver(SlotListPanel.this, Signal.areaSlotSaved, message -> {
 			
 			// Get slot.
@@ -1482,6 +1501,7 @@ public class SlotListPanel extends JPanel {
 		
 		// Set table.
 		doNotUpdateSlotDescription = true;
+		Object [][] tableSelection = Utility.getTableSelection(tableSlots);
 		tableSlots.removeAll();
 		tableSlots.clearSelection();
 		tableModel.setList(areas, foundSlots, buttonShowOnlyFound.isSelected(), !buttonShowUserSlots.isSelected());
@@ -1825,13 +1845,48 @@ public class SlotListPanel extends JPanel {
 	
 	/**
 	 * Set areas.
-	 * @param areas
+	 * @param areaCollection
 	 */
-	public void setAreas(LinkedList<Area> areas) {
-
+	public void setAreas(Collection<? extends Object> areaCollection) {
+		
+		// Check input value.
+		if (areaCollection == null) {
+			return;
+		}
+		
+		// Initialize the list.
+		LinkedList<Area> areas = new LinkedList<Area>();
+		
+		// Convert input collection items to area objects.
+		areaCollection.forEach(item -> {
+			
+			Area area = null;
+			
+			// On area ID.
+			if (item instanceof Long) {
+				
+				Long areaId = (Long) item;
+				area = ProgramGenerator.getArea(areaId);
+			}
+			// On area object.
+			else if (item instanceof Area) {
+				
+				area = (Area) item;
+			}
+			
+			// Add new area into the list.
+			if (area != null) {
+				areas.add(area);
+			}
+		});
+		
+		// Check and set list of areas for the tree view or the list view.
+		if (areas.isEmpty()) {
+			return;
+		}
 		this.areas = areas;
 		
-		j.log("SELECTED AREAS %s", areas.toString());
+		j.log("SELECTED AREAS %s", this.areas.toString());
 		
 		// Load slots.
 		loadSlots();

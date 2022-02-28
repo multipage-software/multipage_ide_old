@@ -460,8 +460,9 @@ public class AreaLocalMenu {
 		Area area = listener.getCurrentArea();
 		CreateAreasFromSourceCode.showDialog(parentComponent, area);
 		
-		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Object sourceObject = parentComponent != null ? parentComponent : this;
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -941,8 +942,9 @@ public class AreaLocalMenu {
 		
 		GeneratorMainFrame.getFrame().setHomeArea(parentComponent, area);
 		
-		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Object sourceObject = parentComponent != null ? parentComponent : this;
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -956,8 +958,9 @@ public class AreaLocalMenu {
 		
 		GeneratorMainFrame.getFrame().copyAreaTree(area, parentArea);
 		
-		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Object sourceObject = parentComponent != null ? parentComponent : this;
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -970,8 +973,9 @@ public class AreaLocalMenu {
 		
 		GeneratorMainFrame.getFrame().pasteAreaTree(area);
 		
-		// Transmit "request update all" signal.
-		ConditionalEvents.transmit(this, Signal.updateAll);
+		// Update GUI components with areas.
+		Object sourceObject = parentComponent != null ? parentComponent : this;
+		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
