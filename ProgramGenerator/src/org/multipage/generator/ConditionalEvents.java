@@ -99,10 +99,10 @@ public class ConditionalEvents {
 	private static LinkedList<Message> messageQueue = new LinkedList<Message>();
 	
 	/**
-	 * All conditional event processors in the application.
+	 * All registered receivers in the application.
 	 */
 	private static LinkedHashMap<EventCondition, LinkedHashMap<Integer,
-					LinkedHashMap<Object, LinkedList<EventHandle>>>> conditionalEvents = new LinkedHashMap<EventCondition, LinkedHashMap<Integer,
+					LinkedHashMap<Object, LinkedList<EventHandle>>>> receivers = new LinkedHashMap<EventCondition, LinkedHashMap<Integer,
 																							LinkedHashMap<Object, LinkedList<EventHandle>>>>();
 	
 	/**
@@ -180,7 +180,7 @@ public class ConditionalEvents {
 	 * Create message queue snapshot.
 	 * @return
 	 */
-	public static LinkedList getQueueSnapshot() {
+	public static LinkedList<Message> getQueueSnapshot() {
 		
 		synchronized (messageQueue) {
 			
@@ -215,11 +215,6 @@ public class ConditionalEvents {
 				// Pop the message and exit the loop.
 				incomingMessage.ref = popMessage();
 				if (incomingMessage.ref != null) {
-					
-					// TODO: debug
-					if (incomingMessage.ref.signal == Signal.showAreasProperties && incomingMessage.ref.relatedInfo != null && incomingMessage.ref.relatedInfo.toString().equals("[640]")) {
-						j.log("INCOMING %s", incomingMessage.ref.toString());
-					}
 					break;
 				}
 	
@@ -242,8 +237,8 @@ public class ConditionalEvents {
 			clearExpiredMessages(currentTime);
 			
 			// Check if some similar message is surviving in the dedicated memory,
-			// so that current incoming message have to be skipped.
-			// If so, skip the invocations of event actions.
+			// so that current incoming message will be skipped.
+			// If it is so, skip the invocation of the event actions.
 			if (!isMessageSurviving(incomingMessage.ref, currentTime)) {
 				
 				// Break point managed by log.
@@ -253,27 +248,30 @@ public class ConditionalEvents {
 				if (signal.isSpecial()) {
 					invokeSpecialEvents(incomingMessage.ref);
 				}
-				// For all other matching events invoke theirs action lambdas.
+				// For all other matching receivers invoke theirs actions.
 				else {
 					
-					synchronized (conditionalEvents) {
+					synchronized (receivers) {
 						
-						LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = conditionalEvents.get(signal);
-						
+						// Filter receivers by signal.
+						LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = receivers.get(signal);
 						if (priorities != null) {
-							priorities.forEach((priority, keys) -> {
-								if (keys != null) {
-									keys.forEach((key, eventHandles) -> {
+							
+							// For each stored priority retrieve appropriate receiver objects.
+							priorities.forEach((priority, receiverObjects) -> {
+								if (receiverObjects != null) {
+									
+									// Invoke actions for event handles.
+									receiverObjects.forEach((receiverObject, eventHandles) -> {
 										
 										if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... a switch for debugging purposes; this condition disables receiving of unnecessary signals
 											
-											// Save the message key for debugging purposes.
-											incomingMessage.ref.key = key;
+											// Save the message's receiver object for debugging purposes.
+											incomingMessage.ref.receiverObject = receiverObject;
 											
-
 											// Invoke event actions matching the incoming message.
 											// Let survive messages for a time spans defined in event handlers.
-											invokeActions(currentTime, eventHandles, priority, key, incomingMessage.ref);
+											invokeActions(currentTime, eventHandles, priority, receiverObject, incomingMessage.ref);
 										}
 									});
 								}
@@ -448,8 +446,8 @@ public class ConditionalEvents {
 		synchronized (messageQueue) {
 			messageQueue.clear();
 			
-			synchronized (conditionalEvents) {
-				conditionalEvents.clear();
+			synchronized (receivers) {
+				receivers.clear();
 			}
 		}
 		
@@ -566,12 +564,7 @@ public class ConditionalEvents {
 				message.reflection = stackElements[3];
 			}
 			
-			if (signal == Signal.showAreasProperties) {
-				j.log("ADDING %s", message.toString());
-			}
-			
 			messageQueue.add(message);
-			
 			Lock.notify(dispatchLock);
 		}
 	}
@@ -646,39 +639,38 @@ public class ConditionalEvents {
 
 	/**
 	 * Register new conditional event, the receiver of messages.
-	 * @param key - a key for conditional event
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition - either Signal or SignalType
 	 * @param messageLambda
-	 * @return - input key for action group
+	 * @return 
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda) {
+	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
+		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
 	}
 		
 	/**
 	 * Register new action for an event group.
-	 * @param key
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition
 	 * @param priority
 	 * @param messageLambda
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, int priority, Consumer<Message> messageLambda) {
+	public static Object receiver(Object receiverObject, EventCondition eventCondition, int priority, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		eventCondition.setPriority(priority);
-		return registerConditionalEvent(key, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
+		return registerReceiver(receiverObject, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
 	}
 	
 	/**
 	 * Register new conditional event, the receiver of messages.
-	 * @param key - a key for conditional event
+	 * @param receiverObject -reference to an object that receives events
 	 * @param eventConditions
 	 * @param messageLambda
-	 * @return - keys for action condition
+	 * @return
 	 */
-	public static Object [] receiver(Object key, EventCondition [] eventConditions, Consumer<Message> messageLambda) {
+	public static Object [] receiver(Object receiverObject, EventCondition [] eventConditions, Consumer<Message> messageLambda) {
 		
 		final long timeSpanMs = 500;
 		
@@ -690,7 +682,7 @@ public class ConditionalEvents {
 		for (int index = 0; index < count; index++) {
 			
 			EventCondition eventCondition = eventConditions[index];
-			outputKeys[index] = registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
+			outputKeys[index] = registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
 		}
 		
 		return outputKeys;
@@ -698,59 +690,59 @@ public class ConditionalEvents {
 	
 	/**
 	 * 
-	 * @param key - a key for conditional event
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition
 	 * @param messageLambda
 	 * @param timeSpanMs
-	 * @return - a key for action condition
+	 * @return
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs) {
+	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
+		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
 	}
 
 	/**
 	 * Register new conditional event, the receiver of messages.
-	 * @param key - a key for conditional event
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition
 	 * @param messageLambda
 	 * @param coalesceTimeSpanMs
 	 * @param identifier
-	 * @return - a key for action condition
+	 * @return
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
+	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, minDelayMessageCoalesceMs, identifier);
+		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, minDelayMessageCoalesceMs, identifier);
 	}
 	
 	/**
 	 * Register new action for an event group.
-	 * @param key - a key for conditional event
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition
 	 * @param messageLambda
 	 * @param timeSpanMs
 	 * @param identifier
-	 * @return - a key for action condition
+	 * @return
 	 */
-	public static Object receiver(Object key, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
+	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
 		
 		// Delegate the call.
-		return registerConditionalEvent(key, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, identifier);
+		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, identifier);
 	}
 	
 	/**
-	 * Register new conditional event for given condition.
-	 * @param key - a key for conditional event
+	 * Register new receiver for conditional events.
+	 * @param receiverObject - reference to an object that receives events
 	 * @param eventCondition
 	 * @param priority 
 	 * @param message
 	 * @param timeSpanMs
 	 * @param identifier 
-	 * @return a key for action group
+	 * @return 
 	 */
-	private static Object registerConditionalEvent(Object key, EventCondition eventCondition, int priority,
+	private static Object registerReceiver(Object receiverObject, EventCondition eventCondition, int priority,
 			Consumer<Message> message, Long timeSpanMs, String identifier) {
 		
 		// Get reflection info.
@@ -761,22 +753,22 @@ public class ConditionalEvents {
 		}
 		
 		// A lambda function that can register conditional event.
-		synchronized (conditionalEvents) {
+		synchronized (receivers) {
 		
-			// Create auxiliary table from the map.
-			ConditionalEventsAuxTable auxiliaryTable = ConditionalEventsAuxTable.createFrom(conditionalEvents);
+			// Create auxiliary table from current receivers.
+			ReceiversAuxiliaryTable receiversAuxiliaryTable = ReceiversAuxiliaryTable.createFrom(receivers);
 			
-			// Create new event handle, add new table record.
-			EventHandle eventHandle = new EventHandle(message, timeSpanMs, reflection.ref, identifier);
-			auxiliaryTable.addRecord(key, eventCondition, priority, eventHandle);
+			// Create new event handle and add new table record.
+			EventHandle eventHandle = new EventHandle(message, priority, timeSpanMs, reflection.ref, identifier);
+			receiversAuxiliaryTable.addReceiver(receiverObject, eventCondition, priority, eventHandle);
 			
-			// Retrieve sorted conditional events.
-			conditionalEvents = auxiliaryTable.retrieveSorted();
+			// Retrieve sorted list of registered receivers.
+			receivers = receiversAuxiliaryTable.retrieveSorted();
 		}
 		
 		// If the key is a Swing component, use automatic release of the event receiver when the component is removed.
-		if (key instanceof JComponent) {
-			JComponent component = (JComponent) key;
+		if (receiverObject instanceof JComponent) {
+			JComponent component = (JComponent) receiverObject;
 			
 			component.addAncestorListener(new AncestorListener() {
 				
@@ -789,7 +781,7 @@ public class ConditionalEvents {
 				// Release all listeners associated with the key.
 				@Override
 				public void ancestorRemoved(AncestorEvent event) {
-					ConditionalEvents.removeReceivers(key);
+					ConditionalEvents.removeReceivers(receiverObject);
 				}
 
 				@Override
@@ -800,7 +792,7 @@ public class ConditionalEvents {
 		}
 		
 		// Return key.
-		return key;
+		return receiverObject;
 	}
 	
 	/**
@@ -809,10 +801,10 @@ public class ConditionalEvents {
 	 */
 	public static void removeReceivers(Object key) {
 		
-		synchronized (conditionalEvents) {
+		synchronized (receivers) {
 			
 			// Remove conditional events for key.
-			conditionalEvents.remove(key);
+			receivers.remove(key);
 		}
 	}
 }

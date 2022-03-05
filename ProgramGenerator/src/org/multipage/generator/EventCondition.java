@@ -30,14 +30,4 @@ public interface EventCondition {
 	 * @return
 	 */
 	boolean matches(Message incomingMessage);
-
-	/**
-	 * Set priority.
-	 */
-	public void setPriority(int priority);
-	
-	/**
-	 * Get priority.
-	 */
-	public int getPriority() ;
 }

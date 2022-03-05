@@ -958,7 +958,7 @@ public class SlotListPanel extends JPanel {
 
 	/**
 	 * Select slot with start character sequence.
-	 * @param key
+	 * @param receiverObject
 	 */
 	protected void selectSlotWithCharacterSequence(String keySequence) {
 		

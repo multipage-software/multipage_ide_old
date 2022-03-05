@@ -85,7 +85,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class GeneratorMainFrame extends JFrame implements Updated {
+public class GeneratorMainFrame extends JFrame implements Update {
 
 	/**
 	 * Version.
@@ -714,8 +714,8 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 		// Receive the "update updateAreasModel" signal.
 		ConditionalEvents.receiver(this, Signal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
 			
-			// Check if the message is acceptable with receiving object.
-			if (!message.isAcceptableWith(GeneratorMainFrame.this)) {
+			// Check if the message determines itself. If so, avoid infinite loop of messages.
+			if (message.isSelfDetermined(GeneratorMainFrame.this)) {
 				return;
 			}
 			
@@ -1066,7 +1066,6 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 				
 				// Transmit event.
 				if (selectedAreaIds != null) {
-					j.log("TRANSMITTED 6 showAreasProperties %s", selectedAreaIds.toString());
 					ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showAreasProperties, selectedAreaIds);
 				}
 			}
@@ -1732,7 +1731,6 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 		
 		// Select all areas.
 		ConditionalEvents.transmit(this, Signal.selectAll);
-		j.log("TRANSMITTED 7 showAreasProperties %s", "");
 		// Show areas' properties.
 		ConditionalEvents.transmit(this, Signal.showAreasProperties);
 	}
@@ -1742,7 +1740,6 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 	 */
 	public void onUnselectAll() {
 		
-		j.log("TRANSMITTED 8 showAreasProperties %s", "");
 		// Unselect all areas.
 		ConditionalEvents.transmit(this, Signal.unselectAll);
 		// Show areas' properties.
@@ -1792,7 +1789,7 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 	 */
 	public void onUpdate() {
 		
-		Updated.update(Updated.GUI_GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
+		Update.run(Update.GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
 	}
 
 	/**
@@ -2976,7 +2973,7 @@ public class GeneratorMainFrame extends JFrame implements Updated {
 	protected void onTest() {
 		
 		// TODO: test the update statement.
-		Updated.update(Updated.GUI_GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
+		Update.run(Update.GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
 	}
 
 	/**

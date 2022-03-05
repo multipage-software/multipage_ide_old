@@ -9,6 +9,7 @@ package org.multipage.generator;
 
 import java.awt.Component;
 import java.awt.Window;
+import java.util.Objects;
 
 import org.multipage.gui.Utility;
 
@@ -23,41 +24,76 @@ public class EventSource {
 	 * Enumeration of sources.
 	 */
 	// Unknown event source.
-	public static final EventSource UNKNOWN = new EventSource();
+	public static final EventSource UNKNOWN = new EventSource("UNKNOWN");
 	// The Generator Main Frame source.
-	public static final EventSource GENERATOR_MAIN_FRAME = new EventSource();
+	public static final EventSource GENERATOR_MAIN_FRAME = new EventSource("GENERATOR_MAIN_FRAME");
 	// The Area Editor source.
-	public static final EventSource AREA_EDITOR = new EventSource();
+	public static final EventSource AREA_EDITOR = new EventSource("AREA_EDITOR");
 	// The Local Pop Up Menu source.
-	public static final EventSource LOCAL_POPUP_MENU = new EventSource();
+	public static final EventSource LOCAL_POPUP_MENU = new EventSource("LOCAL_POPUP_MENU");
 	// The Area Trace source.
-	public static final EventSource AREA_TRACE = new EventSource();
+	public static final EventSource AREA_TRACE = new EventSource("AREA_TRACE");
 	
 	/**
-	 * Basic source which is set to one of the above listed basic sources.
+	 * Name of the event source.
 	 */
-	private EventSource basicSource = null;
-	
-	/**
-	 * Reference to source object .
-	 */
-	private Object initiatorObject = null;
-	
+	private String name = null;
+		
 	/**
 	 * Flag that determines user direct event.
 	 */
 	private boolean userInitiated = false;
+		
+	/**
+	 * Reference to source object .
+	 */
+	private Object sourceObject = null;
 	
 	/**
-	 * Initiating message.
+	 * Source message.
 	 */
-	private Message initiatorMessage = null;
+	private Message sourceMessage = null;
+		
+	/**
+	 * Reference to previous event source that causes the event.
+	 */
+	private EventSource previousEventSource = null;
 	
 	/**
-	 * Reference to previous source that causes the event.
+	 * Basic event source which is set to one of the above listed basic constant sources.
 	 */
-	private EventSource previousSource = null;
+	private EventSource basicEventSource = null;
 	
+	/**
+	 * Constructor.
+	 */
+	public EventSource() {
+		
+	}
+	
+	/**
+	 * Constructor.
+	 * @param name
+	 */
+	public EventSource(String name) {
+		
+		this.name = name;
+	}
+	
+	/**
+	 * Get description of the event source.
+	 * @return
+	 */
+	public String getDescription() {
+		
+		String className = getClass().getSimpleName();
+		String sourceName = name != null ? name : "unknown";
+		String initiator = userInitiated ? "user" : "machine";
+		
+		String description = String.format("%s %s initiated by %s", className, sourceName, initiator);
+		return description;
+	}
+
 	/**
 	 * Clone new event source for user action.
 	 * @param initiatorObject
@@ -76,13 +112,13 @@ public class EventSource {
 	/**
 	 * Clone new event source for machine action.
 	 * @param initiatorObject
-	 * @param initiatorMessage
+	 * @param sourceMessage
 	 * @return
 	 */
 	public EventSource machineAction(Object initiatorObject, Message intiatorMessage) {
 		
 		// Clone the event source.
-		EventSource clonedEventSource = clone(initiatorObject, false, initiatorMessage);
+		EventSource clonedEventSource = clone(initiatorObject, false, sourceMessage);
 		
 		// Return cloned event source.
 		return clonedEventSource;
@@ -97,33 +133,51 @@ public class EventSource {
 	 */
 	public EventSource clone(Object initiatorObject, boolean userInitiated, Message intiatorMessage) {
 		
-		// Clone the event source.
+		// Create new the event source.
 		EventSource clonedEventSource = new EventSource();
 		
-		// Preserve basic source reference.
-		clonedEventSource.basicSource = basicSource;
-		
-		// Set initiator object.
-		clonedEventSource.initiatorObject = initiatorObject;
-		
+		// Set name.
+		clonedEventSource.name = name;
+				
 		// Set user initiation flag.
 		clonedEventSource.userInitiated = userInitiated;
 		
+		// Preserve basic source reference.
+		clonedEventSource.basicEventSource = basicEventSource;
+		
+		// Set initiator object.
+		clonedEventSource.sourceObject = initiatorObject;
+		
 		// Set initiating message.
-		clonedEventSource.initiatorMessage = intiatorMessage;
+		clonedEventSource.sourceMessage = intiatorMessage;
 		
 		// Return cloned event source.
 		return clonedEventSource;
 	}
 	
 	/**
-	 * Check if the receiving object is acceptable with the event source.
-	 * @param receivingObject
+	 * Check if input object equals to this event source.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		EventSource other = (EventSource) obj;
+		return Objects.equals(basicEventSource, other.basicEventSource)
+				&& Objects.equals(sourceMessage, other.sourceMessage)
+				&& Objects.equals(sourceObject, other.sourceObject) && userInitiated == other.userInitiated;
+	}
+
+	/**
+	 * Get initiator message.
 	 * @return
 	 */
-	public boolean isAcceptableWith(Object receivingObject) {
+	public Message getInitiatorMessage() {
 		
-		// TODO: use appropriate rules to avoid messages' infinite loops.
-		return false;
+		return sourceMessage;
 	}
 }

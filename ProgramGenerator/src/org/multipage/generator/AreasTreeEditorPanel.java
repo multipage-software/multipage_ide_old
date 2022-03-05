@@ -59,7 +59,6 @@ import org.maclan.Area;
 import org.maclan.AreasModel;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.GraphUtility;
-import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
@@ -74,7 +73,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Updated  {
+public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Update  {
 	
 	/**
 	 * Version.
@@ -866,7 +865,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				
 				onSelectedListItem();
 				
-				j.log("TRANSMITTED 10 showAreasProperties %s", selectedListAreaIds.toString());
 		    	// Propagate the "show areas' properties" event.
 		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, Signal.showAreasProperties, selectedListAreaIds);
 			}
@@ -875,8 +873,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		// "Update all request" event receiver.
 		ConditionalEvents.receiver(this, Signal.updateAreasTreeEditor, message -> {
 			
-			// Check if the message is acceptable with receiving object.
-			if (!message.isAcceptableWith(AreasTreeEditorPanel.this)) {
+			// Check if the message determines itself. If so, avoid infinite loop of messages.
+			if (message.isSelfDetermined(AreasTreeEditorPanel.this)) {
 				return;
 			}
 			
@@ -1468,9 +1466,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				// Restore selection.
 				list.setSelectedIndices(selectedIndices);
 			}
-			
-			// Transmit the "update all" signal.
-			ConditionalEvents.transmit(this, Signal.updateAll);
 		});
 	}
 	

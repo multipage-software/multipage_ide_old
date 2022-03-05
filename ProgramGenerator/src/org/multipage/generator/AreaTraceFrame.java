@@ -1015,7 +1015,7 @@ public class AreaTraceFrame extends JFrame {
 	private void onUpdate() {
 		
 		// Update GUI components with areas.
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_TRACE.userAction(this, null));
+		Update.run(Update.GROUP_AREAS, EventSource.AREA_TRACE.userAction(this, null));
 	}
 	
 	/**

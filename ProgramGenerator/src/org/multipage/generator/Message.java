@@ -41,8 +41,8 @@ public class Message {
 	// Receive time.
 	public Long receiveTime;
 	
-	// Event handler key.
-	public Object key;
+	// Reference to the object that receives the message.
+	public Object receiverObject;
 	
 	/**
 	 * Dump message.
@@ -335,23 +335,27 @@ public class Message {
 	}
 	
 	/**
-	 * Check if the receiving object is acceptable with this message.
+	 * Check if the message determines itself.
 	 * @param receivingObject
 	 * @return
 	 */
-	public boolean isAcceptableWith(Object receivingObject) {
+	public boolean isSelfDetermined(Object receivingObject) {
 		
 		// Initialize output value.
-		boolean isAcceptable = false;
+		boolean isSelfDetermined = false;
 		
 		// Try to get event source.
 		if (source instanceof EventSource) {
 			
-			// Delegate the call.
+			// Get event source..
 			EventSource eventSource = (EventSource) source;
-			isAcceptable = eventSource.isAcceptableWith(receivingObject);
+			
+			// Get the initiator message.
+			Message initiatorMessage = eventSource.getInitiatorMessage();
+			
+			// TODO: match this message with previous messages.
 		}
 		
-		return isAcceptable;
+		return isSelfDetermined;
 	}
 }

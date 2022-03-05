@@ -129,9 +129,6 @@ public class ProgramGenerator {
 		// Create areas model.
 		areasModel = new AreasModel();
 		
-		// Initialize a map that maps update group to the list of signals.
-		Updated.initialize();
-		
 		return true;
 	}
 	

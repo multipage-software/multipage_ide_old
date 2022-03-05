@@ -321,11 +321,6 @@ public enum Signal implements EventCondition {
 	private HashSet<SignalType> includedInTypes = new HashSet<SignalType>();
 	
 	/**
-	 * Priority of the signal.
-	 */
-	private int priority = ConditionalEvents.MIDDLE_PRIORITY;
-	
-	/**
 	 * Enable or disable this signal.
 	 */
 	private boolean enabled = true;
@@ -429,24 +424,6 @@ public enum Signal implements EventCondition {
 		Signal signal = incomingMessage.signal;
 		boolean matches = this.equals(signal);
 		return matches;
-	}
-	
-	/**
-	 * Set priority.
-	 */
-	@Override
-	public void setPriority(int priority) {
-		
-		this.priority = priority;
-	}
-	
-	/**
-	 * Get priority.
-	 */
-	@Override
-	public int getPriority() {
-		
-		return priority;
 	}
 	
 	/**

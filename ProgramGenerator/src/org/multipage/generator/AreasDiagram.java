@@ -63,7 +63,7 @@ import org.multipage.util.j;
  * @author
  *
  */
-public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Updated {
+public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Update {
 
 	/**
 	 * Version.
@@ -333,8 +333,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		// Receive the "update areas' diagram" signal.
 		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAreasDiagram), message -> {
 			
-			// Check if the message is acceptable with receiving object.
-			if (!message.isAcceptableWith(AreasDiagram.this)) {
+			// Check if the message determines itself. If so, avoid infinite loop of messages.
+			if (message.isSelfDetermined(AreasDiagram.this)) {
 				return;
 			}
 			
@@ -361,7 +361,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				// Get selected area IDs.
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
-				j.log("TRANSMITTED 2 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
@@ -378,7 +377,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				// Get selected area IDs.
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
-				j.log("TRANSMITTED 1 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
@@ -493,7 +491,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 					selectRecursive(area, true, false);
 				}
 				
-				j.log("TRANSMITTED 3 showAreasProperties %s", selectedIds.toString());
 				// Propagate the "show areas' properties" signal.
 				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.

@@ -13,8 +13,6 @@ import java.util.HashSet;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
-import org.multipage.util.j;
-
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
@@ -27,7 +25,7 @@ import javafx.scene.web.WebView;
  * @author user
  *
  */
-public class MonitorPanel extends Panel implements TabItemInterface, Updated {
+public class MonitorPanel extends Panel implements TabItemInterface, Update {
 
 	/**
 	 * Version
@@ -151,8 +149,8 @@ public class MonitorPanel extends Panel implements TabItemInterface, Updated {
 		// The "update all" request receiver.
 		ConditionalEvents.receiver(this, Signal.updateMonitorPanel, message -> {
 			
-			// Check if the message is acceptable with receiving object.
-			if (!message.isAcceptableWith(MonitorPanel.this)) {
+			// Check if the message determines itself. If so, avoid infinite loop of messages.
+			if (message.isSelfDetermined(MonitorPanel.this)) {
 				return;
 			}
 			

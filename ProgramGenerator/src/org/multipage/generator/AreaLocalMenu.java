@@ -462,7 +462,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -944,7 +944,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -960,7 +960,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**
@@ -975,7 +975,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
 
 	/**

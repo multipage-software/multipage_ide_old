@@ -481,7 +481,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Update GUI components with areas.
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
+		Update.run(Update.GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
 	}
 
 	/**
@@ -493,7 +493,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Update GUI components with areas.
-		Updated.update(Updated.GUI_GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
+		Update.run(Update.GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
 
 		// Save dialog.
 		saveDialog();

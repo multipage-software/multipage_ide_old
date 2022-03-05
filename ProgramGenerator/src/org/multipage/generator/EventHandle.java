@@ -19,6 +19,11 @@ class EventHandle {
 	public Consumer<Message> action;
 	
 	/**
+	 * Priority of the event handle.
+	 */
+	public Integer priority;
+	
+	/**
 	 * Time span in milliseconds for coalescing the same messages. They do not trigger the action.
 	 */
 	public Long coalesceTimeSpanMs;
@@ -35,11 +40,6 @@ class EventHandle {
 	public String identifier;
 	
 	/**
-	 * A priority of the event handle. For debugging purposes.
-	 */
-	public Integer priority;
-	
-	/**
 	 * An event handle key. For debugging purposes.
 	 */
 	public Object key;
@@ -47,14 +47,16 @@ class EventHandle {
 	/**
 	 * Constructor.
 	 * @param action
+	 * @param priority 
 	 * @param eventPriority 
 	 * @param timeSpanMs
 	 * @param reflection
 	 * @param identifier
 	 */
-	EventHandle(Consumer<Message> action, Long timeSpanMs, StackTraceElement reflection, String identifier) {
+	EventHandle(Consumer<Message> action, int priority, Long timeSpanMs, StackTraceElement reflection, String identifier) {
 		
 		this.action = action;
+		this.priority = priority;
 		this.coalesceTimeSpanMs = timeSpanMs;
 		this.reflection = reflection;
 		this.identifier = identifier;
