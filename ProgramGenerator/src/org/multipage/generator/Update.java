@@ -107,7 +107,7 @@ public interface Update {
 			}
 			
 			// TODO: log transmitted signals.
-			LoggingDialog.log("TRASMITTED SIGNAL %s", signal);
+			LoggingDialog.log("TRASMITTED SIGNAL %s (BY USER)", signal);
 			
 			// Transmit signal.
 			ConditionalEvents.transmit(eventSource, signal);

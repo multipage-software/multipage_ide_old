@@ -534,7 +534,7 @@ public class StateSerializer {
 		stateInputStream = openStateInputStream(settingsFileName);
 		if (stateInputStream != null) {
 			
-			j.log("Loading application settings form \"%s\"", settingsFileName);
+			j.log("Loading application settings from \"%s\"", settingsFileName);
 			try {
 				// Do loop for all known listeners. Invoke events that can read the settings.
 				for (SerializeStateAdapter listener : serializeStateListenersRef) {

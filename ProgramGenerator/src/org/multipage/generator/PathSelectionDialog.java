@@ -239,8 +239,8 @@ public class PathSelectionDialog extends JDialog {
 	 */
 	private void loadPaths(Area area) {
 		
-		GeneratorUtilities.loadProgramPaths(comboBoxPaths);
-		GeneratorUtilities.loadAreaPaths(comboBoxPaths, area);
+		GeneratorUtility.loadProgramPaths(comboBoxPaths);
+		GeneratorUtility.loadAreaPaths(comboBoxPaths, area);
 	}
 	
 	/**

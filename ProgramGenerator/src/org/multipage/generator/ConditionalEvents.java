@@ -122,7 +122,7 @@ public class ConditionalEvents {
 	private static Lock dispatchLock = new Lock();
 	
 	/**
-	 * Surviving messages needed for coalesce of the same messages in given time span.
+	 * Surviving messages needed for coalescing of same messages in given period of time.
 	 * ( Expiration time -> Message )
 	 */
 	private static LinkedHashMap<Long, Message> survivingMessages = new LinkedHashMap<Long, Message>();
@@ -387,7 +387,7 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Let survive the input message till expiration time.
+	 * Let survive the input message till the expiration time.
 	 * @param message
 	 * @param expirationTime
 	 */
@@ -428,7 +428,7 @@ public class ConditionalEvents {
 		// Initialization.
 		HashSet<Long> expirationsToRemove = new HashSet<Long>();
 		
-		// Find expired time keys.
+		// Find expired time points.
 		survivingMessages.entrySet().stream()
 			.filter(item -> item.getKey() < currentTime)
 			.forEach(item -> expirationsToRemove.add(item.getKey()));

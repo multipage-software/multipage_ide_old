@@ -9,7 +9,9 @@ package org.multipage.generator;
 
 import java.awt.Component;
 import java.awt.Window;
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -65,8 +67,10 @@ public class ProgramGenerator {
 	 */
 	private static ExtensionToBuilder extensionToBuilder = null;
 	
-	
-	private static ExtensionToBuilder extensionToDynamic;
+	/**
+	 * Extension to system of conditional events.
+	 */
+	private static ExtensionToBuilder extensionToDynamic = null;
 	
 	/**
 	 * Application state serializer.
@@ -140,7 +144,7 @@ public class ProgramGenerator {
 		
 		GeneratorMainFrame.setDefaultData();
 		Settings.setDefaultData();
-		GeneratorUtilities.setDefaultData();
+		GeneratorUtility.setDefaultData();
 		AreasDiagram.setDefaultData();
 		SplitProperties.setDefaultData();
 		CustomizedControls.setDefaultData();
@@ -196,7 +200,7 @@ public class ProgramGenerator {
 		
 		GeneratorMainFrame.serializeData(inputStream);
 		Settings.serializeData(inputStream);
-		GeneratorUtilities.serializeData(inputStream);
+		GeneratorUtility.serializeData(inputStream);
 		AreasDiagram.seriliazeData(inputStream);
 		SplitProperties.seriliazeData(inputStream);
 		CustomizedControls.seriliazeData(inputStream);
@@ -257,7 +261,7 @@ public class ProgramGenerator {
 		
 		GeneratorMainFrame.serializeData(outputStream);
 		Settings.serializeData(outputStream);
-		GeneratorUtilities.serializeData(outputStream);
+		GeneratorUtility.serializeData(outputStream);
 		AreasDiagram.serializeData(outputStream);
 		SplitProperties.serializeData(outputStream);
 		CustomizedControls.serializeData(outputStream);
@@ -316,6 +320,42 @@ public class ProgramGenerator {
 		
 		return String.format(Resources.getString("org.multipage.generator.textMainFrameCaption"), BuildNumber.getVersion(), 
 				ProgramGenerator.class.getSuperclass().getName().equals("GeneratorFullMain") ? "Network" : "Standalone");
+	}
+	
+	/**
+	 * Get application JAR file or its directory.
+	 * @return
+	 */
+	public static File getApplicationFileOrDirectory() {
+		
+		// Get application path.
+		URL applicationUrl = Utility.class.getProtectionDomain().getCodeSource().getLocation();
+		String applicationPathName = applicationUrl.getPath();
+		File auxiliaryFile = new File(applicationPathName);
+		
+		// If the path is a directory
+		if (!auxiliaryFile.exists()) {
+			return null;
+		}
+		
+		if (auxiliaryFile.isDirectory()) {
+			
+			// To get application folder, Remove tail components of the path.
+			URL generatorMainClassUrl = Utility.class.getProtectionDomain().getCodeSource().getLocation();
+			String generatorMainClassName = generatorMainClassUrl.getPath();
+			File generatorMainClassFile = new File(generatorMainClassName);
+			generatorMainClassName = generatorMainClassFile.toString();
+			String applicationRootPath = generatorMainClassName.replace(File.separator + "ProgramGenerator" + File.separator + "bin", "");
+			return new File(applicationRootPath);
+		}
+		else if (auxiliaryFile.isFile()) {
+			
+			// Get application JAR file.
+			String applicationJarPath = auxiliaryFile.toString();
+			return new File(applicationJarPath);
+		}
+		
+		return null;
 	}
 
 	/**

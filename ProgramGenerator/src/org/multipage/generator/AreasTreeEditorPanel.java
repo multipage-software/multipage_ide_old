@@ -873,8 +873,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		// "Update all request" event receiver.
 		ConditionalEvents.receiver(this, Signal.updateAreasTreeEditor, message -> {
 			
-			// Check if the message determines itself. If so, avoid infinite loop of messages.
-			if (message.isSelfDetermined(AreasTreeEditorPanel.this)) {
+			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
+			if (message.isRepeatingIn(AreasTreeEditorPanel.this, previousMessage -> true)) {
 				return;
 			}
 			

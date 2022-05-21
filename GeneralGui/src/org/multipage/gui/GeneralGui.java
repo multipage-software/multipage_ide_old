@@ -8,6 +8,8 @@
 package org.multipage.gui;
 
 import java.io.IOException;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.swing.UIManager;
 
@@ -28,6 +30,13 @@ public class GeneralGui {
 	 * Application state serializer.
 	 */
 	private static StateSerializer serializer;
+	
+	/**
+	 * Log lambda functions.
+	 */
+	private static Supplier<Boolean> canLogLambda = null;
+	private static Consumer<String> logLambda = null;
+	private static Runnable logInvolveUserLambda = null;
 	
 	/**
 	 * Get state serializer
@@ -248,5 +257,67 @@ public class GeneralGui {
 		AnchorDialog.serializeData(outputStream);
 		HelpDialog.serializeData(outputStream);
 		CssResourcesUrlsPanel.serializeData(outputStream);
+	}
+	
+	/**
+	 * Set "can log" lambda function.
+	 * @param canLogLambda
+	 */
+	public static void setCanLogLambda(Supplier<Boolean> canLogLambda) {
+		
+		GeneralGui.canLogLambda = canLogLambda;
+	}
+	
+	/**
+	 * Set logging lambda function.
+	 * @param logLambda
+	 */
+	public static void setLogLambda(Consumer<String> logLambda) {
+		
+		GeneralGui.logLambda = logLambda;
+	}
+	
+	/**
+	 * Set a lambda function that enables user actions in the logging process.
+	 * @param logInvolveUserLambda
+	 */
+	public static void setLogInvolveUserLambda(Runnable logInvolveUserLambda) {
+		
+		GeneralGui.logInvolveUserLambda = logInvolveUserLambda;
+	}
+	
+	/**
+	 * Log text.
+	 */
+	public static void log(String logText) {
+		
+		if (logLambda != null) {
+			logLambda.accept(logText);
+		}
+	}
+	
+	/**
+	 * Log parameterized text.
+	 */
+	public static void log(String logText, Object ... textParameters) {
+		
+		if (logLambda != null) {
+			
+			if (textParameters.length > 0) {
+				logText = String.format(logText, textParameters);
+			}
+			
+			logLambda.accept(logText);
+		}
+	}
+	
+	/**
+	 * Involve user action in the logging process.
+	 */
+	public static void logInvolveUser() {
+		
+		if (logInvolveUserLambda != null) {
+			logInvolveUserLambda.run();
+		}
 	}
 }

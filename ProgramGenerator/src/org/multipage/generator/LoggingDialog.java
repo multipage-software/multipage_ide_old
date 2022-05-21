@@ -67,6 +67,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
+import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.StateInputStream;
@@ -131,19 +132,19 @@ public class LoggingDialog extends JDialog {
 	private static boolean omitChooseSignals = true;
 
 	/**
-	 * Queue limit.
-	 */
-	private static int queueLimit = 20;
-
-	/**
 	 * Message limit.
 	 */
-	private static int logLimit = 20;
-
+	public static int logLimit = 20;
+	
+	/**
+	 * Queue limit.
+	 */
+	public static int queueLimit = 20;
+	
 	/**
 	 * Limit of logged events.
 	 */
-	private static int eventLimit = 30;
+	public static int eventLimit = 30;
 
 	/**
 	 * Bounds.
@@ -309,15 +310,15 @@ public class LoggingDialog extends JDialog {
 	private static int messageQueueSnapshotsDividerNumber = 0;
 	
 	/**
-	 * Events divider number.
+	 * Message queue divider number.
 	 */
 	private static int eventsDividerNumber = 0;
 
 	/**
-	 * Logged events. Maps: Signal -> Message -> Execution time -> Event
+	 * Logged events. Maps: Signal or a textual divider between signals -> Message -> Execution time -> Event
 	 */
 	private static LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>> events = new LinkedHashMap<Signal, LinkedHashMap<Message, LinkedHashMap<Long, LinkedList<LoggedEvent>>>>();
-
+	
 	/**
 	 * Omitted signals.
 	 */
@@ -392,6 +393,11 @@ public class LoggingDialog extends JDialog {
 		ProgramHelp.setCanLogLambda(() -> isLoggingEnabled());
 		ProgramHelp.setLogLambda(text -> log(text));
 		ProgramHelp.setLogInvolveUserLambda(() -> LoggingDialog.involveUserAction());
+		
+		// Attach general GUI functions module.
+		GeneralGui.setCanLogLambda(() -> isLoggingEnabled());
+		GeneralGui.setLogLambda(text -> log(text));
+		GeneralGui.setLogInvolveUserLambda(() -> LoggingDialog.involveUserAction());
 
 		// If the following flag was set, open the dialog.
 		if (openedWhenInitialized) {
@@ -761,7 +767,7 @@ public class LoggingDialog extends JDialog {
 		listBreakPoints = new JList();
 		scrollPaneBreakPoints.setViewportView(listBreakPoints);
 	}
-
+	
 	/**
 	 * Post creation.
 	 */
@@ -795,6 +801,8 @@ public class LoggingDialog extends JDialog {
 				"org.multipage.generator.tooltipLogBreakItems", () -> onBreakMessages());
 		ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/clear.png",
 				"org.multipage.generator.tooltipLogClearItems", () -> onClearMessages());
+		ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/settings.png",
+				"org.multipage.generator.tooltipLogSettings", () -> onLogSettings());
 		toolBarLog.addSeparator();
 		ToolBarKit.addToolBarButton(toolBarLog, "org/multipage/generator/images/divider.png",
 				"org.multipage.generator.tooltipLogAddDivider", () -> onPrinTextDivider());
@@ -806,7 +814,7 @@ public class LoggingDialog extends JDialog {
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/close_all.png",
 				"org.multipage.generator.tooltipClearLoggedQueues", () -> onClearQueues());
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/settings.png",
-				"org.multipage.generator.tooltipLoggedQueuesSettings", () -> onLogSettings());
+				"org.multipage.generator.tooltipLogSettings", () -> onLogSettings());
 		toolBarMessageQueue.addSeparator();
 		ToolBarKit.addToolBarButton(toolBarMessageQueue, "org/multipage/generator/images/divider.png",
 				"org.multipage.generator.tooltipLogAddDivider", () -> onMessagesDivider());
@@ -816,12 +824,15 @@ public class LoggingDialog extends JDialog {
 				"org.multipage.generator.tooltipClearLoggedEvents", () -> onClearEvents());
 		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/settings.png",
 				"org.multipage.generator.tooltipLoggedEventsSettings", () -> onLogSettings());
+		toolBarEvents.addSeparator();
+		ToolBarKit.addToolBarButton(toolBarEvents, "org/multipage/generator/images/divider.png",
+				"org.multipage.generator.tooltipLogAddDivider", () -> onEventsDivider());
 
 		// A tool bar for break points.
 		ToolBarKit.addToolBarButton(toolBarBreakPoints, "org/multipage/generator/images/close_all.png",
 				"org.multipage.generator.tooltipClearLogBreakPoints", () -> onClearBreakPoints());
 	}
-
+	
 	/**
 	 * Localize components.
 	 */
@@ -948,6 +959,17 @@ public class LoggingDialog extends JDialog {
 
 		logMessagesDivider();
 	}
+	
+	/**
+	 * Print divider after currently displayed event.
+	 * 
+	 * @return
+	 */
+	private void onEventsDivider() {
+		
+		logEventsDivider();
+	}
+
 	
 	/**
 	 * Apply dialog state to GUI controls.
@@ -1490,7 +1512,7 @@ public class LoggingDialog extends JDialog {
 
 		// Add new message.
 		LoggedMessage log = new LoggedMessage(logText);
-
+		
 		if (!LoggingDialog.logList) {
 			logTexts.clear();
 		}
@@ -1526,11 +1548,29 @@ public class LoggingDialog extends JDialog {
 			
 			// Add new divider. The key name for divider should be unique, so append
 			// current number of dividers after the divider keyword. Than increase the number.
-			String keyText = "divider" + String.valueOf(messageQueueSnapshotsDividerNumber++);
-			messageQueueSnapshots.put(keyText, null);
+			String divederText = "divider" + String.valueOf(messageQueueSnapshotsDividerNumber++);
+			messageQueueSnapshots.put(divederText, null);
 			
 			// Update the tree view.
 			updateMessageQueueTree();
+		}
+	}
+	
+	/**
+	 * Add new divider after currently displayed events.
+	 */
+	private void logEventsDivider() {
+		
+		synchronized (events) {
+			
+			// Add new divider message. The divider should be unique, so append
+			// current number of dividers after the divider keyword. Than increase the number.
+			Message dividerMessage = new Message();
+			dividerMessage.relatedInfo = "divider" + String.valueOf(eventsDividerNumber++);
+			events.forEach((signal, messages) -> messages.put(dividerMessage, null));
+			
+			// Update the tree view.
+			updateEventTree();
 		}
 	}
 	
@@ -1578,7 +1618,7 @@ public class LoggingDialog extends JDialog {
 
 		synchronized (events) {
 
-			// Delegate the call.
+			// Delegate the call to addMessage(...).
 			addMessage(incomingMessage);
 		}
 	}
@@ -2032,9 +2072,18 @@ public class LoggingDialog extends JDialog {
 				// Create message nodes.
 				if (messageMap != null) {
 					messageMap.forEach((message, executionTimeMap) -> {
+						
+						// Check if the message is just a divider.
+						boolean isDivider = false;
+						if (message.signal == null && message.relatedInfo instanceof String) {
+							
+							// Check if the message is a divider.
+							String relatedInfo = (String) message.relatedInfo;
+							isDivider = relatedInfo.startsWith("divider");
+						}
 
 						// Add message node.
-						DefaultMutableTreeNode messageNode = new DefaultMutableTreeNode(message);
+						DefaultMutableTreeNode messageNode = new DefaultMutableTreeNode(isDivider ? divider : message);
 						signalNode.add(messageNode);
 
 						// Create execution time nodes.
@@ -2058,7 +2107,8 @@ public class LoggingDialog extends JDialog {
 									});
 								}
 							});
-						} else {
+						}
+						else if (!isDivider) {
 							// Informative node.
 							DefaultMutableTreeNode auxNode = new DefaultMutableTreeNode("DROPPED OR COALESCED");
 							messageNode.add(auxNode);

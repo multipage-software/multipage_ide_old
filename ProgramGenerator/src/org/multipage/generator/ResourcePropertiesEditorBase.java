@@ -191,7 +191,7 @@ public class ResourcePropertiesEditorBase extends JDialog {
 			
 			if (file.ref == null) {
 				// Select file.
-			    file.ref = GeneratorUtilities.chooseFileAndSaveMethod(parentComponent,
+			    file.ref = GeneratorUtility.chooseFileAndSaveMethod(parentComponent,
 			    		saveAsText, encoding);
 			    if (file.ref == null) {
 			    	return false;
@@ -246,7 +246,7 @@ public class ResourcePropertiesEditorBase extends JDialog {
 			
 			if (file.ref == null) {
 				// Select file.
-				file.ref = GeneratorUtilities.chooseFileAndSaveMethod(parentComponent,
+				file.ref = GeneratorUtility.chooseFileAndSaveMethod(parentComponent,
 				    	saveAsText, encoding);
 				if (file.ref == null) {
 					return false;
@@ -382,10 +382,10 @@ public class ResourcePropertiesEditorBase extends JDialog {
 		// Initialize MIME types.
 		long mimeTypeId = resource.getMimeTypeId();
 		if (mimeTypeId == 0L) {
-			GeneratorUtilities.loadMimeAndSelect(resource.getDescription(), comboBoxMime);
+			GeneratorUtility.loadMimeAndSelect(resource.getDescription(), comboBoxMime);
 		}
 		else {
-			GeneratorUtilities.loadMimeAndSelect(mimeTypeId, comboBoxMime);
+			GeneratorUtility.loadMimeAndSelect(mimeTypeId, comboBoxMime);
 		}
 		Object originalMimeTypeObject = comboBoxMime.getSelectedItem();
 		if (originalMimeTypeObject != null) {
@@ -529,7 +529,7 @@ public class ResourcePropertiesEditorBase extends JDialog {
 	protected void onLoadData() {
 
 		// Choose file and save method.
-		file.ref = GeneratorUtilities.chooseFileAndSaveMethod(parentWindow,
+		file.ref = GeneratorUtility.chooseFileAndSaveMethod(parentWindow,
 				saveAsText, encoding);
 		
 		if (file.ref == null) {
@@ -537,7 +537,7 @@ public class ResourcePropertiesEditorBase extends JDialog {
 		}
 		
 		// Set MIME type.
-		GeneratorUtilities.loadMimeAndSelect(file.ref.getName(), comboBoxMime);
+		GeneratorUtility.loadMimeAndSelect(file.ref.getName(), comboBoxMime);
 		// Set file.
 		setFileLabel();
 		// Enable clear button.
@@ -661,7 +661,7 @@ public class ResourcePropertiesEditorBase extends JDialog {
 	 */
 	private void selectMimeType(MimeType mimeType) {
 
-		GeneratorUtilities.selectMime(comboBoxMime, mimeType);
+		GeneratorUtility.selectMime(comboBoxMime, mimeType);
 	}
 	
 	/**
@@ -673,14 +673,14 @@ public class ResourcePropertiesEditorBase extends JDialog {
 		if (mimeType == null) {
 			
 			if (originalMimeType != null) {
-				GeneratorUtilities.loadMimeAndSelect(originalMimeType.getId(), comboBoxMime);
+				GeneratorUtility.loadMimeAndSelect(originalMimeType.getId(), comboBoxMime);
 			}
 			else {
-				GeneratorUtilities.loadMimeAndSelect(resource.getDescription(), comboBoxMime);
+				GeneratorUtility.loadMimeAndSelect(resource.getDescription(), comboBoxMime);
 			}
 			return;
 		}
 		
-		GeneratorUtilities.loadMimeAndSelect(mimeType.getId(), comboBoxMime);
+		GeneratorUtility.loadMimeAndSelect(mimeType.getId(), comboBoxMime);
 	}
 }

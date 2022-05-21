@@ -225,7 +225,7 @@ public class UserSlotInput extends JDialog {
 	 */
 	private void loadTypes() {
 		
-		GeneratorUtilities.loadSlotTypesCombo(comboSlotType);
+		GeneratorUtility.loadSlotTypesCombo(comboSlotType);
 		
 		comboSlotType.setSelectedItem(SlotType.TEXT);
 	}

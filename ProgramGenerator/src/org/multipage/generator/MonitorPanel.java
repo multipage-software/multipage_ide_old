@@ -149,8 +149,8 @@ public class MonitorPanel extends Panel implements TabItemInterface, Update {
 		// The "update all" request receiver.
 		ConditionalEvents.receiver(this, Signal.updateMonitorPanel, message -> {
 			
-			// Check if the message determines itself. If so, avoid infinite loop of messages.
-			if (message.isSelfDetermined(MonitorPanel.this)) {
+			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
+			if (message.isRepeatingIn(MonitorPanel.this, previousMessage -> true)) {
 				return;
 			}
 			

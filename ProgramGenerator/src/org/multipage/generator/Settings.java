@@ -7,6 +7,8 @@
 
 package org.multipage.generator;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -15,24 +17,40 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JSlider;
+import javax.swing.JTabbedPane;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.maclan.MiddleUtility;
 import org.maclan.server.DebugListener;
 import org.maclan.server.ProgramServlet;
+import org.multipage.addinloader.AddInLoader;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
+import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
@@ -53,6 +71,18 @@ public class Settings extends JDialog {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * Show tab constants.
+	 */
+	public static final int NOT_SET = -1;
+	public static final int GENERAL = 0;
+	public static final int ADD_INS = 1;
+	
+	/**
+	 * Settings dialog singleton.
+	 */
+	private static Settings dialog = null;
+	
+	/**
 	 * Settings.
 	 */
 	private static String resourcesRenderFolder;
@@ -62,6 +92,7 @@ public class Settings extends JDialog {
 	private static int httpPortNumber;
 	private static boolean commonResourceFileNames;
 	private static boolean enableDebugging = false;
+	private static double animationDuration;
 	
 	/**
 	 * Set maximum text resource size.
@@ -131,6 +162,7 @@ public class Settings extends JDialog {
 		httpPortNumber = 8080;
 		commonResourceFileNames = false;
 		enableDebugging = false;
+		animationDuration = 3.0;
 	}
 
 	/**
@@ -150,8 +182,9 @@ public class Settings extends JDialog {
 		//MiddleUtility.webInterfaceDir = "";
 		//MiddleUtility.databaseAccess = "";
 		commonResourceFileNames = false;
+		sliderAnimationDuration.setValue((int) animationDuration);
 	}
-
+	
 	/**
 	 * Read state.
 	 * @param inputStream
@@ -172,6 +205,7 @@ public class Settings extends JDialog {
 		commonResourceFileNames = inputStream.readBoolean();
 		enableDebugging = inputStream.readBoolean();
 		setEnableDebugging(false);  // This command sets a listener for servlet
+		animationDuration = inputStream.readDouble();
 	}
 
 	/**
@@ -190,10 +224,11 @@ public class Settings extends JDialog {
 		outputStream.writeInt(httpPortNumber);
 		outputStream.writeBoolean(commonResourceFileNames);
 		outputStream.writeBoolean(enableDebugging);
+		outputStream.writeDouble(animationDuration);
 	}
 
 	/**
-	 * Set deafult data.
+	 * Set default data.
 	 */
 	public static void setDefaultData() {
 
@@ -204,30 +239,36 @@ public class Settings extends JDialog {
 	 * Dialog components.
 	 */
 	private JButton buttonCancel;
+	private JButton buttonOk;
+	private JButton buttonDefaults;
+	private JTabbedPane tabbedPane;
+	private JLabel labelWebInterfaceDirectory;
+	private TextFieldEx textWebInterfaceDirectory;
+	private JLabel labelPhpEngineDirectory;
+	private TextFieldEx textPhpEngineDirectory;
+	private JButton buttonPhpEngine;
+	private JLabel labelHttpPortNumer;
+	private TextFieldEx textPortNumber;
+	private JLabel labelResourcesRenderFolder;
+	private TextFieldEx textResourcesRenderFolder;
+	private JCheckBox checkCommonResourceFileNames;
+	private JLabel labelAnimationDuration;
+	private JSlider sliderAnimationDuration;
+	private JSeparator separator;
 	private JLabel labelMaxSizeOfTextResource;
 	private TextFieldEx textMaxTextResourceSize;
-	private JButton buttonOk;
 	private JLabel labelBytes;
-	private JButton buttonDefaults;
 	private JLabel labelIndexExtractLength;
 	private TextFieldEx textExtractCharacters;
 	private JLabel labelCharacters;
 	private JCheckBox checkRemovePartiallyRenderedPages;
-	private JLabel labelHttpPortNumer;
-	private JSeparator separator;
-	private TextFieldEx textPortNumber;
-	private TextFieldEx textWebInterfaceDirectory;
-	private JLabel labelWebInterfaceDirectory;
-	private JCheckBox checkCommonResourceFileNames;
-	private JLabel labelResourcesRenderFolder;
-	private TextFieldEx textResourcesRenderFolder;
-	private JButton buttonWebInterface;
 	private JLabel labelDatabaseAccess;
 	private TextFieldEx textDatabaseAccess;
 	private JButton buttonDatabaseAccess;
-	private JLabel labelPhpEngineDirectory;
-	private TextFieldEx textPhpEngineDirectory;
-	private JButton buttonPhpEngine;
+	private JButton buttonWebInterface;
+	private JButton buttonResourcesFolder;
+	private JMenuItem menuLoadAddIn;
+	private JMenuItem menuRemoveAddIn;
 
 	/**
 	 * Load dialog.
@@ -242,6 +283,7 @@ public class Settings extends JDialog {
 		textDatabaseAccess.setText(MiddleUtility.getDatabaseAccess());
 		textPhpEngineDirectory.setText(MiddleUtility.getPhpDirectory());
 		checkCommonResourceFileNames.setSelected(commonResourceFileNames);
+		sliderAnimationDuration.setValue((int) animationDuration);
 		
 		try {
 			textWebInterfaceDirectory.setText(MiddleUtility.getWebInterfaceDirectory());
@@ -404,24 +446,43 @@ public class Settings extends JDialog {
 			Utility.show(this, "org.multipage.generator.messageRestartApplication");
 		}
 		
+		// Get current value of animation duration.
+		animationDuration = (int) sliderAnimationDuration.getValue();
+		
 		return true;
 	}
 
 	/**
 	 * Launch the dialog.
+	 * @param parent
 	 */
-	public static void showDialog(JFrame parentFrame) {
+	public static void showDialog(Component parent) {
 
-		Settings dialog = new Settings(parentFrame);
+		showDialog(parent, Settings.NOT_SET);
+	}
+	
+	/**
+	 * Launch the dialog.
+	 * @param parent
+	 * @param selectTab
+	 */
+	public static void showDialog(Component parent, int selectTab) {
+		
+		// Show the dialog.
+		if (dialog == null) {
+			dialog = new Settings(parent);
+		}
+		
+		dialog.selectTab(selectTab);
 		dialog.setVisible(true);
 	}
-
+	
 	/**
 	 * Create the dialog.
-	 * @param parentFrame 
+	 * @param parent 
 	 */
-	public Settings(JFrame parentFrame) {
-		super(parentFrame, true);
+	public Settings(Component parent) {
+		super(Utility.findWindow(parent), ModalityType.MODELESS);
 		// Initialize components.
 		initComponents();
 		// Post creation.
@@ -434,7 +495,7 @@ public class Settings extends JDialog {
 	 * Initialize components.
 	 */
 	private void initComponents() {
-		setMinimumSize(new Dimension(330, 520));
+		
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
@@ -442,7 +503,7 @@ public class Settings extends JDialog {
 			}
 		});
 		setTitle("org.multipage.generator.textSettings");
-		setBounds(100, 100, 330, 510);
+		setBounds(100, 100, 330, 690);
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
 		
@@ -460,18 +521,6 @@ public class Settings extends JDialog {
 		springLayout.putConstraint(SpringLayout.EAST, buttonCancel, -10, SpringLayout.EAST, getContentPane());
 		getContentPane().add(buttonCancel);
 		
-		labelMaxSizeOfTextResource = new JLabel("org.multipage.generator.textMaximumSizeOfTextResource");
-		springLayout.putConstraint(SpringLayout.WEST, labelMaxSizeOfTextResource, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, labelMaxSizeOfTextResource, -10, SpringLayout.EAST, getContentPane());
-		getContentPane().add(labelMaxSizeOfTextResource);
-		
-		textMaxTextResourceSize = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textMaxTextResourceSize, 3, SpringLayout.SOUTH, labelMaxSizeOfTextResource);
-		springLayout.putConstraint(SpringLayout.WEST, textMaxTextResourceSize, 10, SpringLayout.WEST, getContentPane());
-		textMaxTextResourceSize.setHorizontalAlignment(SwingConstants.RIGHT);
-		getContentPane().add(textMaxTextResourceSize);
-		textMaxTextResourceSize.setColumns(15);
-		
 		buttonOk = new JButton("textOk");
 		buttonOk.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -485,12 +534,6 @@ public class Settings extends JDialog {
 		springLayout.putConstraint(SpringLayout.NORTH, buttonOk, 0, SpringLayout.NORTH, buttonCancel);
 		springLayout.putConstraint(SpringLayout.EAST, buttonOk, -6, SpringLayout.WEST, buttonCancel);
 		getContentPane().add(buttonOk);
-		
-		labelBytes = new JLabel("org.multipage.generator.textBytes");
-		springLayout.putConstraint(SpringLayout.NORTH, labelBytes, 0, SpringLayout.NORTH, textMaxTextResourceSize);
-		springLayout.putConstraint(SpringLayout.WEST, labelBytes, 6, SpringLayout.EAST, textMaxTextResourceSize);
-		springLayout.putConstraint(SpringLayout.SOUTH, labelBytes, 0, SpringLayout.SOUTH, textMaxTextResourceSize);
-		getContentPane().add(labelBytes);
 		
 		buttonDefaults = new JButton("org.multipage.generator.textRestoreDefaults");
 		buttonDefaults.addActionListener(new ActionListener() {
@@ -506,97 +549,30 @@ public class Settings extends JDialog {
 		buttonDefaults.setMargin(new Insets(0, 0, 0, 0));
 		getContentPane().add(buttonDefaults);
 		
-		labelIndexExtractLength = new JLabel("org.multipage.generator.textIndexFilePageExtractLength");
-		springLayout.putConstraint(SpringLayout.NORTH, labelIndexExtractLength, 10, SpringLayout.SOUTH, textMaxTextResourceSize);
-		springLayout.putConstraint(SpringLayout.WEST, labelIndexExtractLength, 0, SpringLayout.WEST, labelMaxSizeOfTextResource);
-		getContentPane().add(labelIndexExtractLength);
+		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		springLayout.putConstraint(SpringLayout.NORTH, tabbedPane, 10, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, tabbedPane, 10, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.SOUTH, tabbedPane, -10, SpringLayout.NORTH, buttonOk);
+		springLayout.putConstraint(SpringLayout.EAST, tabbedPane, -10, SpringLayout.EAST, getContentPane());
+		tabbedPane.setPreferredSize(new Dimension(5, 600));
+		tabbedPane.setSize(new Dimension(0, 600));
+		getContentPane().add(tabbedPane);
 		
-		textExtractCharacters = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textExtractCharacters, 3, SpringLayout.SOUTH, labelIndexExtractLength);
-		springLayout.putConstraint(SpringLayout.WEST, textExtractCharacters, 10, SpringLayout.WEST, getContentPane());
-		textExtractCharacters.setHorizontalAlignment(SwingConstants.RIGHT);
-		springLayout.putConstraint(SpringLayout.EAST, textExtractCharacters, 0, SpringLayout.EAST, textMaxTextResourceSize);
-		getContentPane().add(textExtractCharacters);
-		textExtractCharacters.setColumns(10);
-		
-		labelCharacters = new JLabel("org.multipage.generator.textCharacters");
-		springLayout.putConstraint(SpringLayout.NORTH, labelCharacters, 6, SpringLayout.SOUTH, labelIndexExtractLength);
-		springLayout.putConstraint(SpringLayout.WEST, labelCharacters, 0, SpringLayout.WEST, labelBytes);
-		getContentPane().add(labelCharacters);
-		
-		checkRemovePartiallyRenderedPages = new JCheckBox("org.multipage.generator.textRemovePartiallyRenderedPages");
-		springLayout.putConstraint(SpringLayout.NORTH, checkRemovePartiallyRenderedPages, 10, SpringLayout.SOUTH, textExtractCharacters);
-		springLayout.putConstraint(SpringLayout.WEST, checkRemovePartiallyRenderedPages, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(checkRemovePartiallyRenderedPages);
-		
-		labelHttpPortNumer = new JLabel("org.multipage.generator.textHttpPortNumber");
-		springLayout.putConstraint(SpringLayout.WEST, labelHttpPortNumer, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelHttpPortNumer);
-		
-		separator = new JSeparator();
-		springLayout.putConstraint(SpringLayout.NORTH, labelMaxSizeOfTextResource, 20, SpringLayout.SOUTH, separator);
-		springLayout.putConstraint(SpringLayout.EAST, separator, -10, SpringLayout.EAST, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, separator, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(separator);
-		
-		textPortNumber = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textPortNumber, 3, SpringLayout.SOUTH, labelHttpPortNumer);
-		springLayout.putConstraint(SpringLayout.WEST, textPortNumber, 10, SpringLayout.WEST, getContentPane());
-		textPortNumber.setHorizontalAlignment(SwingConstants.RIGHT);
-		textPortNumber.setColumns(5);
-		getContentPane().add(textPortNumber);
-		
-		labelWebInterfaceDirectory = new JLabel("org.multipage.generator.textWebInterfaceDirectory");
-		springLayout.putConstraint(SpringLayout.WEST, labelWebInterfaceDirectory, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelWebInterfaceDirectory);
-		
-		textWebInterfaceDirectory = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textWebInterfaceDirectory, 3, SpringLayout.SOUTH, labelWebInterfaceDirectory);
-		springLayout.putConstraint(SpringLayout.WEST, textWebInterfaceDirectory, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(textWebInterfaceDirectory);
-		textWebInterfaceDirectory.setColumns(10);
-		
-		checkCommonResourceFileNames = new JCheckBox("org.multipage.generator.textCommonResources");
-		springLayout.putConstraint(SpringLayout.WEST, checkCommonResourceFileNames, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.NORTH, separator, 20, SpringLayout.SOUTH, checkCommonResourceFileNames);
-		getContentPane().add(checkCommonResourceFileNames);
-		
-		labelResourcesRenderFolder = new JLabel("org.multipage.generator.textResourcesRenderFolder");
-		springLayout.putConstraint(SpringLayout.NORTH, labelResourcesRenderFolder, 10, SpringLayout.SOUTH, textPortNumber);
-		springLayout.putConstraint(SpringLayout.WEST, labelResourcesRenderFolder, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelResourcesRenderFolder);
-		
-		textResourcesRenderFolder = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textResourcesRenderFolder, 3, SpringLayout.SOUTH, labelResourcesRenderFolder);
-		springLayout.putConstraint(SpringLayout.EAST, textResourcesRenderFolder, -10, SpringLayout.EAST, getContentPane());
-		springLayout.putConstraint(SpringLayout.NORTH, checkCommonResourceFileNames, 6, SpringLayout.SOUTH, textResourcesRenderFolder);
-		springLayout.putConstraint(SpringLayout.WEST, textResourcesRenderFolder, 10, SpringLayout.WEST, getContentPane());
-		textResourcesRenderFolder.setColumns(10);
-		getContentPane().add(textResourcesRenderFolder);
-		
-		buttonWebInterface = new JButton("");
-		springLayout.putConstraint(SpringLayout.NORTH, buttonWebInterface, 0, SpringLayout.NORTH, textWebInterfaceDirectory);
-		springLayout.putConstraint(SpringLayout.EAST, buttonWebInterface, -6, SpringLayout.EAST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, textWebInterfaceDirectory, 0, SpringLayout.WEST, buttonWebInterface);
-		buttonWebInterface.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onWebInterface();
-			}
-		});
-		buttonWebInterface.setPreferredSize(new Dimension(20, 20));
-		getContentPane().add(buttonWebInterface);
+		JPanel panelGeneral = new JPanel();
+		panelGeneral.setBackground(Color.WHITE);
+		tabbedPane.addTab("org.multipage.generator.textGeneralSettings", null, panelGeneral, null);
+		SpringLayout sl_panelGeneral = new SpringLayout();
+		panelGeneral.setLayout(sl_panelGeneral);
 		
 		labelDatabaseAccess = new JLabel("org.multipage.generator.textDatabaseAccess");
-		springLayout.putConstraint(SpringLayout.NORTH, labelDatabaseAccess, 10, SpringLayout.NORTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.WEST, labelDatabaseAccess, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelDatabaseAccess, 10, SpringLayout.NORTH, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelDatabaseAccess, 10, SpringLayout.WEST, panelGeneral);
+		panelGeneral.add(labelDatabaseAccess);
 		
 		textDatabaseAccess = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, labelWebInterfaceDirectory, 10, SpringLayout.SOUTH, textDatabaseAccess);
-		springLayout.putConstraint(SpringLayout.NORTH, textDatabaseAccess, 3, SpringLayout.SOUTH, labelDatabaseAccess);
-		springLayout.putConstraint(SpringLayout.WEST, textDatabaseAccess, 10, SpringLayout.WEST, getContentPane());
-		textDatabaseAccess.setColumns(10);
-		getContentPane().add(textDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textDatabaseAccess, 6, SpringLayout.SOUTH, labelDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textDatabaseAccess, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(textDatabaseAccess);
 		
 		buttonDatabaseAccess = new JButton("");
 		buttonDatabaseAccess.addActionListener(new ActionListener() {
@@ -604,23 +580,43 @@ public class Settings extends JDialog {
 				onDatabaseAccess();
 			}
 		});
-		springLayout.putConstraint(SpringLayout.EAST, textDatabaseAccess, 0, SpringLayout.WEST, buttonDatabaseAccess);
-		springLayout.putConstraint(SpringLayout.NORTH, buttonDatabaseAccess, 0, SpringLayout.NORTH, textDatabaseAccess);
-		springLayout.putConstraint(SpringLayout.EAST, buttonDatabaseAccess, -6, SpringLayout.EAST, getContentPane());
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textDatabaseAccess, 0, SpringLayout.WEST, buttonDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, buttonDatabaseAccess, 0, SpringLayout.NORTH, textDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, buttonDatabaseAccess, -10, SpringLayout.EAST, panelGeneral);
 		buttonDatabaseAccess.setPreferredSize(new Dimension(20, 20));
-		getContentPane().add(buttonDatabaseAccess);
+		panelGeneral.add(buttonDatabaseAccess);
+		
+		labelWebInterfaceDirectory = new JLabel("org.multipage.generator.textWebInterfaceDirectory");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelWebInterfaceDirectory, 15, SpringLayout.SOUTH, textDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelWebInterfaceDirectory, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelWebInterfaceDirectory);
+		
+		textWebInterfaceDirectory = new TextFieldEx();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textWebInterfaceDirectory, 6, SpringLayout.SOUTH, labelWebInterfaceDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textWebInterfaceDirectory, 0, SpringLayout.WEST, labelDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textWebInterfaceDirectory, 0, SpringLayout.EAST, textDatabaseAccess);
+		panelGeneral.add(textWebInterfaceDirectory);
+		
+		buttonWebInterface = new JButton("");
+		buttonWebInterface.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onWebInterface();
+			}
+		});
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, buttonWebInterface, 6, SpringLayout.SOUTH, labelWebInterfaceDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, buttonWebInterface, 0, SpringLayout.EAST, buttonDatabaseAccess);
+		buttonWebInterface.setPreferredSize(new Dimension(20, 20));
+		panelGeneral.add(buttonWebInterface);
 		
 		labelPhpEngineDirectory = new JLabel("org.multipage.generator.textPhpEngineDirectory");
-		springLayout.putConstraint(SpringLayout.NORTH, labelPhpEngineDirectory, 10, SpringLayout.SOUTH, textWebInterfaceDirectory);
-		springLayout.putConstraint(SpringLayout.WEST, labelPhpEngineDirectory, 10, SpringLayout.WEST, getContentPane());
-		getContentPane().add(labelPhpEngineDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelPhpEngineDirectory, 19, SpringLayout.SOUTH, textWebInterfaceDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelPhpEngineDirectory, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelPhpEngineDirectory);
 		
 		textPhpEngineDirectory = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, labelHttpPortNumer, 10, SpringLayout.SOUTH, textPhpEngineDirectory);
-		springLayout.putConstraint(SpringLayout.NORTH, textPhpEngineDirectory, 3, SpringLayout.SOUTH, labelPhpEngineDirectory);
-		springLayout.putConstraint(SpringLayout.WEST, textPhpEngineDirectory, 10, SpringLayout.WEST, getContentPane());
-		textPhpEngineDirectory.setColumns(10);
-		getContentPane().add(textPhpEngineDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textPhpEngineDirectory, 6, SpringLayout.SOUTH, labelPhpEngineDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textPhpEngineDirectory, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(textPhpEngineDirectory);
 		
 		buttonPhpEngine = new JButton("");
 		buttonPhpEngine.addActionListener(new ActionListener() {
@@ -628,13 +624,177 @@ public class Settings extends JDialog {
 				onPhpEngine();
 			}
 		});
-		springLayout.putConstraint(SpringLayout.EAST, textPhpEngineDirectory, 0, SpringLayout.WEST, buttonPhpEngine);
-		springLayout.putConstraint(SpringLayout.NORTH, buttonPhpEngine, 0, SpringLayout.NORTH, textPhpEngineDirectory);
-		springLayout.putConstraint(SpringLayout.EAST, buttonPhpEngine, -6, SpringLayout.EAST, getContentPane());
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textPhpEngineDirectory, 0, SpringLayout.WEST, buttonPhpEngine);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, buttonPhpEngine, 0, SpringLayout.NORTH, textPhpEngineDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, buttonPhpEngine, 0, SpringLayout.WEST, buttonDatabaseAccess);
 		buttonPhpEngine.setPreferredSize(new Dimension(20, 20));
-		getContentPane().add(buttonPhpEngine);
+		panelGeneral.add(buttonPhpEngine);
+		
+		labelHttpPortNumer = new JLabel("org.multipage.generator.textHttpPortNumber");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelHttpPortNumer, 23, SpringLayout.SOUTH, textPhpEngineDirectory);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelHttpPortNumer, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelHttpPortNumer);
+		
+		textPortNumber = new TextFieldEx();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textPortNumber, 6, SpringLayout.SOUTH, labelHttpPortNumer);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textPortNumber, 0, SpringLayout.WEST, labelDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textPortNumber, 50, SpringLayout.WEST, labelHttpPortNumer);
+		textPortNumber.setHorizontalAlignment(SwingConstants.RIGHT);
+		panelGeneral.add(textPortNumber);
+		
+		labelResourcesRenderFolder = new JLabel("org.multipage.generator.textResourcesRenderFolder");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelResourcesRenderFolder, 16, SpringLayout.SOUTH, textPortNumber);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelResourcesRenderFolder, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelResourcesRenderFolder);
+		
+		textResourcesRenderFolder = new TextFieldEx();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textResourcesRenderFolder, 6, SpringLayout.SOUTH, labelResourcesRenderFolder);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textResourcesRenderFolder, 10, SpringLayout.WEST, panelGeneral);
+		panelGeneral.add(textResourcesRenderFolder);
+		
+		checkCommonResourceFileNames = new JCheckBox("org.multipage.generator.textCommonResources");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, checkCommonResourceFileNames, 10, SpringLayout.SOUTH, textResourcesRenderFolder);
+		checkCommonResourceFileNames.setBackground(Color.WHITE);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, checkCommonResourceFileNames, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(checkCommonResourceFileNames);
+		
+		labelAnimationDuration = new JLabel("org.multipage.generator.textAnimationDelta");
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelAnimationDuration, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelAnimationDuration);
+		
+		sliderAnimationDuration = new JSlider();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, sliderAnimationDuration, 6, SpringLayout.SOUTH, labelAnimationDuration);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, sliderAnimationDuration, 10, SpringLayout.WEST, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, sliderAnimationDuration, 0, SpringLayout.EAST, buttonDatabaseAccess);
+		sliderAnimationDuration.setBackground(Color.WHITE);
+		sliderAnimationDuration.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				onAnimationDurationChange();
+			}
+		});
+		sliderAnimationDuration.setValue(3);
+		sliderAnimationDuration.setSnapToTicks(true);
+		sliderAnimationDuration.setPaintTicks(true);
+		sliderAnimationDuration.setPaintLabels(true);
+		sliderAnimationDuration.setMinorTickSpacing(1);
+		sliderAnimationDuration.setMinimum(1);
+		sliderAnimationDuration.setMaximum(5);
+		sliderAnimationDuration.setMajorTickSpacing(1);
+		panelGeneral.add(sliderAnimationDuration);
+		
+		separator = new JSeparator();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelAnimationDuration, 17, SpringLayout.SOUTH, separator);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, separator, 10, SpringLayout.WEST, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, separator, 0, SpringLayout.EAST, buttonDatabaseAccess);
+		panelGeneral.add(separator);
+		
+		labelMaxSizeOfTextResource = new JLabel("org.multipage.generator.textMaximumSizeOfTextResource");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelMaxSizeOfTextResource, 10, SpringLayout.SOUTH, checkCommonResourceFileNames);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelMaxSizeOfTextResource, 10, SpringLayout.WEST, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, labelMaxSizeOfTextResource, -10, SpringLayout.EAST, panelGeneral);
+		panelGeneral.add(labelMaxSizeOfTextResource);
+		
+		textMaxTextResourceSize = new TextFieldEx();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textMaxTextResourceSize, 6, SpringLayout.SOUTH, labelMaxSizeOfTextResource);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textMaxTextResourceSize, 10, SpringLayout.WEST, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textMaxTextResourceSize, 100, SpringLayout.WEST, panelGeneral);
+		textMaxTextResourceSize.setHorizontalAlignment(SwingConstants.RIGHT);
+		panelGeneral.add(textMaxTextResourceSize);
+		
+		labelBytes = new JLabel("org.multipage.generator.textBytes");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelBytes, 6, SpringLayout.SOUTH, labelMaxSizeOfTextResource);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelBytes, 6, SpringLayout.EAST, textMaxTextResourceSize);
+		panelGeneral.add(labelBytes);
+		
+		labelIndexExtractLength = new JLabel("org.multipage.generator.textIndexFilePageExtractLength");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelIndexExtractLength, 10, SpringLayout.SOUTH, textMaxTextResourceSize);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelIndexExtractLength, 0, SpringLayout.WEST, labelDatabaseAccess);
+		panelGeneral.add(labelIndexExtractLength);
+		
+		textExtractCharacters = new TextFieldEx();
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, textExtractCharacters, 6, SpringLayout.SOUTH, labelIndexExtractLength);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, textExtractCharacters, 0, SpringLayout.WEST, labelDatabaseAccess);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textExtractCharacters, 100, SpringLayout.WEST, panelGeneral);
+		textExtractCharacters.setHorizontalAlignment(SwingConstants.RIGHT);
+		panelGeneral.add(textExtractCharacters);
+		
+		labelCharacters = new JLabel("org.multipage.generator.textCharacters");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, labelCharacters, 6, SpringLayout.SOUTH, labelIndexExtractLength);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, labelCharacters, 6, SpringLayout.EAST, textExtractCharacters);
+		panelGeneral.add(labelCharacters);
+		
+		checkRemovePartiallyRenderedPages = new JCheckBox("org.multipage.generator.textRemovePartiallyRenderedPages");
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, checkRemovePartiallyRenderedPages, 10, SpringLayout.SOUTH, textExtractCharacters);
+		sl_panelGeneral.putConstraint(SpringLayout.WEST, checkRemovePartiallyRenderedPages, 10, SpringLayout.WEST, panelGeneral);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, separator, 16, SpringLayout.SOUTH, checkRemovePartiallyRenderedPages);
+		checkRemovePartiallyRenderedPages.setBackground(Color.WHITE);
+		panelGeneral.add(checkRemovePartiallyRenderedPages);
+		
+		buttonResourcesFolder = new JButton("");
+		buttonResourcesFolder.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onResourcesFolder();
+			}
+		});
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, textResourcesRenderFolder, 0, SpringLayout.WEST, buttonResourcesFolder);
+		sl_panelGeneral.putConstraint(SpringLayout.NORTH, buttonResourcesFolder, 6, SpringLayout.SOUTH, labelResourcesRenderFolder);
+		sl_panelGeneral.putConstraint(SpringLayout.EAST, buttonResourcesFolder, 0, SpringLayout.EAST, buttonDatabaseAccess);
+		buttonResourcesFolder.setPreferredSize(new Dimension(20, 20));
+		panelGeneral.add(buttonResourcesFolder);
+		
+		JPanel panelAddIn = new JPanel();
+		panelAddIn.setBorder(null);
+		tabbedPane.addTab("org.multipage.generator.textAddIns", null, panelAddIn, null);
+		SpringLayout sl_panelAddIn = new SpringLayout();
+		panelAddIn.setLayout(sl_panelAddIn);
+		
+		JScrollPane scrollPane = new JScrollPane();
+		sl_panelAddIn.putConstraint(SpringLayout.NORTH, scrollPane, 0, SpringLayout.NORTH, panelAddIn);
+		scrollPane.setBorder(null);
+		sl_panelAddIn.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, panelAddIn);
+		sl_panelAddIn.putConstraint(SpringLayout.SOUTH, scrollPane, 0, SpringLayout.SOUTH, panelAddIn);
+		sl_panelAddIn.putConstraint(SpringLayout.EAST, scrollPane, 0, SpringLayout.EAST, panelAddIn);
+		panelAddIn.add(scrollPane);
+		
+		JList listAddIns = new JList();
+		listAddIns.setBorder(null);
+		scrollPane.setViewportView(listAddIns);
+		
+		JMenuBar menuBar = new JMenuBar();
+		scrollPane.setColumnHeaderView(menuBar);
+		
+		menuLoadAddIn = new JMenuItem("org.multipage.generator.menuLoadAddIn");
+		menuLoadAddIn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onLoadAddIn();
+			}
+		});
+		menuLoadAddIn.setActionCommand("");
+		menuBar.add(menuLoadAddIn);
+		
+		menuRemoveAddIn = new JMenuItem("org.multipage.generator.menuRemoveAddIn");
+		menuRemoveAddIn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onRemoveAddIn();
+			}
+		});
+		menuRemoveAddIn.setActionCommand("");
+		menuBar.add(menuRemoveAddIn);
 	}
 	
+	/**
+	 * O change of the animation duration.
+	 */
+	protected void onAnimationDurationChange() {
+		
+		// Get current value of animation duration.
+		boolean isAdjusting = sliderAnimationDuration.getValueIsAdjusting();
+		if (isAdjusting) {
+			
+			animationDuration = (int) sliderAnimationDuration.getValue();
+		}
+	}
+
 	/**
 	 * Post creation.
 	 */
@@ -656,8 +816,11 @@ public class Settings extends JDialog {
 	private void localize() {
 
 		Utility.localize(this);
+		Utility.localize(tabbedPane);
 		Utility.localize(buttonOk);
 		Utility.localize(buttonCancel);
+		Utility.localize(menuLoadAddIn);
+		Utility.localize(menuRemoveAddIn);
 		Utility.localize(labelMaxSizeOfTextResource);
 		Utility.localize(labelBytes);
 		Utility.localize(buttonDefaults);
@@ -670,6 +833,7 @@ public class Settings extends JDialog {
 		Utility.localize(labelResourcesRenderFolder);
 		Utility.localize(labelDatabaseAccess);
 		Utility.localize(labelPhpEngineDirectory);
+		Utility.localize(labelAnimationDuration);
 	}
 
 	/**
@@ -680,8 +844,31 @@ public class Settings extends JDialog {
 		buttonWebInterface.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
 		buttonDatabaseAccess.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
 		buttonPhpEngine.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
+		buttonResourcesFolder.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
 		buttonOk.setIcon(Images.getIcon("org/multipage/generator/images/ok_icon.png"));
 		buttonCancel.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
+	}
+	
+	/**
+	 * Select tab.
+	 * @param selectTab
+	 */
+	private void selectTab(int selectTab) {
+		
+		int tabCount = tabbedPane.getTabCount();
+		
+		if (selectTab >= 0 && selectTab < tabCount) {
+			tabbedPane.setSelectedIndex(selectTab);
+		}
+	}
+	
+	/**
+	 * Get animation duration.
+	 * @return
+	 */
+	public static double getAnimationDuration() {
+		
+		return animationDuration;
 	}
 	
 	/**
@@ -716,7 +903,6 @@ public class Settings extends JDialog {
 		// On PostgreSQL database.
 		else if ("org.maclan.postgresql".equals(MiddleUtility.getPathToMiddle())) {
 			
-			
 		}
 	}
 	
@@ -731,6 +917,213 @@ public class Settings extends JDialog {
 		}
 		
 		textPhpEngineDirectory.setText(phpDirectory);
+	}
+	
+	/**
+	 * On resources folder.
+	 */
+	private void onResourcesFolder() {
+		
+		String resourcesFolder = Utility.chooseDirectory2(this, "org.multipage.generator.titleResourcesDirectory");
+		if (resourcesFolder == null) {
+			return;
+		}
+		
+		textResourcesRenderFolder.setText(resourcesFolder);
+	}
+	
+	/**
+	 * On load add-in.
+	 */
+	protected void onLoadAddIn() {
+		
+		// Get file name.
+		String [][] filters = {{"org.multipage.generator.textAddInJarFilesFilter", "jar"}};
+		
+		File addInJarFile = Utility.chooseFileNameToOpen(this, filters);
+		if (addInJarFile == null) {
+			return;
+		}
+		
+		// Get loader package.
+		Class<?> loaderClass = AddInLoader.class;
+		String className = loaderClass.getSimpleName();
+		String jarFileName = className + ".jar";
+		Package thePackage = loaderClass.getPackage();
+		
+		GeneralGui.log("ON LOAD ADD IN");
+		
+		try {
+			// Create unique temporary folder for saving temporary JAR file.
+			Path temporaryPath = Files.createTempDirectory("ProgramGenerator_");
+			
+			// TODO: debug
+			GeneralGui.log("TEMPORARY PATH %s", temporaryPath);
+			GeneralGui.logInvolveUser();
+			
+			// Create temporary JAR file.
+			File temporaryJarFile = Paths.get(temporaryPath.toString(), jarFileName).toFile();
+			
+			// Save add-in loader to executable JAR file in temporary directory.
+			//Path temporaryClassPath = saveAddInLoader(loaderPackage, temporaryJarFile);
+			
+			// Find out if this application is zipped in JAR file.
+			boolean isApplicationZipped = Utility.isApplicationZipped();
+			
+			// On JAR file.
+			if (isApplicationZipped) {
+				
+				GeneralGui.log("APPLICATION ZIPPED");
+				
+				// Export JAR package classes to output JAR file.
+				GeneratorUtility.exportJarPackageToJarFile(thePackage, temporaryJarFile);
+			}
+			// On a directory with classes.
+			else {
+				
+				// Get this application path.
+				String applicationPath = Utility.getApplicationPath(GeneratorMain.class);
+				
+				// Export directory classes to output JAR file..
+				GeneratorUtility.exportDirectoryClassesToJarFile(applicationPath, thePackage, temporaryJarFile);
+			}
+			
+			// Try to run the Add-In loader.
+			if (temporaryJarFile != null) {
+				String result = Utility.runJavaClass(temporaryPath, loaderClass, new String [] {"addInJarFile=" + addInJarFile});
+
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Save Add-In loader to temporary file.
+	 * @param loaderClass
+	 * @param applicationFileOrDirectory
+	 * @return temporary folder with loader executable JAR file
+	 */
+	private Path saveAddInLoader(Class<?> loaderClass, File applicationFileOrDirectory) {
+		
+		Path temporaryClassPath = null;
+		FileSystem appJarFileSystem = null;
+		FileSystem loaderJarFileSystem = null;
+		
+		try {
+			
+			// Get the loader package and class name.
+			final String loaderPackageName = loaderClass.getPackageName();
+			final String loaderClassName = loaderClass.getSimpleName();
+			
+			// Create unique temporary folder for saving the loader JAR file.
+			temporaryClassPath = Files.createTempDirectory("ProgramGenerator_");
+			
+			// Path to JAR meta information.
+			final String metaInfFolder = "META-INF";
+			final String metaInfPathName = loaderPackageName.replace('.', '_') + "_" + metaInfFolder;
+			
+			// Create file system of the loader JAR.
+			final String loaderFileSystemUriName = "jar:file:/" + temporaryClassPath.toString().replace('\\', '/') + '/' + loaderClassName + ".jar";
+			final URI loaderFileSystemUri = URI.create(loaderFileSystemUriName);
+			final Map<String, String> loaderEnvironment = Map.of("create", "true");
+			loaderJarFileSystem = FileSystems.newFileSystem(loaderFileSystemUri, loaderEnvironment);
+			
+			final String loaderJarSeparator = loaderJarFileSystem.getSeparator();
+			
+			// Get package folder.
+			final String loaderPackageFolder = loaderPackageName.replace(".", loaderJarSeparator);
+			
+			// Get path in the target JAR file system.
+			final Path loaderTargetJarPath = loaderJarFileSystem.getPath(loaderJarSeparator, loaderPackageFolder, loaderJarSeparator);
+			
+			// Export loader from application directory.
+			if (applicationFileOrDirectory.isDirectory()) {
+			
+				// Get loader source path.
+				Path addInLoaderSourcePath = Paths.get(applicationFileOrDirectory.getPath(), "ProgramGenerator", "bin", loaderPackageFolder);
+				
+				// Copy loader into the executable JAR file.
+				Utility.copyDirToJar(addInLoaderSourcePath, loaderTargetJarPath, loaderJarFileSystem);
+				
+				// TODO: debug
+				LoggingDialog.log("COPY FROM %s TO %s", addInLoaderSourcePath, loaderTargetJarPath);
+				
+				// Copy META-INF folder to the runnable JAR archive.
+				final Path metaInfPath = Paths.get(applicationFileOrDirectory.getPath(), "ProgramGenerator", "src", metaInfPathName);
+				final Path metaInfJarPath = loaderJarFileSystem.getPath(loaderJarSeparator, metaInfFolder);
+				
+				Utility.copyDirToJar(metaInfPath, metaInfJarPath, loaderJarFileSystem);
+			}
+			// Use application JAR file.
+			// TODO: Use loader JAR file system in the copy function.
+			else if (applicationFileOrDirectory.isFile()) {
+				
+				// Get loader sources path in the application JAR.
+				final String appJarUriName = "jar:file:/" + applicationFileOrDirectory.toString().replace('\\', '/');
+				final URI appFileSystemUri = URI.create(appJarUriName);
+				final Map<String, String> appEnvironment = Map.of("create", "true");
+				
+				// TODO: debug
+				LoggingDialog.log("APPLICATION JAR %s", appFileSystemUri);
+				
+				// Create application JAR file system.
+				appJarFileSystem = FileSystems.newFileSystem(appFileSystemUri, appEnvironment);
+				
+				final String appJarSeparator = loaderJarFileSystem.getSeparator();
+				
+				// Get path of the loader in application JAR file system.
+				final Path loaderPathInAppJar = appJarFileSystem.getPath(appJarSeparator, loaderPackageFolder);
+				
+				// Copy loader classes into the temporary JAR file.
+				// TODO: fix error in destination path
+				Utility.copyDirToJar(loaderPathInAppJar, loaderTargetJarPath, appJarFileSystem);
+			}
+			else {
+				Utility.show(this, "org.multipage.generator.messageUnknownApplicationFileOnAddIn");
+			}
+		}
+		catch (Exception e) {
+			Utility.show(this, "org.multipage.generator.messageExeptionRaisedOnAddIn", e.getLocalizedMessage());
+			
+			// TODO: debug
+			StringWriter logWriter = new StringWriter();
+			PrintWriter printWriter = new PrintWriter(logWriter);
+			e.printStackTrace(printWriter);
+			StringBuffer stringBuffer = logWriter.getBuffer();
+			String message = stringBuffer.toString();
+			LoggingDialog.log("STACK DUMP %s", message);
+		}
+		finally {
+			try {
+				if (appJarFileSystem != null) {
+					appJarFileSystem.close();
+					// TODO: debug
+					LoggingDialog.log("APPLICATION JAR CLOSED");
+				}
+				if (loaderJarFileSystem != null) {
+					loaderJarFileSystem.close();
+					// TODO: debug
+					LoggingDialog.log("LOADER JAR CLOSED");
+				}
+			}
+			catch (IOException e) {
+			}
+		}
+		
+		// TODO: debug
+		LoggingDialog.log("TEMPORARY PATH: %s", temporaryClassPath);
+		return temporaryClassPath;
+	}
+
+	/**
+	 * On remove add-in.
+	 * 
+	 */
+	protected void onRemoveAddIn() {
+		
+		
 	}
 	
 	/**

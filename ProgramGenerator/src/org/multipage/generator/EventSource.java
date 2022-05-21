@@ -7,11 +7,11 @@
 
 package org.multipage.generator;
 
-import java.awt.Component;
-import java.awt.Window;
+import java.util.LinkedList;
 import java.util.Objects;
-
-import org.multipage.gui.Utility;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Initiator of conditional event.
@@ -37,32 +37,32 @@ public class EventSource {
 	/**
 	 * Name of the event source.
 	 */
-	private String name = null;
+	public String name = null;
 		
 	/**
 	 * Flag that determines user direct event.
 	 */
-	private boolean userInitiated = false;
+	public boolean userInitiated = false;
 		
 	/**
 	 * Reference to source object .
 	 */
-	private Object sourceObject = null;
+	public Object sourceObject = null;
 	
 	/**
 	 * Source message.
 	 */
-	private Message sourceMessage = null;
+	public Message sourceMessage = null;
 		
 	/**
 	 * Reference to previous event source that causes the event.
 	 */
-	private EventSource previousEventSource = null;
+	public EventSource previousEventSource = null;
 	
 	/**
 	 * Basic event source which is set to one of the above listed basic constant sources.
 	 */
-	private EventSource basicEventSource = null;
+	public EventSource basicEventSource = null;
 	
 	/**
 	 * Constructor.
@@ -128,10 +128,10 @@ public class EventSource {
 	 * Clone event source.
 	 * @param initiatorObject
 	 * @param userInitiated
-	 * @param intiatorMessage
+	 * @param sourceMessage
 	 * @return
 	 */
-	public EventSource clone(Object initiatorObject, boolean userInitiated, Message intiatorMessage) {
+	public EventSource clone(Object initiatorObject, boolean userInitiated, Message sourceMessage) {
 		
 		// Create new the event source.
 		EventSource clonedEventSource = new EventSource();
@@ -145,11 +145,11 @@ public class EventSource {
 		// Preserve basic source reference.
 		clonedEventSource.basicEventSource = basicEventSource;
 		
-		// Set initiator object.
+		// Set source object.
 		clonedEventSource.sourceObject = initiatorObject;
 		
-		// Set initiating message.
-		clonedEventSource.sourceMessage = intiatorMessage;
+		// Set source message.
+		clonedEventSource.sourceMessage = sourceMessage;
 		
 		// Return cloned event source.
 		return clonedEventSource;
@@ -179,5 +179,48 @@ public class EventSource {
 	public Message getInitiatorMessage() {
 		
 		return sourceMessage;
+	}
+	
+	/**
+	 * Traverse previously sent messages and find the matching message.
+	 * @param signal
+	 * @param receivingObject
+	 * @param previousMessageLambda
+	 * @return
+	 */
+	public Message traversePreviousMessages(Signal signal, Object receivingObject, Function<Message, Boolean> previousMessageLambda) {
+		
+		// Check input.
+		if (previousMessageLambda == null) {
+			return null;
+		}
+		
+		EventSource eventSource = this;
+		do {
+			
+			// Get source message.
+			Message previousMessage = eventSource.sourceMessage;
+			
+			// Check the previous message for null value.
+			if (previousMessage == null) {
+				return null;
+			}
+			
+			// If the message matches input parameters and lambda function returns true value,
+			// return the message.
+			if (previousMessage.signal == signal && previousMessage.source == receivingObject) {
+				
+				if (previousMessageLambda.apply(previousMessage)) {
+					return previousMessage;
+				}
+			}
+			
+			// Get previous event source.
+			eventSource = eventSource.previousEventSource;
+		}
+		while (eventSource != null);
+		
+		// Message not found.
+		return null;
 	}
 }

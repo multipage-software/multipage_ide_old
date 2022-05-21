@@ -250,7 +250,7 @@
       <tabName>Generator</tabName>
       <columns>
         <column0>30</column0>
-        <column1>228</column1>
+        <column1>267</column1>
         <otherColumns>323</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
@@ -302,8 +302,8 @@
   </linked-list>
   <int>2</int>
   <java.awt.Rectangle>
-    <x>606</x>
-    <y>289</y>
+    <x>609</x>
+    <y>129</y>
     <width>707</width>
     <height>502</height>
   </java.awt.Rectangle>

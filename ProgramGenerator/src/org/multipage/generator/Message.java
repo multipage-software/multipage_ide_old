@@ -7,6 +7,8 @@
 
 package org.multipage.generator;
 
+import java.util.function.Function;
+
 import org.multipage.gui.Utility;
 
 /**
@@ -337,25 +339,30 @@ public class Message {
 	/**
 	 * Check if the message determines itself.
 	 * @param receivingObject
+	 * @param strictChecking
 	 * @return
 	 */
-	public boolean isSelfDetermined(Object receivingObject) {
+	public boolean isRepeatingIn(Object receivingObject, Function<Message, Boolean> previvousMessageLambda) {
 		
 		// Initialize output value.
-		boolean isSelfDetermined = false;
+		boolean isRepeated = false;
 		
 		// Try to get event source.
 		if (source instanceof EventSource) {
 			
-			// Get event source..
+			// Get event source.
 			EventSource eventSource = (EventSource) source;
 			
-			// Get the initiator message.
-			Message initiatorMessage = eventSource.getInitiatorMessage();
-			
-			// TODO: match this message with previous messages.
+			// Check machine action.
+			if (!eventSource.userInitiated) {
+				
+				// Traverse previous messages with given signal and receiving object.
+				Message previousMessage = eventSource.traversePreviousMessages(signal, receivingObject, message -> previvousMessageLambda.apply(message));
+				
+				// Set output flag.
+				isRepeated = previousMessage != null;
+			}
 		}
-		
-		return isSelfDetermined;
+		return isRepeated;
 	}
 }

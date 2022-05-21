@@ -216,7 +216,7 @@ public class SelectNewTextResourceDialog extends JDialog {
 			Option option = dialog.getSelectedOption();
 			
 			text.ref = option.contentText;
-			mimeType.ref = GeneratorUtilities.getMimeType(option.type, option.extension);
+			mimeType.ref = GeneratorUtility.getMimeType(option.type, option.extension);
 		}
 		
 		return dialog.confirm;

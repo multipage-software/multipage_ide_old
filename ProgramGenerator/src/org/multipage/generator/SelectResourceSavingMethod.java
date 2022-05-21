@@ -398,7 +398,7 @@ public class SelectResourceSavingMethod extends JDialog {
 		// Get path.
 		String path = file.getPath();
 		// Choose file.
-		File choosenFile = GeneratorUtilities.chooseFile(this, path, true);
+		File choosenFile = GeneratorUtility.chooseFile(this, path, true);
 		if (choosenFile == null) {
 			return;
 		}

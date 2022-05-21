@@ -714,13 +714,17 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// Receive the "update updateAreasModel" signal.
 		ConditionalEvents.receiver(this, Signal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
 			
-			// Check if the message determines itself. If so, avoid infinite loop of messages.
-			if (message.isSelfDetermined(GeneratorMainFrame.this)) {
+			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
+			if (message.isRepeatingIn(GeneratorMainFrame.this, previousMessage -> true)) {
 				return;
 			}
 			
 			// Reload areas model.
 			ProgramGenerator.reloadModel();
+			
+			// TODO: transmit same signal again, test infinite loop
+			LoggingDialog.log("TRASMITTED SIGNAL %s (BY MACHINE)", Signal.updateAreasModel);
+			ConditionalEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.machineAction(this, message), Signal.updateAreasModel);
 		});
 		
 		// "Expose read only areas" event receiver.

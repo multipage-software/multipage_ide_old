@@ -243,7 +243,7 @@ public class ResourceLoadInfoPanel extends JPanel {
 	protected void onFile() {
 		
 	    // Get selected file.
-	    File file = GeneratorUtilities.chooseFile(this, null, false);
+	    File file = GeneratorUtility.chooseFile(this, null, false);
 	    if (file == null) {
 	    	return;
 	    }

@@ -52,11 +52,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
-
-	/**
-	 * Animate delta T in milliseconds.
-	 */
-	protected static final int animateDeltaT = 20;
 	
 	/**
 	 * Tool tip window.
@@ -155,11 +150,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected javax.swing.Timer animationTimer;
 	
-	/**
-	 * Animation duration in seconds.
-	 */
-	protected static final double animationDuration = 1.5;
-
 	/**
 	 * Position saving delay in milliseconds.
 	 */
@@ -418,30 +408,38 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 			}
 		});
 		
+		// Get animation tick in milliseconds.
+		final double animationTickMs = 20.0;
+		
 		// Create animate listener.
 		ActionListener animateListener = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				
+				// Get animation duration.
+				double animationDurationMs = Settings.getAnimationDuration() * 1000.0;
+				
 				// Invoke on animate method.
 				onAnimate();
 				
 				// If the animation time equals the duration time, stop timer.
-				if (animationTime >= animationDuration) {
+				if (animationTime >= animationDurationMs) {
 					finishAnimation();
 					return;
 				}
 				
 				// Set overview.
 				setOverviewControl();
+				
 				// Increment time.
-				animationTime += (double) animateDeltaT / 1000.0;
+				animationTime += animationTickMs;
 			}
 		};
 		
 		// Create animation timer.
-		animationTimer = new javax.swing.Timer(animateDeltaT, animateListener);
+		animationTimer = new javax.swing.Timer((int) animationTickMs, animateListener);
 		animationTimer.setCoalesce(false);
+		
 		// Set key listener.
 		setFocusable(true);
 		addKeyListener(new KeyAdapter() {
@@ -1371,8 +1369,9 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 * On animate.
 	 */
 	protected void onAnimate() {
-
-		double T = animationDuration;
+		
+		// Get animation duration.
+		double T = Settings.getAnimationDuration() * 1000.0;
 		double t = animationTime;
 		double multiplier;
 		

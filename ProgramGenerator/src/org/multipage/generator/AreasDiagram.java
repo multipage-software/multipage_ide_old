@@ -333,8 +333,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		// Receive the "update areas' diagram" signal.
 		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAreasDiagram), message -> {
 			
-			// Check if the message determines itself. If so, avoid infinite loop of messages.
-			if (message.isSelfDetermined(AreasDiagram.this)) {
+			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
+			if (message.isRepeatingIn(AreasDiagram.this, previousMessage -> true)) {
 				return;
 			}
 			
