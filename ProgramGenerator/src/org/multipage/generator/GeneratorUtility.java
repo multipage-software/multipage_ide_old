@@ -13,7 +13,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -41,7 +40,6 @@ import org.maclan.SlotType;
 import org.maclan.server.AreaServer;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.generator.ProgramPaths.PathSupplier;
-import org.multipage.gui.GeneralGui;
 import org.multipage.gui.RendererPathItem;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
@@ -552,30 +550,27 @@ public class GeneratorUtility {
 	public static void exportDirectoryClassesToJarFile(String applicationPath, Package thePackage, File jarFile)
 			throws Exception {
 		
+		// Create uninitialized local variables.
 		FileSystem destinationJarFileSystem = null;
+		Exception exception = null;
 		
 		try {
 		
 			// Get destination JAR file system and a separator.
 			final URI uri = URI.create("jar:file:/" + jarFile.toString().replace(File.separatorChar, '/'));
 			final Map<String, String> environment = Map.of("create", "true");
-	
 			destinationJarFileSystem = FileSystems.newFileSystem(uri, environment);
-			String destinationSeparator = destinationJarFileSystem.getSeparator();
+			final String destinationSeparator = destinationJarFileSystem.getSeparator();
 			
 			// Get the package folders separated with file system separators.
-			String sourcePackageFolders = File.separator + thePackage.getName().replace(".", File.separator);
-			String destinationPackageFolders = destinationSeparator + thePackage.getName().replace(".", destinationSeparator);
+			final String sourcePackageFolders = File.separator + thePackage.getName().replace(".", File.separator);
+			final String [] destinationPackageFolders = thePackage.getName().split("\\.");
 			
 			// Get paths to the classes.
-			Path sourcePathInDirectory = Paths.get(applicationPath, sourcePackageFolders);
-			Path destinationPathInJar = destinationJarFileSystem.getPath(destinationPackageFolders);
+			final Path sourcePathInDirectory = Paths.get(applicationPath, sourcePackageFolders);
 			
 			// Copy source classes into the target JAR file.
-			Utility.copyDirToJar(sourcePathInDirectory, destinationPathInJar, destinationJarFileSystem);
-			
-			// TODO: debug
-			GeneralGui.log("COPY FROM %s TO %s", sourcePathInDirectory, destinationPathInJar);
+			Utility.copyDirToJar(sourcePathInDirectory, destinationPackageFolders, destinationJarFileSystem);
 			
 			// Meta information folder name.
 			final String metaInfFolderName = "META-INF";
@@ -583,15 +578,12 @@ public class GeneratorUtility {
 			// Copy source META-INF folder to the target JAR archive.
 			final String sourceMetaInfRoot = thePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
 			final Path sourceMetaInfPath = Paths.get(applicationPath, sourceMetaInfRoot);
-			final Path destinationMetaInfPath = destinationJarFileSystem.getPath(destinationSeparator, metaInfFolderName);
+			final String [] destinationMetaInfPath = new String [] {destinationSeparator, metaInfFolderName};
 			
 			Utility.copyDirToJar(sourceMetaInfPath, destinationMetaInfPath, destinationJarFileSystem);
-			
-			// TODO: refactoring DONE, remove the comment
 		}
 		catch (Exception e) {
-			GeneralGui.log("EXCEPTION %s", e.getLocalizedMessage());
-			GeneralGui.log("EXCEPTION CAUSE %s", e.getCause().getLocalizedMessage());
+			exception = e;
 		}
 		finally {
 			// Close both file systems.
@@ -600,108 +592,57 @@ public class GeneratorUtility {
 					destinationJarFileSystem.close();
 				}
 			}
-			catch (IOException e) {
+			catch (Exception e) {
+				if (exception == null) {
+					exception = e;
+				}
 			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
 		}
 	}
 	
 	/**
 	 * Export JAR package to JAR file.
+	 * @param applicationJarPath
 	 * @param thePackage
 	 * @param jarFile
 	 */
-	public static void exportJarPackageToJarFile(Package thePackage, File jarFile) {
+	public static void exportJarPackageToJarFile(String applicationJarPath, Package thePackage, File jarFile)
+			throws Exception {
 		
 		// TODO: place it on STACKOVERFLOW
 		//////////////////////////////////
 		
-		// Get application path.
-		String sourceJarFileName = Utility.getApplicationJarFile().toString();
-		
-		// TODO: remove it
-		GeneralGui.log("Utility:1 sourceJarFileName=%s", sourceJarFileName);
-		GeneralGui.logInvolveUser();
-		
 		// Create uninitialized local variables.
 		FileSystem sourceFileSystem = null;
-		FileSystem destinationfileSystem = null;
+		FileSystem destinationFileSystem = null;
+		Exception exception = null;
 		
 		try {
 			// Obtain file system of the application JAR.
-			String sourceUriString = "jar:file:/" + sourceJarFileName.replace('\\', '/');
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:3 sourceUriString=%s", sourceUriString);
-			GeneralGui.logInvolveUser();
-			
+			final String sourceUriString = "jar:file:/" + applicationJarPath.replace('\\', '/');
 			final URI sourceUri = URI.create(sourceUriString);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:4 sourceUri=%s", sourceUri.toString());
-			GeneralGui.logInvolveUser();
-			
 			final Map<String, String> sourceEnvironment = Map.of("create", "true");
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:5 sourceEnvironment=%s", sourceEnvironment.toString());
-			GeneralGui.logInvolveUser();
-			
 			sourceFileSystem = FileSystems.newFileSystem(sourceUri, sourceEnvironment);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:6 sourceFileSystem=%s", sourceFileSystem);
-			GeneralGui.logInvolveUser();
-			
 			final String sourceSeparator = sourceFileSystem.getSeparator();
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:7 sourceSeparator=%s", sourceSeparator);
-			GeneralGui.logInvolveUser();
 			
 			// Obtain file system of the loader JAR.
 			String destinationUriString = "jar:file:/" + jarFile.getPath().replace('\\', '/');
 			final URI destinationUri = URI.create(destinationUriString);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:8 destinationUri=%s", destinationUri);
-			GeneralGui.logInvolveUser();
-			
 			final Map<String, String> destinationEnvironment = Map.of("create", "true");
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:9 destinationEnvironment=%s", destinationEnvironment);
-			GeneralGui.logInvolveUser();
-			
-			destinationfileSystem = FileSystems.newFileSystem(destinationUri, destinationEnvironment);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:10 destinationfileSystem=%s", destinationfileSystem);
-			GeneralGui.logInvolveUser();
-			
-			final String destinationSeparator = destinationfileSystem.getSeparator();
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:11 destinationSeparator=%s", destinationSeparator);
-			GeneralGui.logInvolveUser();
+			destinationFileSystem = FileSystems.newFileSystem(destinationUri, destinationEnvironment);
+			final String destinationSeparator = destinationFileSystem.getSeparator();
 			
 			// Get source and destination paths.
-			Path sourcePath = sourceFileSystem.getPath(sourceSeparator, thePackage.getName().replace(".", sourceSeparator));
+			final Path sourcePath = sourceFileSystem.getPath(sourceSeparator, thePackage.getName().replace(".", sourceSeparator));
+			final Path destinationPath = destinationFileSystem.getPath(destinationSeparator, thePackage.getName().replace(".", destinationSeparator));
 			
-			// TODO: remove it
-			GeneralGui.log("Utility:12 sourcePath=%s", sourcePath);
-			GeneralGui.logInvolveUser();
-			
-			Path destinationPath = destinationfileSystem.getPath(destinationSeparator, thePackage.getName().replace(".", destinationSeparator));
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:13 destinationPath=%s", destinationPath);
-			GeneralGui.logInvolveUser();
-			
-			Utility.copyJarToJar(sourcePath, destinationPath, destinationfileSystem);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:14 copyJarToJar: %s to %s", destinationPath, destinationPath);
-			GeneralGui.logInvolveUser();
+			// Copy source classes to the destination path.
+			Utility.copyFromJarToJar(sourcePath, destinationPath, destinationFileSystem);
 			
 			// Path to JAR meta information.
 			final String metaInfFolderName = "META-INF";
@@ -709,54 +650,39 @@ public class GeneratorUtility {
 			// Copy META-INF folder to the runnable JAR archive.
 			final String sourceMetaInfRoot = thePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
 			final Path sourceMetaInfPath = sourceFileSystem.getPath(destinationSeparator, sourceMetaInfRoot);
-			final Path destinationMetaInfPath = destinationfileSystem.getPath(destinationSeparator, metaInfFolderName);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:15 copyJarToJar: %s to %s", sourceMetaInfPath, destinationMetaInfPath);
-			GeneralGui.logInvolveUser();
-			
-			Utility.copyJarToJar(sourceMetaInfPath, destinationMetaInfPath, destinationfileSystem);
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:16 copyJarToJar: %s to %s", sourceMetaInfPath, destinationMetaInfPath);
-			GeneralGui.logInvolveUser();
+			final Path destinationMetaInfPath = destinationFileSystem.getPath(destinationSeparator, metaInfFolderName);
+			Utility.copyFromJarToJar(sourceMetaInfPath, destinationMetaInfPath, destinationFileSystem);
 		}
 		catch (Exception e) {
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:E1 Exception.Class=%s", e.getClass().getSimpleName());
-			GeneralGui.logInvolveUser();
-			
-			// TODO: remove it
-			GeneralGui.log("Utility:E2 Exception.LocalizedMessage=%s", e.getLocalizedMessage());
-			GeneralGui.logInvolveUser();
-			
-			// TODO: remove it
-			if (e.getCause() != null) {
-				GeneralGui.log("Utility:E3 Exception.Cause=%s", e.getCause().getLocalizedMessage());
-				GeneralGui.logInvolveUser();
-			}
+			exception = e;
 		}
 		finally {
 			// Close both file systems.
 			try {
 				if (sourceFileSystem != null) {
 					sourceFileSystem.close();
-					
-					// TODO: remove it
-					GeneralGui.log("Utility:14 fileSystemApp.Close");
-					GeneralGui.logInvolveUser();
-				}
-				if (destinationfileSystem != null) {
-					destinationfileSystem.close();
-					
-					// TODO: remove it
-					GeneralGui.log("Utility:15 fileSystemLoader.Close");
-					GeneralGui.logInvolveUser();
 				}
 			}
 			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
 			}
+			try {
+				if (destinationFileSystem != null) {
+					destinationFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
 		}
 	}
 }

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-  <string>C:\from_master\multipage_ide\ProgramMiddle\src\org\maclan\properties</string>
+  <string>C:\from_master\multipage_ide\ProgramAddIns\src\org\multipage\addinloader\properties</string>
   <boolean>true</boolean>
   <java.awt.Rectangle>
     <x>0</x>
@@ -299,8 +299,17 @@
         <otherColumns>321</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
+    <program.localizer.LocalizerItem>
+      <filePath>C:\from_master\multipage_ide\ProgramAddIns\src\org\multipage\addinloader\properties\messages_en_US.properties</filePath>
+      <tabName>AddInLoader</tabName>
+      <columns>
+        <column0>30</column0>
+        <column1>298</column1>
+        <otherColumns>347</otherColumns>
+      </columns>
+    </program.localizer.LocalizerItem>
   </linked-list>
-  <int>2</int>
+  <int>8</int>
   <java.awt.Rectangle>
     <x>609</x>
     <y>129</y>

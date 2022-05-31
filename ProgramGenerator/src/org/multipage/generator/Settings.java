@@ -17,15 +17,10 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
+import java.util.Locale;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -41,6 +36,7 @@ import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -48,9 +44,9 @@ import org.maclan.MiddleUtility;
 import org.maclan.server.DebugListener;
 import org.maclan.server.ProgramServlet;
 import org.multipage.addinloader.AddInLoader;
+import org.multipage.addins.ProgramAddIns;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
-import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
@@ -950,48 +946,66 @@ public class Settings extends JDialog {
 		String className = loaderClass.getSimpleName();
 		String jarFileName = className + ".jar";
 		Package thePackage = loaderClass.getPackage();
-		
-		GeneralGui.log("ON LOAD ADD IN");
-		
+
 		try {
+			
 			// Create unique temporary folder for saving temporary JAR file.
 			Path temporaryPath = Files.createTempDirectory("ProgramGenerator_");
-			
-			// TODO: debug
-			GeneralGui.log("TEMPORARY PATH %s", temporaryPath);
-			GeneralGui.logInvolveUser();
-			
+
 			// Create temporary JAR file.
 			File temporaryJarFile = Paths.get(temporaryPath.toString(), jarFileName).toFile();
-			
-			// Save add-in loader to executable JAR file in temporary directory.
-			//Path temporaryClassPath = saveAddInLoader(loaderPackage, temporaryJarFile);
-			
+
 			// Find out if this application is zipped in JAR file.
 			boolean isApplicationZipped = Utility.isApplicationZipped();
 			
 			// On JAR file.
+			String applicationAddInsPath = null;
 			if (isApplicationZipped) {
-				
-				GeneralGui.log("APPLICATION ZIPPED");
+
+				// Get application JAR path.
+				String applicationJarPath = Utility.getApplicationJarFile().toString();
 				
 				// Export JAR package classes to output JAR file.
-				GeneratorUtility.exportJarPackageToJarFile(thePackage, temporaryJarFile);
+				GeneratorUtility.exportJarPackageToJarFile(applicationJarPath, thePackage, temporaryJarFile);
+				
+				// Set the Add-Ins path to JAR path.
+				applicationAddInsPath = applicationJarPath;
 			}
 			// On a directory with classes.
 			else {
 				
 				// Get this application path.
-				String applicationPath = Utility.getApplicationPath(GeneratorMain.class);
+				String LoaderPath = Utility.getApplicationPath(ProgramAddIns.class);
 				
 				// Export directory classes to output JAR file..
-				GeneratorUtility.exportDirectoryClassesToJarFile(applicationPath, thePackage, temporaryJarFile);
+				GeneratorUtility.exportDirectoryClassesToJarFile(LoaderPath, thePackage, temporaryJarFile);
+				
+				// Set the Add-Ins path.
+				applicationAddInsPath = Utility.getApplicationPath(ProgramAddIns.class);
 			}
 			
-			// Try to run the Add-In loader.
 			if (temporaryJarFile != null) {
-				String result = Utility.runJavaClass(temporaryPath, loaderClass, new String [] {"addInJarFile=" + addInJarFile});
-
+				
+				// Get language and country information that uses this application to display related GUI.
+				Locale locale = Locale.getDefault();
+				String language = locale.getLanguage();
+				String country = locale.getCountry();
+				
+				// Try to run the Add-In loader.
+				Utility.runExecutableJar(temporaryPath.toString(), temporaryJarFile.toString(),
+											new String [] {"addInJarFile=" + addInJarFile,
+														   "applicationAddInsPath=" + applicationAddInsPath,
+														   "language=" + language,
+														   "country=" + country});
+				
+				// Close this window.
+				SwingUtilities.invokeLater(() -> {
+					dispose();
+				});
+				// Close the whole application.
+				SwingUtilities.invokeLater(() -> {
+					GeneratorMainFrame.getFrame().closeWindow();
+				});
 			}
 		}
 		catch (Exception e) {
@@ -999,124 +1013,6 @@ public class Settings extends JDialog {
 		}
 	}
 	
-	/**
-	 * Save Add-In loader to temporary file.
-	 * @param loaderClass
-	 * @param applicationFileOrDirectory
-	 * @return temporary folder with loader executable JAR file
-	 */
-	private Path saveAddInLoader(Class<?> loaderClass, File applicationFileOrDirectory) {
-		
-		Path temporaryClassPath = null;
-		FileSystem appJarFileSystem = null;
-		FileSystem loaderJarFileSystem = null;
-		
-		try {
-			
-			// Get the loader package and class name.
-			final String loaderPackageName = loaderClass.getPackageName();
-			final String loaderClassName = loaderClass.getSimpleName();
-			
-			// Create unique temporary folder for saving the loader JAR file.
-			temporaryClassPath = Files.createTempDirectory("ProgramGenerator_");
-			
-			// Path to JAR meta information.
-			final String metaInfFolder = "META-INF";
-			final String metaInfPathName = loaderPackageName.replace('.', '_') + "_" + metaInfFolder;
-			
-			// Create file system of the loader JAR.
-			final String loaderFileSystemUriName = "jar:file:/" + temporaryClassPath.toString().replace('\\', '/') + '/' + loaderClassName + ".jar";
-			final URI loaderFileSystemUri = URI.create(loaderFileSystemUriName);
-			final Map<String, String> loaderEnvironment = Map.of("create", "true");
-			loaderJarFileSystem = FileSystems.newFileSystem(loaderFileSystemUri, loaderEnvironment);
-			
-			final String loaderJarSeparator = loaderJarFileSystem.getSeparator();
-			
-			// Get package folder.
-			final String loaderPackageFolder = loaderPackageName.replace(".", loaderJarSeparator);
-			
-			// Get path in the target JAR file system.
-			final Path loaderTargetJarPath = loaderJarFileSystem.getPath(loaderJarSeparator, loaderPackageFolder, loaderJarSeparator);
-			
-			// Export loader from application directory.
-			if (applicationFileOrDirectory.isDirectory()) {
-			
-				// Get loader source path.
-				Path addInLoaderSourcePath = Paths.get(applicationFileOrDirectory.getPath(), "ProgramGenerator", "bin", loaderPackageFolder);
-				
-				// Copy loader into the executable JAR file.
-				Utility.copyDirToJar(addInLoaderSourcePath, loaderTargetJarPath, loaderJarFileSystem);
-				
-				// TODO: debug
-				LoggingDialog.log("COPY FROM %s TO %s", addInLoaderSourcePath, loaderTargetJarPath);
-				
-				// Copy META-INF folder to the runnable JAR archive.
-				final Path metaInfPath = Paths.get(applicationFileOrDirectory.getPath(), "ProgramGenerator", "src", metaInfPathName);
-				final Path metaInfJarPath = loaderJarFileSystem.getPath(loaderJarSeparator, metaInfFolder);
-				
-				Utility.copyDirToJar(metaInfPath, metaInfJarPath, loaderJarFileSystem);
-			}
-			// Use application JAR file.
-			// TODO: Use loader JAR file system in the copy function.
-			else if (applicationFileOrDirectory.isFile()) {
-				
-				// Get loader sources path in the application JAR.
-				final String appJarUriName = "jar:file:/" + applicationFileOrDirectory.toString().replace('\\', '/');
-				final URI appFileSystemUri = URI.create(appJarUriName);
-				final Map<String, String> appEnvironment = Map.of("create", "true");
-				
-				// TODO: debug
-				LoggingDialog.log("APPLICATION JAR %s", appFileSystemUri);
-				
-				// Create application JAR file system.
-				appJarFileSystem = FileSystems.newFileSystem(appFileSystemUri, appEnvironment);
-				
-				final String appJarSeparator = loaderJarFileSystem.getSeparator();
-				
-				// Get path of the loader in application JAR file system.
-				final Path loaderPathInAppJar = appJarFileSystem.getPath(appJarSeparator, loaderPackageFolder);
-				
-				// Copy loader classes into the temporary JAR file.
-				// TODO: fix error in destination path
-				Utility.copyDirToJar(loaderPathInAppJar, loaderTargetJarPath, appJarFileSystem);
-			}
-			else {
-				Utility.show(this, "org.multipage.generator.messageUnknownApplicationFileOnAddIn");
-			}
-		}
-		catch (Exception e) {
-			Utility.show(this, "org.multipage.generator.messageExeptionRaisedOnAddIn", e.getLocalizedMessage());
-			
-			// TODO: debug
-			StringWriter logWriter = new StringWriter();
-			PrintWriter printWriter = new PrintWriter(logWriter);
-			e.printStackTrace(printWriter);
-			StringBuffer stringBuffer = logWriter.getBuffer();
-			String message = stringBuffer.toString();
-			LoggingDialog.log("STACK DUMP %s", message);
-		}
-		finally {
-			try {
-				if (appJarFileSystem != null) {
-					appJarFileSystem.close();
-					// TODO: debug
-					LoggingDialog.log("APPLICATION JAR CLOSED");
-				}
-				if (loaderJarFileSystem != null) {
-					loaderJarFileSystem.close();
-					// TODO: debug
-					LoggingDialog.log("LOADER JAR CLOSED");
-				}
-			}
-			catch (IOException e) {
-			}
-		}
-		
-		// TODO: debug
-		LoggingDialog.log("TEMPORARY PATH: %s", temporaryClassPath);
-		return temporaryClassPath;
-	}
-
 	/**
 	 * On remove add-in.
 	 * 

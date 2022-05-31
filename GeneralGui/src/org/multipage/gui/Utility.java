@@ -51,7 +51,6 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -59,7 +58,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -82,7 +80,6 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -557,7 +554,7 @@ public class Utility {
 			button.setToolTipText(Resources.getString(tooltip));
 		}
 	}
-
+	
 	/**
 	 * Performs label localization.
 	 * @param label
@@ -566,7 +563,7 @@ public class Utility {
 		
 		label.setText(Resources.getString(label.getText()));
 	}
-
+	
 	/**
 	 * Performs check box localization.
 	 * @param checkBox
@@ -3880,21 +3877,21 @@ public class Utility {
 			// Wait given time span for process termination.
 			if (timeout != null) {
 				process.waitFor(timeout, unit);
-			}
 	        
-	        // Get its stdout and read the output text.
-	        standardOutput = process.getInputStream();
-			reader = new BufferedReader(new InputStreamReader(standardOutput));
-			
-			while (true) {
+		        // Get its stdout and read the output text.
+		        standardOutput = process.getInputStream();
+				reader = new BufferedReader(new InputStreamReader(standardOutput));
 				
-				String line = reader.readLine();
-				if (line == null) {
-					break;
+				while (true) {
+					
+					String line = reader.readLine();
+					if (line == null) {
+						break;
+					}
+					
+					text.append(line);
+					text.append("\n");
 				}
-				
-				text.append(line);
-				text.append("\n");
 			}
 		}
 		catch (Exception e) {
@@ -3930,32 +3927,26 @@ public class Utility {
 	}
 	
 	/**
-	 * Run java class with java.exe.
-	 * @param javaClassPath
-	 * @param runnableClass
+	 * Run executable JAR using java.exe.
+	 * @param workingDirectory
+	 * @param executableJarPath
 	 * @param parameters
 	 */
-	public static String runJavaClass(Path javaClassPath, Class<?> runnableClass, String [] parameters)
+	public static String runExecutableJar(String workingDirectory, String executableJarPath, String [] parameters)
 			throws Exception {
 		
 		// Get Java home directory.
 		String javaExePath = System.getProperty("java.home") + File.separatorChar + "bin" + File.separatorChar + "java.exe";
 		
-		// Get working directory from class path.
-		String workingDirectory = javaClassPath.toString();
-		
-		// Class name.
-		String className = runnableClass.getName();
-		
 		// Compile java execution command.
 		StringBuilder javaCommand = new StringBuilder();
-		javaCommand.append('\"').append(javaExePath).append("\" -cp \"").append(workingDirectory).append("\" ").append(className);
+		javaCommand.append('\"').append(javaExePath).append("\" -jar \"").append(executableJarPath).append('\"');
 		
 		for (String parameter : parameters) {
 			javaCommand.append(" \"").append(parameter).append('\"');
 		}
 		
-		// TODO: do it like following well stated command "C:\library\graalvm-ce-java17-21.3.0\bin\java.exe" -cp "C:\Users\vacla\AppData\Local\Temp\ProgramGenerator_2930131809177417903" org.multipage.addinloader.AddInLoader
+		// TODO: do it like following well stated command "C:\library\graalvm-ce-java17-21.3.0\bin\java.exe" -jar "C:\Users\vacla\AppData\Local\Temp\ProgramGenerator_2930131809177417903\AddInLoader.jar"
 		
 		// Run java command.
 		String result = runExecutable(workingDirectory, javaCommand.toString(), null, TimeUnit.SECONDS);
@@ -5265,63 +5256,67 @@ public class Utility {
 	/**
 	 * Copy source directory to a target JAR file system.
 	 * @param sourcePath
-	 * @param destinationPath
+	 * @param destinationFoldersPath
 	 * @param destinationFileSystem 
-	 * @throws IOException
+	 * @throws Exception
 	 */
-	public static void copyDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+	public static void copyDirToJar(Path sourcePath, String [] destinationFoldersPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Get destination file system path separator.
+		String destinationSeparator = destinationFileSystem.getSeparator();
+		
+		// Compile destination path.
+		Path destinationPath = destinationFileSystem.getPath(destinationSeparator, destinationFoldersPath);
+		
+		// Delegate the call.
+		copyFromDirToJar(sourcePath, destinationPath, destinationFileSystem);
+	}
+	
+	/**
+	 * Copy source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationPath
+	 * @param destinationFileSystem
+	 */
+	private static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
 			throws Exception {
 		
 		// Create destination directory if it doesn't exist.
 	    if (!Files.exists(destinationPath)) {
 	    	Files.createDirectories(destinationPath);
-	    	
-	    	// TODO: debug
-			GeneralGui.log("CREATED DIRECTORIES IN JAR: %s", destinationPath);
-			GeneralGui.logInvolveUser();
 	    }
 	    
 	    // If the source and destination paths designate files, copy the source
 	    // file directly to the destination file.
 	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
-	    	Path resultPath = Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-	    	
-	    	// TODO: debug
-			GeneralGui.log("COPY FILE %s INTO JAR %s. RESULT PATH %s", sourcePath, destinationPath, resultPath);
-			GeneralGui.logInvolveUser();
-	    	return;
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
 	    }
 	    
-		// TODO: debug
-		GeneralGui.log("LIST PATH ENTRIES %s", sourcePath);
-		GeneralGui.logInvolveUser();
-	    
 	    // List child source paths.
-	    Files.list(sourcePath).forEachOrdered(sourceSubPath ->
-	    {
-			// TODO: debug
-			GeneralGui.log("PATH ENTRY %s", sourceSubPath);
-			GeneralGui.logInvolveUser();
-			
+	    Obj<Exception> exception = new Obj<Exception>();
+	    Files.list(sourcePath).forEachOrdered(sourceSubPath -> {
 	    	try {
 	    		Path fileOrFolder = sourceSubPath.getFileName();
 	    		Path destinationSubPath = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
 	    		
-				// TODO: debug
-				GeneralGui.log("INVOKE COPY HELPER %s TO %s", sourceSubPath, destinationSubPath);
-				GeneralGui.logInvolveUser();
-				
-	    		copyExHelper(sourceSubPath, destinationSubPath, destinationFileSystem);
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourceSubPath)) {
+	    	        copyFromDirToJar(sourceSubPath, destinationSubPath, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourceSubPath, destinationSubPath, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
 	    	}
 	    	catch (Exception e) {
-	    		
-				// TODO: debug
-				GeneralGui.log("EXCEPTION %s", e.getLocalizedMessage());
-				GeneralGui.logInvolveUser();
-				
-	    		e.printStackTrace();
+	    		exception.ref = e;
 	    	}
 	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
+	    }
 	}
 	
 	/**
@@ -5331,100 +5326,45 @@ public class Utility {
 	 * @param fileSystemLoader
 	 * @throws IOException 
 	 */
-	public static void copyJarToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
-			throws IOException {
-		
-    	// TODO: debug
-		GeneralGui.log("ENTER COPY JAR %s INTO JAR %s", sourcePath, destinationPath);
-		GeneralGui.logInvolveUser();
+	public static void copyFromJarToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+			throws Exception {
 		
 		// Create destination directory if it doesn't exist.
 	    if (!Files.exists(destinationPath)) {
 	    	Files.createDirectories(destinationPath);
-	    	
-	    	// TODO: debug
-			GeneralGui.log("CREATED DIRECTORIES IN JAR: %s", destinationPath);
-			GeneralGui.logInvolveUser();
 	    }
 	    
 	    // If the source and destination paths designate files, copy the source
 	    // file directly to the destination file.
+	    Obj<Exception> exception = new Obj<Exception>();
 	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
-	    	Path resultPath = Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-	    	
-	    	// TODO: debug
-			GeneralGui.log("COPY JAR %s INTO JAR %s. RESULT PATH %s", sourcePath, destinationPath, resultPath);
-			GeneralGui.logInvolveUser();
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
 	    	return;
 	    }
 	    
-		// TODO: debug
-		GeneralGui.log("LIST PATH ENTRIES %s", sourcePath);
-		GeneralGui.logInvolveUser();
-	    
 	    // List child source paths.
-		try {
-		    Files.list(sourcePath).forEachOrdered(sourcePathEntry ->
-		    {
-				// TODO: debug
-				GeneralGui.log("PATH ENTRY %s", sourcePathEntry);
-				GeneralGui.logInvolveUser();
-				
-		    	try {
-		    		Path fileOrFolder = sourcePathEntry.getFileName();
-		    		Path newDestination = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
-		    		
-					// TODO: debug
-					GeneralGui.log("INVOKE COPY HELPER %s TO %s", sourcePathEntry, newDestination);
-					GeneralGui.logInvolveUser();
-					
-		    		copyExHelper(sourcePathEntry, newDestination, destinationFileSystem);
-		    	}
-		    	catch (Exception e) {
-		    		
-					// TODO: debug
-					GeneralGui.log("EXCEPTION %s", e.getLocalizedMessage());
-					GeneralGui.logInvolveUser();
-					
-		    		e.printStackTrace();
-		    	}
-		    });
-		}
-		catch (Exception e) {
-			
-			// TODO: debug
-			GeneralGui.log("EXCEPTION CLASS NAME %s", e.getClass().getName());
-			GeneralGui.logInvolveUser();
-			GeneralGui.log("EXCEPTION MESSAGE %s", e.getMessage());
-			GeneralGui.logInvolveUser();
-		}
-	}
-	
-	/**
-	 * Helper function for copying files and directories.
-	 * @param sourcePath
-	 * @param destinationPath
-	 * @param applicationJarFs 
-	 * @throws IOException
-	 */
-	private static void copyExHelper(Path sourcePath, Path destinationPath, FileSystem applicationJarFs)
-			throws Exception {
-		
-		// Copy the directory or the file.
-	    if (Files.isDirectory(sourcePath)) {
-	        copyDirToJar(sourcePath, destinationPath, applicationJarFs);
-	    }
-	    else {
-
-	    	// TODO: debug
-	    	GeneralGui.log("COPY SOURCE %s TO DESTINATION %s", sourcePath, destinationPath);
-			GeneralGui.logInvolveUser();
-			
-			Path resultPath = Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-			
-	    	// TODO: debug
-	    	GeneralGui.log("COPIED SOURCE %s TO DESTINATION %s", sourcePath, resultPath);
-			GeneralGui.logInvolveUser();
+	    Files.list(sourcePath).forEachOrdered(sourcePathEntry -> {
+	    	
+	    	try {
+	    		Path fileOrFolder = sourcePathEntry.getFileName();
+	    		Path newDestination = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
+	    		
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourcePathEntry)) {
+	    	        copyFromDirToJar(sourcePathEntry, newDestination, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourcePathEntry, newDestination, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
+	    	}
+	    	catch (Exception e) {
+	    		exception.ref = e;
+	    	}
+	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
 	    }
 	}
 	

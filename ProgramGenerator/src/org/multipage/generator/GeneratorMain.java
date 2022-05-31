@@ -43,7 +43,7 @@ public class GeneratorMain {
 	 * Default language and country.
 	 */
 	public static final String defaultLanguage = "en";
-	private static final String defaultCountry = "US";
+	public static final String defaultCountry = "US";
 	
 	/**
 	 * Serialized data location.
