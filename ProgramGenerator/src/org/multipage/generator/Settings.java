@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Locale;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -36,7 +35,6 @@ import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -47,12 +45,15 @@ import org.multipage.addinloader.AddInLoader;
 import org.multipage.addins.ProgramAddIns;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
+import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import java.awt.BorderLayout;
+import javax.swing.JToolBar;
 
 /**
  * 
@@ -263,8 +264,9 @@ public class Settings extends JDialog {
 	private JButton buttonDatabaseAccess;
 	private JButton buttonWebInterface;
 	private JButton buttonResourcesFolder;
-	private JMenuItem menuLoadAddIn;
-	private JMenuItem menuRemoveAddIn;
+	private JToolBar toolBar;
+	private JSeparator separator_1;
+	private JSeparator separator_2;
 
 	/**
 	 * Load dialog.
@@ -499,7 +501,7 @@ public class Settings extends JDialog {
 			}
 		});
 		setTitle("org.multipage.generator.textSettings");
-		setBounds(100, 100, 330, 690);
+		setBounds(100, 100, 726, 690);
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
 		
@@ -741,41 +743,52 @@ public class Settings extends JDialog {
 		JPanel panelAddIn = new JPanel();
 		panelAddIn.setBorder(null);
 		tabbedPane.addTab("org.multipage.generator.textAddIns", null, panelAddIn, null);
-		SpringLayout sl_panelAddIn = new SpringLayout();
-		panelAddIn.setLayout(sl_panelAddIn);
+		panelAddIn.setLayout(new BorderLayout(0, 0));
 		
 		JScrollPane scrollPane = new JScrollPane();
-		sl_panelAddIn.putConstraint(SpringLayout.NORTH, scrollPane, 0, SpringLayout.NORTH, panelAddIn);
 		scrollPane.setBorder(null);
-		sl_panelAddIn.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, panelAddIn);
-		sl_panelAddIn.putConstraint(SpringLayout.SOUTH, scrollPane, 0, SpringLayout.SOUTH, panelAddIn);
-		sl_panelAddIn.putConstraint(SpringLayout.EAST, scrollPane, 0, SpringLayout.EAST, panelAddIn);
 		panelAddIn.add(scrollPane);
 		
 		JList listAddIns = new JList();
 		listAddIns.setBorder(null);
 		scrollPane.setViewportView(listAddIns);
 		
-		JMenuBar menuBar = new JMenuBar();
-		scrollPane.setColumnHeaderView(menuBar);
+		toolBar = new JToolBar();
+		toolBar.setFloatable(false);
+		panelAddIn.add(toolBar, BorderLayout.NORTH);
 		
-		menuLoadAddIn = new JMenuItem("org.multipage.generator.menuLoadAddIn");
-		menuLoadAddIn.addActionListener(new ActionListener() {
+		JButton buttonLoadAddIn = new JButton("org.multipage.generator.menuLoadAddIn");
+		buttonLoadAddIn.setMargin(new Insets(2, 2, 2, 2));
+		buttonLoadAddIn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onLoadAddIn();
 			}
 		});
-		menuLoadAddIn.setActionCommand("");
-		menuBar.add(menuLoadAddIn);
+		toolBar.add(buttonLoadAddIn);
 		
-		menuRemoveAddIn = new JMenuItem("org.multipage.generator.menuRemoveAddIn");
-		menuRemoveAddIn.addActionListener(new ActionListener() {
+		JButton buttonRemoveAddIn = new JButton("org.multipage.generator.menuRemoveAddIn");
+		buttonRemoveAddIn.setMargin(new Insets(2, 2, 2, 2));
+		buttonRemoveAddIn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onRemoveAddIn();
 			}
 		});
-		menuRemoveAddIn.setActionCommand("");
-		menuBar.add(menuRemoveAddIn);
+		
+		separator_1 = new JSeparator();
+		separator_1.setMaximumSize(new Dimension(3, 32767));
+		separator_1.setPreferredSize(new Dimension(0, 0));
+		separator_1.setOrientation(SwingConstants.VERTICAL);
+		toolBar.add(separator_1);
+		toolBar.add(buttonRemoveAddIn);
+		
+		separator_2 = new JSeparator();
+		separator_2.setMaximumSize(new Dimension(3, 32767));
+		separator_2.setOrientation(SwingConstants.VERTICAL);
+		toolBar.add(separator_2);
+		
+		JButton buttonSignAddIn = new JButton("org.multipage.generator.menuAddInSigner");
+		buttonSignAddIn.setMargin(new Insets(2, 2, 2, 2));
+		toolBar.add(buttonSignAddIn);
 	}
 	
 	/**
@@ -815,8 +828,7 @@ public class Settings extends JDialog {
 		Utility.localize(tabbedPane);
 		Utility.localize(buttonOk);
 		Utility.localize(buttonCancel);
-		Utility.localize(menuLoadAddIn);
-		Utility.localize(menuRemoveAddIn);
+		Utility.localize(toolBar);
 		Utility.localize(labelMaxSizeOfTextResource);
 		Utility.localize(labelBytes);
 		Utility.localize(buttonDefaults);
@@ -936,7 +948,7 @@ public class Settings extends JDialog {
 		// Get file name.
 		String [][] filters = {{"org.multipage.generator.textAddInJarFilesFilter", "jar"}};
 		
-		File addInJarFile = Utility.chooseFileNameToOpen(this, filters);
+		File addInJarFile = Utility.chooseFileToOpen(this, filters);
 		if (addInJarFile == null) {
 			return;
 		}
@@ -946,66 +958,47 @@ public class Settings extends JDialog {
 		String className = loaderClass.getSimpleName();
 		String jarFileName = className + ".jar";
 		Package thePackage = loaderClass.getPackage();
-
+		
 		try {
-			
 			// Create unique temporary folder for saving temporary JAR file.
 			Path temporaryPath = Files.createTempDirectory("ProgramGenerator_");
-
+			
 			// Create temporary JAR file.
 			File temporaryJarFile = Paths.get(temporaryPath.toString(), jarFileName).toFile();
-
+			
 			// Find out if this application is zipped in JAR file.
 			boolean isApplicationZipped = Utility.isApplicationZipped();
 			
+			// Get path to ProgramAddins project.
+			String applicationPath = Utility.getApplicationPath(ProgramAddIns.class);
+			
+			String workingDirectory = "";
+			
 			// On JAR file.
-			String applicationAddInsPath = null;
 			if (isApplicationZipped) {
-
-				// Get application JAR path.
-				String applicationJarPath = Utility.getApplicationJarFile().toString();
 				
 				// Export JAR package classes to output JAR file.
-				GeneratorUtility.exportJarPackageToJarFile(applicationJarPath, thePackage, temporaryJarFile);
+				GeneratorUtility.exportJarPackageToJarFile(applicationPath, thePackage, temporaryJarFile);
 				
-				// Set the Add-Ins path to JAR path.
-				applicationAddInsPath = applicationJarPath;
+				workingDirectory = Paths.get(applicationPath).getParent().toString();
 			}
 			// On a directory with classes.
 			else {
 				
-				// Get this application path.
-				String LoaderPath = Utility.getApplicationPath(ProgramAddIns.class);
-				
 				// Export directory classes to output JAR file..
-				GeneratorUtility.exportDirectoryClassesToJarFile(LoaderPath, thePackage, temporaryJarFile);
-				
-				// Set the Add-Ins path.
-				applicationAddInsPath = Utility.getApplicationPath(ProgramAddIns.class);
+				GeneratorUtility.exportDirectoryClassesToJarFile(applicationPath, thePackage, temporaryJarFile);
 			}
 			
+			// Try to run the Add-In loader.
 			if (temporaryJarFile != null) {
 				
-				// Get language and country information that uses this application to display related GUI.
-				Locale locale = Locale.getDefault();
-				String language = locale.getLanguage();
-				String country = locale.getCountry();
+				Utility.runExecutableJar(temporaryPath.toString(), temporaryJarFile.toString(), new String [] {
+											"addInJarFile=" + addInJarFile.toString(),
+											"applicationFile=" +  applicationPath,
+											"applicationWorkingDirectory=" + workingDirectory});
 				
-				// Try to run the Add-In loader.
-				Utility.runExecutableJar(temporaryPath.toString(), temporaryJarFile.toString(),
-											new String [] {"addInJarFile=" + addInJarFile,
-														   "applicationAddInsPath=" + applicationAddInsPath,
-														   "language=" + language,
-														   "country=" + country});
-				
-				// Close this window.
-				SwingUtilities.invokeLater(() -> {
-					dispose();
-				});
-				// Close the whole application.
-				SwingUtilities.invokeLater(() -> {
-					GeneratorMainFrame.getFrame().closeWindow();
-				});
+				// Terminate the application.
+				ConditionalEvents.transmit(this, Signal.terminate);
 			}
 		}
 		catch (Exception e) {
@@ -1067,7 +1060,7 @@ public class Settings extends JDialog {
 	 * 
 	 * @return
 	 */
-	public static boolean isRemovePartiallyGenerated() {
+	public static boolean partiallyGeneratedRemoved() {
 		
 		return isRemovePartiallyRenderedPages;
 	}

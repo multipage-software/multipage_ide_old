@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/graalvm-ce-java17-21.3.0">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramBasic"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramGenerator"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramHelp"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddleDerby"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddlePostgreSQL"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramTranslator"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

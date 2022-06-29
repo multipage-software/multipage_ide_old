@@ -120,6 +120,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.JViewport;
 import javax.swing.ListCellRenderer;
@@ -157,6 +158,7 @@ import javax.swing.tree.TreePath;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -638,6 +640,29 @@ public class Utility {
 		for (int index = 0; index < tabbedPane.getTabCount(); index++) {
 			
 			tabbedPane.setTitleAt(index, Resources.getString(tabbedPane.getTitleAt(index)));
+		}
+	}
+	
+	/**
+	 * Localize tool bar.
+	 * @param toolBar
+	 */
+	public static void localize(JToolBar toolBar) {
+		
+		// Get number of tool bar components.
+		int componentCount = toolBar.getComponentCount();
+		
+		// Traverse all tool bar components.
+		for (int index = 0; index < componentCount; index++) {
+			
+			Component component = toolBar.getComponentAtIndex(index);
+			
+			// Localize each button on the tool bar.
+			if (component instanceof JButton) {
+				
+				JButton button = (JButton) component;
+				localize(button);
+			}
 		}
 	}
 	
@@ -1317,25 +1342,25 @@ public class Utility {
 	}
 	
 	/**
-	 * Choose file name to load.
+	 * Choose file name to opem.
 	 * @param translatorDialog
 	 * @param filters: {{"org.multipage.translator.textXmlFilesDictionary", "xml"}, {...}, ...}
 	 * @return
 	 */
-	public static File chooseFileNameToOpen(Component parentComponent, String[][] filters) {
+	public static File chooseFileToOpen(Component parentComponent, String[][] filters) {
 		
 		// Delegate the call
-		return chooseFileNameToOpen(parentComponent, filters, true);
+		return chooseFileToOpen(parentComponent, filters, true);
 	}
 	
 	/**
-	 * Choose file name to load.
+	 * Choose file name to open.
 	 * @param translatorDialog
 	 * @param filters: {{"org.multipage.translator.textXmlFilesDictionary", "xml"}, {...}, ...} or {{"XML files", "xml"}, {...}, ...}
 	 * @param useStringResources - if true the method uses IDs of strings in filter definition otherwise ordinary texts
 	 * @return
 	 */
-	public static File chooseFileNameToOpen(Component parentComponent,
+	public static File chooseFileToOpen(Component parentComponent,
 			String[][] filters, boolean useStringResources) {
 		
 		// Select resource file.
@@ -3843,12 +3868,30 @@ public class Utility {
 		
 		return resourceIds;
 	}
+	
+	/**
+	 * Run executable file using given command that is placed in directory
+	 * designated by "path" argument.
+	 * @param workingDirectory
+	 * @param command
+	 * @return
+	 * @throws Exception 
+	 */
+	public static String runExecutable(String workingDirectory, String command)
+			throws Exception {
+		
+		// Delegate the call.
+		String outputString = runExecutable(workingDirectory, command, null, null);
+		return outputString;
+	}
 
 	/**
 	 * Run executable file using given command that is placed in directory
 	 * designated by "path" argument.
 	 * @param workingDirectoryPath
 	 * @param command
+	 * @param timeout
+	 * @param unit
 	 * @return
 	 * @throws Exception 
 	 */
@@ -3875,7 +3918,7 @@ public class Utility {
 			Process process = Runtime.getRuntime().exec(command, null, workingDirectory);
 			
 			// Wait given time span for process termination.
-			if (timeout != null) {
+			if (timeout != null && unit != null) {
 				process.waitFor(timeout, unit);
 	        
 		        // Get its stdout and read the output text.
@@ -3892,6 +3935,9 @@ public class Utility {
 					text.append(line);
 					text.append("\n");
 				}
+			}
+			else {
+				standardOutput = process.getInputStream();
 			}
 		}
 		catch (Exception e) {
@@ -3922,7 +3968,7 @@ public class Utility {
 		if (exception != null) {
 			throw exception;
 		}
-        
+		
 		return text.toString();
 	}
 	
@@ -3942,14 +3988,15 @@ public class Utility {
 		StringBuilder javaCommand = new StringBuilder();
 		javaCommand.append('\"').append(javaExePath).append("\" -jar \"").append(executableJarPath).append('\"');
 		
-		for (String parameter : parameters) {
-			javaCommand.append(" \"").append(parameter).append('\"');
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				javaCommand.append(" \"").append(parameter).append('\"');
+			}
 		}
 		
-		// TODO: do it like following well stated command "C:\library\graalvm-ce-java17-21.3.0\bin\java.exe" -jar "C:\Users\vacla\AppData\Local\Temp\ProgramGenerator_2930131809177417903\AddInLoader.jar"
-		
 		// Run java command.
-		String result = runExecutable(workingDirectory, javaCommand.toString(), null, TimeUnit.SECONDS);
+		String result = runExecutable(workingDirectory, javaCommand.toString());
 		return result;
 	}
 	

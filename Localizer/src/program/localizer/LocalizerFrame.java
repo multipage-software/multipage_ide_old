@@ -418,7 +418,7 @@ public class LocalizerFrame extends JFrame {
 		// Try to open file.
 		String[][] filters = {{"localizer.textPropertiesFiles", "properties"}};
 		
-		File file = Utility.chooseFileNameToOpen(this, filters);
+		File file = Utility.chooseFileToOpen(this, filters);
 		if (file == null) {
 			return;
 		}

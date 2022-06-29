@@ -9,11 +9,11 @@ package org.multipage.translator;
 
 import java.awt.image.*;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import org.apache.commons.imaging.Imaging;
 import org.multipage.gui.*;
 
 import java.awt.*;
@@ -341,8 +341,11 @@ public class LoadFlagDialog extends JDialog {
 				System.out.println("Error: cannot load flag file.");
 				continue;
 			}
+			
+			InputStream inputStream = null;
 			try {
-				BufferedImage image = ImageIO.read(urlFile);
+				inputStream = urlFile.openStream();
+				BufferedImage image = Imaging.getBufferedImage(inputStream);
 				
 				// Create flag object and add it to the list.
 				CountryFlag countryFlag = new CountryFlag(flagFile, image);
@@ -351,8 +354,17 @@ public class LoadFlagDialog extends JDialog {
 				// Set list model.
 				list.setModel(listModel);
 			}
-			catch (IOException e) {
+			catch (Exception e) {
 				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
 			}
 		}
 	}

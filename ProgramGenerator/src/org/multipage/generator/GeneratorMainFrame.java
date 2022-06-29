@@ -78,7 +78,6 @@ import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 /**
  * 
@@ -670,6 +669,11 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		SyncMain.setCloseEvent(() -> {
 			
 			closeWindow();
+		});
+		
+		// "Terminate" event receiver.
+		ConditionalEvents.receiver(this, Signal.terminate, message -> {
+				closeWindow();
 		});
 		
 		// "Show areas' properties" event receiver.
@@ -2227,7 +2231,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// On error delete created files and exit the method.
 		if (progressResult != ProgressResult.OK) {
 			
-			if (Settings.isRemovePartiallyGenerated()) {
+			if (Settings.partiallyGeneratedRemoved()) {
 				
 				// Ask user and delete files.
 				if (!Utility.deleteFolderContent(target.ref)) {

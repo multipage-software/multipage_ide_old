@@ -11,9 +11,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 
+import org.apache.commons.imaging.Imaging;
 import org.multipage.gui.Utility;
 
 /**
@@ -56,9 +56,9 @@ public class TranslatorUtilities {
 	    
 	    BufferedImage image;
 		try {
-			image = ImageIO.read(file);
+			image = Imaging.getBufferedImage(file);
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			return null;
 		}
 	    

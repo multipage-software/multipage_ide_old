@@ -14,7 +14,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.imageio.ImageIO;
+import org.apache.commons.imaging.ImageFormats;
+import org.apache.commons.imaging.Imaging;
 
 /**
  * @author
@@ -32,9 +33,9 @@ public class ImgUtility {
 		BufferedImage image = null;
 		InputStream inputStream = new ByteArrayInputStream(bytes);
 		try {
-			image = ImageIO.read(inputStream);
+			image = Imaging.getBufferedImage(inputStream);
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			return null;
 		}
 		return image;
@@ -64,18 +65,20 @@ public class ImgUtility {
 
 	/**
 	 * Converts image to the byte array in given format.
-	 * @param image
+	 * @param bufferedImage
+	 * @param formatName
 	 * @return
 	 */
-	public static byte[] convertImageToByteArray(BufferedImage bufferedImage, String format) {
+	public static byte[] convertImageToByteArray(BufferedImage bufferedImage, String formatName) {
 		
 		// Obtain image content.
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		try {
-			ImageIO.write(bufferedImage, format, outputStream);
+			ImageFormats format = ImageFormats.valueOf(formatName);
+			Imaging.writeImage(bufferedImage, outputStream, format);
 			return outputStream.toByteArray();
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			return null;
 		}
 	}

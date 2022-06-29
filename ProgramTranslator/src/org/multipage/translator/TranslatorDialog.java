@@ -1067,7 +1067,7 @@ public class TranslatorDialog extends JDialog {
 		// Get file name.
 		String [][] filters = {{"org.multipage.translator.textXmlFilesDictionary", "xml"}};
 		
-		File file = Utility.chooseFileNameToOpen(this, filters);
+		File file = Utility.chooseFileToOpen(this, filters);
 		if (file == null) {
 			return;
 		}

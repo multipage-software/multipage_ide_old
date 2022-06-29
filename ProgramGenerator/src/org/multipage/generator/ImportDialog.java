@@ -150,7 +150,7 @@ public class ImportDialog extends JDialog {
 		
 		// Find XML file.
 		String [][] filters = {{"org.multipage.generator.textXmlAreaTreeData", "xml"}};
-		File xmlFile = Utility.chooseFileNameToOpen(parent, filters);
+		File xmlFile = Utility.chooseFileToOpen(parent, filters);
 		if (xmlFile == null) {
 			return null;
 		}
@@ -492,7 +492,7 @@ public class ImportDialog extends JDialog {
 			
 			String [][] filters = {{"org.multipage.generator.textDatFiles", "dat"}};
 			
-			File selectedFile = Utility.chooseFileNameToOpen(this, filters);
+			File selectedFile = Utility.chooseFileToOpen(this, filters);
 			
 			if (selectedFile == null) {
 

@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-import javax.imageio.ImageIO;
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
@@ -31,6 +30,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 
+import org.apache.commons.imaging.Imaging;
 import org.maclan.Area;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
@@ -328,9 +328,9 @@ public class GeneratorUtility {
 	    
 	    BufferedImage image;
 		try {
-			image = ImageIO.read(file);
+			image = Imaging.getBufferedImage(file);
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			return null;
 		}
 	    

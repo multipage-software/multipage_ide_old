@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="/ProgramMiddle"/>
+	<classpathentry kind="src" path="/GeneralGui"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramBasic"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
+	<classpathentry kind="src" path=".apt_generated">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="forms-1.3.0.jar" sourcepath="forms-1.3.0-src.zip"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramGenerator"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramTranslator"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramHelp"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="miglayout15-swing.jar" sourcepath="miglayout-src.zip"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

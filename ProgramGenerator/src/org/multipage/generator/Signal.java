@@ -35,6 +35,9 @@ public enum Signal implements EventCondition {
 	// TODO: remove it
 	updateAll,
 	
+	// TODO: finish the definition
+	terminate,
+	
 	// Load diagrams on application start up.
 	loadDiagrams(
 			SignalType.areaViewStateChange,

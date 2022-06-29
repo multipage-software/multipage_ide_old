@@ -220,7 +220,7 @@ public class FilePanel extends InsertPanel implements StringValueEditor, Externa
 	protected void onSelectFilePath() {
 		
 		// Display dialog for file selection
-		File textFile = Utility.chooseFileNameToOpen(this, null);
+		File textFile = Utility.chooseFileToOpen(this, null);
 		if (textFile == null) {
 			return;
 		}

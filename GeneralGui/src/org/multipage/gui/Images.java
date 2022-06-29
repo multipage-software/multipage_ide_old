@@ -16,6 +16,8 @@ import java.util.*;
 import javax.imageio.*;
 import javax.swing.*;
 
+import org.apache.commons.imaging.Imaging;
+
 /**
  * @author
  *
@@ -65,12 +67,24 @@ public class Images {
 		if (image == null) {
 			URL url = ClassLoader.getSystemResource(urlString);
 			if (url != null) {
+				InputStream inputStream = null;
 				try {
-					image = ImageIO.read(url);
+					inputStream = url.openStream();
+					image = Imaging.getBufferedImage(inputStream);
 					images.put(urlString, image);
 					
-				} catch (IOException e) {
+				}
+				catch (Exception e) {
 					e.printStackTrace();
+				}
+				finally {
+					if (inputStream != null	) {
+						try {
+							inputStream.close();
+						}
+						catch (Exception e) {
+						}
+					}
 				}
 			}
 		}

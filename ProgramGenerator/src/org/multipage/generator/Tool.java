@@ -11,10 +11,10 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
-import javax.imageio.ImageIO;
+import org.apache.commons.imaging.Imaging;
 
 
 /**
@@ -91,11 +91,23 @@ public class Tool {
 		// Try to load image.
 		URL url = ClassLoader.getSystemResource(imageFile);
 		if (url != null) {
+			
+			InputStream inputStream = null;
 			try {
-				this.image = ImageIO.read(url);
-				
-			} catch (IOException e) {
+				inputStream = url.openStream();
+				this.image = Imaging.getBufferedImage(inputStream);
+			}
+			catch (Exception e) {
 				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
 			}
 		}
 	}
