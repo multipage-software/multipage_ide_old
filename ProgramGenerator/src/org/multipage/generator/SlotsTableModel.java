@@ -56,7 +56,7 @@ public class SlotsTableModel extends AbstractTableModel {
 	 * Set list.
 	 * @param holders
 	 * @param foundSlots 
-	 * @param showOnlyFound - TODO
+	 * @param showOnlyFound
 	 * @param showAllSlots 
 	 */
 	public void setList(LinkedList<? extends SlotHolder> holders,

@@ -657,21 +657,6 @@ public class SlotListPanel extends JPanel {
 			}
 		});
 		
-		// Receive the "update all" event.
-		ConditionalEvents.receiver(SlotListPanel.this, Signal.updateAll, message -> {
-			
-			// Disable the signal temporarily.
-			Signal.updateAll.disable();
-			
-			// Update slot list
-			update();
-			
-			// Enable the signal.
-			SwingUtilities.invokeLater(() -> {
-				Signal.updateAll.enable();
-			});
-		});
-		
 		// Receive the "area slot saved" event.
 		ConditionalEvents.receiver(SlotListPanel.this, Signal.areaSlotSaved, message -> {
 			
@@ -1647,8 +1632,6 @@ public class SlotListPanel extends JPanel {
 	 */
 	protected void onChange() {
 		
-		// Transmit the "update all" signal.
-		ConditionalEvents.transmit(SlotListPanel.this, Signal.updateAll);
 	}
 	
 	/**

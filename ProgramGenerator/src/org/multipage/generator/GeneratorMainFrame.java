@@ -725,10 +725,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			
 			// Reload areas model.
 			ProgramGenerator.reloadModel();
-			
-			// TODO: transmit same signal again, test infinite loop
-			LoggingDialog.log("TRASMITTED SIGNAL %s (BY MACHINE)", Signal.updateAreasModel);
-			ConditionalEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.machineAction(this, message), Signal.updateAreasModel);
 		});
 		
 		// "Expose read only areas" event receiver.
@@ -1488,41 +1484,41 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// Add buttons. 24 x 24 icons
 		toolBar.addSeparator();
 		if (ProgramBasic.isUsedLogin()) {
-			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", this, "onLoginProperties", "org.multipage.generator.tooltipLoginWindow");
+			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", "org.multipage.generator.tooltipLoginWindow", ()->onLoginProperties());
 			toolBar.addSeparator();
 		}
-		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", this, "onShowHideIds", "org.multipage.generator.tooltipShowHideIds");
+		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", "org.multipage.generator.tooltipShowHideIds", ()->onShowHideIds());
 		addHideSlotsButton(toolBar);
 		toolBar.addSeparator();
-		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onExposeReadOnly", "org.multipage.generator.tooltipAreasUnprotected");
+		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", "org.multipage.generator.tooltipAreasUnprotected", ()->onExposeReadOnly());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdate");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdate", ()->onUpdate());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", this, "onFocusBasicArea", "org.multipage.generator.tooltipFocusWhole");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", "org.multipage.generator.tooltipFocusWhole", ()->onFocusBasicArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", this, "onFocusTabArea", "org.multipage.generator.tooltipFocus");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", "org.multipage.generator.tooltipFocus", ()->onFocusTabArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", this, "onFocusHome", "org.multipage.generator.tooltipFocusHome");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", "org.multipage.generator.tooltipFocusHome", ()->onFocusHome());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", this, "onSearch", "org.multipage.generator.tooltipSearch");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", "org.multipage.generator.tooltipSearch", ()->onSearch());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", this, "onSelectAll", "org.multipage.generator.tooltipSelectAll");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", "org.multipage.generator.tooltipSelectAll", ()->onSelectAll());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", this, "onUnselectAll", "org.multipage.generator.tooltipUnselectAll");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", "org.multipage.generator.tooltipUnselectAll", ()->onUnselectAll());
 		toolBar.addSeparator();
-		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", this, "onUndoFocus", "org.multipage.generator.tooltipUndoFocus");
+		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", "org.multipage.generator.tooltipUndoFocus", ()->onUndoFocus());
 		toolBar.addSeparator();
-		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", this, "onRedoFocus", "org.multipage.generator.tooltipRedoFocus");
+		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", "org.multipage.generator.tooltipRedoFocus", ()->onRedoFocus());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", this, "onRenderTool", "org.multipage.generator.tooltipRenderHtmlPages");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", ()->onRenderTool());
 		toolBar.addSeparator();
-		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", this, "onToggleDebug", "org.multipage.generator.tooltipEnableDisplaySourceCode");
+		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", ()->onToggleDebug());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", this, "onRevert", "org.multipage.generator.tooltipRevertExternalSourceCodes");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", "org.multipage.generator.tooltipRevertExternalSourceCodes", ()->onRevert());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", this, "onMonitorHomePage", "org.multipage.generator.tooltipMonitorHomePage");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipMonitorHomePage", ()->onMonitorHomePage());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", this, "onHelpAboutMenu", "org.multipage.generator.tooltipAbout");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", "org.multipage.generator.tooltipAbout", ()->onHelpAboutMenu());
 		
 		// Set undo and redo references.
 		getAreaDiagram().setUndoRedoComponents(undoButton, redoButton);
@@ -1665,31 +1661,15 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onShowHideIds() {
 		
-		// Toggle show IDs flags.
+		// Show or hide displayed IDs.
 		boolean showIds = showIdButton.isSelected();
-		showIDs(showIds);
+		// Inform areas and slots to use IDs in its descriptions.
+		Area.setShowId(showIds);
+		Slot.setShowId(showIds);
+		// Transmit show/hide IDs signal.
+		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showOrHideIds, showIds);
 	}
 	
-	/**
-	 * Show hide IDs.
-	 */
-	public void showIDs(boolean show) {
-		
-		Area.setShowId(show);
-		Slot.setShowId(show);
-		
-		showIDsExtended(show);
-		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showOrHideIds, show);
-	}
-
-	/**
-	 * Show IDs extended.
-	 */
-	protected void showIDsExtended(boolean show) {
-		
-	}
-
 	/**
 	 * @return the areaDiagramEditor
 	 */
@@ -3806,9 +3786,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areas,
 				parentArea);
 		dialog.setVisible(true);
-		
-		// Propagate update all event.
-		ConditionalEvents.transmit(parentComponent, Signal.updateAll);
-		
+
 	}
 }

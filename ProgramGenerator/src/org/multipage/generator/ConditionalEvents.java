@@ -57,7 +57,7 @@ public class ConditionalEvents {
 		public boolean full = false;
 		
 		// Concrete signals.
-		public Signal [] concreteSignals = { Signal.updateAll };
+		public Signal [] concreteSignals = { };
 	}
 	public static LogParameters logParameters = new LogParameters();
 	

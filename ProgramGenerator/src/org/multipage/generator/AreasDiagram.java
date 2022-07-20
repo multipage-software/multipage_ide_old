@@ -338,6 +338,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				return;
 			}
 			
+			// TODO: debug
+			LoggingDialog.log("RELOADING AreasDiagram");
+			
 			// Reload and repaint the diagram.
 			reload(false, false);
 			setOverview();
@@ -1282,7 +1285,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		}
 		
 		// Reload diagram.
-		updateInformation();
+		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
 	}
 
 	/**
@@ -1347,22 +1350,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		}
 
 		return areaIds;
-	}
-
-	/**
-	 * Update information.
-	 * @param source 
-	 */
-	public void updateInformation() {
-		
-		// Get selected areas.
-		LinkedList<Area> selectedAreas = getSelectedAreas();
-		// Reload diagram.
-		reload(false, false);
-		// Select areas.
-		selectAreas(selectedAreas);
-		// Sets overview.
-		setOverview();
 	}
 	
 	/**
@@ -2098,7 +2085,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		
 		Area area = ProgramGenerator.getAreasModel().getArea(areaId);
 		select(area, true, true);
-		updateInformation();
+		
+		// Reload diagram.
+		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
 	}
 	
 	/**
@@ -2661,7 +2650,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				}
 				
 				// Reload diagram.
-				updateInformation();
+				Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
 				
 				if (selectAndFocus) {
 					// Select the new area.
@@ -2731,8 +2720,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				affectedParentArea, parentComponent);
 		dialog.setVisible(true);
 		
-		// Reload area diagram.
-		updateInformation();
+		// Reload diagram.
+		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
 	}
 
 	/**

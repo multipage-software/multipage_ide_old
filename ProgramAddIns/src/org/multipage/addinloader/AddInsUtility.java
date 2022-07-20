@@ -24,6 +24,9 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JTree;
+import javax.swing.tree.TreeModel;
+import javax.swing.tree.TreePath;
 
 /**
  * Miscellaneous helper functions.
@@ -539,5 +542,53 @@ public class AddInsUtility {
 		// Delegate the call.
 		String outputString = runExecutableJar(workingDirectory, executableJarPath, null);
 		return outputString;
+	}
+
+	/**
+	 * Expand / collapse all.
+	 * @param tree
+	 * @param expand
+	 */
+	public static void expandAll(JTree tree, boolean expand) {
+		
+		TreeModel model = tree.getModel();
+		if (model != null) {
+			TreePath parent = new TreePath(model.getRoot());
+			expandAll(tree, model, parent, expand);
+		}
+	}
+	
+	/**
+	 * Expand / collapse all.
+	 * @param tree
+	 * @param model
+	 * @param parent
+	 * @param expand
+	 */
+	private static void expandAll(JTree tree, TreeModel model, TreePath parent,
+			boolean expand) {
+		
+		// Check input values.
+		if (tree == null || model == null || parent == null) {
+			return;
+		}
+		
+		// Traverse children
+		Object node = parent.getLastPathComponent();
+		int count = model.getChildCount(node);
+		
+		for (int index = 0; index < count; index++) {
+
+			Object child = model.getChild(node, index);
+			TreePath path = parent.pathByAddingChild(child);
+			expandAll(tree, model, path, expand);
+	    }
+
+	    // Expansion or collapse must be done bottom-up
+	    if (expand) {
+	        tree.expandPath(parent);
+	    } else {
+	        tree.collapsePath(parent);
+	    }
 	}
 }

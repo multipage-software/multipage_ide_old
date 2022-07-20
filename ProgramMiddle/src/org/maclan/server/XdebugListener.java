@@ -1084,7 +1084,6 @@ public class XdebugListener extends DebugListener {
 	@Override
 	public boolean startDebugging() {
 		
-		// TODO:
 		return true;
 	}
 	
@@ -1093,7 +1092,6 @@ public class XdebugListener extends DebugListener {
 	 */
 	public void stopDebugging() {
 		
-		// TODO:
 		command.set(stop);
 		Lock.notify(commandSet);
 	}

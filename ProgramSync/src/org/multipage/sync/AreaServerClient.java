@@ -193,7 +193,7 @@ public class AreaServerClient {
 				if (xml == null) {
 					
 					// Add reload menu item
-					addefaultMenuItems();
+					adDefaultMenuItems();
 					return;
 				}
 				
@@ -267,14 +267,14 @@ public class AreaServerClient {
 					}
 					
 					// Add default menu items.
-					addefaultMenuItems();
+					adDefaultMenuItems();
 				});
 				
 			}
 			catch (Exception e) {
 				
 				// Add reload menu item
-				addefaultMenuItems();
+				adDefaultMenuItems();
 				
 				Exception exception = null;
 				String errorMessage = e.getLocalizedMessage();
@@ -305,7 +305,7 @@ public class AreaServerClient {
 	/**
 	 * Add reload menu item
 	 */
-	private void addefaultMenuItems() {
+	private void adDefaultMenuItems() {
 		
 		SwingUtilities.invokeLater(() -> {
 			

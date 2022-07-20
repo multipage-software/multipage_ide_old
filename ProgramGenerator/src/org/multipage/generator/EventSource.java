@@ -33,6 +33,8 @@ public class EventSource {
 	public static final EventSource LOCAL_POPUP_MENU = new EventSource("LOCAL_POPUP_MENU");
 	// The Area Trace source.
 	public static final EventSource AREA_TRACE = new EventSource("AREA_TRACE");
+	// The Areas Diagram source.
+	public static final EventSource AREAS_DIAGRAM = new EventSource("AREAS_DIAGRAM");
 	
 	/**
 	 * Name of the event source.

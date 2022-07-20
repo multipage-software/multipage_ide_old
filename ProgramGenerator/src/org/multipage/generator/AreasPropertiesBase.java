@@ -466,7 +466,7 @@ public class AreasPropertiesBase extends JPanel {
 		Runnable updateEvent = () -> {
 			
 			// Propagate update event
-			// TODO:
+			// TODO: finish it
 		};
 		
 		textDescription.updateLambda = updateEvent;

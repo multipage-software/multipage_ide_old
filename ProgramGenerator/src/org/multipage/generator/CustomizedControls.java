@@ -351,7 +351,6 @@ public class CustomizedControls extends JDialog {
 		focusedAreaWidth = sliderFocusedAreaWidth.getValue();
 		AreasDiagram.focusAreaShapeWidth = focusedAreaWidth;
 		
-		GeneratorMainFrame.getVisibleAreasDiagram().updateInformation();
 		GeneratorMainFrame.getVisibleAreasDiagram().setNotAnimateNextFocus();
 		GeneratorMainFrame.getVisibleAreasDiagram().focusBasicArea();
 	}

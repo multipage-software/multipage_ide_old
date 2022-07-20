@@ -50,6 +50,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeNode;
@@ -760,13 +761,13 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 	private void createToolBars() {
 		
 		// Area tree tool bar.
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", this, "onExpandTree", "org.multipage.generator.tooltipExpandTree");
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", this, "onCollapseTree", "org.multipage.generator.tooltipCollapseTree");
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", "org.multipage.generator.tooltipExpandTree", ()->onExpandTree());
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", "org.multipage.generator.tooltipCollapseTree", ()->onCollapseTree());
 		
 		// Add tool bar controls.
-		buttonSuperAreas = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/superareas.png", this, "onToggleSubSuper", "org.multipage.generator.tooltipToggleSubSuperAreas");
-		buttonAliases = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/description_alias.png", this, "onToggleDescriptionsAliases", "org.multipage.generator.tooltipToggleDescriptionsAliases");
-		buttonShowIds = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/show_hide_id.png", this, "onToggleShowIds", "org.multipage.generator.tooltipToggleShowIds");
+		buttonSuperAreas = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/superareas.png", "org.multipage.generator.tooltipToggleSubSuperAreas", ()->onToggleSubSuper());
+		buttonAliases = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/description_alias.png", "org.multipage.generator.tooltipToggleDescriptionsAliases", ()->onToggleDescriptionsAliases());
+		buttonShowIds = ToolBarKit.addToggleButton(toolBarTree, "org/multipage/generator/images/show_hide_id.png", "org.multipage.generator.tooltipToggleShowIds", ()->onToggleShowIds());
 		toolBarTree.add(checkInherits);
 	}
 	
@@ -933,6 +934,16 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				selectArea(areaId);
 			}
 		});
+		
+		// "Show/hide IDs" event receiver.
+		ConditionalEvents.receiver(this, Signal.showOrHideIds, action -> {
+			
+			// Set button state.
+			boolean showIds = action.getRelatedInfo();
+			buttonShowIds.setSelected(showIds);
+			// Reload editor.
+			reload();
+		});
 	}
 	
 	/**
@@ -1078,6 +1089,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		tree.setModel(treeModel);
 		// Set renderer.
 		tree.setCellRenderer(new TreeCellRenderer() {
+			
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree, Object value,
 					boolean selected, boolean expanded, boolean leaf, int row,
