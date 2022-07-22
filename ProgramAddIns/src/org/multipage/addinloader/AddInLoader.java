@@ -11,8 +11,10 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -22,16 +24,16 @@ import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeListener;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.CodeSigner;
-import java.security.Signer;
+import java.security.PublicKey;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,7 +56,6 @@ import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableColumnModel;
@@ -72,15 +73,6 @@ import javax.swing.tree.TreeNode;
  *
  */
 public class AddInLoader extends JFrame {
-	
-	/**
-	 * JAR file meta information 
-	 */
-	private static class JarMetaInfo {
-		
-		public HashMap<String, LinkedList<Signer>> signedFiles = null;
-		public String debug = "";
-	}
 
 	/**
 	 * Version number.
@@ -88,7 +80,12 @@ public class AddInLoader extends JFrame {
 	private static final long serialVersionUID = 1L;
 	
 	/**
-	 * Regex pattern that parse single output line returned by "jarsigner -verify -verbose" statement.
+	 * Constants.
+	 */
+	private static final String UNKNOWN = "UNKNOWN";
+	
+	/**
+	 * REGEX pattern that parse single output line returned by "jarsigner -verify -verbose" statement.
 	 */
 	private static final Pattern regexVerifier = Pattern.compile(
 			"^\\s*(?<verifierFlags>[smk]{1,3}+|\\?)"
@@ -103,7 +100,199 @@ public class AddInLoader extends JFrame {
 			);
 	
 	/**
-	 * Signed file or folder.
+	 * REGEX pattern that checks if the path name designates a META-INF file.
+	 */
+	private static final Pattern regexMetaInfFile = Pattern.compile(
+			"META-INF(/|\\\\)(MANIFEST.MF|.+?\\.SF|.+?\\.DSA|.+?\\.RSA|SIG-.)"
+			);
+	
+	/**
+	 * REGEX pattern that can parse issuer from appropriate X.509 certificate text item.
+	 */
+	private static final Pattern regexIssuerFields = Pattern.compile(
+			"^\\s*CN\\s*=\\s*(?<commonName>.+?)\\s*,"
+			+ "\\s*OU\\s*=\\s*(?<organizationalUnit>.+?)\\s*,"
+			+ "\\s*O\\s*=\\s*(?<organization>.+?)\\s*,"
+			+ "\\s*L\\s*=\\s*(?<locality>.+?)\\s*,"
+			+ "\\s*ST\\s*=\\s*(?<stateOrProvinceName>.+?)\\s*,"
+			+ "\\s*C\\s*=\\s*(?<countryName>.+?)\\s*$"
+			);
+	
+	/**
+	 * Author that has signed files.
+	 */
+	private static class Author {
+		
+		/**
+		 * Reference to code signer.
+		 */
+		CodeSigner codeSigner = null;
+		
+		/**
+		 * Name of the author.
+		 */
+		String commonName = UNKNOWN;
+
+		/**
+		 * X509 certificate path from signer to certification authority (last item in the lit).
+		 */
+		List<X509Certificate> certificatePath = null;
+		
+		// Issuer fields taken from first X.509 certificate in certificate path. 
+		private String organizationalUnit = UNKNOWN;
+		private String organization = UNKNOWN;
+		private String locality = UNKNOWN;
+		private String stateOrProvinceName = UNKNOWN;
+		private String countryName = UNKNOWN;
+		
+		/**
+		 * Constructor.
+		 * @param codeSigner
+		 */
+		public Author(CodeSigner codeSigner) {
+
+			this.codeSigner = codeSigner;
+		}
+		
+		/**
+		 * This method must be called called after the object is created. It will set up additional fields of the object.
+		 */
+		public void postCreate() throws Exception {
+
+			// Get full name and the certificates of the author.
+			certificatePath = new LinkedList<X509Certificate>();
+			CertPath certificatePath = codeSigner.getSignerCertPath();
+			
+			List<? extends Certificate> certificates = certificatePath.getCertificates();
+			if (certificates != null && !certificates.isEmpty()) {
+				
+				Certificate certificate = certificates.get(0);
+				if (certificate instanceof X509Certificate) {
+					
+					X509Certificate x509Certificate = (X509Certificate) certificate;
+					
+					// Parse issuer fields.
+					String issuerTextLine = x509Certificate.getIssuerX500Principal().getName();
+					
+					Matcher matcher = regexIssuerFields.matcher(issuerTextLine);
+					if (!matcher.find()) {
+						AddInsUtility.throwException("org.multipage.addinloader.messageExpectingIssuerInX509Certificate");
+					}
+					
+					// Set issuer fields.
+					commonName = matcher.group("commonName");
+					organizationalUnit = matcher.group("organizationalUnit");
+					organization = matcher.group("organization");
+					locality = matcher.group("locality");
+					stateOrProvinceName = matcher.group("stateOrProvinceName");
+					countryName = matcher.group("countryName");
+				}
+				else {
+					AddInsUtility.throwException("org.multipage.addinloader.messageExpectingX509CertificateType");
+				}
+			}
+		}
+		
+		/**
+		 * Create hash code for this object based on code signer.
+		 */
+		@Override
+		public int hashCode() {
+			return codeSigner.hashCode();
+		}
+		
+		/**
+		 * The input object equals if it has same code signer field.
+		 */
+		@Override
+		public boolean equals(Object object) {
+			
+			if (!(object instanceof Author)) {
+				return false;
+			}
+			Author author = (Author) object;
+			return author.codeSigner.equals(this.codeSigner);
+		}
+		
+		/**
+		 * Return common name of author found in X.509 certificate.
+		 */
+		@Override
+		public String toString() {
+			
+			return commonName;
+		}		
+	}
+	
+	/**
+	 * Certificate as a tree node.
+	 */
+	private static class CertificateTreeNode extends DefaultMutableTreeNode {
+		
+		/**
+		 * Version.
+		 */
+		private static final long serialVersionUID = 1L;
+		
+		/**
+		 * X.509 certificate object.
+		 */
+		public Certificate certificate = null;
+		
+		/**
+		 * Common name of a certificate subject.
+		 */
+		private String commonName = UNKNOWN;
+		
+		/**
+		 * Constructor.
+		 * @param certificate
+		 */
+		public CertificateTreeNode(Certificate certificate) {
+			
+			this.certificate = certificate;
+		}
+		
+		/**
+		 * Constructor of the root node.
+		 * @param rootCaption
+		 */
+		public CertificateTreeNode(String rootCaption) {
+			
+			this.commonName = rootCaption;
+		}
+
+		/**
+		 * Post creation of the object.
+		 */
+		private void postCreate() {
+			
+			if (certificate instanceof X509Certificate) {
+				X509Certificate x509Certificate = (X509Certificate) certificate;
+				String subject = x509Certificate.getSubjectDN().getName();
+				
+				Matcher matcher = regexIssuerFields.matcher(subject);
+				if (!matcher.find()) {
+					return;
+				}
+				
+				// Set issuer fields.
+				commonName = matcher.group("commonName");
+			}
+		}
+		
+		/**
+		 * Get text representation of the certificate.
+		 */
+		@Override
+		public String toString() {
+			
+			return commonName;
+		}
+	}
+	
+	/**
+	 * Signed file or folder as a tree node.
 	 */
 	private static class SignedFileTreeNode extends DefaultMutableTreeNode {
 		
@@ -111,11 +300,6 @@ public class AddInLoader extends JFrame {
 		 * Version.
 		 */
 		private static final long serialVersionUID = 1L;
-
-		/**
-		 * List of currently selected signers.
-		 */
-		public static CodeSigner [] selectedSigners = null;
 		
 		/**
 		 * Icons.
@@ -162,10 +346,11 @@ public class AddInLoader extends JFrame {
 		/**
 		 * Flags found by "jarsigner -verify -verbose" statement.
 		 */
-		private boolean signatureVerified = false;
-		private boolean listedInManifest = false;
-		private boolean certificateInKeystore = false;
-		private boolean notSigned = true;
+		public boolean signatureVerified = false;
+		public boolean listedInManifest = false;
+		public boolean certificateInKeystore = false;
+		public boolean isMetaInfFile = false;
+		public boolean notSigned = true;
 
 		/**
 		 * Constructor.
@@ -176,6 +361,15 @@ public class AddInLoader extends JFrame {
 			
 			this.fileName = fileName;
 			this.fileSigners = fileSigners;
+		}
+		
+		/**
+		 * Constructor of the root node.
+		 * @param rootCaption
+		 */
+		public SignedFileTreeNode(String rootCaption) {
+			
+			this.fileName = rootCaption;
 		}
 		
 		/**
@@ -194,9 +388,10 @@ public class AddInLoader extends JFrame {
 
 				// Select file or package icon.
 				boolean signed = signedFile.signatureVerified;
+				boolean metaInf = signedFile.isMetaInfFile;
 				
 				if (leaf) {
-					Icon icon = (signed? signedFileIcon : badFileIcon);
+					Icon icon = (signed ? signedFileIcon : (metaInf ? fileIcon : badFileIcon));
 					renderer.setLeafIcon(icon);
 				}
 				else {
@@ -205,14 +400,30 @@ public class AddInLoader extends JFrame {
 					renderer.setClosedIcon(icon);
 				}
 			}
-			else if (value instanceof X509Certificate) {
+			else if (value instanceof CertificateTreeNode) {
 				
-				X509Certificate x509Certificate = (X509Certificate) value;
+				CertificateTreeNode certificateNode = (CertificateTreeNode) value;
 				
 				// TODO: <---MAKE FINISH IT Set up the signed flag according to certificate authenticity.
-				boolean signed = true;
+				Icon icon = null;
 				
-				Icon icon = (signed ? signedCertificateIcon : badCertificateIcon);
+				Certificate certificate = certificateNode.certificate;
+				if (certificate != null) {
+					
+					PublicKey publicKey = certificate.getPublicKey();
+					boolean verified = false;
+					try {
+						certificate.verify(publicKey);
+						verified = true;
+					}
+					catch (Exception e) {
+					}
+					icon = (verified ? signedCertificateIcon : badCertificateIcon);
+				}
+				else {
+					icon = folderIcon; 
+				}
+				
 				renderer.setLeafIcon(icon);
 				renderer.setOpenIcon(icon);
 				renderer.setClosedIcon(icon);
@@ -291,7 +502,6 @@ public class AddInLoader extends JFrame {
 	private JTextField textApplicationWorkingDirectory;
 	private JLabel labelWorkingDirectory;
 	private JLabel labelPackagesAndFiles;
-	private JLabel labelCertificates;
 	private JLabel labelMessages;
 	private JTextArea textAreaMessages;
 	private JTree treePackagesAndFiles;
@@ -299,6 +509,11 @@ public class AddInLoader extends JFrame {
 	
 	// GUI events.
 	private PropertyChangeListener onSelectAuthorEvent = event -> onSelectAuthor();
+	
+	/**
+	 * Set of all authors.
+	 */
+	private HashSet<Author> allAuthors = null;
 	
 	/**
 	 * Create the frame.
@@ -398,42 +613,43 @@ public class AddInLoader extends JFrame {
 		panelWithItems.setLayout(null);
 		
 		panelAuthors = new JPanel();
+		panelAuthors.setOpaque(false);
+		panelAuthors.setBackground(SystemColor.window);
 		panelAuthors.setBorder(null);
 		panelAuthors.setBounds(10, 11, 618, 158);
 		panelWithItems.add(panelAuthors);
 		panelAuthors.setLayout(null);
 		
 		JScrollPane scrollPaneCertificates = new JScrollPane();
-		scrollPaneCertificates.setBorder(new LineBorder(new Color(230, 230, 250)));
-		scrollPaneCertificates.setBounds(330, 22, 288, 136);
+		scrollPaneCertificates.setOpaque(false);
+		scrollPaneCertificates.setBounds(409, 33, 209, 124);
 		scrollPaneCertificates.setPreferredSize(new Dimension(300, 70));
 		panelAuthors.add(scrollPaneCertificates);
 		
 		treeCertificates = new JTree();
-		treeCertificates.setOpaque(false);
 		treeCertificates.setBackground(Color.WHITE);
-		treeCertificates.setBorder(null);
 		scrollPaneCertificates.setViewportView(treeCertificates);
 		
 		JScrollPane scrollPaneAuthors = new JScrollPane();
 		scrollPaneAuthors.setBackground(Color.WHITE);
-		scrollPaneAuthors.setBorder(new LineBorder(new Color(230, 230, 250)));
-		scrollPaneAuthors.setBounds(0, 11, 320, 146);
+		scrollPaneAuthors.setBorder(null);
+		scrollPaneAuthors.setBounds(0, 11, 410, 146);
 		panelAuthors.add(scrollPaneAuthors);
 		scrollPaneAuthors.setPreferredSize(new Dimension(300, 70));
 		
 		tableAuthors = new JTable();
+		tableAuthors.setFillsViewportHeight(true);
+		tableAuthors.setGridColor(SystemColor.control);
+		tableAuthors.setForeground(SystemColor.windowText);
+		tableAuthors.setFont(new Font("Tahoma", Font.PLAIN, 13));
 		tableAuthors.addPropertyChangeListener(onSelectAuthorEvent);
 		tableAuthors.setBorder(null);
 		scrollPaneAuthors.setViewportView(tableAuthors);
 		
 		labelAuthors = new JLabel("org.multipage.addinloader.textAddInAuthors");
+		labelAuthors.setBorder(null);
 		labelAuthors.setBounds(0, 0, 320, 12);
 		panelAuthors.add(labelAuthors);
-		
-		labelCertificates = new JLabel("org.multipage.addinloader.textAddInCertificates");
-		labelCertificates.setBounds(330, 11, 288, 12);
-		panelAuthors.add(labelCertificates);
 		
 		JScrollPane scrollPaneMessages = new JScrollPane();
 		scrollPaneMessages.setBounds(10, 396, 620, 115);
@@ -505,29 +721,32 @@ public class AddInLoader extends JFrame {
 		
 		// Get selected authors that have signed JAR entries.
 		int [] selectedRows = tableAuthors.getSelectedRows();
-		int count = selectedRows.length;
-		
-		// Get selected items of the table.
-		SignedFileTreeNode.selectedSigners = new CodeSigner [count];
-		
+
 		displayCertificates(treeCertificates, null);
 		
-		for (int index = 0; index < count; index++) {
+		for (int row : selectedRows) {
 			
-			Object value = tableAuthors.getValueAt(index, 0);
-			CodeSigner signer = (CodeSigner) value;
-			SignedFileTreeNode.selectedSigners[index] = signer;
+			Object value = tableAuthors.getValueAt(row, 0);
+			if (!(value instanceof Author)) {
+				return;
+			}
+			
+			Author author = (Author) value;
+			CodeSigner codeSigner = author.codeSigner;
 			
 			// Display signer certificates.
 			if (treeCertificates != null) {
-				CertPath certificatesPath = signer.getSignerCertPath();
+				CertPath certificatesPath = codeSigner.getSignerCertPath();
 				displayCertificates(treeCertificates, certificatesPath);
 			}
 		}
 		
 		// Update packages and files tree.
 		if (treePackagesAndFiles != null) {
-			SwingUtilities.invokeLater(() -> treePackagesAndFiles.updateUI());
+			SwingUtilities.invokeLater(() -> {
+				treePackagesAndFiles.updateUI();
+				AddInsUtility.expandAll(treeCertificates, true);
+			});
 		}
 	}
 	
@@ -553,10 +772,7 @@ public class AddInLoader extends JFrame {
 			}
 			
 			// Load Add-in JAR file meta information.
-			JarMetaInfo metaInfo = frame.readJarInformation(addInJarFile);
-			
-			// TODO: debug
-			frame.textAreaMessages.setText(metaInfo.debug);
+			frame.displayJarVerificationInfo(addInJarFile);
 			
 			// Show the application window.
 			frame.display();
@@ -567,13 +783,10 @@ public class AddInLoader extends JFrame {
 	}
 	
 	/**
-	 * Load information about the JAR file that contains add-in functions.
+	 * Load information about the JAR file that contains add-in classes.
 	 * @param - addInJarFile
 	 */
-	private JarMetaInfo readJarInformation(String addInJarFile) {
-		
-		// Initialize controls.
-		JarMetaInfo metaInfo = new JarMetaInfo();
+	private void displayJarVerificationInfo(String addInJarFile) {
 		
 		// Set certificate, package and file renderer.
 		TreeCellRenderer cellRenderer = new TreeCellRenderer() {
@@ -592,20 +805,59 @@ public class AddInLoader extends JFrame {
 		treeCertificates.setCellRenderer(cellRenderer);
 		treePackagesAndFiles.setCellRenderer(cellRenderer);
 		
-		enableGuiEvents(false);
-		displayNewAuthor(tableAuthors, null);
-		displayFileOrFolder(treePackagesAndFiles, null);
-		enableGuiEvents(true);
-		
-		JarFile jarFile = null;
+		final Obj<JarFile> jarFile = new Obj<JarFile>(null);
 		Process process = null;
 		
 		try {
+			// Initialize controls.
+			enableGuiEvents(false);
+			
+			displayFileOrFolder(treePackagesAndFiles, null);
+			displayNewAuthor(tableAuthors, null);
+			
+			enableGuiEvents(true);
+			
+			// Read JAR entries and check its signatures.
+			
 			// Traverse all JAR file entries and add corresponding file or folder nodes into the tree.
-			jarFile = new JarFile(addInJarFile);
-			Collections.list(jarFile.entries()).forEach(jarEntry -> {
-				displayFileOrFolder(treePackagesAndFiles, jarEntry);
+			jarFile.ref = new JarFile(addInJarFile);
+			Obj<Exception> exception = new Obj<Exception>(null);
+			Collections.list(jarFile.ref.entries()).forEach(jarEntry -> {
+				
+				InputStream inputStream = null;
+				try {
+					inputStream = jarFile.ref.getInputStream(jarEntry);
+					inputStream.readAllBytes();
+					
+					displayFileOrFolder(treePackagesAndFiles, jarEntry);
+					
+					CodeSigner [] authors = jarEntry.getCodeSigners();
+					if (authors != null) {
+						for (CodeSigner author : authors) {
+							displayNewAuthor(tableAuthors, author);
+						}
+					}
+				}
+				catch (Exception e) {
+					if (exception.ref == null) {
+						exception.ref = e;
+					}
+				}
+				finally {
+					if (inputStream != null) {
+						try {
+							inputStream.close();
+						} 
+						catch (Exception e) {
+						}
+					}
+				}
 			});
+			
+			// Throw possible exception.
+			if (exception.ref != null) {
+				throw exception.ref;
+			}
 			
 			// Create and run the "jarsigner" verifying process.
 			String javaHome = System.getProperty("java.home");
@@ -616,7 +868,7 @@ public class AddInLoader extends JFrame {
 			process = processBuilder.start();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 			 
-			// Reading the output.
+			// Reading the output lines and display the signature checks.
 			String line = null;
 		    while ((line = reader.readLine()) != null) {
 		    	checkFileOrFolder(treePackagesAndFiles, line);
@@ -629,9 +881,9 @@ public class AddInLoader extends JFrame {
 			AddInsUtility.show(this, "org.multipage.addinloader.messageJarSignerException", e.getLocalizedMessage());
 		}
 		finally {
-			if (jarFile != null) {
+			if (jarFile.ref != null) {
 				try {
-					jarFile.close();
+					jarFile.ref.close();
 				}
 				catch (Exception e) {
 				}
@@ -641,12 +893,72 @@ public class AddInLoader extends JFrame {
 			}
 		}
 		
-		// Create a set for all code signers.
-		HashSet<CodeSigner> codeSigners = new HashSet<CodeSigner>();
-		
+		// Derive verifier flags for all non leaf nodes.
+		Object rootObject = treePackagesAndFiles.getModel().getRoot();
+		if (rootObject instanceof SignedFileTreeNode) {
 			
+			SignedFileTreeNode rootNode = (SignedFileTreeNode) rootObject;
+			
+			boolean signaturesVerified = derivePackageFlags(rootNode);
+			updateRootNodeFlags(rootNode, signaturesVerified);
+		}
+	}
+
+	/**
+	 * Derive flags for all packages and other non leaf nodes.
+	 * @param currentNode
+	 * @return true, if all children are signed, else return false.
+	 */
+	private boolean derivePackageFlags(TreeNode currentNode) {
 		
-		return metaInfo;
+		// Cast node to signed file.
+		SignedFileTreeNode currentSignedFile = null;
+		if (currentNode instanceof SignedFileTreeNode) {
+			currentSignedFile = (SignedFileTreeNode) currentNode;
+		}
+		
+		// Get child nodes.
+		int count = currentNode.getChildCount();
+		if (count <= 0) {
+			
+			// Check if the leaf node is signed.
+			if (currentSignedFile != null) {
+				return currentSignedFile.signatureVerified || currentSignedFile.isMetaInfFile;
+			}
+		}
+		
+		// Call current method recursively for all child nodes and check if they are signed.
+		boolean childSignaturesVerified = true;
+		
+		for (int index = 0; index < count; index++) {
+
+			TreeNode childNode = currentNode.getChildAt(index);
+			boolean childrenSigned = derivePackageFlags(childNode);
+			
+			if (!childrenSigned) {
+				childSignaturesVerified = false;
+			}
+		}
+		
+		// Set node flag.
+		if (currentSignedFile != null) {
+			currentSignedFile.signatureVerified = childSignaturesVerified;
+		}
+		
+		return childSignaturesVerified;
+	}
+	
+	/**
+	 * Update root node flags.
+	 * @param rootNode
+	 * @param signaturesVerified 
+	 */
+	private void updateRootNodeFlags(SignedFileTreeNode rootNode, boolean signaturesVerified) {
+		
+		rootNode.signatureVerified = signaturesVerified;
+		rootNode.fileName = AddInsUtility.getString(
+				signaturesVerified ? "org.multipage.addinloader.textSignaturesVerified"
+								   : "org.multipage.addinloader.textNotAllSignaturesVerified");
 	}
 	
 	/**
@@ -664,13 +976,14 @@ public class AddInLoader extends JFrame {
 	/**
 	 * TODO <---Display new author.
 	 * @param tableAuthors
-	 * @param signer
+	 * @param codeSigner
 	 */
-	private void displayNewAuthor(JTable tableAuthors, CodeSigner signer) {
+	private void displayNewAuthor(JTable tableAuthors, CodeSigner codeSigner)
+		throws Exception {
 		
 		// Set up table model and cell renderer.
 		DefaultTableModel model = null;
-		if (signer == null) {
+		if (codeSigner == null) {
 			
 			model = new DefaultTableModel();
 			
@@ -680,14 +993,21 @@ public class AddInLoader extends JFrame {
 			TableColumn column = new TableColumn();
 			
 			column.setModelIndex(0);
-			String columnName = AddInsUtility.getString("org.multipage.addinloader.titleAuthor");
+			String columnName = AddInsUtility.getString("org.multipage.addinloader.titleAuthorName");
 			column.setHeaderValue(columnName);
 			columnModel.addColumn(column);
 			tableAuthors.setColumnModel(columnModel);
 			model.addColumn(columnName);
 			
 			column.setModelIndex(1);
-			columnName = "certificatePath";
+			columnName = AddInsUtility.getString("org.multipage.addinloader.titleAuthorRole");
+			column.setHeaderValue(columnName);
+			columnModel.addColumn(column);
+			tableAuthors.setColumnModel(columnModel);
+			model.addColumn(columnName);
+			
+			column.setModelIndex(2);
+			columnName = AddInsUtility.getString("org.multipage.addinloader.titleAuthorLocality");
 			column.setHeaderValue(columnName);
 			columnModel.addColumn(column);
 			tableAuthors.setColumnModel(columnModel);
@@ -701,6 +1021,7 @@ public class AddInLoader extends JFrame {
 				}
 			});
 
+			tableAuthors.getTableHeader().setOpaque(false);
 			tableAuthors.setModel(model);
 			return;
 		}
@@ -708,45 +1029,29 @@ public class AddInLoader extends JFrame {
 			model = (DefaultTableModel) tableAuthors.getModel();
 		}
 		
-		String author = "UNKNOWN";
-		
-		// Get certificates of the signer.
-		CertPath certificatePath = signer.getSignerCertPath();
-		List<? extends Certificate> certificates = certificatePath.getCertificates();
-		if (certificates != null && !certificates.isEmpty()) {
-			
-			Certificate certificate = certificates.get(0);
-			if (certificate instanceof X509Certificate) {
-				
-				X509Certificate x509Certificate = (X509Certificate) certificate;
-				author = x509Certificate.getIssuerX500Principal().getName();
-			}
+		// Ensure the set of authors is created.
+		if (allAuthors == null) {
+			allAuthors = new HashSet<Author>();
 		}
 		
-		// If the author (the signer) is not already displayed, add them to the table.
-		int rowCount = model.getRowCount();
-		for (int row = 0; row < rowCount; row++) {
-			
-			// Get name of author from the table.
-			try {
-				Object cellValue = model.getValueAt(row, 0);
-				if (!(cellValue instanceof String)) {
-					continue;
-				}
-			
-				// If the author already exists, exit this method.
-				String tableAuthor = (String) cellValue;
-				if (author.equals(tableAuthor)) {
-					return;
-				}
-			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
+		// Create new author.
+		Author author = new Author(codeSigner);
+		
+		// Check if author is already inserted.
+		if (allAuthors.contains(author)) {
+			return;
 		}
 		
-		// Add new row.
-		model.addRow(new Object [] {signer, author, certificatePath});
+		// Complete creation of the author object and add it to the set of all found authors.
+		author.postCreate();
+		allAuthors.add(author);
+		
+		// Add new table item.
+		model.addRow(new Object [] {
+				author,
+				author.organizationalUnit,
+				author.locality
+				});
 	}
 
 	/**
@@ -763,24 +1068,24 @@ public class AddInLoader extends JFrame {
 		
 		// Get tree model.
 		DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-		DefaultMutableTreeNode root = null;
+		SignedFileTreeNode root = null;
 		
 		// Remove old and create new root node of the tree.
 		if (jarEntry == null) {
 			
 			// Create root node.
 			String rootCaption = AddInsUtility.getString("org.multipage.addinloader.textSignedFiles");
-			root = new DefaultMutableTreeNode(rootCaption);
+			root = new SignedFileTreeNode(rootCaption);
 			model.setRoot(root);
 			return;
 		}
 		
 		// Get root node.
 		Object object = model.getRoot();
-		if (!(object instanceof DefaultMutableTreeNode)) {
+		if (!(object instanceof SignedFileTreeNode)) {
 			return;
 		}
-		root = (DefaultMutableTreeNode) object;
+		root = (SignedFileTreeNode) object;
 		
 		// Get file path.
 		String filePath = jarEntry.getName();
@@ -789,17 +1094,18 @@ public class AddInLoader extends JFrame {
 		CodeSigner [] signers = jarEntry.getCodeSigners();
 		
 		// Setup current node.
-		Obj<DefaultMutableTreeNode> parent = new Obj<DefaultMutableTreeNode>(root);
+		Obj<SignedFileTreeNode> parent = new Obj<SignedFileTreeNode>(root);
 		
 		// Add each path element to the tree model.
 		Path path = Paths.get(filePath);
+		boolean isMetaInfFile = isMetaInfFile(path);
 		
 		path.forEach(pathElement -> {
 			String pathElementName = pathElement.toString();
 
 			int count = parent.ref.getChildCount();
 
-			DefaultMutableTreeNode child = null;
+			SignedFileTreeNode child = null;
 			
 			// Find matching node between child nodes of the parent node in the tree.
 			boolean match = false;
@@ -810,7 +1116,7 @@ public class AddInLoader extends JFrame {
 					continue;
 				}
 				
-				child = (DefaultMutableTreeNode) childNode;
+				child = (SignedFileTreeNode) childNode;
 				String childName = child.toString();
 				
 				if (childName.equals(pathElementName)) {
@@ -821,7 +1127,9 @@ public class AddInLoader extends JFrame {
 			
 			// Create new node.
 			if (!match) {
-				child = new SignedFileTreeNode(pathElementName, signers);
+				SignedFileTreeNode childSigned = new SignedFileTreeNode(pathElementName, signers);
+				childSigned.isMetaInfFile = isMetaInfFile;
+				child = childSigned;
 				parent.ref.add(child);
 			}
 			
@@ -833,7 +1141,21 @@ public class AddInLoader extends JFrame {
 	}
 	
 	/**
-	 * TODO: <---MAKE Parse text line taken from "jarsigner" tool output and display corresponding file or folder node
+	 * Returns true, if the input path designates a META-INFO file.
+	 * @param path
+	 * @return
+	 */
+	private boolean isMetaInfFile(Path path) {
+		
+		String pathName = path.toString();
+		Matcher matcher = regexMetaInfFile.matcher(pathName);
+		
+		boolean isMetaInfFile = matcher.find();
+		return isMetaInfFile;
+	}
+
+	/**
+	 * Parse text line taken from "jarsigner" tool output and display corresponding file or folder node
 	 * check in input tree. 
 	 * @param tree
 	 * @param jarVerifierOutputLine
@@ -889,8 +1211,6 @@ public class AddInLoader extends JFrame {
 		
 		// If the file or folder was not found...
 		if (!found.ref) {
-			// TODO: debug
-			j.log("NOT FOUND [%s] %s", verifierFlags, fileOrFolder);
 			return;
 		}
 		
@@ -918,24 +1238,24 @@ public class AddInLoader extends JFrame {
 		
 		// Get tree model.
 		DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-		DefaultMutableTreeNode root = null;
+		CertificateTreeNode root = null;
 		
 		// Remove old and create new root node of the tree.
 		if (certPath == null) {
 			
 			// Create root node.
 			String rootCaption = AddInsUtility.getString("org.multipage.addinloader.textCertificates");
-			root = new DefaultMutableTreeNode(rootCaption);
+			root = new CertificateTreeNode(rootCaption);
 			model.setRoot(root);
 			return;
 		}
 		
 		// Get root node.
 		Object object = model.getRoot();
-		if (!(object instanceof DefaultMutableTreeNode)) {
+		if (!(object instanceof CertificateTreeNode)) {
 			return;
 		}
-		root = (DefaultMutableTreeNode) object;
+		root = (CertificateTreeNode) object;
 		
 		// Get certificates.
 		List<? extends Certificate> certificates = certPath.getCertificates();
@@ -944,37 +1264,19 @@ public class AddInLoader extends JFrame {
 		}
 		
 		// Setup current node.
-		Obj<DefaultMutableTreeNode> parent = new Obj<DefaultMutableTreeNode>(root);
-		
-		// TODO: debug
-		j.log("--------------------");
-		j.log("NEW CERTIFICATE PATH, len=%d", certificates.size());
-		j.log("--------------------");
+		Obj<CertificateTreeNode> parent = new Obj<CertificateTreeNode>(root);
 		
 		// Add each certificate to the tree model.	
 		certificates.forEach(certificate -> {
 			
 			// Create new node.
-			DefaultMutableTreeNode child = new DefaultMutableTreeNode(certificate);
+			CertificateTreeNode child = new CertificateTreeNode(certificate);
+			child.postCreate();
 			parent.ref.add(child);
-			
-			// TODO: debug
-			j.log("NEW NODE %s -> %s", dump(parent.ref), dump(child));
 			
 			// Move to child node.
 			parent.ref = child;
 		});
-	}
-	
-	// TODO: remove it
-	private String dump(DefaultMutableTreeNode node) {
-		
-		Object userObject = node.getUserObject();
-		if (userObject instanceof X509Certificate) {
-			X509Certificate certificate = (X509Certificate) userObject;
-			return certificate.getIssuerDN().getName();
-		}
-		return node.toString();
 	}
 	
 	/**
@@ -1059,10 +1361,6 @@ public class AddInLoader extends JFrame {
 		localize();
 		// Set icons.
 		setIcons();
-		// Initialize the list view.
-		initializeList();
-		// Display Add-In certificates.
-		displayAddInCertificates();
 	}
 	
 	/**
@@ -1076,7 +1374,6 @@ public class AddInLoader extends JFrame {
 		AddInsUtility.localize(labelWorkingDirectory);
 		AddInsUtility.localize(labelLoaderPath);
 		AddInsUtility.localize(labelAuthors);
-		AddInsUtility.localize(labelCertificates);
 		AddInsUtility.localize(labelPackagesAndFiles);
 		AddInsUtility.localize(labelMessages);
 		AddInsUtility.localize(buttonConfirm);
@@ -1092,25 +1389,6 @@ public class AddInLoader extends JFrame {
 		// Set main icon.
 		Image icon = AddInsUtility.getImage("org/multipage/addinloader/images/main_icon.png");
 		setIconImage(icon);
-	}
-	
-	/**
-	 * Initialize the list view.
-	 */
-	private void initializeList() {
-		
-		// Create list of authors.
-		
-		
-	}
-	
-	/**
-	 * Display Add-In certificates.
-	 */
-	private void displayAddInCertificates() {
-		
-		// TODO Auto-generated method stub
-		
 	}
 	
 	/**

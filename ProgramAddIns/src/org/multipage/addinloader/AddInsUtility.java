@@ -591,4 +591,15 @@ public class AddInsUtility {
 	        tree.collapsePath(parent);
 	    }
 	}
+	/**
+	 * Throws exception with given message
+	 * @param messageResourceId
+	 * @param error 
+	 */
+	public static void throwException(String messageResourceId)
+			throws Exception {
+		
+		String message = getString(messageResourceId);
+		throw new Exception(message);
+	}
 }
