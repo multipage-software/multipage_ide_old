@@ -14,8 +14,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -601,5 +608,188 @@ public class AddInsUtility {
 		
 		String message = getString(messageResourceId);
 		throw new Exception(message);
+	}
+	
+	/**
+	 * Copy JAR source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationPath
+	 * @param fileSystemLoader
+	 * @throws IOException 
+	 */
+	public static void copyFromJarToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Create destination directory if it doesn't exist.
+	    if (!Files.exists(destinationPath)) {
+	    	Files.createDirectories(destinationPath);
+	    }
+	    
+	    // If the source and destination paths designate files, copy the source
+	    // file directly to the destination file.
+	    Obj<Exception> exception = new Obj<Exception>();
+	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+	    	return;
+	    }
+	    
+	    // List child source paths.
+	    Files.list(sourcePath).forEachOrdered(sourcePathEntry -> {
+	    	
+	    	try {
+	    		Path fileOrFolder = sourcePathEntry.getFileName();
+	    		Path newDestination = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
+	    		
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourcePathEntry)) {
+	    	        copyFromDirToJar(sourcePathEntry, newDestination, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourcePathEntry, newDestination, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
+	    	}
+	    	catch (Exception e) {
+	    		exception.ref = e;
+	    	}
+	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
+	    }
+	}
+
+	/**
+	 * Copy source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationPath
+	 * @param destinationFileSystem
+	 */
+	private static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Create destination directory if it doesn't exist.
+	    if (!Files.exists(destinationPath)) {
+	    	Files.createDirectories(destinationPath);
+	    }
+	    
+	    // If the source and destination paths designate files, copy the source
+	    // file directly to the destination file.
+	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+	    }
+	    
+	    // List child source paths.
+	    Obj<Exception> exception = new Obj<Exception>();
+	    Files.list(sourcePath).forEachOrdered(sourceSubPath -> {
+	    	try {
+	    		Path fileOrFolder = sourceSubPath.getFileName();
+	    		Path destinationSubPath = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
+	    		
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourceSubPath)) {
+	    	        copyFromDirToJar(sourceSubPath, destinationSubPath, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourceSubPath, destinationSubPath, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
+	    	}
+	    	catch (Exception e) {
+	    		exception.ref = e;
+	    	}
+	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
+	    }
+	}
+
+	/**
+	 * Export JAR package to JAR file.
+	 * @param sourceJarPath
+	 * @param sourcePackage
+	 * @param destinationJarFile
+	 * @param destinationPackage
+	 */
+	public static void exportJarPackageToJarFile(String sourceJarPath, String sourcePackage,String destinationJarFile, String destinationPackage)
+			throws Exception {
+		
+		// Create uninitialized local variables.
+		FileSystem sourceFileSystem = null;
+		FileSystem destinationFileSystem = null;
+		Exception exception = null;
+		
+		try {
+			// Obtain file system of the application JAR.
+			final String sourceUriString = "jar:file:/" + sourceJarPath.replace('\\', '/');
+			final URI sourceUri = URI.create(sourceUriString);
+			final Map<String, String> sourceEnvironment = Map.of("create", "true");
+			sourceFileSystem = FileSystems.newFileSystem(sourceUri, sourceEnvironment);
+			final String sourceSeparator = sourceFileSystem.getSeparator();
+			
+			// Obtain file system of the loader JAR.
+			String destinationUriString = "jar:file:/" + destinationJarFile.replace('\\', '/');
+			final URI destinationUri = URI.create(destinationUriString);
+			final Map<String, String> destinationEnvironment = Map.of("create", "true");
+			destinationFileSystem = FileSystems.newFileSystem(destinationUri, destinationEnvironment);
+			final String destinationSeparator = destinationFileSystem.getSeparator();
+			
+			// Get source and destination paths.
+			final Path sourcePath = sourceFileSystem.getPath(sourceSeparator, sourcePackage.replace(".", sourceSeparator));
+			final Path destinationPath = destinationFileSystem.getPath(destinationSeparator, destinationPackage.replace(".", destinationSeparator));
+			
+			// Copy source classes to the destination path.
+			copyFromJarToJar(sourcePath, destinationPath, destinationFileSystem);
+		}
+		catch (Exception e) {
+			exception = e;
+		}
+		finally {
+			// Close both file systems.
+			try {
+				if (sourceFileSystem != null) {
+					sourceFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+			try {
+				if (destinationFileSystem != null) {
+					destinationFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
+		}
+	}
+	
+	/**
+	 * Returns true if this application is zipped in JAR file.
+	 * @return
+	 */
+	public static boolean isApplicationZipped(String applicationPath) {
+		
+		// Get application path.
+		File fileOrFolder = new File(applicationPath);
+
+		// If the path is a file return true.
+		if (fileOrFolder.exists() && fileOrFolder.isFile()) {
+			return true;
+		}
+		
+		// Otherwise return false.
+		return false;
 	}
 }

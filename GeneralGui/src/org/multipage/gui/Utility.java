@@ -58,10 +58,13 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -80,6 +83,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -112,6 +116,7 @@ import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -128,6 +133,8 @@ import javax.swing.RowSorter;
 import javax.swing.RowSorter.SortKey;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
@@ -158,7 +165,6 @@ import javax.swing.tree.TreePath;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -209,6 +215,7 @@ public class Utility {
 	public static final String floatGroupRegex = "\\s*([0-9\\-\\+\\.eE]+)\\s*";
 	public static final String lengthUnitsRegex = "(px|em|%|cm|mm|in|ex|pt|pc|\\s*)";
 	public static final String angleUnitsRegex = "(deg|grad|rad|turn|\\s*)";
+	public static final Pattern x509CommonNameRegex = Pattern.compile("^\\s*CN\\s*=\\s*(?<commonName>[^,]+)");
 	
 	/**
 	 * Regular expression pattern for format specifier in String.fomat(...)
@@ -591,6 +598,19 @@ public class Utility {
 	public static void localize(JToggleButton toggleButton) {
 		
 		toggleButton.setText(Resources.getString(toggleButton.getText()));
+	}
+	
+	/**
+	 * Performs localization of panel title.
+	 * @param panel
+	 */
+	public static void localize(JPanel panel) {
+		
+		Border border = panel.getBorder();
+		if (border instanceof TitledBorder) {
+			TitledBorder titleBorder = (TitledBorder) border;
+			titleBorder.setTitle(Resources.getString(titleBorder.getTitle()));
+		}
 	}
 
 	/**
@@ -5324,7 +5344,7 @@ public class Utility {
 	 * Copy source directory to a target JAR file system.
 	 * @param sourcePath
 	 * @param destinationPath
-	 * @param destinationFileSystem
+	 * @param destinationFileSystemo
 	 */
 	private static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
 			throws Exception {
@@ -5414,6 +5434,150 @@ public class Utility {
 	    	throw exception.ref;
 	    }
 	}
+
+	/**
+	 * Import directory classes from an application package to a JAR file.
+	 * @param applicationPath
+	 * @param thePackage
+	 * @param jarFile
+	 * @throws Exception 
+	 */
+	public static void importDirectoryClassesToJarFile(String applicationPath, Package thePackage, File jarFile)
+			throws Exception {
+		
+		// Create uninitialized local variables.
+		FileSystem destinationJarFileSystem = null;
+		Exception exception = null;
+		
+		try {
+		
+			// Get destination JAR file system and a separator.
+			final URI uri = URI.create("jar:file:/" + jarFile.toString().replace(File.separatorChar, '/'));
+			final Map<String, String> environment = Map.of("create", "true");
+			destinationJarFileSystem = FileSystems.newFileSystem(uri, environment);
+			final String destinationSeparator = destinationJarFileSystem.getSeparator();
+			
+			// Get the package folders separated with file system separators.
+			final String sourcePackageFolders = File.separator + thePackage.getName().replace(".", File.separator);
+			final String [] destinationPackageFolders = thePackage.getName().split("\\.");
+			
+			// Get paths to the classes.
+			final Path sourcePathInDirectory = Paths.get(applicationPath, sourcePackageFolders);
+			
+			// Copy source classes into the target JAR file.
+			Utility.copyDirToJar(sourcePathInDirectory, destinationPackageFolders, destinationJarFileSystem);
+			
+			// Meta information folder name.
+			final String metaInfFolderName = "META-INF";
+			
+			// Copy source META-INF folder to the target JAR archive.
+			final String sourceMetaInfRoot = thePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
+			final Path sourceMetaInfPath = Paths.get(applicationPath, sourceMetaInfRoot);
+			final String [] destinationMetaInfPath = new String [] {destinationSeparator, metaInfFolderName};
+			
+			Utility.copyDirToJar(sourceMetaInfPath, destinationMetaInfPath, destinationJarFileSystem);
+		}
+		catch (Exception e) {
+			exception = e;
+		}
+		finally {
+			// Close both file systems.
+			try {
+				if (destinationJarFileSystem != null) {
+					destinationJarFileSystem.close();
+				}
+			}
+			catch (Exception e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
+		}
+	}
+	
+	/**
+	 * Import JAR package to JAR file.
+	 * @param sourceJarPath
+	 * @param sourcePackage
+	 * @param destinationJarFile
+	 * @param destinationPackage
+	 */
+	public static void importJarPackageToJarFile(String sourceJarPath, Package sourcePackage, File destinationJarFile, Package destinationPackage)
+			throws Exception {
+		
+		// Create uninitialized local variables.
+		FileSystem sourceFileSystem = null;
+		FileSystem destinationFileSystem = null;
+		Exception exception = null;
+		
+		try {
+			// Obtain file system of the application JAR.
+			final String sourceUriString = "jar:file:/" + sourceJarPath.replace('\\', '/');
+			final URI sourceUri = URI.create(sourceUriString);
+			final Map<String, String> sourceEnvironment = Map.of("create", "true");
+			sourceFileSystem = FileSystems.newFileSystem(sourceUri, sourceEnvironment);
+			final String sourceSeparator = sourceFileSystem.getSeparator();
+			
+			// Obtain file system of the loader JAR.
+			String destinationUriString = "jar:file:/" + destinationJarFile.getPath().replace('\\', '/');
+			final URI destinationUri = URI.create(destinationUriString);
+			final Map<String, String> destinationEnvironment = Map.of("create", "true");
+			destinationFileSystem = FileSystems.newFileSystem(destinationUri, destinationEnvironment);
+			final String destinationSeparator = destinationFileSystem.getSeparator();
+			
+			// Get source and destination paths.
+			final Path sourcePath = sourceFileSystem.getPath(sourceSeparator, sourcePackage.getName().replace(".", sourceSeparator));
+			final Path destinationPath = destinationFileSystem.getPath(destinationSeparator, destinationPackage.getName().replace(".", destinationSeparator));
+			
+			// Copy source classes to the destination path.
+			Utility.copyFromJarToJar(sourcePath, destinationPath, destinationFileSystem);
+			
+			// Path to JAR meta information.
+			final String metaInfFolderName = "META-INF";
+			
+			// Copy META-INF folder to the runnable JAR archive.
+			final String sourceMetaInfRoot = sourcePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
+			final Path sourceMetaInfPath = sourceFileSystem.getPath(destinationSeparator, sourceMetaInfRoot);
+			final Path destinationMetaInfPath = destinationFileSystem.getPath(destinationSeparator, metaInfFolderName);
+			Utility.copyFromJarToJar(sourceMetaInfPath, destinationMetaInfPath, destinationFileSystem);
+		}
+		catch (Exception e) {
+			exception = e;
+		}
+		finally {
+			// Close both file systems.
+			try {
+				if (sourceFileSystem != null) {
+					sourceFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+			try {
+				if (destinationFileSystem != null) {
+					destinationFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
+		}
+	}
 	
 	/**
 	 * Returns true if this application is zipped in JAR file.
@@ -5476,5 +5640,168 @@ public class Utility {
 		
 		String xmlHeader = String.format(xmlHeaderTemplate, charset.toString());
 		checkString(inputStream, xmlHeader, charset, false);
+	}
+	
+	/**
+	 * Get content of an application file.
+	 * @param filePath
+	 * @return
+	 */
+	public static byte [] getApplicationFileContent(String filePath) {
+		
+		byte [] content = null;
+		
+		URL fileUrl = ClassLoader.getSystemResource(filePath);
+		if (fileUrl != null) {
+			
+			InputStream inputStream = null;
+			try {
+				inputStream = fileUrl.openStream();
+				content = inputStream.readAllBytes();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
+			}
+		}
+		
+		return content;
+	}
+	
+	/**
+	 * Get content of a disk file.
+	 * @param filePath
+	 * @return
+	 */
+	public static byte[] getFileContent(String filePath) {
+		
+		byte [] content = null;
+		
+		InputStream inputStream = null;
+		try {
+			filePath = filePath.replace('\\', '/');
+			
+			URL fileUrl = new URL("file://" + filePath);
+			if (fileUrl != null) {
+				inputStream = fileUrl.openStream();
+				content = inputStream.readAllBytes();
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if (inputStream != null	) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return content;
+	}
+	
+	/**
+	 * Get content of an application certificate.
+	 * @param certificatePath
+	 * @return
+	 */
+	public static X509Certificate getApplicationCertificate(String certificatePath) {
+		
+		X509Certificate certificate = null;
+		
+		URL certificateUrl = ClassLoader.getSystemResource(certificatePath);
+		if (certificateUrl != null) {
+			
+			InputStream inputStream = null;
+			try {
+				inputStream = certificateUrl.openStream();
+				
+				CertificateFactory factory = CertificateFactory.getInstance("X.509");
+				certificate = (X509Certificate)factory.generateCertificate(inputStream);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
+			}
+		}
+		
+		return certificate;
+	}
+	
+	/**
+	 * Get content of certificate in disk file.
+	 * @param certificatePath
+	 * @return
+	 */
+	public static X509Certificate getFileCertificate(String certificatePath) {
+		
+		X509Certificate certificate = null;
+		
+		InputStream inputStream = null;
+		try {
+			certificatePath = certificatePath.replace('\\', '/');
+			
+			URL certificateUrl = new URL("file://" + certificatePath);
+			if (certificateUrl != null) {
+				inputStream = certificateUrl.openStream();
+				
+				CertificateFactory factory = CertificateFactory.getInstance("X.509");
+				certificate = (X509Certificate)factory.generateCertificate(inputStream);
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return certificate;
+	}
+	
+	/**
+	 * Get common name (the CN field) of X.509 certificate.
+	 * @param certificate
+	 * @return
+	 */
+	public static String getCommonName(X509Certificate certificate) {
+		
+		String textLine = certificate.getSubjectX500Principal().getName();
+		Matcher matcher = x509CommonNameRegex.matcher(textLine);
+		
+		boolean found = matcher.find();
+		int count = matcher.groupCount();
+		
+		// Use group count count.
+		if (!found || count != 1) {
+			return "";
+		}
+		String commonName = "CN=" + matcher.group("commonName");
+		return commonName;
 	}
 }

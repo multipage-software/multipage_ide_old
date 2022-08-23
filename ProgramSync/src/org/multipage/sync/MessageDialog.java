@@ -502,8 +502,11 @@ public class MessageDialog extends JDialog {
 				// Display remembered message depending on the previous flag
 				MessageDialog.dialog.displayRememberedMessage();
 				
+				// TODO: Setting the window always on top may cause other active message boxes displayed behind this dialog
+				// to block this window with a dead lock.
+				//dialog.setAlwaysOnTop(true);
+				
 				// Set visible
-				dialog.setAlwaysOnTop(true);
 				dialog.setVisible(true);
 			}
 			catch (Exception e) {

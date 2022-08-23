@@ -4,9 +4,9 @@
  * Created on : 26-04-2017
  *
  */
-
 package org.multipage.generator;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -26,13 +26,12 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
+import javax.swing.JToolBar;
 import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
@@ -45,15 +44,12 @@ import org.multipage.addinloader.AddInLoader;
 import org.multipage.addins.ProgramAddIns;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
-import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-import java.awt.BorderLayout;
-import javax.swing.JToolBar;
 
 /**
  * 
@@ -787,6 +783,11 @@ public class Settings extends JDialog {
 		toolBar.add(separator_2);
 		
 		JButton buttonSignAddIn = new JButton("org.multipage.generator.menuAddInSigner");
+		buttonSignAddIn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onSignAddIn();
+			}
+		});
 		buttonSignAddIn.setMargin(new Insets(2, 2, 2, 2));
 		toolBar.add(buttonSignAddIn);
 	}
@@ -977,16 +978,16 @@ public class Settings extends JDialog {
 			// On JAR file.
 			if (isApplicationZipped) {
 				
-				// Export JAR package classes to output JAR file.
-				GeneratorUtility.exportJarPackageToJarFile(applicationPath, thePackage, temporaryJarFile);
+				// Import JAR package classes to output JAR file.
+				Utility.importJarPackageToJarFile(applicationPath, thePackage, temporaryJarFile, thePackage);
 				
 				workingDirectory = Paths.get(applicationPath).getParent().toString();
 			}
 			// On a directory with classes.
 			else {
 				
-				// Export directory classes to output JAR file..
-				GeneratorUtility.exportDirectoryClassesToJarFile(applicationPath, thePackage, temporaryJarFile);
+				// Import directory classes to output JAR file.
+				Utility.importDirectoryClassesToJarFile(applicationPath, thePackage, temporaryJarFile);
 			}
 			
 			// Try to run the Add-In loader.
@@ -1012,7 +1013,20 @@ public class Settings extends JDialog {
 	 */
 	protected void onRemoveAddIn() {
 		
+	}
+	
+	/**
+	 * On sign Add-in classes placed in Add-in JAR file.
+	 */
+	protected void onSignAddIn() {
 		
+		// Find add-in JAR file on disk.
+		File addInJarFile = Utility.chooseFileToOpen(this, new String [][] {{"org.multipage.generator.textAddInJarFilesFilter", "jar"}});
+		if (addInJarFile == null) {
+			return;
+		}
+		
+		SignAddInDialog.showDialog(this, addInJarFile.toString());
 	}
 	
 	/**

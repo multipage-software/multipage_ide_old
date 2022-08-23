@@ -404,7 +404,7 @@ public class AddInLoader extends JFrame {
 				
 				CertificateTreeNode certificateNode = (CertificateTreeNode) value;
 				
-				// TODO: <---MAKE FINISH IT Set up the signed flag according to certificate authenticity.
+				// Set up flag according to certificate.
 				Icon icon = null;
 				
 				Certificate certificate = certificateNode.certificate;
@@ -974,7 +974,7 @@ public class AddInLoader extends JFrame {
 	}
 
 	/**
-	 * TODO <---Display new author.
+	 * Display new author.
 	 * @param tableAuthors
 	 * @param codeSigner
 	 */
@@ -1397,11 +1397,12 @@ public class AddInLoader extends JFrame {
 	protected void onConfirm() {
 		
 		try {
-			
-			// Try to load Add-In into the application JAR file or folder.
+			String destinationPackage = "org.multipage.addins";
+			AddInsUtility.exportJarPackageToJarFile(addInJarFile, "", applicationPath, destinationPackage);
 		}
 		catch (Exception e) {
-			
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

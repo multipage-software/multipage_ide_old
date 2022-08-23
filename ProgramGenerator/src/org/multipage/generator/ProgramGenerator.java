@@ -12,7 +12,6 @@ import java.awt.Window;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -37,7 +36,6 @@ import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 import build_number.BuildNumber;
 
@@ -187,6 +185,8 @@ public class ProgramGenerator {
 		ClonedDiagramDialog.setDefaultData();
 		LoggingDialog.setDefaultData();
 		LoggingSettingsDialog.setDefaultData();
+		SignAddInDialog.setDefaultData();
+		GenKeyDialog.setDefaultData();
 	}
 	
 	/**
@@ -249,6 +249,8 @@ public class ProgramGenerator {
 		ClonedDiagramDialog.serializeData(inputStream);
 		LoggingDialog.serializeData(inputStream);
 		LoggingSettingsDialog.serializeData(inputStream);
+		SignAddInDialog.serializeData(inputStream);
+		GenKeyDialog.serializeData(inputStream);
 	}
 	
 	/**
@@ -310,6 +312,8 @@ public class ProgramGenerator {
 		ClonedDiagramDialog.serializeData(outputStream);
 		LoggingDialog.serializeData(outputStream);
 		LoggingSettingsDialog.serializeData(outputStream);
+		SignAddInDialog.serializeData(outputStream);
+		GenKeyDialog.serializeData(outputStream);
 	}
 	
 	/**
