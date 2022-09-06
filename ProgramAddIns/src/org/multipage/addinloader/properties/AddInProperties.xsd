@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.example.org/AddInProperties" xmlns:tns="http://www.example.org/AddInProperties" elementFormDefault="qualified">
+
+    <element name="AddIn" type="tns:AddIn"></element>
+    
+
+    <complexType name="AddIn">
+    	<sequence>
+    		<element name="Name" minOccurs="1" maxOccurs="1" type="string">
+    		</element>
+            <element name="Tag" type="string" minOccurs="1" maxOccurs="1"></element>
+            <element name="Version" type="string" minOccurs="1" maxOccurs="1"></element>
+    		<element name="Description" type="string" minOccurs="1" maxOccurs="1"></element>
+    	</sequence>
+    </complexType>
+</schema>

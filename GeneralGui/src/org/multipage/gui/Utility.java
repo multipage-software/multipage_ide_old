@@ -162,6 +162,7 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.apache.commons.io.IOUtils;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -3890,6 +3891,30 @@ public class Utility {
 	}
 	
 	/**
+	 * Read all text lines from the input stream.
+	 * @param inputStream
+	 * @return
+	 */
+	public static StringBuilder readAllLines(InputStream inputStream)
+			throws Exception {
+		
+		StringBuilder text = new StringBuilder("");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+		
+		while (true) {
+			
+			String line = reader.readLine();
+			if (line == null) {
+				break;
+			}
+			
+			text.append(line);
+			text.append("\n");
+		}
+		return text;
+	}
+	
+	/**
 	 * Run executable file using given command that is placed in directory
 	 * designated by "path" argument.
 	 * @param workingDirectory
@@ -3930,7 +3955,7 @@ public class Utility {
 					command));
 		}
 		
-		InputStream standardOutput = null;
+		InputStream processOutput = null;
 		BufferedReader reader = null;
 		try {
 			
@@ -3942,22 +3967,13 @@ public class Utility {
 				process.waitFor(timeout, unit);
 	        
 		        // Get its stdout and read the output text.
-		        standardOutput = process.getInputStream();
-				reader = new BufferedReader(new InputStreamReader(standardOutput));
-				
-				while (true) {
-					
-					String line = reader.readLine();
-					if (line == null) {
-						break;
-					}
-					
-					text.append(line);
-					text.append("\n");
-				}
+		        processOutput = process.getInputStream();
+				text = readAllLines(processOutput);
+				processOutput = process.getErrorStream();
+				text.append(readAllLines(processOutput));
 			}
 			else {
-				standardOutput = process.getInputStream();
+				processOutput = process.getInputStream();
 			}
 		}
 		catch (Exception e) {
@@ -3966,9 +3982,9 @@ public class Utility {
 		finally {
 			
 			// Close stdout.
-			if (standardOutput != null) {
+			if (processOutput != null) {
 				try {
-					standardOutput.close();
+					processOutput.close();
 				}
 				catch (Exception e) {
 				}
@@ -3993,6 +4009,16 @@ public class Utility {
 	}
 	
 	/**
+	 * Get JRE directory.
+	 * @return
+	 */
+	public static String getJavaRuntimeFolder() {
+		
+		String javaRuntimePath = System.getProperty("java.home") + File.separatorChar + "bin";
+		return javaRuntimePath;
+	}
+	
+	/**
 	 * Run executable JAR using java.exe.
 	 * @param workingDirectory
 	 * @param executableJarPath
@@ -4002,7 +4028,8 @@ public class Utility {
 			throws Exception {
 		
 		// Get Java home directory.
-		String javaExePath = System.getProperty("java.home") + File.separatorChar + "bin" + File.separatorChar + "java.exe";
+		String javaRuntimePath = getJavaRuntimeFolder();
+		String javaExePath = javaRuntimePath + File.separatorChar + "java.exe";
 		
 		// Compile java execution command.
 		StringBuilder javaCommand = new StringBuilder();
@@ -4018,6 +4045,47 @@ public class Utility {
 		// Run java command.
 		String result = runExecutable(workingDirectory, javaCommand.toString());
 		return result;
+	}
+	
+	/**
+	 * Run selected Java tool.
+	 * @param workingDirectory
+	 * @param javaToolName
+	 * @param parameters
+	 */
+	public static String runJavaTool(String workingDirectory, String javaToolName, String[] parameters, int timeout, TimeUnit unit)
+			throws Exception {
+		
+		final Pattern whitespaceRegex = Pattern.compile("\\s+");
+			
+		// Get Java home directory.
+		String javaToolExecutable = getJavaRuntimeFolder() + File.separator + javaToolName;
+		
+		// Build Java tool statement.
+		StringBuilder javaStatement = new StringBuilder();
+		javaStatement.append('\"').append(javaToolExecutable).append('\"');
+		
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				
+				// If the parameter contains white space, wrap it with quotes.
+				Matcher matcher = whitespaceRegex.matcher(parameter);
+				boolean found = matcher.find();
+				javaStatement.append(' ');
+				if (found) {
+					javaStatement.append('\"');
+				}
+				javaStatement.append(parameter);
+				if (found) {
+					javaStatement.append('\"');
+				}
+			}
+		}
+		
+		// Run executable statement.
+		String resultText = runExecutable(workingDirectory, javaStatement.toString(), timeout, unit);
+		return resultText;
 	}
 	
 	/**
@@ -5709,6 +5777,109 @@ public class Utility {
 		}
 		
 		return content;
+	}
+	
+	/**
+	 * Expose application file.
+	 * @param parent
+	 * @param file	 
+	 */
+	public static File exposeApplicationFile(String file)
+			throws Exception {
+		
+		// Initialize field value.
+		File tempFile = null;
+		
+		BufferedInputStream inputStream = null;
+		BufferedOutputStream outputStream = null;
+		
+		try {
+			// Get keystore input stream. 
+			URL fileUrl = ClassLoader.getSystemResource(file);
+			inputStream = new BufferedInputStream(fileUrl.openStream());
+			
+			// Get temporary file.
+			String tempPath = Files.createTempFile("Multipage", "").toString();
+			tempFile = new File(tempPath);
+			
+			// Create output stream.
+			outputStream = new BufferedOutputStream(new FileOutputStream(tempPath));
+			
+			// Write data to the temporary file.
+			IOUtils.copy(inputStream, outputStream);
+		}
+		catch (Exception e) {
+			throwException("org.multipage.gui.messageCannotExposeApplicationFile", e.getLocalizedMessage());
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return tempFile;
+	}
+
+	/**
+	 * Expose application PKCS12 keystore.
+	 * @param parent
+	 * @param keystoreFile
+	 */
+	public static File exposeApplicationKeystore(Component parent, String keystoreFile) {
+		
+		// Initialize field value.
+		File tempKeystoreFile = null;
+		
+		BufferedInputStream inputStream = null;
+		BufferedOutputStream outputStream = null;
+		
+		try {
+			// Get keystore input stream.
+			URL certificateUrl = ClassLoader.getSystemResource(keystoreFile);
+			inputStream = new BufferedInputStream(certificateUrl.openStream());
+			
+			// Get temporary file.
+			String tempKeystorePath = Files.createTempFile("Multipage", "").toString();
+			tempKeystoreFile = new File(tempKeystorePath);
+			
+			// Create output stream.
+			outputStream = new BufferedOutputStream(new FileOutputStream(tempKeystorePath));
+			
+			// Write data to the temporary file.
+			IOUtils.copy(inputStream, outputStream);
+		}
+		catch (Exception e) {
+			show(parent, "org.multipage.gui.messageCannotExposeApplicationKeystore", e.getLocalizedMessage());
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return tempKeystoreFile;
 	}
 	
 	/**

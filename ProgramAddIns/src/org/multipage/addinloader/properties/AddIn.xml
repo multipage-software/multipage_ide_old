@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tns:AddIn xmlns:tns="http://www.example.org/AddInProperties" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.example.org/AddInProperties AddInProperties.xsd ">
+  <tns:Name>Builder for creating area templates</tns:Name>
+  <tns:Tag>Builder</tns:Tag>
+  <tns:Version>1.0.0</tns:Version>
+  <tns:Description>This extension enables to create new area templates which can be than used by the Multipage IDE.</tns:Description>
+</tns:AddIn>

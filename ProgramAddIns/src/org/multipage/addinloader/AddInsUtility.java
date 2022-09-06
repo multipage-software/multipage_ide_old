@@ -35,6 +35,9 @@ import javax.swing.JTree;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+import org.multipage.addins.ImportFileApp;
+import org.multipage.gui.Utility;
+
 /**
  * Miscellaneous helper functions.
  * @author vakol
@@ -665,7 +668,7 @@ public class AddInsUtility {
 	 * @param destinationPath
 	 * @param destinationFileSystem
 	 */
-	private static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+	public static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
 			throws Exception {
 		
 		// Create destination directory if it doesn't exist.
@@ -677,6 +680,14 @@ public class AddInsUtility {
 	    // file directly to the destination file.
 	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
 	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+	    }
+	    
+	    // If the source is a file and target is a directory, create target file with same name in the directory.
+	    if (Files.isRegularFile(sourcePath) && Files.isDirectory(destinationPath)) {
+	    	Path fileName = sourcePath.getFileName();
+	    	Path destinationFile = destinationFileSystem.getPath(destinationPath.toString(), fileName.toString());
+	    	Files.copy(sourcePath, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+	    	return;
 	    }
 	    
 	    // List child source paths.
@@ -791,5 +802,31 @@ public class AddInsUtility {
 		
 		// Otherwise return false.
 		return false;
+	}
+
+	/**
+	 * Imports updated keystore file.
+	 * @param keystoreFile
+	 * @param restart
+	 * @return true on success
+	 * @throws Exception 
+	 */
+	public static boolean importUpdatedKeystore(File keystoreFile, boolean restart)
+			throws Exception {
+		
+		// Check keystore file.
+		if (!keystoreFile.isFile()) {
+			return false;
+		}
+		
+		// Expose application that can import the keystore.
+		Class<?> applicationClass = ImportFileApp.class;
+		String applicationFolder = applicationClass.getPackageName().replace('.', File.separatorChar);
+		String applictionPath = File.separatorChar + applicationFolder + File.separatorChar + "ImportFileApp.class";
+		File applicationFile = Utility.exposeApplicationFile(applictionPath);
+		
+		// TODO: <---MAKE Run Java application class.
+		
+		return true;
 	}
 }

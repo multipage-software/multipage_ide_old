@@ -229,7 +229,7 @@ public class SignAddInDialog extends JDialog {
 	private JTable tableKeystoreContent;
 	private JLabel labelCertificateAlias;
 	private JComboBox<String> comboCertificate;
-	private JPasswordField passwordForKeystore;
+	private JPasswordField textPassword;
 	private JLabel labelKeystorePassword;
 	private JToolBar toolBarKeystoreActions;
 
@@ -435,18 +435,18 @@ public class SignAddInDialog extends JDialog {
 		sl_panelKeystore.putConstraint(SpringLayout.WEST, labelKeystorePassword, 0, SpringLayout.WEST, labelKeyStore);
 		panelKeystore.add(labelKeystorePassword);
 		
-		passwordForKeystore = new JPasswordField();
-		passwordForKeystore.addKeyListener(new KeyAdapter() {
+		textPassword = new JPasswordField();
+		textPassword.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				onEnterPassword(e);
 			}
 		});
-		sl_panelKeystore.putConstraint(SpringLayout.NORTH, labelKeyStore, 20, SpringLayout.SOUTH, passwordForKeystore);
-		sl_panelKeystore.putConstraint(SpringLayout.NORTH, passwordForKeystore, -3, SpringLayout.NORTH, labelKeystorePassword);
-		sl_panelKeystore.putConstraint(SpringLayout.WEST, passwordForKeystore, 6, SpringLayout.EAST, labelKeystorePassword);
-		sl_panelKeystore.putConstraint(SpringLayout.EAST, passwordForKeystore, -105, SpringLayout.EAST, scrollPaneKeystoreContent);
-		panelKeystore.add(passwordForKeystore);
+		sl_panelKeystore.putConstraint(SpringLayout.NORTH, labelKeyStore, 20, SpringLayout.SOUTH, textPassword);
+		sl_panelKeystore.putConstraint(SpringLayout.NORTH, textPassword, -3, SpringLayout.NORTH, labelKeystorePassword);
+		sl_panelKeystore.putConstraint(SpringLayout.WEST, textPassword, 6, SpringLayout.EAST, labelKeystorePassword);
+		sl_panelKeystore.putConstraint(SpringLayout.EAST, textPassword, -105, SpringLayout.EAST, scrollPaneKeystoreContent);
+		panelKeystore.add(textPassword);
 		
 		toolBarKeystoreActions = new JToolBar();
 		toolBarKeystoreActions.setFloatable(false);
@@ -471,7 +471,7 @@ public class SignAddInDialog extends JDialog {
 		// Set icons used by the GUI components.
 		setIcons();
 		// Export keystore to temporary file.
-		keystoreFile = exposeKeystore();
+		keystoreFile = Utility.exposeApplicationKeystore(this, "org/multipage/addinloader/properties/multipage_client.p12");
 		// Load and display keystore entries.
 		loadKeystoreTable(keystoreFile);
 		// Load stored dialog states.
@@ -506,58 +506,14 @@ public class SignAddInDialog extends JDialog {
 	 */
 	private void onKeystoreGenKey() {
 		
+		// Get current directory.
+		String pathName = Utility.getCurrentPathName();
+		File currentDirectory = new File(pathName);
+				
 		// Input key pair properties.
-		GenKeyDialog.showDialog();
+		GenKeyDialog.showDialog(this, currentDirectory, () -> textPassword.getPassword());
 	}
 
-	/**
-	 * Expose Multipage client PKCS12 keystore.
-	 */
-	private File exposeKeystore() {
-		
-		// Initialize field value.
-		File keystoreFile = null;
-		
-		BufferedInputStream inputStream = null;
-		BufferedOutputStream outputStream = null;
-		
-		try {
-			// Get keystore input stream.
-			URL certificateUrl = ClassLoader.getSystemResource("org/multipage/addinloader/properties/multipage_client.p12");
-			inputStream = new BufferedInputStream(certificateUrl.openStream());
-			
-			// Get temporary file.
-			String keystorePath = Files.createTempFile("Multipage", "").toString();
-			keystoreFile = new File(keystorePath);
-			
-			// Create output stream.
-			outputStream = new BufferedOutputStream(new FileOutputStream(keystorePath));
-			
-			// Write data to the temporary file.
-			IOUtils.copy(inputStream, outputStream);
-		}
-		catch (Exception e) {
-			Utility.show(this, "org.multipage.generator.messageCannotExposeMultipageKeystore", e.getLocalizedMessage());
-		}
-		finally {
-			if (inputStream != null) {
-				try {
-					inputStream.close();
-				}
-				catch (Exception e) {
-				}
-			}
-			if (outputStream != null) {
-				try {
-					outputStream.close();
-				}
-				catch (Exception e) {
-				}
-			}
-		}
-		
-		return keystoreFile;
-	}
 
 	/**
 	 * Localize texts of the GUI components.
@@ -695,7 +651,7 @@ public class SignAddInDialog extends JDialog {
 		
 		try {
 			// Try to open keystore.
-			char [] credentialsChar = passwordForKeystore.getPassword();
+			char [] credentialsChar = textPassword.getPassword();
 			keystore = KeyStore.getInstance(keystoreFile, credentialsChar);
 		}
 		catch (Exception e) {

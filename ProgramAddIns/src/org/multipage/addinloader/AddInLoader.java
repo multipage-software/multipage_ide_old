@@ -750,7 +750,6 @@ public class AddInLoader extends JFrame {
 		}
 	}
 	
-	
 	/**
 	 * Launch the application.
 	 */
