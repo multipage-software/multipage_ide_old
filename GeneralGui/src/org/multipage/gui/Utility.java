@@ -56,6 +56,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -1307,30 +1308,31 @@ public class Utility {
 	}
 	
 	/**
-	 * Get JTable selection.
+	 * Get selected values.
 	 * @param tableSlots
 	 * @return
 	 */
 	public static Object [][] getTableSelection(JTable table) {
 		
 		// Get selected rows.
-		TableModel model = table.getModel();
 		int [] selectedRowIndices = table.getSelectedRows();
 		
 		// Get the number of table columns.
 		int columnCount = table.getColumnCount();
 		
-		// Initialize array.
-		Object [][] tableSelection = new Object [selectedRowIndices.length][columnCount];
-		
-		// Get all selected table items.
-		for (int row : selectedRowIndices) {
-			for (int column = 0; column < columnCount; columnCount++) {
-			
-				tableSelection[row][column] = table.getValueAt(row, column);
-			}
-		}
-		return tableSelection;
+		// Create array of cell values.
+		Object [][] selectedCellValues = new Object [selectedRowIndices.length][columnCount];
+//		
+//		// Get all selected table items.
+//		int index = 0;
+//		for (int selectedRow : selectedRowIndices) {
+//			for (int column = 0; column < columnCount; column++) {
+//				
+//				selectedCellValues[index][column] = table.getValueAt(selectedRow, column);
+//				index++;
+//			}
+//		}
+		return selectedCellValues;
 	}
 
 	/**
@@ -3965,16 +3967,16 @@ public class Utility {
 			// Wait given time span for process termination.
 			if (timeout != null && unit != null) {
 				process.waitFor(timeout, unit);
-	        
-		        // Get its stdout and read the output text.
-		        processOutput = process.getInputStream();
-				text = readAllLines(processOutput);
-				processOutput = process.getErrorStream();
-				text.append(readAllLines(processOutput));
 			}
 			else {
-				processOutput = process.getInputStream();
+				process.waitFor();
 			}
+			
+			// Get its stdout and read the output text.
+			processOutput = process.getInputStream();
+			text = readAllLines(processOutput);
+			processOutput = process.getErrorStream();
+			text.append(readAllLines(processOutput));
 		}
 		catch (Exception e) {
 			exception = e;
@@ -4045,6 +4047,55 @@ public class Utility {
 		// Run java command.
 		String result = runExecutable(workingDirectory, javaCommand.toString());
 		return result;
+	}
+	
+	/**
+	 * Run Java class.
+	 * @param runnableClass
+	 * @param classDirectory
+	 * @param workingDirectory
+	 * @param parameters
+	 * @throws Exception 
+	 */
+	public static String runJavaClass(Class<?> runnableClass, String classDirectory, String workingDirectory, String[] parameters)
+			throws Exception {
+		
+		// Get Java home directory.
+		String javaRuntimePath = getJavaRuntimeFolder();
+		String javaExePath = javaRuntimePath + File.separatorChar + "java.exe";
+		
+		// Compile java execution command.
+		String classFullName = runnableClass.getCanonicalName();
+		StringBuilder javaCommand = new StringBuilder();
+		javaCommand.append('\"').append(javaExePath).append("\" -cp \"").append(classDirectory).append("\" ").append(classFullName);
+		
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				javaCommand.append(" \"").append(parameter).append('\"');
+			}
+		}
+		
+		String javaCommandString = javaCommand.toString();
+		
+		// TODO: <---DEBUG Run Java class.
+		log(javaCommandString);
+		show2(javaCommandString);
+		
+		// Run java command.
+		try {
+			show2("RUN EXECUTABLE");
+			String result = "JAVA RESULT " + runExecutable(workingDirectory, javaCommandString);
+			log(result);
+			show2(result);
+			return result;
+		}
+		catch (Exception e) {
+			String result = "JAVA EXCEPTION " + e.getLocalizedMessage();
+			log(result);
+			show2(result);
+			return result;
+		}
 	}
 	
 	/**
@@ -5389,6 +5440,26 @@ public class Utility {
 	}
 	
 	/**
+	 * Dump byte buffer.
+	 * @param buffer
+	 * @return
+	 */
+    public static String dump(ByteBuffer buffer) {
+    	
+    	if (buffer == null) {
+    		return "null";
+    	}
+    	
+        ByteBuffer protectedBuffer = buffer.asReadOnlyBuffer();
+        byte[] bytes = new byte[protectedBuffer.capacity()];
+        protectedBuffer.rewind();
+        protectedBuffer.get(bytes);
+        
+        String text = Arrays.toString(bytes);
+        return text;
+    }
+	
+	/**
 	 * Copy source directory to a target JAR file system.
 	 * @param sourcePath
 	 * @param destinationFoldersPath
@@ -5671,10 +5742,10 @@ public class Utility {
 	 * Returns true if this application is zipped in JAR file.
 	 * @return
 	 */
-	public static File getApplicationJarFile() {
+	public static File getApplicationFile(Class<?> mainClass) {
 		
 		// Get application file.
-		URL applicationUrl = Utility.class.getProtectionDomain().getCodeSource().getLocation();
+		URL applicationUrl = mainClass.getProtectionDomain().getCodeSource().getLocation();
 		String applicationPathName = applicationUrl.getPath();
 		
 		File applicationFile = new File(applicationPathName);
@@ -5781,34 +5852,43 @@ public class Utility {
 	
 	/**
 	 * Expose application file.
-	 * @param parent
-	 * @param file	 
+	 * @param fileFolder
+	 * @param fileName
+	 * @param outputDirectory	 
 	 */
-	public static File exposeApplicationFile(String file)
+	public static File exposeApplicationFile(String fileFolder, String fileName, String outputDirectory)
 			throws Exception {
 		
 		// Initialize field value.
-		File tempFile = null;
+		File exposedFile = null;
 		
 		BufferedInputStream inputStream = null;
 		BufferedOutputStream outputStream = null;
 		
 		try {
+			// Trim input strings.
+			fileFolder = fileFolder.replace(File.separatorChar, '/');
+			fileName = fileName.replace(File.separatorChar, '/');
 			// Get keystore input stream. 
-			URL fileUrl = ClassLoader.getSystemResource(file);
+			URL fileUrl = ClassLoader.getSystemResource(fileFolder + '/' + fileName);
+			// TODO: <---DEBUG File name.
+			Utility.show2("Exposed file %s", fileUrl);
 			inputStream = new BufferedInputStream(fileUrl.openStream());
 			
-			// Get temporary file.
-			String tempPath = Files.createTempFile("Multipage", "").toString();
-			tempFile = new File(tempPath);
+			// Get file.
+			exposedFile = new File(outputDirectory + File.separatorChar + fileFolder.replace('/', File.separatorChar) +
+								   File.separatorChar + fileName);
+			exposedFile.getParentFile().mkdirs();
 			
 			// Create output stream.
-			outputStream = new BufferedOutputStream(new FileOutputStream(tempPath));
+			outputStream = new BufferedOutputStream(new FileOutputStream(exposedFile));
 			
 			// Write data to the temporary file.
 			IOUtils.copy(inputStream, outputStream);
 		}
 		catch (Exception e) {
+			// TODO: <---DEBUG Eexception.
+			show2("Expose %s error. Line no. %d", fileName, e.getStackTrace()[0].getLineNumber());
 			throwException("org.multipage.gui.messageCannotExposeApplicationFile", e.getLocalizedMessage());
 		}
 		finally {
@@ -5828,7 +5908,7 @@ public class Utility {
 			}
 		}
 		
-		return tempFile;
+		return exposedFile;
 	}
 
 	/**
@@ -5845,6 +5925,8 @@ public class Utility {
 		BufferedOutputStream outputStream = null;
 		
 		try {
+			// Trim input string.
+			keystoreFile = keystoreFile.replace(File.separatorChar, '/');
 			// Get keystore input stream.
 			URL certificateUrl = ClassLoader.getSystemResource(keystoreFile);
 			inputStream = new BufferedInputStream(certificateUrl.openStream());
@@ -5861,6 +5943,8 @@ public class Utility {
 		}
 		catch (Exception e) {
 			show(parent, "org.multipage.gui.messageCannotExposeApplicationKeystore", e.getLocalizedMessage());
+			// TODO: <---DEBUG Expose keystore exception.
+			show2("Line no. %d", e.getStackTrace()[0].getLineNumber());
 		}
 		finally {
 			if (inputStream != null) {

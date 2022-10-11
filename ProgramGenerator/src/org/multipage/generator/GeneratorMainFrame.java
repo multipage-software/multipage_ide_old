@@ -662,6 +662,13 @@ public class GeneratorMainFrame extends JFrame implements Update {
 					// Delegates the call to debug viewer
 					debugViewer.showUserAlert(message, timeout);
 				}
+
+				@Override
+				public void sessionStateChanged(boolean ready) {
+					
+					// Invoke session ready event in the viewer.
+					debugViewer.onSessionStateChanged(debugger, ready);
+				}
 			});
 		}
 		

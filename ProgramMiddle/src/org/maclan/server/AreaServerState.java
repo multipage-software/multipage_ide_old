@@ -268,6 +268,11 @@ public class AreaServerState {
 	public int enableMetaTags = AreaServerState.metaInfoFalse;
 	
 	/**
+	 * Process META tags or not.
+	 */
+	public boolean processMetaTags = true;
+	
+	/**
 	 * Xdebug client.
 	 */
 	public XdebugClient debugClient = null;

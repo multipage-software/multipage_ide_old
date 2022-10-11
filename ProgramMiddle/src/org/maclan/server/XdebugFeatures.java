@@ -76,7 +76,7 @@ public class XdebugFeatures {
 	}
 	
 	/**
-	 * Sets a new value of given Xdebug server feature
+	 * Sets a new value of given Xdebug server feature.
 	 * @param feature
 	 * @param newValue
 	 * @throws Exception
@@ -131,6 +131,6 @@ public class XdebugFeatures {
 		String command = String.format("feature_get -n %s", feature);
 		XdebugPacket packet = xdebugClient.command(socketChannel, command);
 		String sValue =  packet.getString("/response/text()");
-		features.put(feature, sValue);
+		features.put(feature, sValue != null ? sValue : "null");
 	}
 }

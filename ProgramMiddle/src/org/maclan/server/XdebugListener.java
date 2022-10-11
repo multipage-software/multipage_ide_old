@@ -7,7 +7,6 @@
 package org.maclan.server;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -15,17 +14,19 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.multipage.gui.Callback;
-import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * @author user
@@ -34,7 +35,7 @@ import org.multipage.util.Resources;
 public class XdebugListener extends DebugListener {
 	
 	/**
-	 * Xdebug port number. Set default port number to 9001, because JVM Xdebug already uses the port numer 9000.
+	 * Xdebug port number. Set default port number to 9001, because JVM Xdebug already uses the port number 9000.
 	 */
 	public static final int xdebugPort = 9001;
 	
@@ -47,6 +48,11 @@ public class XdebugListener extends DebugListener {
 	 * Tiout in milliseconds for client connections with Xdebug protocol.
 	 */
 	public final static long xdebugClientTimeoutMs = 1000;
+	
+	/**
+	 * The loop timeout for idle operations (in milliseconds).
+	 */
+	private long listenerIdleTimeoutMs = 200;
 	
 	/**
 	 * Xdebug listener singleton object
@@ -167,33 +173,45 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Send name class
 	 */
-	static class XdebugCommand {
-
+	static class XdebugStatement {
+		
+		/**
+		 * Response wrappers.
+		 */
+		final String simpleResponseWrapper = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+											 "<response xmlns=\"urn:debugger_protocol_v1\" %s transaction_id=\"%s\"/>";
+		final String complexResponseWrapper = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+				 							  "<response xmlns=\"urn:debugger_protocol_v1\" %s transaction_id=\"%s\">%s</response>";
 		/**
 		 * Command name
 		 */
-		private String name;
+		private String name = null;
+		
+		/**
+		 * Command parameters.
+		 */
+		private HashMap<String, String> parameters = null;
 		
 		/**
 		 * Command data
 		 */
-		private byte [] data;
+		private byte [] data = null;
 		
 		/**
 		 * Command response
 		 */
-		private XdebugPacket response;
+		private XdebugPacket response = null;
 		
 		/**
 		 * Caught exceptions
 		 */
-		private LinkedList<Exception> exceptions;
+		private LinkedList<Exception> exceptions = null;
 		
 		/**
 		 * Constructor
 		 * @param commandName
 		 */
-		public XdebugCommand(String commandName) {
+		public XdebugStatement(String commandName) {
 			
 			this(commandName, null);
 		}
@@ -201,9 +219,20 @@ public class XdebugListener extends DebugListener {
 		/**
 		 * Constructor
 		 * @param commandName
+		 * @param parameters
+		 */
+		public XdebugStatement(String commandName, HashMap<String, String> parameters) {
+			
+			this.name = commandName;
+			this.parameters = parameters;
+		}
+		
+		/**
+		 * Constructor
+		 * @param commandName
 		 * @param data
 		 */
-		public XdebugCommand(String commandName, Object data) {
+		public XdebugStatement(String commandName, Object data) {
 			
 			this.name = commandName;
 			
@@ -212,7 +241,7 @@ public class XdebugListener extends DebugListener {
 				this.data = Base64.getEncoder().encode(bytes);
 			}
 		}
-
+		
 		/**
 		 * Set command
 		 * @param commandName
@@ -231,6 +260,17 @@ public class XdebugListener extends DebugListener {
 			
 			this.name = commandName;
 			this.data = data;
+		}
+		
+		/**
+		 * Get parameter.
+		 * @param name
+		 * @return
+		 */
+		public String getParameter(String name) {
+			
+			String value = parameters.get(name);
+			return value;
 		}
 
 		/**
@@ -285,7 +325,7 @@ public class XdebugListener extends DebugListener {
 		/**
 		 * Check if command name equals
 		 */
-		synchronized public boolean equals(XdebugCommand command) {
+		synchronized public boolean equals(XdebugStatement command) {
 			
 			return this.name.equals(command.name);
 		}
@@ -296,6 +336,165 @@ public class XdebugListener extends DebugListener {
 		synchronized public boolean equals(String commandName) {
 			
 			return this.name.equals(commandName);
+		}
+		
+		/**
+		 * Parse Xdebug command text.
+		 * @param commandText
+		 * @return
+		 */
+		public static XdebugStatement parse(String commandText) {
+			
+			// Command name parser.
+			final Pattern nameRegex = Pattern.compile("^\\s*(?<name>\\w+)");
+			// Parameter parser.
+			final Pattern parameterRegex = Pattern.compile("-(?<flag>\\w+)\\s+(?<param>(\\w+)|\"(.*?)(?<!\\\\)\")");
+			
+			// Find command name.
+			Matcher commandNameMatcher = nameRegex.matcher(commandText);
+			boolean found = commandNameMatcher.find();
+			int count = commandNameMatcher.groupCount();
+			
+			if (found && count == 1) {
+				
+				String commandName = commandNameMatcher.group("name");
+				
+				// Find parameters.
+				HashMap<String, String> parameters = new HashMap<String, String>();
+				Matcher parametersMatcher = parameterRegex.matcher(commandText);
+				do {
+					found = parametersMatcher.find();
+					count = parametersMatcher.groupCount();
+					
+					if (!(found && count == 4)) {
+						break;
+					}
+					
+					String flag = parametersMatcher.group("flag");
+					String parameter = parametersMatcher.group("param");
+					
+					parameters.put(flag, parameter);
+				}
+				while (true);
+				
+				// Create Xdebug command and return it.
+				XdebugStatement xdebugCommand = new XdebugStatement(commandName, parameters);
+				return xdebugCommand;
+			}
+			
+			return null;
+		}
+		
+		/**
+		 * Get transaction number.
+		 * @return
+		 */
+		public int getTransactionNumber() {
+			
+			if (parameters == null) {
+				return 0;
+			}
+			
+			String transactionId = parameters.get("i");
+			if (transactionId == null || transactionId.length() < 2) {
+				return 0;
+			}
+			
+			transactionId = transactionId.substring(1);
+			int transactionNumber = Integer.parseInt(transactionId);
+			return transactionNumber;
+		}
+		
+		/**
+		 * Check Xdebug statement name
+		 * @param statementName
+		 * @return
+		 */
+		public boolean is(String statementName) {
+			
+			if (name == null) {
+				return false;
+			}
+			return name.equals(statementName);
+		}
+		
+		/**
+		 * Get feature name.
+		 * @return
+		 */
+		public String getFeatureName() {
+			
+			if (parameters == null) {
+				return null;
+			}
+			
+			String feature = parameters.get("n");
+			return feature;
+		}
+		
+		/**
+		 * Compile response.
+		 * @param - arguments
+		 * @return
+		 */
+		public String compileResponse(String arguments) {
+			
+			// Delegate call.
+			return compileResponse(arguments, null, simpleResponseWrapper);
+		}
+		
+		
+		/**
+		 * Compile response.
+		 * @param - arguments
+		 * @return
+		 */
+		public String compileResponse(String arguments, String responseText) {
+			
+			// Delegate call.
+			return compileResponse(arguments, responseText, complexResponseWrapper);
+		}
+		
+		/**
+		 * Compile response.
+		 * @param arguments
+		 * @param responseText
+		 * @return
+		 */
+		public String compileResponse(String arguments, String responseText, String xmlTemplate) {
+			
+			// Try to get statement name.
+			String allArguments = "command=\"" + this.name + "\"";
+			
+			// Try to get feature name.
+			String feature = getFeatureName();
+			if (feature != null) {
+				allArguments += " feature=\"" + feature + "\"";
+			}
+			
+			// Trim input parameter.
+			if (arguments == null) {
+				arguments = "";
+			}
+			
+			// Add leading space.
+			if (!arguments.isEmpty()) {
+				allArguments += ' ' + arguments;
+			}
+			
+			// Compile response text.
+			String transactionId = parameters.get("i");
+			String response = null;
+			
+			if (responseText != null)
+				response = String.format(xmlTemplate, allArguments, transactionId, responseText);
+			else
+				response = String.format(xmlTemplate, allArguments, transactionId);
+			
+			// TODO: <---DEBUG
+			j.log("XML RESPONSE: %s", response);
+			
+			return response;
 		}
 	}
 	
@@ -329,7 +528,7 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Xdebug name
 	 */
-	private XdebugCommand command = new XdebugCommand(nop, null);
+	private XdebugStatement command = new XdebugStatement(nop, null);
 	
 	/**
 	 * A channel for communication with Xdebug client
@@ -470,6 +669,8 @@ public class XdebugListener extends DebugListener {
 		}
 		
 		// Wait for session ready
+		// TODO: <---DEBUG
+		j.log("WAIT FOR %s COMMAND %s", sessionReady, commandName);
 		boolean timeout = Lock.waitFor(sessionReady, 10000);
 		if (timeout) {
 			throw new Exception("USERTHREAD: session is not ready, a timeout occured");
@@ -507,7 +708,7 @@ public class XdebugListener extends DebugListener {
 	 * @return
 	 * @throws Exception 
 	 */
-	private XdebugPacket resultOf(XdebugCommand command) throws Exception {
+	private XdebugPacket resultOf(XdebugStatement command) throws Exception {
 		
 		// If no response, return empty packet
 		if (command.exceptions == null && command.response == null) {
@@ -563,48 +764,61 @@ public class XdebugListener extends DebugListener {
 				}	
 				
 				// Enter loop with rules and process incoming commands
-				while (!terminate) {
-					
-					// Check connection status with watch dog
-					watchDogCheckStatusOf(connection);
-					
-					// Rule: Process stop command
-					if (isStop(command)) {
-						endOfSession();
-						continue;
+				try {
+					while (!terminate) {
+						
+						// Check connection status with watch dog
+						watchDogCheckStatusOf(connection);
+						
+						// Rule: Process stop command
+						if (isStop(command)) {
+							endOfSession();
+							continue;
+						}
+						
+						// Rule: Wait for a while if the session is stopping
+						if (isStopping(status)) {
+							sleepFor(200);
+							continue;
+						}
+						
+						// Rule: Accept incoming connection
+						if (shouldAcceptNewConnection()) {
+							connection = waitForConnection();
+							continue;
+						}
+						
+						// Rule: Initialize communication
+						if (shouldBeInitialized(connection)) {
+							initializeCommunication(connection);
+							continue;
+						}
+						
+						// Rule: Wait for a new command
+						if (isInitialized(connection) && !is(command)) {
+							Lock.notify(sessionReady);
+							// TODO: <---DEBUG
+							j.log("NOTIFIED LOCK %s THREAD %s", sessionReady, Thread.currentThread());
+							notifySessionReady();
+							Lock.waitFor(commandSet, 50000);
+							continue;
+						}
+						
+						// Rule: Process other commands
+						if (is(command)) {
+							sendThrough(connection, command);
+							endOfTransaction();
+							continue;
+						}
+						
+						// Idle time.
+						Thread.sleep(listenerIdleTimeoutMs);
 					}
+				}
+				catch (Exception e) {
 					
-					// Rule: Wait for a while if the session is stopping
-					if (isStopping(status)) {
-						sleepFor(200);
-						continue;
-					}
-					
-					// Rule: Accept incoming connection
-					if (shouldAcceptNewConnection()) {
-						connection = waitForConnection();
-						continue;
-					}
-					
-					// Rule: Initialize communication
-					if (shouldBeInitialized(connection)) {
-						initializeCommunication(connection);
-						continue;
-					}
-					
-					// Rule: Wait for a new command
-					if (isInitialized(connection) && !is(command)) {
-						Lock.notify(sessionReady);
-						Lock.waitFor(commandSet, 50000);
-						continue;
-					}
-					
-					// Rule: Process other commands
-					if (is(command)) {
-						sendThrough(connection, command);
-						endOfTransaction();
-						continue;
-					}
+					e.printStackTrace();
+					endOfSession();
 				}
 				
 				// Reset command
@@ -678,7 +892,8 @@ public class XdebugListener extends DebugListener {
 					return false;
 				}
 				
-				return Session.ready.equals(session);
+				boolean initialized = Session.ready.equals(session);
+				return initialized;
 			}
 			
 			/**
@@ -686,7 +901,7 @@ public class XdebugListener extends DebugListener {
 			 * @param command
 			 * @return
 			 */
-			private boolean isStop(XdebugCommand command) {
+			private boolean isStop(XdebugStatement command) {
 				
 				return command.isStop();
 			}
@@ -696,7 +911,7 @@ public class XdebugListener extends DebugListener {
 			 * @param command
 			 * @return
 			 */
-			private boolean is(XdebugCommand command) {
+			private boolean is(XdebugStatement command) {
 				
 				return !command.isEmpty();
 			}
@@ -862,7 +1077,7 @@ public class XdebugListener extends DebugListener {
 					String [] message = readMessages(connection, null);
 					
 					// Communication breakdown
-					if (message.length < 2) {
+					if (message == null) {
 						throw noResponse;
 					}
 					
@@ -877,8 +1092,8 @@ public class XdebugListener extends DebugListener {
 					
 					//  Check language
 					String language = packet.getString("/init/@language");
-					if (!"PHP".equals(language)) {
-						throw new Exception(String.format("Xdebug: declared language '%s' doesn't match the reuqired PHP language", language));
+					if (!("PHP".equals(language) || "Maclan".equals(language))) {
+						throw new Exception(String.format("Xdebug: declared language '%s' doesn't match the required PHP or Maclan language", language));
 					}
 					
 					// Initialization was successful. Continue the communication with
@@ -909,6 +1124,15 @@ public class XdebugListener extends DebugListener {
 			}
 			
 			/**
+			 * Notify all listeners that the Xdebug session is ready.
+			 */
+			private void notifySessionReady() {
+				
+				// Call the debug viewer callback function.
+				debugViewerCallback.sessionStateChanged(true);
+			}
+			
+			/**
 			 * Send command through connection
 			 * @param connection
 			 * @param data 
@@ -918,7 +1142,7 @@ public class XdebugListener extends DebugListener {
 			 */
 			private XdebugPacket sendThrough(SocketChannel connection, String commandName, String data, LinkedList<Exception> exceptions) {
 				
-				XdebugCommand command = new XdebugCommand(commandName, data);
+				XdebugStatement command = new XdebugStatement(commandName, data);
 				sendThrough(connection, command);
 				exceptions.clear();
 				exceptions.addAll(0, command.exceptions);
@@ -931,7 +1155,7 @@ public class XdebugListener extends DebugListener {
 			 * @param command
 			 * @throws Exception 
 			 */
-			private void sendThrough(SocketChannel connection, XdebugCommand command) {
+			private void sendThrough(SocketChannel connection, XdebugStatement command) {
 				
 				try {
 					// Check if name exists
@@ -1236,71 +1460,79 @@ public class XdebugListener extends DebugListener {
 	}
 	
 	/**
-	 * Returns true if the channel is readable
-	 * @param socketChannel
-	 * @param timeout
-	 * @return
-	 */
-	private boolean isReadable(SocketChannel socketChannel, int timeout) {
-		
-		Obj<Boolean> readable = new Obj<Boolean>(false);
-		try {
-			connection.configureBlocking(false);
-			
-			Selector selector = Selector.open();
-			connection.register(selector, SelectionKey.OP_READ);
-			
-			selector.select(timeout);
-			selector.selectedKeys().stream().forEach((key) -> { if (key.isValid() && key.isReadable()) readable.ref = true; });
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		return readable.ref;
-	}
-
-	/**
 	 * Read Xdebug messages separated by '\0' character from the channel
 	 * @param socketChannel
 	 * @return
 	 */
 	private String [] readMessages(SocketChannel socketChannel, String encoding)
 			throws Exception {
-			
+		
+		Obj<String []> messages = new Obj<String []>(null);
+				
 		ByteArrayOutputStream messageData = new ByteArrayOutputStream();
 		ByteBuffer buffer = ByteBuffer.allocate(inputBufferSize);
 		
-		int bytesRead;
+		// Read bytes from the socket channel.			
+		connection.configureBlocking(false);
 		
-		// Read bytes from the socket channel.
-		while (true) {
-			
-			if (!isReadable(socketChannel, xdebugIdleMs)) {
-				break;
-			}
-			
-			if ((bytesRead = socketChannel.read(buffer)) <= 0) {
-				break;
-			}
-			
-			byte [] byteArray = buffer.array();
-			messageData.write(byteArray);
-
-			if (bytesRead < inputBufferSize) {
-				break;
-			}
-			
-			buffer.clear();
-		}
+		Selector selector = Selector.open();
+		connection.register(selector, SelectionKey.OP_READ);
 		
-		// Coverts input bytes to messages.
-		byte [] bytes = messageData.toByteArray();
-		String messageText = encoding != null ? new String(bytes, encoding)	: new String(bytes);
+		// Wait for input message.
+		selector.select(xdebugIdleMs);
 		
-		// Split the input string and create array of input messages.
-		String [] messages = messageText.split("\0");
-		return messages;
+		// Process the input message.
+		selector.selectedKeys().stream().forEach(key -> {
+			
+			if (key.isValid() && key.isReadable()) {
+				
+				while (true) {
+					try {
+						int bytesRead = socketChannel.read(buffer);
+						
+						if (bytesRead <= 0) {
+							break;
+						}
+						
+						buffer.rewind();
+						
+						byte [] byteArray = new byte [bytesRead];
+						buffer.get(byteArray, 0, bytesRead);
+						
+						messageData.write(byteArray);
+			
+						if (bytesRead < inputBufferSize) {
+							break;
+						}
+						
+						buffer.clear();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				
+				try {
+					// Converts input bytes to messages.
+					byte [] bytes = messageData.toByteArray();
+					String messageText = encoding != null ? new String(bytes, encoding)	: new String(bytes);
+					
+					// Split the input string and create array with message length and message text.
+					messages.ref = messageText.split("\0");
+					if (messages.ref.length != 2) {
+						messages.ref = null;
+					}
+					else
+						// TODO: <---DEBUG READ RESPONSE
+						j.log("READ RESPONSE len=%d \"%s\"", messages.ref.length, messages.ref.length == 2 ? messages.ref[0] + ", " + messages.ref[1] : "unknown");
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		
+		return messages.ref ;
 	}
 
 	/**
@@ -1409,7 +1641,7 @@ public class XdebugListener extends DebugListener {
 			String [] message = readMessages(socketChannel, null);
 			
 			// Bad Xdebug message
-			if (message.length < 2) {
+			if (message == null) {
 				throw noResponse;
 			}
 			

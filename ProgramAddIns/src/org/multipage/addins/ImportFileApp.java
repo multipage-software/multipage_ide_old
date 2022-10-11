@@ -18,7 +18,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.multipage.util.Obj;
+import javax.swing.JOptionPane;
 
 /**
  * @author vakol
@@ -45,21 +45,28 @@ public class ImportFileApp {
 		// Application to restart.
 		String restartedAppPath = args[3];
 		
+		// TODO: <---DEBUG MESSAGES
+		JOptionPane.showConfirmDialog(null, "START IMPORT");
+		
 		// Import file to JAR archive.
-	    importToJarArchive(importedFilePath, jarFilePath, targetFolder);
+	    Boolean success = importToJarArchive(importedFilePath, jarFilePath, targetFolder);
+	    JOptionPane.showConfirmDialog(null, "Import successful " + success);
 	    
 	    // Restart main application.
 	    File appFile = new File(restartedAppPath);
 	    if (!appFile.isFile()) {
+	    	JOptionPane.showConfirmDialog(null, "Missing file " + appFile);
 	    	return;
 	    }
 	    String workingDirectory = appFile.getParent();
 	    
 		// Run main application.
 		try {
-			runExecutableJar(workingDirectory, restartedAppPath, null);
+			String result = runExecutableJar(workingDirectory, restartedAppPath, null);
+			JOptionPane.showConfirmDialog(null, "Restart result " + result);
 		}
 		catch (Exception e) {
+			JOptionPane.showConfirmDialog(null, "Restart exception " + e.getLocalizedMessage());
 		}
 	}
 	
@@ -92,6 +99,7 @@ public class ImportFileApp {
 			success = true;
 		}
 		catch (Exception e) {
+			JOptionPane.showConfirmDialog(null, "Import exception " + e.getLocalizedMessage());
 		}
 		finally {
 			if (jarFileSystem != null) {
@@ -127,7 +135,7 @@ public class ImportFileApp {
 	    }
 	    
 	    // List child source paths.
-	    Obj<Exception> exception = new Obj<Exception>();
+	    Exception [] exception = new Exception [] { null };
 	    Files.list(sourcePath).forEachOrdered(sourceSubPath -> {
 	    	try {
 	    		Path fileOrFolder = sourceSubPath.getFileName();
@@ -142,13 +150,13 @@ public class ImportFileApp {
 	    	    }
 	    	}
 	    	catch (Exception e) {
-	    		exception.ref = e;
+	    		exception[0] = e;
 	    	}
 	    });
 	    
 	    // Throw exception.
-	    if (exception.ref != null) {
-	    	throw exception.ref;
+	    if (exception[0] != null) {
+	    	throw exception[0];
 	    }
 	}
 	

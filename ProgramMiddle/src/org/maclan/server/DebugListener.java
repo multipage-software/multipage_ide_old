@@ -43,15 +43,15 @@ public abstract class DebugListener {
 	/**
 	 * Start debugging
 	 */
-	abstract boolean startDebugging();
+	public abstract boolean startDebugging();
 	
 	/**
 	 * Stop debugging
 	 */
-	abstract void stopDebugging();
+	public abstract void stopDebugging();
 	
 	/**
 	 * Close debugger
 	 */
-	abstract void close();
+	public abstract void close();
 }

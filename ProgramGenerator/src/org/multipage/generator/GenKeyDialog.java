@@ -308,7 +308,7 @@ public class GenKeyDialog extends JDialog {
 		
 		try {
 			// Import keystore file. Application will be restarted.
-		    AddInsUtility.importUpdatedKeystore(updatedKeystoreFile.ref, true);
+		    AddInsUtility.importUpdatedKeystore(updatedKeystoreFile.ref, ProgramGenerator.class, true);
 		}
 		catch (Exception e) {
 			Utility.show2(this, e.getLocalizedMessage());

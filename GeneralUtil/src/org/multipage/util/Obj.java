@@ -10,9 +10,7 @@ package org.multipage.util;
 /**
  * @author
  * 
- * Use this class as a parameter to a method. Method than sets ref property.
- * After the method returns the ref property is set and you can use it.
- * This class is a wrapper of T type object.
+ * This class is a wrapper for objects of type T.
  */
 public class Obj<T> {
 

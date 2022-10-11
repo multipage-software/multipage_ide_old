@@ -24,11 +24,16 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.function.BiFunction;
 
 import javax.swing.DefaultListModel;
@@ -65,6 +70,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.maclan.MiddleUtility;
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
 import org.multipage.gui.GeneralGui;
@@ -267,9 +273,16 @@ public class LoggingDialog extends JDialog {
 		 * @return
 		 */
 		public String getText() {
-
+			
 			Timestamp timeStamp = new Timestamp(this.timeStamp);
-			return String.format("[%s] %s", timeStamp.toString(), this.messageText);
+			
+			DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+		            .withLocale(Locale.ENGLISH);
+			
+			ZonedDateTime dateTime = timeStamp.toInstant().atZone(ZoneId.systemDefault());
+		    String timeStampText = dateTime.format(formatter);
+			
+			return String.format("[%s] %s", timeStampText, this.messageText);
 		}
 	}
 
@@ -507,6 +520,11 @@ public class LoggingDialog extends JDialog {
 	private JButton buttonStepSingleItem;
 	private JButton buttonRunItems;
 	private JButton buttonBreakItems;
+	private JPanel panel;
+	private JSplitPane splitPane;
+	private JPanel panelBottom;
+	private JTextPane textPaneMetaTags;
+	private JTree treeMetaTags;
 
 	/**
 	 * Show dialog.
@@ -646,6 +664,37 @@ public class LoggingDialog extends JDialog {
 		textQueueMessage = new TextPaneEx();
 		textQueueMessage.setContentType("text/html");
 		scrollPaneQueueMessageDescription.setViewportView(textQueueMessage);
+		
+		panel = new JPanel();
+		tabbedPane.addTab("META parser", null, panel, null);
+		panel.setLayout(new BorderLayout(0, 0));
+		
+		splitPane = new JSplitPane();
+		splitPane.setResizeWeight(0.5);
+		panel.add(splitPane);
+		
+		JScrollPane scrollPaneLeft = new JScrollPane();
+		splitPane.setLeftComponent(scrollPaneLeft);
+		
+		textPaneMetaTags = new JTextPane();
+		scrollPaneLeft.setViewportView(textPaneMetaTags);
+		
+		JScrollPane scrollPaneRight = new JScrollPane();
+		splitPane.setRightComponent(scrollPaneRight);
+		
+		treeMetaTags = new JTree();
+		scrollPaneRight.setViewportView(treeMetaTags);
+		
+		panelBottom = new JPanel();
+		panel.add(panelBottom, BorderLayout.SOUTH);
+		
+		JButton buttonParse = new JButton("Parse");
+		buttonParse.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onParseMetaTags();
+			}
+		});
+		panelBottom.add(buttonParse);
 
 		panelEvents = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textLoggedConditionalEvents", null, panelEvents, null);
@@ -767,7 +816,7 @@ public class LoggingDialog extends JDialog {
 		listBreakPoints = new JList();
 		scrollPaneBreakPoints.setViewportView(listBreakPoints);
 	}
-	
+
 	/**
 	 * Post creation.
 	 */
@@ -2792,5 +2841,15 @@ public class LoggingDialog extends JDialog {
 		//////////////////////////////////////////////////////
 		j.log("BREAK POINT");
 		//////////////////////////////////////////////////////
+	}
+	
+	/**
+	 * On parse META tags.
+	 */
+	protected void onParseMetaTags() {
+		
+		// Get text.
+		String text = textPaneMetaTags.getText();
+		DefaultTreeModel model = (DefaultTreeModel) treeMetaTags.getModel();
 	}
 }

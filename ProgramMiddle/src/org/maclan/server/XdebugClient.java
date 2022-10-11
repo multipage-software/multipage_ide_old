@@ -12,8 +12,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import org.maclan.server.XdebugListener.XdebugStatement;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
 
@@ -30,9 +35,15 @@ public class XdebugClient {
 	public static final String protocolEncoding = "UTF-8";
 
 	/**
-	 * Size of the input buffer in bytes.
+	 * Size of the input and output buffers in bytes.
 	 */
 	private static final int inputBufferSize = 1025;
+	private static final int outputBufferSize = 1025;
+	
+	/**
+	 * Xdebug idle state in milliseconds.
+	 */
+	protected final static int xdebugIdleMs = 200;
 	
 	/**
 	 * Socket channel socketSelector.
@@ -43,6 +54,31 @@ public class XdebugClient {
 	 * Socket object reference.
 	 */
 	public SocketChannel socketChannel = null;
+	
+	/**
+	 * Sequence number.
+	 */
+	private int statementNumber = 0;
+	
+	/**
+	 * Transaction number.
+	 */
+	private int transactionNumber = 0;
+	
+	/**
+	 * Callback interface.
+	 */
+	public static abstract class Callback {
+		
+		/**
+		 * Accept Xdebug statement.
+		 * @param xdebugStatement
+		 */
+		protected String accept(XdebugStatement xdebugStatement) {
+			// Override it.
+			return null;
+		}
+	}
 	
 	/**
 	 * Constructor.
@@ -83,7 +119,6 @@ public class XdebugClient {
 					catch (Exception e) {
 					}
 				}
-				j.log(1);
 				
 			}, XdebugListener.xdebugClientTimeoutMs);
 			
@@ -136,16 +171,16 @@ public class XdebugClient {
 		int messageLength = message.length();
 		String messageLengthString = String.valueOf(messageLength);
 		
-		int bufferBytesCount = 2 * (messageLengthString.length() + 2 + messageLength);
+		int bufferBytesCount = (messageLengthString.length() + 2 + messageLength);
 		ByteBuffer buffer = ByteBuffer.allocate(bufferBytesCount);
 		
 		buffer.put(messageLengthString.getBytes(protocolEncoding));
-		buffer.putChar('\0');
+		buffer.put((byte) 0);
 		buffer.put(message.getBytes(protocolEncoding));
 		
-		// Write bytes to the socket channel.
-		writeMessage(socketChannel, "testing statement");
-//		this.socketChanel.write(buffer);
+		buffer.rewind();
+		
+		socketChannel.write(buffer);
 	}
 	
 	/**
@@ -161,43 +196,138 @@ public class XdebugClient {
 	}
 	
 	/**
+	 * Connect to IDE and return new Xdebug client.
+	 * @param ideHostName
+	 * @param xdebugPort
+	 * @param sourceLocator
+	 * @return
+	 * @throws Exception 
+	 */
+	synchronized public static XdebugClient connectNewClient(String ideHostName, int xdebugPort, String sourceLocator)
+			throws Exception {
+		
+		// Get current process and its parent process IDs.
+		ProcessHandle processHandle = ProcessHandle.current();
+		long processId = processHandle.pid();
+		
+		// Get current thread ID.
+		long threadId = Thread.currentThread().getId();
+		
+		// Create Xdebug client.
+		XdebugClient xdebugClient = XdebugClient.connect(ideHostName, xdebugPort);
+		
+		// Initialize Xdebug protocol communication.
+		String initialXmlPacket = String.format(
+				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+				"<init appid=\"Area Server pid(%d)\" " +
+				"idekey=\"%s\" " +
+				"session=\"\" " +
+				"thread=\"%d\" " +
+				"parent=\"\" " +
+				"language=\"Maclan\" " +
+				"protocol_version=\"1.0\" " +
+				"fileuri=\"%s\"/>",
+				processId,
+				XdebugListener.requiredIdeKey,
+				threadId,
+				sourceLocator);
+		
+		xdebugClient.write(initialXmlPacket);
+		
+		return xdebugClient;
+	}
+	
+	/**
 	 * Communicate with debugger.
 	 * @param statementLambda
 	 * @throws IOException
 	 */
-	public void communicate(BiFunction<SocketChannel, String, Boolean> statementLambda)
+	synchronized public void communicate(Callback callback)
 			throws IOException {
+		
+		// Initialize transaction number.
+		transactionNumber = 1;
 		
 		// Xdebug protocol communication loop.
 		Obj<Boolean> exit = new Obj<Boolean>(false);
 		while (!exit.ref) {
 			
 			try {
-				// Wait for incomming statement.
+				// Wait for incoming statement.
 				socketSelector.select(key -> {
 				
-					if (key.isReadable()) {
+					if (key.isValid() && key.isReadable()) {
+						
 						try {
-							
 							// Read input statement.
 							SocketChannel channel = (SocketChannel) key.channel();
 							
-							ByteBuffer bytes = ByteBuffer.allocate(inputBufferSize);
-							channel.read(bytes);
+							ByteBuffer inputBuffer = ByteBuffer.allocate(inputBufferSize);
+							channel.read(inputBuffer);
 							
-							String inputStatement = new String(bytes.array(), protocolEncoding);
+							String statementText = new String(inputBuffer.array(), protocolEncoding);
+							
+							XdebugStatement xdebugStatement = XdebugStatement.parse(statementText);
+							if (xdebugStatement == null) {
+								return;
+							}
+							
+							// Check transaction ID.
+							int readTransactionNumber = xdebugStatement.getTransactionNumber();
+							if (readTransactionNumber != transactionNumber) {
+								return;
+							}
 							
 							// Process input statement. Break the loop on exit flag.
-							exit.ref = statementLambda.apply(channel, inputStatement);
+							String responseText = callback.accept(xdebugStatement);
+							if (responseText == null) {
+								responseText = "0";
+							}
+
+							// Write returned text.
+							final String divider = "\0";
+							int textLength = responseText.length();
+							String lengthString = String.valueOf(textLength);
+							
+							byte [] lengthBytes = lengthString.getBytes(StandardCharsets.UTF_8);
+							byte [] dividerBytes = divider.getBytes(StandardCharsets.UTF_8);
+							byte [] responseBytes = responseText.getBytes(StandardCharsets.UTF_8);
+							
+							int bufferSize = lengthBytes.length + dividerBytes.length + responseBytes.length;
+							ByteBuffer outputBuffer = ByteBuffer.allocate(bufferSize);
+							
+							outputBuffer.clear();
+							outputBuffer.put(lengthBytes);
+							outputBuffer.put(dividerBytes);
+							outputBuffer.put(responseBytes);
+							outputBuffer.rewind();
+							
+							int bytesWritten = channel.write(outputBuffer);
+							
+							// TODO: <---DEBUG WRITE RESPONSE
+							j.log("WRITE RESPONSE len=%d \"%s\"", bytesWritten, responseText);
+							
+							// Increment transaction number.
+							transactionNumber++;
 						}
-						catch (IOException e) {
+						catch (Exception e) {
+							e.printStackTrace();
 						}
 					}
 		
 				}, XdebugListener.xdebugClientTimeoutMs);
+				
+				// Idle time span.
+				Thread.sleep(xdebugIdleMs);
 			}
 			catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
+	}
+
+	public boolean checkTransactionNumber(int transactionNumber) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

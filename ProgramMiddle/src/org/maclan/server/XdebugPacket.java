@@ -5,7 +5,10 @@ package org.maclan.server;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
 import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -14,6 +17,9 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.j;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -61,8 +67,9 @@ public class XdebugPacket {
 	 * @throws IOException 
 	 * @throws SAXException 
 	 */
-	public XdebugPacket(final String packetText) throws ParserConfigurationException, SAXException, IOException {
-				
+	public XdebugPacket(String packetText)
+			throws Exception {
+		
 		// Prepare XML DOM parser prerequisites
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
@@ -71,28 +78,11 @@ public class XdebugPacket {
 		this.packetText = packetText;
 		
 		// Parse packet text
-		xml = builder.parse(new InputSource(new Reader () {
-			
-			// Reads a character at given position from the packet
-			final int [] characterPosition = { 0 };
-			final int length = packetText.length();
-			
-			// Overridden methods
-			@Override
-			public int read(char[] cbuf, int off, int len) throws IOException {
-				
-				// Fill output buffer with characters
-				int count = 0;
-				for (; count < len && characterPosition[0] < length; count++, characterPosition[0]++) {
-					cbuf[off + count] = packetText.charAt(characterPosition[0]);
-				}
-				return count > 0 ? count : -1;
-			}
-			
-			@Override
-			public void close() throws IOException {
-			}	
-		}));
+		InputSource source = new InputSource(new StringReader(packetText));
+		xml = builder.parse(source);
+		
+		// TODO: <---DEBUG
+		j.log("PARSED XML PACKET: %s", packetText);
 	}
 
 	/**

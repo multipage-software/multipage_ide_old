@@ -44,6 +44,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.StyleSheet;
 
+import org.maclan.server.DebugListener;
 import org.maclan.server.XdebugListener;
 import org.maclan.server.XdebugPacket;
 import org.multipage.gui.AlertWithTimeout;
@@ -113,6 +114,11 @@ public class DebugViewer extends JFrame {
 	 * Header to display
 	 */
 	private String header;
+	
+	/**
+	 * URI to get the source code.
+	 */
+	private String uriRequestSourceCode = null;
 	
 	/**
 	 * Lines of code to display or null if there is nothing to display
@@ -444,43 +450,57 @@ public class DebugViewer extends JFrame {
 	}
 
 	/**
-	 * Opens file for debugging using Xdebug command
-	 * @param fileUri
+	 * Opens file for debugging using debug command
+	 * @param sourceUri
 	 * @throws Exception 
 	 */
-	public int openFile(String fileUri) {
+	public int openFile(String sourceUri) {
 		
-		if (fileUri.isEmpty()) {
+		if (sourceUri.isEmpty()) {
 			return -1;
 		}
 		
 		try {
+			URI uri = new URI(sourceUri);
 			
-			URI uri = new URI(fileUri);
-			File sourceFile = new File(uri);
-			if (sourceFile.exists() && sourceFile.canRead()) {
+			String scheme = uri.getScheme();
+			if ("file".equals(scheme)) {
 				
-				BufferedReader br = new BufferedReader(new FileReader(sourceFile));
-				Obj<String> sourceCode = new Obj<String>("");
+				File sourceFile = new File(uri);
+				if (sourceFile.exists() && sourceFile.canRead()) {
+					
+					BufferedReader br = new BufferedReader(new FileReader(sourceFile));
+					Obj<String> sourceCode = new Obj<String>("");
+					
+					Obj<Integer> lines = new Obj<Integer>(0);
+					
+					br.lines().forEach((String line) -> {
+						sourceCode.ref += line + "\n";
+						lines.ref++;
+					});
+					br.close();
+					
+					this.header = sourceUri;
+					
+					openSource(header, sourceCode.ref);
+					scriptFileName = sourceUri;
+					
+					return lines.ref;
+				}
+			}
+			else if ("debug".equals(scheme)) {
 				
-				Obj<Integer> lines = new Obj<Integer>(0);
-				
-				br.lines().forEach((String line) -> {
-					sourceCode.ref += line + "\n";
-					lines.ref++;
-				});
-				br.close();
-				
-				this.header = fileUri;
-				
-				openSource(header, sourceCode.ref);
-				scriptFileName = fileUri;
-				
-				return lines.ref;
+				// Set source link for future load operation
+				uriRequestSourceCode = sourceUri;
+
+				// Open source code in the viewer.
+				openSource(header, "");
 			}
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			
+			// Display exception.
+			Utility.show(this, "org.multipage.generator.messageDebuggerBadFileUri", sourceUri);
 		}
 		
 		return -1;
@@ -518,6 +538,28 @@ public class DebugViewer extends JFrame {
 		
 		// Show the window
 		setVisible(true);
+	}
+	
+	/**
+	 * Invoked whenever the debug session state changes.
+	 * @param debugger 
+	 * @param ready
+	 */
+	public void onSessionStateChanged(DebugListener debugger, boolean ready) {
+		
+		try {
+			// If there is a request to load a source code from the Xdebug client, do it.
+			if (ready && uriRequestSourceCode != null && debugger instanceof XdebugListener) {
+				
+				XdebugListener xebugListener = (XdebugListener) debugger;
+				String data = "-f " + uriRequestSourceCode;
+				XdebugPacket packet = xebugListener.postCommandT("source", data);
+				// TODO: <---DEBUG
+				j.log("SOURCE CODE: %s", packet.getPacketText());
+			}			
+		}
+		catch (Exception e) {
+		}
 	}
 
 	/**

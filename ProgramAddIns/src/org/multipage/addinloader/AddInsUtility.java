@@ -20,6 +20,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.Map;
@@ -36,6 +37,7 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
 import org.multipage.addins.ImportFileApp;
+import org.multipage.addins.ProgramAddIns;
 import org.multipage.gui.Utility;
 
 /**
@@ -807,11 +809,12 @@ public class AddInsUtility {
 	/**
 	 * Imports updated keystore file.
 	 * @param keystoreFile
+	 * @param mainProjectClass
 	 * @param restart
 	 * @return true on success
 	 * @throws Exception 
 	 */
-	public static boolean importUpdatedKeystore(File keystoreFile, boolean restart)
+	public static boolean importUpdatedKeystore(File keystoreFile, Class<?> mainProjectClass, boolean restart)
 			throws Exception {
 		
 		// Check keystore file.
@@ -819,14 +822,38 @@ public class AddInsUtility {
 			return false;
 		}
 		
+		final String destinationFolder = "org/multipage/addinloader/properties";
+		final String destinationKeystoreName = "multipage_client.p12";
+		final String importerFileName = "ImportFileApp.class";
+		
+		String keystorePath = keystoreFile.toString();
+		
 		// Expose application that can import the keystore.
-		Class<?> applicationClass = ImportFileApp.class;
-		String applicationFolder = applicationClass.getPackageName().replace('.', File.separatorChar);
-		String applictionPath = File.separatorChar + applicationFolder + File.separatorChar + "ImportFileApp.class";
-		File applicationFile = Utility.exposeApplicationFile(applictionPath);
+		Class<?> importerClass = ImportFileApp.class;
+		String importerFolder = importerClass.getPackageName().replace('.', File.separatorChar);
+		String temporaryDirectory = Files.createTempDirectory("Multipage_").toString();
+		File importerFile = Utility.exposeApplicationFile(importerFolder, importerFileName, temporaryDirectory);
+		String keystoreProjectPath = Utility.getApplicationFile(ProgramAddIns.class).toString();
+		String importerWorkingDirectory = importerFile.getParent();
+		File applicationFile = Utility.getApplicationFile(mainProjectClass);
+		String applicationPath = applicationFile.toString();
 		
-		// TODO: <---MAKE Run Java application class.
-		
+		// Run Java application class to import keystore.
+		if (applicationFile.isFile()) {
+			// TODO: <---FIX Bad directory. Remove package path.
+			String result = Utility.runJavaClass(importerClass, temporaryDirectory, importerWorkingDirectory, new String [] {
+				keystorePath,
+				applicationPath,
+				destinationFolder,
+				applicationPath
+			});
+			Utility.show2("IMPORTER RESULT " + result);
+		}
+		else {
+			Path sourcePath = keystoreFile.toPath();
+			Path destinationPath = Paths.get(keystoreProjectPath, destinationFolder, destinationKeystoreName);
+			Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+		} 
 		return true;
 	}
 }

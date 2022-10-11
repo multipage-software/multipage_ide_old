@@ -13,6 +13,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,9 +56,12 @@ import org.maclan.StartResource;
 import org.maclan.VersionObj;
 import org.maclan.expression.ExpressionSolver;
 import org.maclan.expression.ProcedureParameter;
+import org.maclan.server.XdebugClient.Callback;
+import org.maclan.server.XdebugListener.XdebugStatement;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * @author
@@ -2516,7 +2521,7 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// initialization.
+				// Initialization.
 				Long timeoutMilliseconds = null;
 				
 				try {
@@ -2527,7 +2532,7 @@ public class AreaServer {
 					// Check parameters.
 					if (items.hasMoreElements()) {
 						
-						// Try to get timeout value in milliseconds drirectly.
+						// Try to get timeout value in milliseconds directly.
 						Object item = items.nextElement();
 						if (item instanceof String) {
 							String timeoutText = (String) item;
@@ -2538,20 +2543,20 @@ public class AreaServer {
 							server.state.responseTimeoutMilliseconds = timeoutMilliseconds;
 						}
 						
-						// Iniialize constants.
+						// Initialize constants.
 						final String msConstant = "ms";
 						final String defaultConstant = "default";
 						
 						boolean useDefaultValue = false;
 						
-						// Try to get "ms" property value specifying timout milliseconds.
+						// Try to get "ms" property value specifying timeout milliseconds.
 						boolean msPropertyExists = properties.containsKey(msConstant);
 						if (timeoutMilliseconds == null && msPropertyExists) {
 							
 							// Get property value.
 							String msPropertyText = properties.getProperty(msConstant);
 							
-							// Try to set default tmieout when the "ms" property has null or the "default" string value.
+							// Try to set default timeout when the "ms" property has null or the "default" string value.
 							useDefaultValue = (msPropertyText == null);
 							if (!useDefaultValue) {
 								
@@ -3701,10 +3706,8 @@ public class AreaServer {
 					if (server.state.debugClient == null) {
 						server.connectViaXdebug(ideHost.ref, xdebugPort.ref);
 					}
-					// ... or accept Xdebug statements.
-					else {
-						server.acceptXdebugStatements();
-					}
+					// Accept Xdebug statements.
+					server.acceptXdebugStatements();
 				}
 				else {
 					if (breakName != null) {
@@ -3728,47 +3731,76 @@ public class AreaServer {
 	protected void connectViaXdebug(String ideHostName, int xdebugPort)
 			throws Exception {
 		
-		// Get current process and its parent process IDs.
-		ProcessHandle processHandle = ProcessHandle.current();
-		long processId = processHandle.pid();
-		
-		// Get current thread ID.
+		// Create new Xdebug client.
+		String areaServer = state.request.getOriginalRequest().getServerName();
+		long processId = ProcessHandle.current().pid();
 		long threadId = Thread.currentThread().getId();
+		long areaId = state.area.getId();
+		long stateHash = state.hashCode();
 		
-		// Create Xdebug client.
-		state.debugClient = XdebugClient.connect(ideHostName, xdebugPort);
+		// Area server state locator.
+		String areaServerStateLocator = String.format("debug://%s/?pid=%d&amp;tid=%d&amp;aid=%d&amp;stateHash=%d", areaServer, processId, threadId, areaId, stateHash);
 		
-		// Initialize Xdebug protocol communication.
-		String initialXmlPacket = String.format(
-				"<init appid=\"Area Server pid(%d)\" " +
-				"idekey=\"%s\" " +
-				"session=\"\" " +
-				"thread=\"%d\" " +
-				"parent=\"\" " +
-				"language=\"Maclan\" " +
-				"protocol_version=\"1.0\" " +
-				"fileuri=\"\">",
-				processId,
-				XdebugListener.requiredIdeKey,
-				threadId);
-		
-		state.debugClient.write(initialXmlPacket);
+		state.debugClient = XdebugClient.connectNewClient(ideHostName, xdebugPort, areaServerStateLocator);
 	}
 	
 	/**
-	 * Accept incomming Xdebug statements.
+	 * Accept incoming Xdebug statements.
 	 */
 	protected void acceptXdebugStatements()
 			throws Exception {
 		
+		// Get Xdebug client.
+		XdebugClient xdebugClient = state.debugClient;
+		
 		// Check debugger connection state.
-		if (!state.debugClient.checkActive()) {
+		if (!xdebugClient.checkActive()) {
 			AreaServer.throwError("org.maclan.server.messageXdebugConnectionInterrupted");
 		}
 		
 		// Enter main loop for communication with debugger window.
-		state.debugClient.communicate((socketChannel, statement) -> {
-			return true;
+		xdebugClient.communicate(new Callback() {
+			@Override
+			protected String accept(XdebugStatement xdebugStatement) {
+				
+				// On setting and getting features...
+				if (xdebugStatement.is("feature_set")) {
+					
+					// Get feature name.
+					String featureName = xdebugStatement.getFeatureName();
+					if (featureName == null) {
+						return null;
+					}
+					
+					// On show hidden properties...
+					if ("show_hidden".equals(featureName)) {
+						// Wrap response text with XML.
+						String response = xdebugStatement.compileResponse("success=\"1\"");
+						return response;
+					}
+				}
+				else if (xdebugStatement.is("feature_get")) {
+					
+					// Get feature name.
+					String featureName = xdebugStatement.getFeatureName();
+					if (featureName == null) {
+						return null;
+					}
+					
+					// On show hidden properties...
+					if ("show_hidden".equals(featureName)) {
+						// Wrap response text with XML.
+						String response = xdebugStatement.compileResponse("success=\"1\"", "1");
+						return response;
+					}
+				}
+				else if (xdebugStatement.is("source")) {
+					
+					// TODO: <---DEBUG
+					j.log("SENDING SOURCE CODE");
+				}
+				return null;
+			}
 		});
 	}
 
@@ -5716,6 +5748,14 @@ public class AreaServer {
 			if (processLanguageListTags(tagName)) {
 				continue;
 			}
+			// Process meta tag.
+			if (processMetaTags(tagName)) {
+				continue;
+			}
+			// Process meta tag tags.
+			if (processMetaTagTags(tagName)) {
+				continue;
+			}
 			
 			// Try to process call tags. (Must be the last tag processor.)
 			if (!processCallTags(tagName)) {
@@ -5724,7 +5764,8 @@ public class AreaServer {
 			}
 		}
 	}
-	
+
+
 	/**
 	 * Decrement tags level.
 	 * @return
@@ -5751,7 +5792,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !("@META".equals(tagName))) {
+			if (!tagName.isEmpty() && !(!state.processMetaTags && "@META".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5791,7 +5832,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(state.text, positionOut);
 			
 			// Decrement tag name except META tag.
-			if (!tagName.isEmpty() && !("@META".equals(tagName))) {
+			if (!tagName.isEmpty() && !(!state.processMetaTags && "@META".equals(tagName))) {
 				
 				char firstCharacter = tagName.charAt(0);
 				if (firstCharacter == '@') {
@@ -5823,11 +5864,14 @@ public class AreaServer {
 	 */
 	private void checkResponseTimeout() throws Exception {
 		
-		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
+		// TODO: <---DEBUG Do not check timeout.
+		return ;
 		
-		if (deltaMilliseconds >= state.responseTimeoutMilliseconds) {
-			throwError("server.messageResponseTimeExceedsTimout", state.responseTimeoutMilliseconds);
-		}
+//		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
+//		
+//		if (deltaMilliseconds >= state.responseTimeoutMilliseconds) {
+//			throwError("server.messageResponseTimeExceedsTimout", state.responseTimeoutMilliseconds);
+//		}
 	}
 	
 	/**
@@ -5863,7 +5907,8 @@ public class AreaServer {
 		String breakCommand = state.debugClient != null ? "[@BREAK $name=_xdebug]" : "";
 		
 		// Wrap text into META tag.
-		return String.format("[@@META source=#%s]%s%s[/@@META]", tagsSource, replacement, breakCommand);
+		String text = String.format("[@@META source=#%s]%s%s[/@@META]", tagsSource, replacement, replacement, breakCommand);
+		return text;
 	}
 	
 	/**
@@ -5894,7 +5939,7 @@ public class AreaServer {
 				
 				valueBase64 = value.toString();
 				if (!valueBase64.isEmpty()) {
-					valueBase64 = Utility.encodeBase64(valueBase64);
+					//valueBase64 = Utility.encodeBase64(valueBase64);
 				}
 				else {
 					valueBase64 = null;
@@ -5914,7 +5959,8 @@ public class AreaServer {
 		String breakCommand = state.debugClient != null ? "[@BREAK $name=_xdebug]" : "";
 		
 		// Wrap result into a META tag.
-		return String.format("[@@META $tag=#%s $start=%d $stop=%d%s]%s%s[/@@META]", tagName, start, stop, propertiesString, replacement, breakCommand);
+		String text =  String.format("[@@META $tag=#%s $start=%d $stop=%d%s]%s%s[/@@META]", tagName, start, stop, propertiesString, replacement, breakCommand);	
+		return text;
 	}
 	
 	/**
@@ -5980,7 +6026,7 @@ public class AreaServer {
 			String tagName = ServerUtilities.readTagName(text, positionOut);
 			
 			// Remove META tag.
-			if ("@META_TAG".equals(tagName) || "@META_SOURCE".equals(tagName)) {
+			if ("@META".equals(tagName)) {
 				
 				text.replace(tagStartPositionOut.ref, positionOut.ref + 1, "");
 				positionOut.ref = tagStartPositionOut.ref;
@@ -6906,7 +6952,36 @@ public class AreaServer {
 
 		return true;
 	}
-
+	
+	/**
+	 * TODO: <---MAKE Process META tags.
+	 * @param tagName
+	 * @return
+	 */
+	private boolean processMetaTags(String tagName) {
+		
+		// Check tag name.
+		if (!tagName.equals("META")) {
+			return false;
+		}
+		// TODO Auto-generated method stub
+		return true;
+	}
+	
+	/**
+	 * TODO: <---MAKE Process META_TAG tags.
+	 * @param tagName
+	 * @return
+	 */
+	private boolean processMetaTagTags(String tagName) {
+		
+		// Check tag name.
+		if (!tagName.equals("META_TAG")) {
+			return false;
+		}
+		// TODO Auto-generated method stub
+		return true;
+	}
 	/**
 	 * Get home area.
 	 * @return
