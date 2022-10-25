@@ -67,11 +67,14 @@ import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
 import org.maclan.AreasModel;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;

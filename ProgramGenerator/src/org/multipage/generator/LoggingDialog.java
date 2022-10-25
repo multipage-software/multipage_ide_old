@@ -70,12 +70,16 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import org.maclan.MiddleUtility;
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
+import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.EventHandle;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.GeneralGui;
 import org.multipage.gui.Images;
+import org.multipage.gui.Message;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextAreaEx;
@@ -314,7 +318,7 @@ public class LoggingDialog extends JDialog {
 
 	/**
 	 * Logged message queue snapshots. Maps: Time Moment -> List of Messages
-	 */
+	 */              
 	private static LinkedHashMap<String, LinkedList<Message>> messageQueueSnapshots = new LinkedHashMap<String, LinkedList<Message>>();
 	
 	/**

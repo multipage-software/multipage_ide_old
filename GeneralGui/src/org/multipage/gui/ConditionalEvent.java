@@ -4,9 +4,7 @@
  * Created on : 25-02-2021
  * 
  */
-package org.multipage.generator;
-
-import org.multipage.gui.Utility;
+package org.multipage.gui;
 
 /**
  * @author vakol

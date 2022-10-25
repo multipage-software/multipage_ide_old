@@ -37,9 +37,11 @@ import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
 import org.maclan.AreaRelation;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.Signal;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;

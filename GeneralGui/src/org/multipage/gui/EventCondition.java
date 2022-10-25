@@ -4,7 +4,7 @@
  * Created on : 21-01-2021
  *
  */
-package org.multipage.generator;
+package org.multipage.gui;
 
 /**
  * @author vakol

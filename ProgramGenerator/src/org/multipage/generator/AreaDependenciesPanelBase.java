@@ -21,7 +21,9 @@ import javax.swing.JTable;
 import org.maclan.Area;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
+import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 

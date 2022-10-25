@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import org.multipage.generator.LoggingDialog.LoggedMessage;
+import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.EventSource;
+import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.j;
 

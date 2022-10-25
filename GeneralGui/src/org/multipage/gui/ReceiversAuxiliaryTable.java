@@ -4,7 +4,7 @@
  * Created on : 19-02-2021
  *
  */
-package org.multipage.generator;
+package org.multipage.gui;
 
 import java.util.Collections;
 import java.util.Comparator;

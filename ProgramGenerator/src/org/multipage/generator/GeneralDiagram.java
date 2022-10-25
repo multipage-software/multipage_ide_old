@@ -32,11 +32,13 @@ import java.util.LinkedList;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.CursorArea;
 import org.multipage.gui.CursorAreaImpl;
 import org.multipage.gui.HorizontalScroll;
 import org.multipage.gui.Images;
 import org.multipage.gui.ScrollListener;
+import org.multipage.gui.Signal;
 import org.multipage.gui.ToolTipWindow;
 import org.multipage.gui.Utility;
 import org.multipage.gui.VerticalScroll;

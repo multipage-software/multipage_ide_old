@@ -4,10 +4,15 @@
  * Created on : 19-02-2021
  *
  */
-package org.multipage.generator;
+package org.multipage.gui;
 
 import java.util.HashSet;
 
+/**
+ * 
+ * @author vakol
+ *
+ */
 public enum Signal implements EventCondition {
 	
 	// Special signal that runs user lambda function placed in a message on the message thread.
@@ -433,10 +438,5 @@ public enum Signal implements EventCondition {
 	public HashSet<SignalType> getTypes() {
 		
 		return includedInTypes;
-	}
-
-	static Signal update(Class<AreasTreeEditorPanel> class1) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 }

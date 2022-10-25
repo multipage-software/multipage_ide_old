@@ -33,6 +33,8 @@ import org.maclan.AreasModel;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.Signal;
 import org.multipage.util.Resources;
 
 /**

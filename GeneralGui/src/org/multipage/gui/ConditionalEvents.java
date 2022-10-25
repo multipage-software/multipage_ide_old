@@ -5,9 +5,8 @@
  *
  */
 
-package org.multipage.generator;
+package org.multipage.gui;
 
-import java.awt.Window;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -23,13 +22,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.AncestorEvent;
 import javax.swing.event.AncestorListener;
 
-import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.j;
 
 /**
- * 
+ * Conditional events that can signal application states.
  * @author vakol
  *
  */
@@ -210,7 +208,7 @@ public class ConditionalEvents {
 			do {
 				
 				// Log message queue.
-				LoggingDialog.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
+				LoggingCallback.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
 				
 				// Pop the message and exit the loop.
 				incomingMessage.ref = popMessage();
@@ -228,7 +226,7 @@ public class ConditionalEvents {
 			incomingMessage.ref.receiveTime = currentTime;
 			
 			// Log incoming message.
-			LoggingDialog.log(incomingMessage.ref);
+			LoggingCallback.log(incomingMessage.ref);
 			
 			// Get message signal.
 			Signal signal = incomingMessage.ref.signal;
@@ -242,7 +240,7 @@ public class ConditionalEvents {
 			if (!isMessageSurviving(incomingMessage.ref, currentTime)) {
 				
 				// Break point managed by log.
-				LoggingDialog.breakPoint(signal);
+				LoggingCallback.breakPoint(signal);
 				
 				// For special signals perform special invocation.
 				if (signal.isSpecial()) {
@@ -371,7 +369,7 @@ public class ConditionalEvents {
 			letMessageSurvive(message, expirationTime);
 			
 			// Break point managed by log.
-			LoggingDialog.breakPoint(message.signal);
+			LoggingCallback.breakPoint(message.signal);
 			
 			// Invoke the event on Swing thread and write log.
 			SwingUtilities.invokeLater(() -> {
@@ -381,7 +379,7 @@ public class ConditionalEvents {
 				long executionTime = Utility.getNow();
 						
 				// Log the event.
-				LoggingDialog.log(message, eventHandle, executionTime);
+				LoggingCallback.log(message, eventHandle, executionTime);
 			});
 		}
 	}

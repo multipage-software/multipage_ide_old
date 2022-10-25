@@ -4,7 +4,7 @@
  * Created on : 21-07-2017
  *
  */
-package org.multipage.generator;
+package org.multipage.gui;
 
 /**
  * Groups.

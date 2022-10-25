@@ -4,14 +4,14 @@
  * Created on : 19-02-2021
  * 
  */
-package org.multipage.generator;
+package org.multipage.gui;
 
 import java.util.function.Consumer;
 
 /**
  * Event handle.
  */
-class EventHandle {
+public class EventHandle {
 	
 	/**
 	 * An action is a lambda function. It consumes the message if it is not coalesced in a time span.

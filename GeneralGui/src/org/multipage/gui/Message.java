@@ -5,11 +5,9 @@
  *
  */
 
-package org.multipage.generator;
+package org.multipage.gui;
 
 import java.util.function.Function;
-
-import org.multipage.gui.Utility;
 
 /**
  * Message object.
@@ -236,26 +234,6 @@ public class Message {
 		// Check source object.
 		if (source != null) {
 			matches = source.equals(object);
-		}
-		
-		return matches;
-	}
-	
-	/**
-	 * Returns true if the target class of this message matches the parameter.
-	 * @param classObject
-	 * @return
-	 */
-	public boolean targetClass(Class<AreasDiagram> classObject) {
-
-		// Initialize output.
-		boolean matches = false;
-		
-		// Check target class.
-		if (target instanceof Class<?>) {
-			
-			Class<?> targetClass = (Class<?>) target;
-			matches = targetClass.equals(classObject);
 		}
 		
 		return matches;

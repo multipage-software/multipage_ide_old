@@ -32,7 +32,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.maclan.Area;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
+import org.multipage.gui.Signal;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.util.Resources;

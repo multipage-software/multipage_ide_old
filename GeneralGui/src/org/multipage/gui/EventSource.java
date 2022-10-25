@@ -5,7 +5,7 @@
  *
  */
 
-package org.multipage.generator;
+package org.multipage.gui;
 
 import java.util.LinkedList;
 import java.util.Objects;

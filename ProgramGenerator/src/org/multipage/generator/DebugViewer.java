@@ -1144,17 +1144,6 @@ public class DebugViewer extends JFrame {
 		if (client == null) {
 			return;
 		}
-		
-		client.setNewSessionCallback(new Callback() {
-			@Override
-			public Object run(Object input) {
-				SwingUtilities.invokeLater(() -> {
-					step("step_into");
-				});
-				return null;
-			}
-			
-		});
 	}
 	
 	/**

@@ -544,7 +544,6 @@ public class XdebugListener extends DebugListener {
 	 * Callbacks
 	 */
 	private Callback watchDogCallback = null;
-	private Callback newSessionCallback = null;
 
 	/**
 	 * Xdebug status
@@ -796,7 +795,6 @@ public class XdebugListener extends DebugListener {
 						
 						// Rule: Wait for a new command
 						if (isInitialized(connection) && !is(command)) {
-							Lock.notify(sessionReady);
 							// TODO: <---DEBUG
 							j.log("NOTIFIED LOCK %s THREAD %s", sessionReady, Thread.currentThread());
 							notifySessionReady();
@@ -1112,10 +1110,6 @@ public class XdebugListener extends DebugListener {
 					}
 					
 					session = Session.ready;
-					
-					if (newSessionCallback != null) {
-						newSessionCallback.run(null);
-					}
 				}
 				catch (Exception e) {
 					
@@ -1127,6 +1121,8 @@ public class XdebugListener extends DebugListener {
 			 * Notify all listeners that the Xdebug session is ready.
 			 */
 			private void notifySessionReady() {
+				
+				Lock.notify(sessionReady);
 				
 				// Call the debug viewer callback function.
 				debugViewerCallback.sessionStateChanged(true);
@@ -1339,15 +1335,6 @@ public class XdebugListener extends DebugListener {
 	public void setWatchDogCallback(Callback callback) {
 		
 		this.watchDogCallback = callback;
-	}
-	
-	/**
-	 * Sets watch dog callback
-	 * @param callback
-	 */
-	public void setNewSessionCallback(Callback callback) {
-		
-		this.newSessionCallback = callback;
 	}
 	
 	/**

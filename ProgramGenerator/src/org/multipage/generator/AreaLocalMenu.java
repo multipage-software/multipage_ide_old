@@ -24,7 +24,10 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
 import org.maclan.Area;
+import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.Images;
+import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 

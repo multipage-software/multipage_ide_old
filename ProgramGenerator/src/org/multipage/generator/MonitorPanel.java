@@ -13,6 +13,9 @@ import java.util.HashSet;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
+import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.Signal;
+
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
