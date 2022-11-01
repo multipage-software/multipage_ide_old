@@ -43,7 +43,6 @@ import org.maclan.SlotHolder;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
@@ -901,7 +900,7 @@ public class SearchDialog extends JDialog {
 				if (areaId != null) {
 					
 					// Transmit focus area signal.
-					ConditionalEvents.transmit(this, Signal.focusArea, areaId);
+					ConditionalEvents.transmit(this, GuiSignal.focusArea, areaId);
 				}
 			}
 			break;
@@ -931,7 +930,7 @@ public class SearchDialog extends JDialog {
 			}
 			
 			// Transmit focus area signal.
-			ConditionalEvents.transmit(this, Signal.focusArea, coordinatesItem, areaId);
+			ConditionalEvents.transmit(this, GuiSignal.focusArea, coordinatesItem, areaId);
 		}
 	}
 

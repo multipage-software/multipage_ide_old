@@ -41,7 +41,6 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
 import org.multipage.gui.ProgressDialog;
-import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
@@ -529,7 +528,7 @@ public class GenerateAreasDialog extends JDialog {
 		
 		// Update data.
 		long areaId = containerArea.getId();
-		ConditionalEvents.transmit(GenerateAreasDialog.this, Signal.createAreasTree, areaId);
+		ConditionalEvents.transmit(GenerateAreasDialog.this, GuiSignal.createAreasTree, areaId);
 		
 		// Close the window.
 		dispose();

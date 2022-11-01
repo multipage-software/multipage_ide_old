@@ -50,10 +50,8 @@ import org.maclan.VersionObj;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * 
@@ -426,7 +424,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			selectedAreaIds.add(area.getId());
 			
 			// Transmit "on related areas clicked" signal.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.onClickRelatedAreas, selectedAreaIds);
+			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.onClickRelatedAreas, selectedAreaIds);
 		}
 	}
 	
@@ -452,7 +450,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		focusAreaNear(areaId);
 		
 		// Transmit "update areas" signal.
-		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.displayRelatedAreas, areaId);
+		ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.displayRelatedAreas, areaId);
 	}
 
 	/**
@@ -573,19 +571,19 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	private void setListeners() {
 		
 		// "On click related areas" event receiver.
-		ConditionalEvents.receiver(this, Signal.onClickRelatedAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.onClickRelatedAreas, message -> {
 			
 			// Get selected areas.
 			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
 			
 			// Propagate "show areas properties" event.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.showAreasProperties, selectedAreaIds);
+			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.showAreasProperties, selectedAreaIds);
 			// Propagate "select diagram areas" event.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.selectDiagramAreas, selectedAreaIds);
+			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.selectDiagramAreas, selectedAreaIds);
 		});
 		
 		// "Show areas' relations" event receiver.
-		ConditionalEvents.receiver(this, Signal.showAreasRelations, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.showAreasRelations, action -> {
 				
 			if (action.relatedInfo instanceof HashSet<?>) {
 				
@@ -595,7 +593,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Select all" event receiver.
-		ConditionalEvents.receiver(this, Signal.selectAll, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.selectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
 				
@@ -605,7 +603,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Unselect all" event receiver.
-		ConditionalEvents.receiver(this, Signal.unselectAll, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.unselectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
 				
@@ -615,7 +613,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Focus home area" event receiver.
-		ConditionalEvents.receiver(this, Signal.focusHomeArea, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.focusHomeArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
 				focusHomeArea();
@@ -623,7 +621,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Focus tab area" event receiver.
-		ConditionalEvents.receiver(this, Signal.focusTabArea, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.focusTabArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
 				
@@ -633,7 +631,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Display related areas" event receiver.
-		ConditionalEvents.receiver(this, Signal.displayRelatedAreas, action -> {
+		ConditionalEvents.receiver(this, GuiSignal.displayRelatedAreas, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing() && action.relatedInfo instanceof Long) {
 				
@@ -645,7 +643,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// Add receiver for the "show or hide" event.
-		ConditionalEvents.receiver(this, Signal.showOrHideIds, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
 			
 			// Reload and repaint the GUI.
 			reload();
@@ -1431,7 +1429,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		areasDiagram.onTabPanelChange(e, selectedIndex);
 		
 		// Propagate event.
-		ConditionalEvents.transmit(AreasDiagramPanel.this, Signal.mainTabChange, selectedIndex);
+		ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.mainTabChange, selectedIndex);
 	}
 	
 	/**

@@ -36,7 +36,6 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldAutoSave;
@@ -1091,7 +1090,7 @@ public abstract class AreaEditorCommonBase {
 		getCheckBoxHomeArea().addActionListener(homeAreaListener);
 
 		// Update information.
-		ConditionalEvents.transmit(this, Signal.updateHomeArea, areaId);
+		ConditionalEvents.transmit(this, GuiSignal.updateHomeArea, areaId);
 	}
 
 	/**
@@ -1117,7 +1116,7 @@ public abstract class AreaEditorCommonBase {
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
 
 		// Update information.
-		ConditionalEvents.transmit(this, Signal.updateAreaIsDisabled, areaId);
+		ConditionalEvents.transmit(this, GuiSignal.updateAreaIsDisabled, areaId);
 	}
 
 	/**

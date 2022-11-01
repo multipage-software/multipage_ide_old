@@ -36,7 +36,6 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -208,7 +207,7 @@ public class FileNamesEditor extends JDialog {
 		
 		dispose();
 		
-		ConditionalEvents.transmit(FileNamesEditor.this, Signal.updateAreaFileNames);
+		ConditionalEvents.transmit(FileNamesEditor.this, GuiSignal.updateAreaFileNames);
 	}
 
 	/**

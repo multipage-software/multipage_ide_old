@@ -74,7 +74,6 @@ import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;
@@ -82,7 +81,6 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * 
@@ -1036,7 +1034,7 @@ public class AreaTraceFrame extends JFrame {
 	@SuppressWarnings("unused")
 	private void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, Signal.monitorHomePage);
+		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
 	}
 	
 	/**
@@ -1072,7 +1070,7 @@ public class AreaTraceFrame extends JFrame {
 		Settings.setEnableDebugging(enable);
 		
 		// Transmit the "enable / disable" signal.
-		ConditionalEvents.transmit(this, Signal.debugging, enable);
+		ConditionalEvents.transmit(this, GuiSignal.debugging, enable);
 	}
 	
 	/**
@@ -1196,7 +1194,7 @@ public class AreaTraceFrame extends JFrame {
 		});
 		
 		// Receive the "focus area" signal.
-		ConditionalEvents.receiver(this, Signal.focusArea, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.focusArea, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -1213,7 +1211,7 @@ public class AreaTraceFrame extends JFrame {
 		});
 		
 		// Receive the "debugging" signal.
-		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.debugging, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {

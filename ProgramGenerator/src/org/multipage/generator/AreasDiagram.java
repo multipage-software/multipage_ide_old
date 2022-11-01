@@ -60,7 +60,6 @@ import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
-import org.multipage.util.j;
 
 /**
  * @author
@@ -334,7 +333,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	private void setListeners() {
 		
 		// Receive the "update areas' diagram" signal.
-		ConditionalEvents.receiver(this, Signal.array(Signal.loadDiagrams, Signal.updateAreasDiagram), message -> {
+		ConditionalEvents.receiver(this, Signal.array(GuiSignal.loadDiagrams, GuiSignal.updateAreasDiagram), message -> {
 			
 			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
 			if (message.isRepeatingIn(AreasDiagram.this, previousMessage -> true)) {
@@ -351,7 +350,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add receiver for the "click areas in diagram" event.
-		ConditionalEvents.receiver(this, Signal.onClickDiagramAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.onClickDiagramAreas, message -> {
 			
 			// Check the source diagram, clicked graph point and if CTRL key has been pressed.
 			if (AreasDiagram.this.equals(message.source) && message.relatedInfo instanceof Point2D && message.isAdditionalInfo(0, Boolean.class)) {
@@ -368,14 +367,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
 				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
 			}
 		});
 		
 		// Add receiver for the "drag areas in diagram" event.
-		ConditionalEvents.receiver(this, Signal.onDragDiagramAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.onDragDiagramAreas, message -> {
 			
 			// Check the source diagram.
 			if (AreasDiagram.this.equals(message.source)) {
@@ -384,14 +383,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				HashSet<Long> selectedIds = getSelectedAreaIds();
 				
 				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
 			}
 		});
 		
 		// Listen for "select diagram areas" event.
-		ConditionalEvents.receiver(this, Signal.selectDiagramAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.selectDiagramAreas, message -> {
 			
 			if (message.relatedInfo instanceof HashSet<?>) {
 				
@@ -409,7 +408,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add area selection receiver.
-		ConditionalEvents.receiver(this, Signal.array(Signal.selectAll), message -> {
+		ConditionalEvents.receiver(this, Signal.array(GuiSignal.selectAll), message -> {
 			if (AreasDiagram.this.isShowing()) {
 				
 				// Select all.
@@ -421,7 +420,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 			
 		// Add unselect all receiver.
-		ConditionalEvents.receiver(this, Signal.unselectAll, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.unselectAll, message -> {
 											 
 			if (AreasDiagram.this.isShowing()) {
 				
@@ -434,7 +433,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add focus event receiver.
-		ConditionalEvents.receiver(this, Signal.focusBasicArea, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
 			
 			// Focus currently visible Basic Area.
 			if (AreasDiagram.this.isShowing()) {
@@ -443,7 +442,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add receiver for the "expose read only areas" event.
-		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.exposeReadOnlyAreas, message -> {
 			
 			// Set overview and repaint the GUI.
 			setOverview();
@@ -451,7 +450,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add non-coalescing receiver (with time span equal to 0L) for the "display or redraw tool tip" event.
-		ConditionalEvents.receiver(this, Signal.displayOrRedrawToolTip, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.displayOrRedrawToolTip, message -> {
 			
 			if (message.sourceObject(this)) {
 				// Display appropriate tool tip only if constructor window is hidden.
@@ -465,14 +464,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		0L);
 		
 		// Add receiver for the "remove toll tip" event. Event priority is decreased with relation to "display or redraw tool tip" event.
-		ConditionalEvents.receiver(this, Signal.removeToolTip, ConditionalEvents.LOW_PRIORITY, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.removeToolTip, ConditionalEvents.LOW_PRIORITY, message -> {
 			
 			// Hide tool tip window.
 			tooltipWindow.hidew();
 		});
 		
 		// Add receiver for the "show or hide" event.
-		ConditionalEvents.receiver(this, Signal.showOrHideIds, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
 			
 			// Set overview and repaint the GUI.
 			setOverview();
@@ -480,7 +479,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		});
 		
 		// Add receiver for the "on tab change" event.
-		ConditionalEvents.receiver(this, Signal.mainTabChange, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.mainTabChange, message -> {
 			
 			if (AreasDiagram.this.isShowing()) {
 				
@@ -498,9 +497,9 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				}
 				
 				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasProperties, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
 				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, Signal.showAreasRelations, selectedIds);
+				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
 			}
 		});
 	}
@@ -632,7 +631,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		ConditionalEvents.transmit(this, GuiSignal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -656,7 +655,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		hideConstructorsDisplay();
 		
 		// Transmit "remove tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.removeToolTip);
+		ConditionalEvents.transmit(this, GuiSignal.removeToolTip);
 	}
 
 	/**
@@ -757,7 +756,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		}
 		
 		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, Signal.displayOrRedrawToolTip);
+		ConditionalEvents.transmit(this, GuiSignal.displayOrRedrawToolTip);
 	}
 
 	/**
@@ -972,12 +971,12 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 					boolean ctrlKeyPressed = e.isControlDown();
 					
 					// Propagate "on diagram areas clicked" event.
-					ConditionalEvents.transmit(AreasDiagram.this, Signal.onClickDiagramAreas, graphPoint, ctrlKeyPressed);
+					ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.onClickDiagramAreas, graphPoint, ctrlKeyPressed);
 				}
 				else {
 					
 					// Propagate "on diagram areas drag end" event.
-					ConditionalEvents.transmit(AreasDiagram.this, Signal.onDragDiagramAreas);
+					ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.onDragDiagramAreas);
 				}
 			}
 		}

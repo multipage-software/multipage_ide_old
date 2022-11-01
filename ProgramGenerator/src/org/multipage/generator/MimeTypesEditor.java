@@ -49,7 +49,6 @@ import org.maclan.MimeType;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
@@ -438,7 +437,7 @@ public class MimeTypesEditor extends JDialog {
 		// Import data.
 		importMimeTypes(file);
 		
-		ConditionalEvents.transmit(MimeTypesEditor.this, Signal.importMimeTypes);
+		ConditionalEvents.transmit(MimeTypesEditor.this, GuiSignal.importMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();
@@ -525,7 +524,7 @@ public class MimeTypesEditor extends JDialog {
 		MiddleUtility.importFactoryMimeTypes(ProgramBasic.getMiddle(),
 				ProgramBasic.getLoginProperties(), this);
 		
-		ConditionalEvents.transmit(MimeTypesEditor.this, Signal.defaultMimeTypes);
+		ConditionalEvents.transmit(MimeTypesEditor.this, GuiSignal.defaultMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();

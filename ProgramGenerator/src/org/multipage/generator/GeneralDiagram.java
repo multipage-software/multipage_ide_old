@@ -38,7 +38,6 @@ import org.multipage.gui.CursorAreaImpl;
 import org.multipage.gui.HorizontalScroll;
 import org.multipage.gui.Images;
 import org.multipage.gui.ScrollListener;
-import org.multipage.gui.Signal;
 import org.multipage.gui.ToolTipWindow;
 import org.multipage.gui.Utility;
 import org.multipage.gui.VerticalScroll;
@@ -119,7 +118,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateDiagramsControls() {
 		
-		ConditionalEvents.transmit(GeneralDiagram.class, Signal.updateControls);
+		ConditionalEvents.transmit(GeneralDiagram.class, GuiSignal.updateControls);
 	}
 
 	/**
@@ -467,7 +466,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		positionSaveTimer.setRepeats(false);
 		
 		// "Load diagrams' properties" event receiver.
-		ConditionalEvents.receiver(this, Signal.loadDiagrams, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.loadDiagrams, message -> {
 			
 			if (message.sourceClass(GeneratorMainFrame.class)) {
 				
@@ -1137,7 +1136,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void removeDiagram() {
 		
-		ConditionalEvents.transmit(this, Signal.removeDiagram);
+		ConditionalEvents.transmit(this, GuiSignal.removeDiagram);
 	}
 
 	/**

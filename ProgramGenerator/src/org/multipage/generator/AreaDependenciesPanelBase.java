@@ -236,7 +236,7 @@ public class AreaDependenciesPanelBase extends JPanel implements EditorTabAction
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, Signal.swapSiblingAreas, area1.getId(), area2.getId());
+		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, GuiSignal.swapSiblingAreas, area1.getId(), area2.getId());
 		onAreaChange();
 	}
 
@@ -300,7 +300,7 @@ public class AreaDependenciesPanelBase extends JPanel implements EditorTabAction
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, Signal.resetSiblingAreasOrder, currentAreaId);
+		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, GuiSignal.resetSiblingAreasOrder, currentAreaId);
 		onAreaChange();
 	}
 

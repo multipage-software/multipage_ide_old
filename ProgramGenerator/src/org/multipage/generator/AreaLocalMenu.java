@@ -27,7 +27,6 @@ import org.maclan.Area;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -653,7 +652,7 @@ public class AreaLocalMenu {
 
 		Long tabAreaId = GeneratorMainFrame.getTabAreaId();
 		
-		ConditionalEvents.transmit(this, Signal.focusTabArea, tabAreaId);
+		ConditionalEvents.transmit(this, GuiSignal.focusTabArea, tabAreaId);
 	}
 
 	/**
@@ -859,7 +858,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), true);
 		
 		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, Signal.updateGui);
+		ConditionalEvents.transmit(this, GuiSignal.updateGui);
 	}
 
 	/**
@@ -876,7 +875,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), false);
 		
 		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, Signal.updateGui);
+		ConditionalEvents.transmit(this, GuiSignal.updateGui);
 	}
 
 	/**
@@ -893,7 +892,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), true);
 		
 		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, Signal.updateGui);
+		ConditionalEvents.transmit(this, GuiSignal.updateGui);
 	}
 	
 	/**
@@ -910,7 +909,7 @@ public class AreaLocalMenu {
 		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), false);
 		
 		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, Signal.updateGui);
+		ConditionalEvents.transmit(this, GuiSignal.updateGui);
 	}
 
 	/**
@@ -1019,7 +1018,7 @@ public class AreaLocalMenu {
 		// Callback method.
 		if (newAreaId != null) {
 			
-			ConditionalEvents.transmit(AreaLocalMenu.this, Signal.importToArea, area.getId());
+			ConditionalEvents.transmit(AreaLocalMenu.this, GuiSignal.importToArea, area.getId());
 			
 			SwingUtilities.invokeLater(() -> {
 				listener.onNewArea(newAreaId);

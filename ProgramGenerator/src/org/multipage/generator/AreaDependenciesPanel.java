@@ -332,7 +332,7 @@ public class AreaDependenciesPanel extends AreaDependenciesPanelBase {
 								relatedAreaId, relationName);
 						if (result.isOK()) {
 							currentArea.setSubRelationNameLight(relatedAreaId, relationName);
-							ConditionalEvents.transmit(AreaDependenciesPanel.this, Signal.updateAreaSubRelation, currentAreaId, relatedAreaId);
+							ConditionalEvents.transmit(AreaDependenciesPanel.this, GuiSignal.updateAreaSubRelation, currentAreaId, relatedAreaId);
 						}
 						else {
 							// Report error.

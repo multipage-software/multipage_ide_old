@@ -1262,7 +1262,7 @@ public class LoggingDialog extends JDialog {
 		listModelOmittedSignals = new DefaultListModel();
 
 		// Fill the list model.
-		Arrays.stream(Signal.values()).sorted((s1, s2) -> s1.name().compareTo(s2.name())).forEach(signal -> {
+		Signal.definedSignals().stream().sorted((s1, s2) -> s1.name().compareTo(s2.name())).forEach(signal -> {
 			listModelOmittedSignals.addElement(signal);
 		});
 

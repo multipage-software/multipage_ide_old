@@ -46,7 +46,6 @@ import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.ProgressDialog;
-import org.multipage.gui.Signal;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -476,7 +475,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.updateAreaResources, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.updateAreaResources, areaId);
 	}
 	
 	/**
@@ -786,7 +785,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.editResource, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.editResource, areaId);
 	}
 	
 	/**
@@ -835,7 +834,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.deleteResources, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.deleteResources, areaId);
 	}
 	
 	/**
@@ -944,7 +943,7 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 	    
 		// Update information.
 		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, Signal.createTextResource, areaId);
+		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.createTextResource, areaId);
 	}
 
 	/**

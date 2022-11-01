@@ -178,7 +178,7 @@ public class SlotEditorHelper {
 		}
 
 		// Update information.
-		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.areaSlotSaved, editedSlot);
+		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.areaSlotSaved, editedSlot);
 
 		saveDialog();
 	}
@@ -200,7 +200,7 @@ public class SlotEditorHelper {
 		
 		// Update information.
 		long slotId = editedSlot.getId();
-		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.cancelSlotEditor, slotId);
+		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.cancelSlotEditor, slotId);
 
 		saveDialog();
 	}
@@ -613,7 +613,7 @@ public class SlotEditorHelper {
 		originalSlot = newSlot;
 		
 		// Transmit "area slot saved" signal.
-		ConditionalEvents.transmit(SlotEditorHelper.this, Signal.areaSlotSaved, editedSlot);
+		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.areaSlotSaved, editedSlot);
 		
 		Utility.stopWaitCursor(editor.getComponent(), cursorInfo);
 		
@@ -1039,7 +1039,7 @@ public class SlotEditorHelper {
 	 */
 	public void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, Signal.monitorHomePage);
+		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
 	}
 
 	/**

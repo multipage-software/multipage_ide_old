@@ -70,7 +70,6 @@ import org.multipage.gui.EventSource;
 import org.multipage.gui.Images;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
@@ -357,7 +356,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		// Propagate event.
 		SwingUtilities.invokeLater(() -> {
-			ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.loadDiagrams);
+			ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.loadDiagrams);
 		});
 	}
 
@@ -639,7 +638,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			
 			if (!slotIds.isEmpty()) {
 				SwingUtilities.invokeLater(() -> {
-					ConditionalEvents.transmit(ProgramServlet.class, Signal.updatedSlotsWithServlet, slotIds);
+					ConditionalEvents.transmit(ProgramServlet.class, GuiSignal.updatedSlotsWithServlet, slotIds);
 				});
 			}
 		});
@@ -682,12 +681,12 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// "Terminate" event receiver.
-		ConditionalEvents.receiver(this, Signal.terminate, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.terminate, message -> {
 				closeWindow();
 		});
 		
 		// "Show areas' properties" event receiver.
-		ConditionalEvents.receiver(this, Signal.showAreasProperties, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.showAreasProperties, message -> {
 			
 			HashSet<Long> selectedAreaIds = null;
 					
@@ -704,13 +703,13 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// "Monitor home page" event receiver.
-		ConditionalEvents.receiver(this, Signal.monitorHomePage, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.monitorHomePage, message -> {
 			
 			monitorHomePage();
 		});
 		
 		// "Reactivate GUI" event receiver.
-		ConditionalEvents.receiver(this, Signal.reactivateGui, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.reactivateGui, message -> {
 			
 			// Initialize focused component.
 			Component focusedComponent = null;
@@ -726,7 +725,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// Receive the "update updateAreasModel" signal.
-		ConditionalEvents.receiver(this, Signal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
 			
 			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
 			if (message.isRepeatingIn(GeneratorMainFrame.this, previousMessage -> true)) {
@@ -738,12 +737,12 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// "Expose read only areas" event receiver.
-		ConditionalEvents.receiver(this, Signal.exposeReadOnlyAreas, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.exposeReadOnlyAreas, message -> {
 			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
 		});
 		
 		// "Focus area" event receiver.
-		ConditionalEvents.receiver(this, Signal.focusArea, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.focusArea, message -> {
 			
 			// Get diagram panel.
 			AreasDiagramPanel areasDiagramPanel = getFrame().getVisibleAreasEditor();
@@ -776,7 +775,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// Receive the "debugging" signal.
-		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.debugging, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -812,7 +811,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		Component focusedControl = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 		
 		// Propagate the event with focused control.
-		ConditionalEvents.transmit(GeneratorMainFrame.class, Signal.reactivateGui, focusedControl);
+		ConditionalEvents.transmit(GeneratorMainFrame.class, GuiSignal.reactivateGui, focusedControl);
 	}
 	
 	/**
@@ -1080,7 +1079,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 				
 				// Transmit event.
 				if (selectedAreaIds != null) {
-					ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showAreasProperties, selectedAreaIds);
+					ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.showAreasProperties, selectedAreaIds);
 				}
 			}
 		}
@@ -1295,7 +1294,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		updateData.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateAreasModel);
+				ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.updateAreasModel);
 			}});
 		closeAllWindows.addActionListener(new ActionListener() {
 			@Override
@@ -1545,7 +1544,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		Settings.setEnableDebugging(selected);
 		
 		// Transmit the "enable / disable" signal.
-		ConditionalEvents.transmit(this, Signal.debugging, selected);
+		ConditionalEvents.transmit(this, GuiSignal.debugging, selected);
 	}
 
 	/**
@@ -1581,7 +1580,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onFocusBasicArea() {
 		
-		ConditionalEvents.transmit(this, AreasDiagram.class, Signal.focusBasicArea);
+		ConditionalEvents.transmit(this, AreasDiagram.class, GuiSignal.focusBasicArea);
 	}
 
 	/**
@@ -1639,7 +1638,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		ProgramBasic.loginDialog(this, title);
 		statusBar.setLoginProperties(ProgramBasic.getLoginProperties());
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.newBasicArea);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.newBasicArea);
 		
 		loginProperties = ProgramBasic.getLoginProperties();
 		String newDatabaseName = loginProperties.getProperty("database");
@@ -1677,7 +1676,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		Area.setShowId(showIds);
 		Slot.setShowId(showIds);
 		// Transmit show/hide IDs signal.
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.showOrHideIds, showIds);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.showOrHideIds, showIds);
 	}
 	
 	/**
@@ -1728,9 +1727,9 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onSelectAll() {
 		
 		// Select all areas.
-		ConditionalEvents.transmit(this, Signal.selectAll);
+		ConditionalEvents.transmit(this, GuiSignal.selectAll);
 		// Show areas' properties.
-		ConditionalEvents.transmit(this, Signal.showAreasProperties);
+		ConditionalEvents.transmit(this, GuiSignal.showAreasProperties);
 	}
 	
 	/**
@@ -1739,9 +1738,9 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onUnselectAll() {
 		
 		// Unselect all areas.
-		ConditionalEvents.transmit(this, Signal.unselectAll);
+		ConditionalEvents.transmit(this, GuiSignal.unselectAll);
 		// Show areas' properties.
-		ConditionalEvents.transmit(this, Signal.showAreasProperties);
+		ConditionalEvents.transmit(this, GuiSignal.showAreasProperties);
 	}
 
 	/**
@@ -1813,7 +1812,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onFocusHome() {
 		
 		// Propagate event.
-		ConditionalEvents.transmit(this, Signal.focusHomeArea);
+		ConditionalEvents.transmit(this, GuiSignal.focusHomeArea);
 	}
 
 	/**
@@ -1855,7 +1854,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onExposeReadOnly() {
 		
 		// Transmit "expose read only areas" signal.
-		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, Signal.exposeReadOnlyAreas);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, GuiSignal.exposeReadOnlyAreas);
 	}
 
 	/**
@@ -3050,7 +3049,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		importArea(area, this, false, true, true);
 		
 		long areaId = area.getId();
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.importToArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.importToArea, areaId);
 	}
 	
 	/**
@@ -3208,7 +3207,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onMonitorHomePage() {
 		
-		ConditionalEvents.transmit(this, Signal.monitorHomePage);
+		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
 	}
 
 	/**
@@ -3317,7 +3316,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			result.show(parentComponent);
 		}
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.updateHomeArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.updateHomeArea, areaId);
 	}
 	
 	/**
@@ -3328,7 +3327,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		Long tabAreaId = tabPanel.getTopAreaIdOfSelectedTab();
 		
-		ConditionalEvents.transmit(this, Signal.focusTabArea, tabAreaId);
+		ConditionalEvents.transmit(this, GuiSignal.focusTabArea, tabAreaId);
 
 	}
 	
@@ -3554,7 +3553,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		}
 		
 		long areaId = area.getId();
-		ConditionalEvents.transmit(GeneratorMainFrame.this, Signal.importToArea, areaId);
+		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.importToArea, areaId);
 	}
 
 	/**
@@ -3742,7 +3741,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		}
 
 		// Update data.
-		ConditionalEvents.transmit(getFrame(), Signal.transferToArea);
+		ConditionalEvents.transmit(getFrame(), GuiSignal.transferToArea);
 	}
 	
 	/**

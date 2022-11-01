@@ -47,7 +47,6 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
-import org.multipage.gui.Signal;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -995,7 +994,7 @@ public abstract class NamespaceResourcesEditor extends JPanel implements Searcha
 	    addResourceToList(resource);
 		// Update information.
 	    long resourceId = resource.getId();
-		ConditionalEvents.transmit(NamespaceResourcesEditor.this, Signal.newTextResource, resourceId);
+		ConditionalEvents.transmit(NamespaceResourcesEditor.this, GuiSignal.newTextResource, resourceId);
 	}
 	
 	/**

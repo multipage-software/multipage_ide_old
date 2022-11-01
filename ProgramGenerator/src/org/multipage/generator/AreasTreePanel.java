@@ -41,7 +41,6 @@ import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
-import org.multipage.gui.Signal;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
@@ -709,7 +708,7 @@ public class AreasTreePanel extends JPanel {
 		updateData();
 		
 		long areaId = area.getId();
-		ConditionalEvents.transmit(AreasTreePanel.this, Signal.addArea, areaId);
+		ConditionalEvents.transmit(AreasTreePanel.this, GuiSignal.addArea, areaId);
 	}
 	
 	/**

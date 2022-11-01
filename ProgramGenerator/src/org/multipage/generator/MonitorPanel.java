@@ -150,7 +150,7 @@ public class MonitorPanel extends Panel implements TabItemInterface, Update {
 	private void setListeners() {
 		
 		// The "update all" request receiver.
-		ConditionalEvents.receiver(this, Signal.updateMonitorPanel, message -> {
+		ConditionalEvents.receiver(this, GuiSignal.updateMonitorPanel, message -> {
 			
 			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
 			if (message.isRepeatingIn(MonitorPanel.this, previousMessage -> true)) {

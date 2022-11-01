@@ -430,7 +430,7 @@ public class AreaEditorFrame extends AreaEditorFrameBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, Signal.monitorHomePage);
+		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
 	}
 	
 	/**

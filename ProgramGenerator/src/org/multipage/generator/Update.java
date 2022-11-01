@@ -7,15 +7,11 @@
 package org.multipage.generator;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.HashSet;
 
-import org.multipage.generator.LoggingDialog.LoggedMessage;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
-import org.multipage.util.j;
 
 /**
  * 
@@ -86,9 +82,9 @@ public interface Update {
 	static Object [][] updateSignalsSequence = 
 			new Object [][] {
 				{ Signal.updateAreasModel, GROUP_AREAS },
-				{ Signal.updateAreasDiagram, GROUP_AREAS },
-				{ Signal.updateAreasTreeEditor, GROUP_AREAS },
-				{ Signal.updateMonitorPanel, GROUP_MONITOR }
+				{ GuiSignal.updateAreasDiagram, GROUP_AREAS },
+				{ GuiSignal.updateAreasTreeEditor, GROUP_AREAS },
+				{ GuiSignal.updateMonitorPanel, GROUP_MONITOR }
 			};
 	
 	/**

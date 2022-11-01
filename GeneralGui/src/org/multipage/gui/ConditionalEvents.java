@@ -24,7 +24,6 @@ import javax.swing.event.AncestorListener;
 
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
-import org.multipage.util.j;
 
 /**
  * Conditional events that can signal application states.
@@ -166,9 +165,6 @@ public class ConditionalEvents {
 		
 		synchronized (messageQueue) {
 			
-			if (message.signal == Signal.showAreasProperties) {
-				j.log("PUSHING %s", message.toString());
-			}
 			// Append message.
 			messageQueue.add(message);
 		}

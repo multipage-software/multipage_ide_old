@@ -22,7 +22,6 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -71,7 +70,6 @@ import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EditorPaneEx;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
@@ -555,7 +553,7 @@ public class SlotListPanel extends JPanel {
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(SlotListPanel.this, Signal.setSlotsDefaultValues);
+		ConditionalEvents.transmit(SlotListPanel.this, GuiSignal.setSlotsDefaultValues);
 	}
 
 	/**
@@ -643,7 +641,7 @@ public class SlotListPanel extends JPanel {
 	private void setListeners() {
 		
 		// Receive the"show area properties" event.
-		ConditionalEvents.receiver(SlotListPanel.this, Signal.showAreasProperties, message -> {
+		ConditionalEvents.receiver(SlotListPanel.this, GuiSignal.showAreasProperties, message -> {
 			
 			Object relatedInfo = message.getRelatedInfo();
 			
@@ -660,7 +658,7 @@ public class SlotListPanel extends JPanel {
 		});
 		
 		// Receive the "area slot saved" event.
-		ConditionalEvents.receiver(SlotListPanel.this, Signal.areaSlotSaved, message -> {
+		ConditionalEvents.receiver(SlotListPanel.this, GuiSignal.areaSlotSaved, message -> {
 			
 			// Get slot.
 			Slot slot = message.getRelatedInfo();
@@ -1363,7 +1361,7 @@ public class SlotListPanel extends JPanel {
 		onChange();
 		
 		// Update information.
-		ConditionalEvents.transmit(SlotListPanel.this, Signal.removeUserSlots);
+		ConditionalEvents.transmit(SlotListPanel.this, GuiSignal.removeUserSlots);
 	}
 
 	/**

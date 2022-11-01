@@ -6,321 +6,77 @@
  */
 package org.multipage.gui;
 
+import java.lang.reflect.Field;
 import java.util.HashSet;
+import java.util.LinkedList;
 
 /**
- * 
+ * Signal definitions.
  * @author vakol
  *
  */
-public enum Signal implements EventCondition {
+public class Signal implements EventCondition {
 	
 	// Special signal that runs user lambda function placed in a message on the message thread.
-	_invokeLater,
+	public static Signal _invokeLater = new Signal();
 	
 	// Enables target signal.
-	_enableTargetSignal,
+	public static Signal _enableTargetSignal = new Signal();
 	
 	// Update areas' model for the GUI.
-	updateAreasModel(
+	public static Signal updateAreasModel = new Signal(
 			SignalType.guiChangeByUser
-			),
-	// Update GUI components.
-	updateAreasDiagram(
-			SignalType.guiChangeByUser
-			),
-	updateAreasTreeEditor(
-			SignalType.guiChangeByUser
-			),
-	updateMonitorPanel(
-			SignalType.guiChangeByUser
-			),
+			);
+
+	// Update areas' properties.
+	public static Signal updateAreasProperties = new Signal();
 	
-	updateAreasProperties,
+	// TODO: <---MAKE finish the definition of the "terminate" signal
+	public static Signal terminate = new Signal();
 	
-	// TODO: finish the definition
-	terminate,
-	
-	// Load diagrams on application start up.
-	loadDiagrams(
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// On diagram areas clicked.
-	onClickDiagramAreas(
-			SignalType.areaViewStateChange,
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// On drag diagram areas.
-	onDragDiagramAreas(
-			SignalType.areaViewStateChange,
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// On related areas clicked.
-	onClickRelatedAreas(
-			SignalType.areaViewStateChange,
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// Show properties of the areas. The set of area IDs should be appended to the propagated message: 
-	// use ConditionalEvents.propagateMessage(source, Signal.showAreasProperties, HashSet<area IDs: Long>, ...).
-	showAreasProperties(
-			SignalType.areaViewChange,
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// Show relations of the areas. The set of area IDs should be appended to the propagated message: 
-	// use ConditionalEvents.transmit(source, Signal.showAreasRelations, HashSet<area IDs: Long>, ...).
-	showAreasRelations(
-			SignalType.areaViewChange,
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// Display related areas.
-	displayRelatedAreas(
-			SignalType.areaViewChange,
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// Select areas in the diagram. The set of areas' IDs is sent in related info of the message.
-	selectDiagramAreas(
-			SignalType.areaViewChange,
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// Select all areas.
-	selectAll(
-			SignalType.areaViewStateChange,
-			SignalType.areaViewChange,
-			SignalType.slotViewChange,
-			SignalType.guiChange
-			),
-	
-	// Unselect all areas.
-	unselectAll(
-			SignalType.areaViewStateChange,
-			SignalType.areaViewChange,
-			SignalType.slotViewChange,
-			SignalType.guiChange
-			),
-	
-	// Main tab panel selection
-	mainTabChange(
-			SignalType.areaViewChange,
-			SignalType.slotViewChange,
-			SignalType.guiChange
-			),
-	
-	// Sub panel tab change.
-	subTabChange(
-			SignalType.slotViewChange
-			),
-	
-	// On show/hide IDs in areas diagram..
-	showOrHideIds(
-			SignalType.guiChange
-			),
-	
-	// Show read only areas in areas diagram.
-	exposeReadOnlyAreas(
-			SignalType.guiChange
-			),
-	
-	// Redraw GUI.
-	updateGui(
-			SignalType.areaViewStateChange,
-			SignalType.guiChange
-			),
-	
-	// Focus on area.
-	focusArea(
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// Focus on the Basic Area.
-	focusBasicArea(
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// Focus on the tab area.
-	focusTabArea(
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// Focus on the home area.
-	focusHomeArea(
-			SignalType.areaViewChange,
-			SignalType.guiChange
-			),
-	
-	// Monitor home page in web browser.
-	monitorHomePage(
-			SignalType.guiChange
-			),
-	// Update home area.
-	updateHomeArea(
-			SignalType.areaModelChange,
-			SignalType.areaViewChange
-			),
-	// Save slot.
-	areaSlotSaved(
-			SignalType.slotModelChange
-			),
-	// Reactivate GUI
-	reactivateGui(
-			SignalType.guiStateChange
-			),
-	// Display or redraw tool tip.
-	displayOrRedrawToolTip(
-			SignalType.guiChange
-			),
-	// Remove tool tip.
-	removeToolTip(
-			SignalType.guiChange
-			),
 	// Enable or disable debugging.
-	debugging(
+	public static Signal debugging = new Signal(
 			SignalType.serverStateChange
-			),
-	stepLog(
+			);
+	
+	public static Signal stepLog = new Signal(
 			SignalType.guiStateChange,
 			SignalType.guiChange
-			),
-	runLogging(
+			);
+	
+	public static Signal runLogging = new Signal(
 			SignalType.guiStateChange,
 			SignalType.guiChange
-			),
-	breakLogging(
+			);
+	
+	public static Signal breakLogging = new Signal(
 			SignalType.guiStateChange,
 			SignalType.guiChange
-			),
-	// Update of area sub relation.
-	updateAreaSubRelation,
-	// Update of area super relation.
-	updateAreaSuperRelation,
-	// Swaps two sibling areas.
-	swapSiblingAreas,
-	// Reset order of sibling areas to default order.
-	resetSiblingAreasOrder,
-	// Set area relation names.
-	setAreaRelationNames,
-	// Update subarea hidden.
-	updateHiddenSubArea,
-	// Updates visibility of area.
-	updateAreaVisibility,
-	// Update area read only flag.
-	updateAreaReadOnly,
-	// Update area localized flag.
-	updateAreaLocalized,
-	// Update area can import flag.
-	updateAreaCanImport,
-	// Update area project root flag.
-	updateAreaIsProjectRoot,
-	// Save area int database.
-	saveArea,
-	// Upate changes in area.
-	updateAreaChanges,
-	// Update area is disabled flag.
-	updateAreaIsDisabled,
-	// Update area inheritance.
-	updateAreaInheritance,
-	// Import areas.
-	importToArea,
-	// Update area resources.
-	updateAreaResources,
-	// Edit resource.
-	editResource,
-	// Delete resources.
-	deleteResources,
-	// Create new text resource.
-	createTextResource,
-	// Change areas properties.
-	changeAreasProperties,
-	// Delete localized text of an area.
-	deleteAreaLocalizedText,
-	// Update start resource for an area.
-	updateAreaStartResource,
-	// Remove area start resource.
-	removeAreaStartResource,
-	// Add new area.
-	addArea,
-	// Hide unnecessary slots.
-	hideSlots,
-	// Update area versions.
-	updateVersions,
-	// Servlet causes slots update.
-	updatedSlotsWithServlet,
-	// Invoked when area constructors where loaded.
-	loadAreaConstructors,
-	// Invoked when colors where updated.
-	updateColors,
-	// New enumeration type.
-	newEnumeration,
-	// Remove enumeration.
-	removeEnumeration,
-	// Update enumeration.
-	updateEnumeration,
-	// New enumeration value.
-	newEnumerationValue,
-	// Update enumeration value.
-	updateEnumerationValue,
-	// Remove enumeration value.
-	removeEnumerationValue,
-	// Update area file names.
-	updateAreaFileNames,
-	// When area tree was created.
-	createAreasTree,
-	// On new basic area (database changed).
-	newBasicArea,
-	// Transfer area with drag and drop.
-	transferToArea,
-	// Import MIME types.
-	importMimeTypes,
-	// Load default MIME types.
-	defaultMimeTypes,
-	// Created new text resource.
-	newTextResource,
-	// On update of realted area.
-	updateRelatedArea,
+			);
+	
 	// Switch database.
-	switchDatabase,
-	// On cancel slot editing.
-	cancelSlotEditor,
-	// Set slots default values.
-	setSlotsDefaultValues,
-	// When user slots have been removed.
-	removeUserSlots,
-	// Move slots.
-	moveSlots,
-	// Remove slots.
-	removeSlots,
-	// Set slots properties.
-	setSlotsProperties,
-	// Remove diagram.
-	removeDiagram,
-	// Update controls.
-	updateControls,
-	// A flag in a panel with areas tree changed.
-	treeFlagChange;
+	public static Signal switchDatabase = new Signal();
 	
 	/**
 	 * Unnecessary signals.
 	 */
-	private static final Signal [] unnecessarySignals = { displayOrRedrawToolTip, removeToolTip };
+	protected static final LinkedList<Signal> unnecessarySignals = new LinkedList<Signal>();
 	
+	/**
+	 * Descriptive name of the signal.
+	 */
+	public String name = "unknown";
+	
+	/**
+	 * Ordinal number of the signal.
+	 */
+	public int ordinal = -1;
+	
+	/**
+	 * List of all signals.
+	 */
+	public static LinkedList<Signal> allSignals = new LinkedList<Signal>();
+
 	/**
 	 * Signal is included in the following signal types.
 	 */
@@ -332,11 +88,58 @@ public enum Signal implements EventCondition {
 	private boolean enabled = true;
 	
 	/**
+	 * Next ordinal number of the signal. Incremented in loadDescriptiveNames(...).
+	 */
+	private static int nextOrdinal = 1;
+	
+	/**
+	 * Static constructor.
+	 */
+	static {
+		// Unnecessary signals in static constructor.
+		addUnnecessary(/* Add them as parameters. */);
+		
+		// Describe signals.
+		describeSignals(Signal.class);
+	}
+	
+	/**
+	 * Describe signals in input class.
+	 * @param theClass
+	 */
+	public static void describeSignals(Class<? extends Signal> theClass) {
+		
+		Field [] fields = theClass.getFields();
+		for (Field field : fields) {
+			
+			String fieldName = field.getName();
+			try {
+				Object fieldValue = field.get(fieldName);
+				if (fieldValue instanceof Signal) {
+					
+					Signal signal = (Signal) fieldValue;
+					
+					// Set signal name and ordinal number.
+					signal.name = fieldName;
+					signal.ordinal= nextOrdinal;
+					
+					allSignals.add(signal);
+					
+					nextOrdinal++;
+				}
+			}
+			catch (Exception e) {
+			}
+		}
+	}
+	
+	/**
 	 * Constructor of the a signal.
 	 * @param signalTypes
 	 */
-	Signal(SignalType ... signalTypes) {
+	public Signal(SignalType ... signalTypes) {
 		
+		// Set list of types.
 		for (SignalType signalType : signalTypes) {
 			includedInTypes.add(signalType);
 		}
@@ -398,7 +201,7 @@ public enum Signal implements EventCondition {
 	 * For debugging purposes it returns true if the signal is unnecessary.
 	 * @return
 	 */
-	boolean isUnnecessary() {
+	public boolean isUnnecessary() {
 		
 		for (Signal unnecessarySignal : unnecessarySignals) {
 			
@@ -407,6 +210,17 @@ public enum Signal implements EventCondition {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * Add unnecessary signals.
+	 * @param signals
+	 */
+	public static void addUnnecessary(Signal ... signals) {
+		
+		for (Signal signal : signals) {
+			unnecessarySignals.add(signal);
+		}
 	}
 	
 	/**
@@ -438,5 +252,48 @@ public enum Signal implements EventCondition {
 	public HashSet<SignalType> getTypes() {
 		
 		return includedInTypes;
+	}
+	
+	/**
+	 * Return all defined signals.
+	 * @return
+	 */
+	public static LinkedList<Signal> definedSignals() {
+		
+		return allSignals;
+	}
+	
+	/**
+	 * Get field name.
+	 */
+	@Override
+	public String name() {
+		
+		return name;
+	}
+	
+	/**
+	 * Get ordinal number.
+	 */
+	@Override
+	public int ordinal() {
+		
+		return ordinal;
+	}
+
+	/**
+	 * Check if an input object equals this signal.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		
+		if (obj instanceof Signal) {
+			
+			Signal signal = (Signal) obj;
+			boolean isSame = this.name.equals(signal.name);
+			
+			return isSame;
+		}
+		return false;
 	}
 }

@@ -597,7 +597,7 @@ public class AreasPropertiesBase extends JPanel {
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(AreasPropertiesBase.this, Signal.deleteAreaLocalizedText, areaId);
+		ConditionalEvents.transmit(AreasPropertiesBase.this, GuiSignal.deleteAreaLocalizedText, areaId);
 	}
 	
 	/**
