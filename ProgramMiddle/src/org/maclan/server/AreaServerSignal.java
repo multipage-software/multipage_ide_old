@@ -6,6 +6,7 @@
  */
 package org.maclan.server;
 
+import org.multipage.gui.EventCondition;
 import org.multipage.gui.Signal;
 
 /**
@@ -15,6 +16,16 @@ import org.multipage.gui.Signal;
  */
 public class AreaServerSignal extends Signal {
 	
+	/**
+	 * Debug statement.
+	 */
+	public static final AreaServerSignal debugStatement = new AreaServerSignal();
+	
+	/**
+	 * Debug response.
+	 */
+	public static final AreaServerSignal debugResponse = new AreaServerSignal();
+
 	/**
 	 * Static constructor.
 	 */

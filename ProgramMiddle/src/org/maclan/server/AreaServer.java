@@ -13,8 +13,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -3796,8 +3794,13 @@ public class AreaServer {
 				}
 				else if (xdebugStatement.is("source")) {
 					
-					// TODO: <---DEBUG
+					// TODO: <---DEBUG SENDING SOURCE CODE
 					j.log("SENDING SOURCE CODE");
+				}
+				else if (xdebugStatement.is("step_into")) {
+					
+					// TODO: <---DEBUG setp_into
+					j.log("AREA SERVER DEBUGGER step_into");
 				}
 				return null;
 			}

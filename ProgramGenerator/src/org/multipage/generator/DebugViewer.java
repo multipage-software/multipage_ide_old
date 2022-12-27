@@ -27,6 +27,7 @@ import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -37,22 +38,27 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.ListCellRenderer;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.StyleSheet;
 
+import org.maclan.server.AreaServerSignal;
 import org.maclan.server.DebugListener;
 import org.maclan.server.XdebugListener;
 import org.maclan.server.XdebugPacket;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.Callback;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.DOM;
 import org.multipage.util.Obj;
@@ -64,7 +70,7 @@ import org.w3c.dom.NodeList;
 
 /**
  * This is GUI for debugging
- * @author dvchance
+ * @author vakol
  *
  */
 public class DebugViewer extends JFrame {
@@ -116,11 +122,6 @@ public class DebugViewer extends JFrame {
 	private String header;
 	
 	/**
-	 * URI to get the source code.
-	 */
-	private String uriRequestSourceCode = null;
-	
-	/**
 	 * Lines of code to display or null if there is nothing to display
 	 */
 	private LinkedList<String> codeLines;
@@ -144,6 +145,103 @@ public class DebugViewer extends JFrame {
 	 * Stack list model
 	 */
 	private DefaultListModel<Node> listStackModel;
+	
+	/**
+	 * Class for log items.
+	 */
+	private static class LogMessage extends LoggingDialog.LoggedMessage {
+		
+		/**
+		 * List of log messages.
+		 */
+		private static LinkedList<LogMessage> listLoggedMessages = new LinkedList<LogMessage>();
+		
+		/**
+		 * Filter string.
+		 */
+		private static String filterString = "*";
+		
+		/**
+		 * Filter flags.
+		 */
+		private static boolean caseSensitive = false;
+		private static boolean wholeWords = false;
+		private static boolean exactMatch = false;
+		
+		/**
+		 * Constructor.
+		 * @param message
+		 */
+		public LogMessage(String message) {
+			super(message);
+		}
+		
+		/**
+		 * Add new log message.
+		 * @param message
+		 */
+		public static void addLogMessage(String message) {
+			
+			LogMessage logMessage = new LogMessage(message);
+			listLoggedMessages.addLast(logMessage);
+		}
+		
+		/**
+		 * Display HTML log.
+		 * @param textPane
+		 */
+		public static void displayHtmlLog(JTextPane textPane) {
+			
+			String logContent = "";
+			
+			for (LogMessage logMessage : listLoggedMessages) {
+				
+				String messageText = logMessage.getText();
+				
+				// Filter messages.
+				if (!filter(messageText)) {
+					continue;
+				}
+				
+				// Append message text.
+				logContent += messageText + "<br/>";
+			}
+			
+			// Wrap content with HTML tags.
+			logContent = String.format("<html>%s</html>", logContent);
+			textPane.setText(logContent);
+		}
+		
+		/**
+		 * Returns false if the message is filtered or true if the message passes.
+		 * @param messageText
+		 * @return
+		 */
+		private static boolean filter(String messageText) {
+
+			boolean matches = Utility.matches(messageText, filterString, caseSensitive, wholeWords, exactMatch);
+			
+			// TODO: <---DEBUG Check filter match.
+			j.log("FILTER MATCH %b", matches);
+			
+			return matches;
+		}
+
+		/**
+		 * Set filter and display filtered log messages.
+		 * @param filterString
+		 * @param caseSensitive
+		 * @param wholeWords
+		 * @param exactMatch
+		 */
+		public static void setFulltextFilter(String filterString, boolean caseSensitive, boolean wholeWords, boolean exactMatch) {
+			
+			LogMessage.filterString = !filterString.isEmpty() ?  filterString : "*";
+			LogMessage.caseSensitive = caseSensitive;
+			LogMessage.wholeWords = wholeWords;
+			LogMessage.exactMatch = exactMatch;
+		}
+	}
 	
 	/**
 	 * Display code callbacks
@@ -293,6 +391,77 @@ public class DebugViewer extends JFrame {
 		
 		buttonSend = new JButton("Send");
 		panelBottom.add(buttonSend, BorderLayout.EAST);
+		
+		panelExceptions = new JPanel();
+		panelExceptions.setBackground(Color.WHITE);
+		panelExceptions.setOpaque(false);
+		tabbedPane.addTab("Exceptions", null, panelExceptions, null);
+		panelExceptions.setLayout(new BorderLayout(0, 0));
+		
+		scrollPaneExceptions = new JScrollPane();
+		scrollPaneExceptions.setBorder(null);
+		scrollPaneExceptions.setOpaque(false);
+		scrollPaneExceptions.setBackground(Color.WHITE);
+		panelExceptions.add(scrollPaneExceptions, BorderLayout.CENTER);
+		
+		textExceptions = new JTextPane();
+		textExceptions.setContentType("text/html");
+		textExceptions.setBorder(null);
+		scrollPaneExceptions.setViewportView(textExceptions);
+		
+		panelSearch = new JPanel();
+		panelSearch.setBorder(null);
+		panelSearch.setOpaque(false);
+		panelSearch.setBackground(Color.WHITE);
+		panelSearch.setPreferredSize(new Dimension(10, 52));
+		panelExceptions.add(panelSearch, BorderLayout.SOUTH);
+		SpringLayout sl_panelSearch = new SpringLayout();
+		panelSearch.setLayout(sl_panelSearch);
+		
+		labelFilter = new JLabel("org.multipage.generator.messageFilterDebugVievewLog");
+		sl_panelSearch.putConstraint(SpringLayout.NORTH, labelFilter, 6, SpringLayout.NORTH, panelSearch);
+		sl_panelSearch.putConstraint(SpringLayout.WEST, labelFilter, 10, SpringLayout.WEST, panelSearch);
+		panelSearch.add(labelFilter);
+		
+		textFilter = new TextFieldEx();
+		sl_panelSearch.putConstraint(SpringLayout.NORTH, textFilter, 6, SpringLayout.NORTH, panelSearch);
+		sl_panelSearch.putConstraint(SpringLayout.WEST, textFilter, 3, SpringLayout.EAST, labelFilter);
+		sl_panelSearch.putConstraint(SpringLayout.EAST, textFilter, -10, SpringLayout.EAST, panelSearch);
+		panelSearch.add(textFilter);
+		textFilter.setColumns(10);
+		
+		checkCaseSensitive = new JCheckBox("org.multipage.generator.textCaseSensitive");
+		checkCaseSensitive.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onCaseSensitiveChange();
+			}
+		});
+		checkCaseSensitive.setOpaque(false);
+		sl_panelSearch.putConstraint(SpringLayout.NORTH, checkCaseSensitive, 6, SpringLayout.SOUTH, labelFilter);
+		sl_panelSearch.putConstraint(SpringLayout.WEST, checkCaseSensitive, 0, SpringLayout.WEST, labelFilter);
+		panelSearch.add(checkCaseSensitive);
+		
+		checkWholeWords = new JCheckBox("org.multipage.generator.textWholeWords");
+		checkWholeWords.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onWholeWordsChange();
+			}
+		});
+		sl_panelSearch.putConstraint(SpringLayout.WEST, checkWholeWords, 6, SpringLayout.EAST, checkCaseSensitive);
+		sl_panelSearch.putConstraint(SpringLayout.SOUTH, checkWholeWords, 0, SpringLayout.SOUTH, checkCaseSensitive);
+		checkWholeWords.setOpaque(false);
+		panelSearch.add(checkWholeWords);
+		
+		checkExactMatch = new JCheckBox("org.multipage.generator.textExactMatch");
+		checkExactMatch.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onExactMatchChange();
+			}
+		});
+		sl_panelSearch.putConstraint(SpringLayout.WEST, checkExactMatch, 6, SpringLayout.EAST, checkWholeWords);
+		sl_panelSearch.putConstraint(SpringLayout.SOUTH, checkExactMatch, 0, SpringLayout.SOUTH, checkCaseSensitive);
+		checkExactMatch.setOpaque(false);
+		panelSearch.add(checkExactMatch);
 		buttonSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onSendCommand();
@@ -370,7 +539,7 @@ public class DebugViewer extends JFrame {
 		labelStatus = new JLabel("status");
 		panelStatus.add(labelStatus);
 	}
-	
+
 	/**
 	 * Post creation
 	 */
@@ -378,7 +547,8 @@ public class DebugViewer extends JFrame {
 		
 		localize();
 		setIcons();
-		setCallbacks();
+		setListeners();
+		
 		establishWatchDog();
 		
 		initStackDump();
@@ -438,6 +608,11 @@ public class DebugViewer extends JFrame {
 		
 		// Set window title
 		setTitle(Resources.getString("org.multipage.generator.textApplicationDebug"));
+		
+		Utility.localize(labelFilter);
+		Utility.localize(checkCaseSensitive);
+		Utility.localize(checkWholeWords);
+		Utility.localize(checkExactMatch);
 	}
 
 	/**
@@ -491,10 +666,10 @@ public class DebugViewer extends JFrame {
 			else if ("debug".equals(scheme)) {
 				
 				// Set source link for future load operation
-				uriRequestSourceCode = sourceUri;
+				this.header = sourceUri;
 
-				// Open source code in the viewer.
-				openSource(header, "");
+				// Transmit the "source" statement as a signal.
+				ConditionalEvents.transmit(this, AreaServerSignal.debugStatement, "source", sourceUri);
 			}
 		}
 		catch (Exception e) {
@@ -547,19 +722,7 @@ public class DebugViewer extends JFrame {
 	 */
 	public void onSessionStateChanged(DebugListener debugger, boolean ready) {
 		
-		try {
-			// If there is a request to load a source code from the Xdebug client, do it.
-			if (ready && uriRequestSourceCode != null && debugger instanceof XdebugListener) {
-				
-				XdebugListener xebugListener = (XdebugListener) debugger;
-				String data = "-f " + uriRequestSourceCode;
-				XdebugPacket packet = xebugListener.postCommandT("source", data);
-				// TODO: <---DEBUG
-				j.log("SOURCE CODE: %s", packet.getPacketText());
-			}			
-		}
-		catch (Exception e) {
-		}
+		// TODO: <---FINISH IT OR REMOVE IT
 	}
 
 	/**
@@ -652,15 +815,8 @@ public class DebugViewer extends JFrame {
 		if (command.isEmpty()) {
 			return;
 		}
-		try {
-			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
-			String resultText = responsePacket.getPacketText();
-			consolePrint(resultText);
-		}
-		catch (Exception e) {
-			consolePrint("");
-			Utility.show2(this, e.getMessage());
-		}
+		
+		// TODO: <---FINISH
 	}
 	
 	/**
@@ -709,9 +865,9 @@ public class DebugViewer extends JFrame {
 		// Process run command
 		try {
 			startDebugging();
-			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand("run");
-			String resultText = responsePacket.getPacketText();
-			consolePrint(resultText);
+			// TODO: <---FINISH
+			//String resultText = responsePacket.getPacketText();
+			//consolePrint(resultText);
 		}
 		catch (Exception e) {
 		}
@@ -721,6 +877,15 @@ public class DebugViewer extends JFrame {
 	private JPanel panelOutput;
 	private JScrollPane scrollPane;
 	private JTextArea textOutput;
+	private JPanel panelExceptions;
+	private JScrollPane scrollPaneExceptions;
+	private JPanel panelSearch;
+	private JLabel labelFilter;
+	private TextFieldEx textFilter;
+	private JTextPane textExceptions;
+	private JCheckBox checkCaseSensitive;
+	private JCheckBox checkWholeWords;
+	private JCheckBox checkExactMatch;
 
 	
 	/**
@@ -728,43 +893,46 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void step(String command) {
 		
-		// Process step into command
-		try {
-			startDebugging();
-			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
-			if (responsePacket.isEmpty()) {
-				return;
-			}
-			String resultText = responsePacket.getPacketText();
-			consolePrint(resultText);
-			
-			String filename = responsePacket.getString("/response/message/@filename");
-			if (!filename.isEmpty() && !filename.equals(scriptFileName)) {
-				openFile(filename);
-			}
-			
-			String lineNumber = responsePacket.getString("/response/message/@lineno");
-			if (!lineNumber.isEmpty()) {
-				resetStepHighlight();
-				
-				final Color color = new Color(255, 255, 255);
-				final Color bkColor = new Color(255, 0, 0);
-				
-				highlightCurrentStep(Integer.parseInt(lineNumber),  color, bkColor);
-				
-				listWatchModel.clear();
-			}
-			
-			// Show output buffer content, stack dump and breakpoint context
-			showOutput();
-			showStackDump();
-			processContext(3);
-			processContext(1);
-			
-		}
-		catch (Exception e) {
-			j.log("Xdebug: " + e.getLocalizedMessage());
-		}
+		// TODO: <---MAKE Transmit "step" Xdebug signal.
+		ConditionalEvents.transmit(this, AreaServerSignal.debugStatement, command);
+		
+//		// Process step into command
+//		try {
+//			startDebugging();
+//			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
+//			if (responsePacket.isEmpty()) {
+//				return;
+//			}
+//			String resultText = responsePacket.getPacketText();
+//			consolePrint(resultText);
+//			
+//			String filename = responsePacket.getString("/response/message/@filename");
+//			if (!filename.isEmpty() && !filename.equals(scriptFileName)) {
+//				openFile(filename);
+//			}
+//			
+//			String lineNumber = responsePacket.getString("/response/message/@lineno");
+//			if (!lineNumber.isEmpty()) {
+//				resetStepHighlight();
+//				
+//				final Color color = new Color(255, 255, 255);
+//				final Color bkColor = new Color(255, 0, 0);
+//				
+//				highlightCurrentStep(Integer.parseInt(lineNumber),  color, bkColor);
+//				
+//				listWatchModel.clear();
+//			}
+//			
+//			// Show output buffer content, stack dump and breakpoint context
+//			showOutput();
+//			showStackDump();
+//			processContext(3);
+//			processContext(1);
+//			
+//		}
+//		catch (Exception e) {
+//			j.log("Xdebug: " + e.getLocalizedMessage());
+//		}
 	}
 	
 	/**
@@ -772,6 +940,8 @@ public class DebugViewer extends JFrame {
 	 */
 	private void showOutput() {
 		
+		// TODO: <---FINISH
+		/*
 		try {
 			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommandT("eval", "ob_get_contents()");
 			if (!responsePacket.isEmpty()) {
@@ -786,6 +956,7 @@ public class DebugViewer extends JFrame {
 		catch (Exception e) {
 			j.log(e.getMessage());
 		}
+		*/
 	}
 
 	/**
@@ -793,8 +964,8 @@ public class DebugViewer extends JFrame {
 	 */
 	private void showStackDump() {
 		
-		// Process run command
-		try {
+		// TODO: <---REFACTOR Process run command
+		/*try {
 			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand("stack_get");
 			if (!responsePacket.isEmpty()) {
 				
@@ -821,7 +992,7 @@ public class DebugViewer extends JFrame {
 		}
 		catch (Exception e) {
 			j.log(e.getMessage());
-		}
+		}*/
 	}
 	
 	/**
@@ -901,8 +1072,9 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void processContext(int number) {
 		
+		// TODO: <---REFACTOR
 		// Process context_get command
-		try {
+		/*try {
 			String command = String.format("context_get -c %s", number);
 			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
 			if (responsePacket.isEmpty()) {
@@ -975,6 +1147,7 @@ public class DebugViewer extends JFrame {
 		}
 		catch (Exception e) {
 		}
+		*/
 	}
 
 	/**
@@ -1136,16 +1309,126 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Sets callbacks
+	 * Update log. Use control values.
 	 */
-	private void setCallbacks() {
+	private void updateLog() {
 		
-		XdebugListener client = XdebugListener.getSingleton();
-		if (client == null) {
-			return;
+		// Get filter string.
+		String filterString = textFilter.getText();
+		
+		// Get filter flags.
+		boolean caseSensitive = checkCaseSensitive.isSelected();
+		boolean wholeWords = checkWholeWords.isSelected();
+		boolean exactMatch = checkExactMatch.isSelected();
+		
+		// Display filtered log.
+		LogMessage.setFulltextFilter(filterString, caseSensitive, wholeWords, exactMatch);
+		LogMessage.displayHtmlLog(textExceptions);		
+	}
+	
+	/**
+	 * Sets listeners.
+	 */
+	private void setListeners() {
+		
+		// Receive debug signals.
+		ConditionalEvents.receiver(this, AreaServerSignal.debugResponse, message -> {
+			
+			// Get response packet.
+			XdebugPacket responsePacket = message.getRelatedInfo();
+			if (responsePacket == null) {
+				logException("org.multipage.generator.messageNullDebugResponsePacket");
+				return;
+			}
+			
+			// On error display exception message.
+			String errorMessage = responsePacket.getString("/response/error/message/text()");
+			if (errorMessage != null) {
+				logException(responsePacket);
+				return;
+			}
+		});
+		
+		// Full text filter.
+		Utility.onChangeText(textFilter, filterString -> {
+			
+			updateLog();
+		});
+	}
+	
+	
+	/**
+	 * On change filter case sensitive.
+	 */
+	protected void onCaseSensitiveChange() {
+		
+		updateLog();
+	}
+
+	/**
+	 * On change filter whole words.
+	 */
+	protected void onWholeWordsChange() {
+		
+		updateLog();
+	}
+
+	/**
+	 * On change filter exact match.
+	 */
+	protected void onExactMatchChange() {
+		
+		updateLog();
+	}
+	
+
+	/**
+	 * Write exception message to log panel.
+	 * @param message
+	 */
+	private void logException(String message) {
+		
+		// Create new log message.
+		LogMessage.addLogMessage(message);
+		
+		// Get log content.
+		LogMessage.displayHtmlLog(textExceptions);
+		
+		// Select panel with exceptions.
+		int tabIndex = tabbedPane.indexOfComponent(panelExceptions);
+		if (tabIndex >= 0) {
+			tabbedPane.setSelectedIndex(tabIndex);
 		}
 	}
 	
+	/**
+	 * Write error packet to log panel.
+	 * @param errorPacket
+	 */
+	private void logException(XdebugPacket errorPacket) {
+		
+		// Get transaction ID.
+		String transactionId = errorPacket.getString("/response/@transaction_id");
+		
+		// Get statement name.
+		String debugStatement = errorPacket.getString("/response/@command");
+		
+		// Get error code.
+		String errorCode = errorPacket.getString("/response/error/@code");
+		
+		// Application specific code.
+		String applicationCode = errorPacket.getString("/response/error/@apperr");
+		
+		// Get response message.
+		String errorMessage = errorPacket.getString("/response/error/message/text()");
+		
+		// Format final message.
+		String finalMessage = String.format("%s\t%s\terr%s.%s:\n<b>%s</b>", transactionId, debugStatement, errorCode, applicationCode, errorMessage);
+		
+		// Write message to log panel.
+		logException(finalMessage);
+	}
+
 	/**
 	 * Processes Xdebug server status
 	 * @param status 

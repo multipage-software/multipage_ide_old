@@ -61,13 +61,44 @@ public class XdebugPacket {
 	}
 
 	/**
-	 * Constructor of the packet object
+	 * Constructor of the packet object.
 	 * @param packetText
-	 * @throws ParserConfigurationException 
-	 * @throws IOException 
-	 * @throws SAXException 
+	 * @throws Exception 
 	 */
 	public XdebugPacket(String packetText)
+			throws Exception {
+		
+		// Parse input packet text.
+		parse(packetText);
+	}
+	
+	/**
+	 * Constructor of an exception packet.
+	 * @param exception
+	 */
+	public XdebugPacket(String command, Exception exception)
+			throws Exception {
+		
+		// Create XML representation of input exception.
+		final String xmlTemplate = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+									"<response command=\"%s\" transaction_id=\"-1\">" +
+									"<error code=\"-1\" customNs:apperr=\"1\">" +
+									"<customNs:message>%s</customNs:message>" +
+									"</error>" +
+									"</response>";
+		
+		String errorMessage = exception.getLocalizedMessage();
+		String packetText = String.format(xmlTemplate, command, errorMessage);
+		
+		parse(packetText);
+	}
+
+	/**
+	 * Parse input text and load packet.
+	 * @param packetText
+	 * @throws Exception
+	 */
+	public void parse(String packetText)
 			throws Exception {
 		
 		// Prepare XML DOM parser prerequisites
@@ -81,10 +112,10 @@ public class XdebugPacket {
 		InputSource source = new InputSource(new StringReader(packetText));
 		xml = builder.parse(source);
 		
-		// TODO: <---DEBUG
+		// TODO: <---DEBUG PARSED XML PACKET
 		j.log("PARSED XML PACKET: %s", packetText);
 	}
-
+	
 	/**
 	 * Gets DOM type based on XPath expression
 	 * @param xpathExpression

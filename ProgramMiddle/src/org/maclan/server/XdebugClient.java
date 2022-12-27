@@ -13,14 +13,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.maclan.server.XdebugListener.XdebugStatement;
 import org.multipage.util.Obj;
-import org.multipage.util.j;
 
 /**
  * 
@@ -281,7 +276,7 @@ public class XdebugClient {
 							// Process input statement. Break the loop on exit flag.
 							String responseText = callback.accept(xdebugStatement);
 							if (responseText == null) {
-								responseText = "0";
+								responseText = XdebugPacket.empty.toString();
 							}
 
 							// Write returned text.
@@ -303,9 +298,6 @@ public class XdebugClient {
 							outputBuffer.rewind();
 							
 							int bytesWritten = channel.write(outputBuffer);
-							
-							// TODO: <---DEBUG WRITE RESPONSE
-							j.log("WRITE RESPONSE len=%d \"%s\"", bytesWritten, responseText);
 							
 							// Increment transaction number.
 							transactionNumber++;

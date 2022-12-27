@@ -6059,4 +6059,41 @@ public class Utility {
 		String commonName = "CN=" + matcher.group("commonName");
 		return commonName;
 	}
+	
+	/**
+	 *  When content of text field is changed, the method calls input lambda function.
+	 * @param textField
+	 * @param callbackLambda
+	 */
+	public static void onChangeText(JTextField textField, Consumer<String> callbackLambda) {
+		
+		final String alreadySet = "set";
+		
+		// If the component is already set, exit the method.
+		String componentFlag = textField.getName();
+		if (alreadySet.equals(componentFlag)) {
+			return;
+		}
+		
+		// Get text field document and create new document listener.
+		Document document = textField.getDocument();
+		DocumentListener listener = new DocumentListener() {
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+		};
+		
+		// Add listener and set component flag.
+		document.addDocumentListener(listener);
+		textField.setName(alreadySet);
+	}
 }

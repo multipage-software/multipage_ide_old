@@ -18,15 +18,15 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.multipage.gui.Callback;
+import org.multipage.gui.ConditionalEvents;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * @author user
@@ -40,14 +40,14 @@ public class XdebugListener extends DebugListener {
 	public static final int xdebugPort = 9001;
 	
 	/**
-	 * Reuqred IDE key for coomunication in the Xdebug protocol.
+	 * Required IDE key for communication in the Xdebug protocol.
 	 */
 	public static final String requiredIdeKey = "multipage-xdebug";
 	
 	/**
 	 * Tiout in milliseconds for client connections with Xdebug protocol.
 	 */
-	public final static long xdebugClientTimeoutMs = 1000;
+	public static final long xdebugClientTimeoutMs = 1000;
 	
 	/**
 	 * The loop timeout for idle operations (in milliseconds).
@@ -491,9 +491,6 @@ public class XdebugListener extends DebugListener {
 			else
 				response = String.format(xmlTemplate, allArguments, transactionId);
 			
-			// TODO: <---DEBUG
-			j.log("XML RESPONSE: %s", response);
-			
 			return response;
 		}
 	}
@@ -529,12 +526,7 @@ public class XdebugListener extends DebugListener {
 	 * Xdebug name
 	 */
 	private XdebugStatement command = new XdebugStatement(nop, null);
-	
-	/**
-	 * A channel for communication with Xdebug client
-	 */
-	protected SocketChannel connection = null;
-	
+
 	/**
 	 * List of pending connections.
 	 */
@@ -612,43 +604,42 @@ public class XdebugListener extends DebugListener {
 			e.printStackTrace();
 		}
 		finally {
-			this.connection = null;
 			watchDogAlerts("not connected");
 		}
 	}
 	
 	/**
-	 * Send name to Xdebug and get response packet
+	 * Process received command and get response packet.
 	 * @param name
 	 * @return
 	 */
-	public XdebugPacket postCommand(String command) throws Exception {
+	private XdebugPacket processReceivedCommand(String command) throws Exception {
 		
 		// Delegate the call
-		return postCommand(command, null);
+		return processReceivedCommand(command, null);
 	}
 
 	/**
-	 * Send a name with data to Xdebug and get response packet
+	 * Process received command and get response packet.
 	 * @param commandName
 	 * @param data
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugPacket postCommandT(String commandName, String data) throws Exception {
+	private XdebugPacket processReceivedCommandT(String commandName, String data) throws Exception {
 		
 		byte [] bytes = data.getBytes();
-		return postCommand(commandName, bytes);
+		return processReceivedCommand(commandName, bytes);
 	}
 
 	/**
-	 * Send a name with data to Xdebug and get response packet
+	 * Process received command and get response packet.
 	 * @param commandName
 	 * @param data
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugPacket postCommand(String commandName, byte [] data) throws Exception {
+	private XdebugPacket processReceivedCommand(String commandName, byte [] data) throws Exception {
 		
 		// If session is stopping, exit the method
 		if (Session.stopping.equals(session)) {
@@ -668,8 +659,6 @@ public class XdebugListener extends DebugListener {
 		}
 		
 		// Wait for session ready
-		// TODO: <---DEBUG
-		j.log("WAIT FOR %s COMMAND %s", sessionReady, commandName);
 		boolean timeout = Lock.waitFor(sessionReady, 10000);
 		if (timeout) {
 			throw new Exception("USERTHREAD: session is not ready, a timeout occured");
@@ -741,7 +730,111 @@ public class XdebugListener extends DebugListener {
 		
 		this.port = port;
 	}
-	
+		
+	/**
+	 * Main receiving loop.
+	 * @param channel
+	 * @param callbackLambda
+	 */
+	protected void receivingLoop(ServerSocketChannel channel, Function<ByteArrayOutputStream, Boolean> callbackLambda) {
+		
+		// Define constants.
+		final int watchDogIdleMs = 200;
+		final int inputBufferSize = 1024;
+		
+		Obj<Boolean> exitLoop = new Obj<Boolean>(false);
+		Obj<SocketChannel> connection = new Obj<SocketChannel>();
+		ByteBuffer buffer = ByteBuffer.allocate(inputBufferSize);
+		
+		// Enter loop.
+		do {
+			try {
+				Obj<Boolean> exit = new Obj<Boolean>(false);
+				
+				// Wait for socket connection.
+				do {
+					Selector selector = Selector.open();
+					channel.register(selector, SelectionKey.OP_ACCEPT);
+					selector.select(watchDogIdleMs);
+					selector.selectedKeys().stream().forEach(key -> {
+						
+						try {
+							
+							// Check if selected key is valid.
+							if (key.isValid()) {
+								return;
+							}
+							
+							// Get selected channel.
+							ServerSocketChannel selectedChannel = (ServerSocketChannel) key.channel();
+							
+							// Accept new connection.
+							if (key.isAcceptable()) {
+								
+								connection.ref = selectedChannel.accept();
+								if (connection.ref != null) {
+									connection.ref.configureBlocking(false);
+									
+									exit.ref = true;
+								}
+								return;
+							}
+						}
+						catch (Exception e) {
+							// Print error.
+							e.printStackTrace();
+						}
+					});
+				}
+				while (exit.ref);
+				
+				exit.ref = false;
+				
+				// Process incoming statements.
+				do {
+					Selector selector = Selector.open();
+					channel.register(selector, SelectionKey.OP_READ);
+					selector.select(watchDogIdleMs);
+					selector.selectedKeys().stream().forEach(key -> {
+						try {
+							
+							// Read incoming message.
+							if (key.isReadable() && connection.ref != null && connection.ref.isConnected()) {
+								
+								ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+								int bytesRead = 0;
+								while (true) {
+									bytesRead = connection.ref.read(buffer);
+									if (bytesRead <= 0) {
+										break;
+									}
+									
+									int position = buffer.position();
+									byte [] bytes = new byte [position];
+									buffer.get(bytes, 0, position);
+									buffer.clear();
+									byteStream.write(bytes);
+								}
+								
+								// Callback with receiving byte stream.
+								exit.ref = callbackLambda.apply(byteStream);
+							}
+						}
+						catch (Exception e) {
+							// Print error.
+							e.printStackTrace();
+						}
+					});
+				}
+				while (exit.ref);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		while (!exitLoop.ref);
+	}
+
 	/**
 	 * Activates debugger
 	 */
@@ -756,71 +849,26 @@ public class XdebugListener extends DebugListener {
 			@Override
 			public void run() {
 				
-				// Listen to port
-				channel = listenTo(port);
-				if (channel == null) {
-					return;
-				}	
-				
 				// Enter loop with rules and process incoming commands
 				try {
-					while (!terminate) {
-						
-						// Check connection status with watch dog
-						watchDogCheckStatusOf(connection);
-						
-						// Rule: Process stop command
-						if (isStop(command)) {
-							endOfSession();
-							continue;
-						}
-						
-						// Rule: Wait for a while if the session is stopping
-						if (isStopping(status)) {
-							sleepFor(200);
-							continue;
-						}
-						
-						// Rule: Accept incoming connection
-						if (shouldAcceptNewConnection()) {
-							connection = waitForConnection();
-							continue;
-						}
-						
-						// Rule: Initialize communication
-						if (shouldBeInitialized(connection)) {
-							initializeCommunication(connection);
-							continue;
-						}
-						
-						// Rule: Wait for a new command
-						if (isInitialized(connection) && !is(command)) {
-							// TODO: <---DEBUG
-							j.log("NOTIFIED LOCK %s THREAD %s", sessionReady, Thread.currentThread());
-							notifySessionReady();
-							Lock.waitFor(commandSet, 50000);
-							continue;
-						}
-						
-						// Rule: Process other commands
-						if (is(command)) {
-							sendThrough(connection, command);
-							endOfTransaction();
-							continue;
-						}
-						
-						// Idle time.
-						Thread.sleep(listenerIdleTimeoutMs);
+					
+					// Listen to port
+					channel = listenTo(port);
+					if (channel == null) {
+						return;
 					}
+					
+					// Receiving loop.
+					receivingLoop(channel, inputByteStream -> {
+						
+						
+						return false;
+					});
 				}
 				catch (Exception e) {
 					
 					e.printStackTrace();
-					endOfSession();
 				}
-				
-				// Reset command
-				command.set(nop);
 			}
 			
 			/**
@@ -839,16 +887,6 @@ public class XdebugListener extends DebugListener {
 				}
 				
 				return connection.isConnected();
-			}
-			
-			/**
-			 * Returns true if the loop should accept a new connection
-			 * @param channel
-			 * @return
-			 */
-			private boolean shouldAcceptNewConnection() {
-				
-				return !isConnected(connection);
 			}
 			
 			/**
@@ -921,11 +959,11 @@ public class XdebugListener extends DebugListener {
 			 */
 			private String getStatus(SocketChannel socketChannel) {
 				
-				if (connection == null) {
+				if (socketChannel == null) {
 					return "no connection";
 				}
 				
-				if (!connection.isConnected()) {
+				if (!socketChannel.isConnected()) {
 					return "disconnected";
 				}
 				
@@ -957,7 +995,7 @@ public class XdebugListener extends DebugListener {
 			}
 			
 			/**
-			 * Sleep for given tiomeoout
+			 * Sleep for given time out
 			 * @param timeout
 			 */
 			private void sleepFor(int timeout) {
@@ -978,85 +1016,6 @@ public class XdebugListener extends DebugListener {
 				
 				status = getStatus(socketChannel);
 				watchDogAlerts(status);
-			}
-
-			/**
-			 * Wait for a connection from socket channel
-			 * @param channel
-			 * @return
-			 * @throws Exception 
-			 */
-			private SocketChannel waitForConnection() {
-				
-				try {
-					// Reset connection
-					connection = null;
-					Selector selector = Selector.open();
-					
-					Supplier<Boolean> terminationLambda = () -> terminate || isStop(command);
-					
-					while (!terminationLambda.get()) {
-						
-						// If debugging is disabled, close listening port and wait for enable event
-						if (!debuggingEnabled()) {
-							
-							// Close port
-							close(connection);
-							closeChannel();
-							selector.selectNow();
-							
-							// Wait for debugging enabled. On termination exit the method.
-							while (!debuggingEnabled()) {
-								
-								sleepFor(xdebugIdleMs);
-								
-								if (terminationLambda.get()) {
-									return null;
-								}
-							}
-							
-							// Bind current port again
-							channel = listenTo(port);
-							if (channel == null) {
-								return null;
-							}
-						}
-						
-						// Create socket selector for non-blocking mode and register it on given channel
-						// Wait for some amount of time
-						final int timeout = 5 * xdebugIdleMs;
-						
-						channel.register(selector, SelectionKey.OP_ACCEPT);
-						selector.select(timeout);
-						
-						selector.selectedKeys().stream().forEach((SelectionKey key) -> {
-							if (key.isValid() && key.isAcceptable()) {
-								ServerSocketChannel channel = (ServerSocketChannel) key.channel();
-								try {
-									if (connection == null) {
-										connection = channel.accept();
-										
-										if (connection != null) {
-											connection.configureBlocking(false);
-										}
-									}
-								}
-								catch (Exception e) {
-								}
-							}
-						});
-						
-						if (connection != null) {
-							session = Session.connected;
-							break;
-						}
-					}
-					
-					return connection;
-				}
-				catch (Exception e) {
-					return null;
-				}
 			}
 			
 			/**
@@ -1118,6 +1077,45 @@ public class XdebugListener extends DebugListener {
 			}
 			
 			/**
+			 * Listen for user commands.
+			 */
+			private void listenUserCommands(SocketChannel connection) {
+				
+				// Create lock of an exit event.
+				Lock lockExit = new Lock();
+				
+				// Create new command listener and wait.
+				ConditionalEvents.receiver(XdebugListener.this, AreaServerSignal.debugStatement, message -> {
+					
+					// Get command.
+					String command = message.getRelatedInfo();
+					if (command == null) {
+						
+						// Notify the exit event lock.
+						Lock.notifyAll(lockExit);
+						return;
+					}
+					
+					// Check if Xdebug connection is ready.
+					if (!connection.isConnected()) {
+						return;
+					}
+					
+					// Get statement data.
+					String data = "";
+					
+					// Send Xdebug command to debugger.
+					sendThrough(connection, command, data, transactionExceptions);
+				});
+				
+				// Wait for exit of the listen mode.
+				Lock.waitFor(lockExit);
+				
+				// Remove previously created receiver.
+				ConditionalEvents.removeReceivers(AreaServerSignal.debugStatement);
+			}
+			
+			/**
 			 * Notify all listeners that the Xdebug session is ready.
 			 */
 			private void notifySessionReady() {
@@ -1171,7 +1169,7 @@ public class XdebugListener extends DebugListener {
 			/**
 			 * End of transaction
 			 */
-			private void endOfTransaction() {
+			private void endOfTransaction(SocketChannel connection) {
 				
 				// Reset command
 				command.set(nop);
@@ -1189,7 +1187,7 @@ public class XdebugListener extends DebugListener {
 		// Start the thread
 		socketChannelThread.start();
 	}
-	
+
 	/**
 	 * 
 	 * @param channel2
@@ -1221,7 +1219,7 @@ public class XdebugListener extends DebugListener {
 	 * End of session
 	 * @param informUser
 	 */
-	private void endOfSession(boolean informUser) {
+	private void endOfSession(SocketChannel connection, boolean informUser) {
 		
 		try {
 			
@@ -1247,9 +1245,9 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * End of session
 	 */
-	private void endOfSession() {
+	private void endOfSession(SocketChannel connection) {
 		
-		endOfSession(true);
+		endOfSession(connection, true);
 	}
 	
 	/**
@@ -1322,7 +1320,7 @@ public class XdebugListener extends DebugListener {
 	 * @return
 	 * @throws Exception
 	 */
-	public XdebugPacket runCommand(String command) throws Exception {
+	public XdebugPacket runCommand(SocketChannel connection, String command) throws Exception {
 		
 		XdebugPacket responsePacket = command(connection, command);
 		return responsePacket;
@@ -1352,7 +1350,7 @@ public class XdebugListener extends DebugListener {
 	 * Gets channel status
 	 * @return
 	 */
-	public String getChannelStatus() {
+	public String getChannelStatus(SocketChannel connection) {
 		
 		if (connection == null || !connection.isConnected()) {
 			return "not connected";
@@ -1365,7 +1363,7 @@ public class XdebugListener extends DebugListener {
 	 * @param fileUri
 	 * @return
 	 */
-	protected String getSourceCode(String fileUri) throws ChannelBreakDownException  {
+	protected String getSourceCode(SocketChannel connection, String fileUri) throws ChannelBreakDownException  {
 		
 		beginTransaction();
 		XdebugPacket responsePacket = command(connection, String.format("source -f %s", fileUri));
@@ -1386,10 +1384,10 @@ public class XdebugListener extends DebugListener {
 		
 		Obj<Boolean> writable = new Obj<Boolean>(false);
 		try {
-			connection.configureBlocking(false);
+			socketChannel.configureBlocking(false);
 			
 			Selector selector = Selector.open();
-			connection.register(selector, SelectionKey.OP_WRITE);
+			socketChannel.register(selector, SelectionKey.OP_WRITE);
 			
 			selector.select(timeout);
 			selector.selectedKeys().stream().forEach((key) -> { if (key.isValid() && key.isWritable()) writable.ref = true; });
@@ -1460,10 +1458,10 @@ public class XdebugListener extends DebugListener {
 		ByteBuffer buffer = ByteBuffer.allocate(inputBufferSize);
 		
 		// Read bytes from the socket channel.			
-		connection.configureBlocking(false);
+		socketChannel.configureBlocking(false);
 		
 		Selector selector = Selector.open();
-		connection.register(selector, SelectionKey.OP_READ);
+		socketChannel.register(selector, SelectionKey.OP_READ);
 		
 		// Wait for input message.
 		selector.select(xdebugIdleMs);
@@ -1509,9 +1507,6 @@ public class XdebugListener extends DebugListener {
 					if (messages.ref.length != 2) {
 						messages.ref = null;
 					}
-					else
-						// TODO: <---DEBUG READ RESPONSE
-						j.log("READ RESPONSE len=%d \"%s\"", messages.ref.length, messages.ref.length == 2 ? messages.ref[0] + ", " + messages.ref[1] : "unknown");
 				}
 				catch (Exception e) {
 					e.printStackTrace();
