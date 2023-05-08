@@ -1869,8 +1869,6 @@ public class SlotListPanel extends JPanel {
 		}
 		this.areas = areas;
 		
-		j.log("SELECTED AREAS %s", this.areas.toString());
-		
 		// Load slots.
 		loadSlots();
 		

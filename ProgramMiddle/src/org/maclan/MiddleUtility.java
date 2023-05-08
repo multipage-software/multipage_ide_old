@@ -47,6 +47,7 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 
 import org.apache.commons.io.FileUtils;
+import org.maclan.expression.ExpressionSolver;
 import org.maclan.server.AreaServer;
 import org.maclan.server.Request;
 import org.multipage.gui.Utility;
@@ -193,7 +194,7 @@ public class MiddleUtility {
 		// Create middle layer.
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
-			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleImpl");
+			Class<?> objectClass = classLoader.loadClass(pathToMiddle + ".MiddleImpl");
 			
 			Middle middle = (Middle) objectClass.getDeclaredConstructor().newInstance();
 			return middle;
@@ -214,7 +215,7 @@ public class MiddleUtility {
 		// Create middle layer.
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
-			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
+			Class<?> objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
 			
 			MiddleLight middleLight = (MiddleLight) objectClass.getDeclaredConstructor().newInstance();
 			return middleLight;
@@ -235,7 +236,7 @@ public class MiddleUtility {
 		// Create middle layer.
 		try {
 			ClassLoader classLoader = MiddleUtility.class.getClassLoader();
-			Class objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
+			Class<?> objectClass = classLoader.loadClass(pathToMiddle + ".MiddleLightImpl");
 
 			Method method = objectClass.getDeclaredMethod("addExtensions");
 			if (method != null) {
@@ -1538,7 +1539,7 @@ public class MiddleUtility {
 			Object value;
 			String valueText;
 			
-			for (Entry entry : otherProperties.entrySet()) {
+			for (Entry<Object, Object> entry : otherProperties.entrySet()) {
 				
 				name = entry.getKey();
 				if (name == null) {
@@ -1632,5 +1633,25 @@ public class MiddleUtility {
 				
 		UUID guid = UUID.fromString(guidString);
 		return guid;
+	}
+	
+	/**
+	 * Parse booelan value.
+	 * @param valueText
+	 * @return
+	 */
+	public static boolean parseBoolean(String valueText)
+			throws Exception {
+		
+		if (ExpressionSolver.trueValueConstant.equalsIgnoreCase(valueText)) {
+			return true;
+		}
+		else if (ExpressionSolver.falseValueConstant.equalsIgnoreCase(valueText)) {
+			return false;
+		}
+		
+		Utility.throwException("org.maclan.messageBadBooleanTextConstant", valueText,
+				ExpressionSolver.trueValueConstant, ExpressionSolver.falseValueConstant);
+		return false;
 	}
 }

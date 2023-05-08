@@ -29,12 +29,12 @@ import org.xml.sax.SAXException;
  * @author user
  *
  */
-public class XdebugPacket {
+public class XdebugPacketOld {
 	
 	/**
 	 * Empty packet
 	 */
-	public final static XdebugPacket empty = new XdebugPacket();
+	public final static XdebugPacketOld empty = new XdebugPacketOld();
 
 	/**
 	 * XML Document
@@ -54,7 +54,7 @@ public class XdebugPacket {
 	/**
 	 * Constructs empty packet
 	 */
-	public XdebugPacket() {
+	public XdebugPacketOld() {
 		
 		xml = null;
 		packetText = "";
@@ -65,7 +65,7 @@ public class XdebugPacket {
 	 * @param packetText
 	 * @throws Exception 
 	 */
-	public XdebugPacket(String packetText)
+	public XdebugPacketOld(String packetText)
 			throws Exception {
 		
 		// Parse input packet text.
@@ -76,7 +76,7 @@ public class XdebugPacket {
 	 * Constructor of an exception packet.
 	 * @param exception
 	 */
-	public XdebugPacket(String command, Exception exception)
+	public XdebugPacketOld(String command, Exception exception)
 			throws Exception {
 		
 		// Create XML representation of input exception.
@@ -112,7 +112,7 @@ public class XdebugPacket {
 		InputSource source = new InputSource(new StringReader(packetText));
 		xml = builder.parse(source);
 		
-		// TODO: <---DEBUG PARSED XML PACKET
+		// TODO: <---DEBUGGER PARSED XML PACKET
 		j.log("PARSED XML PACKET: %s", packetText);
 	}
 	

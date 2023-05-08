@@ -14,6 +14,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
+import java.util.List;
 
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -68,6 +69,12 @@ public class AreaLocalMenu {
 	private Component parentComponent;
 	
 	/**
+	 * Taken area references.
+	 */
+	private List<Area> takenAreas = null;
+	private Area takenAreaParent = null;
+	
+	/**
 	 * Constructor.
 	 * @param areaLocalMenuListener
 	 */
@@ -105,13 +112,17 @@ public class AreaLocalMenu {
 	 */
 	public void addTo(JPopupMenu popupMenu, int start) {
 		
-		JMenuItem menuCopyAreaTree = createMenuItem(
-				Resources.getString("org.multipage.generator.menuCopyAreaTree"));
-		menuCopyAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
+		JMenuItem menuTakeAreaTree = createMenuItem(
+				Resources.getString("org.multipage.generator.menuTakeAreaTree"));
+		menuTakeAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
 		
-		JMenuItem menuPasteAreaTree = createMenuItem(
-				Resources.getString("org.multipage.generator.menuPasteAreaTree"));
-		menuPasteAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
+		JMenuItem menuCopyTakenAreaTree = createMenuItem(
+				Resources.getString("org.multipage.generator.menuCopyTakenAreaTree"));
+		menuCopyTakenAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
+		
+		JMenuItem menuMoveTakenAreaTree = createMenuItem(
+				Resources.getString("org.multipage.generator.menuMoveTakenAreaTree"));
+		menuMoveTakenAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
 				
 		JMenuItem menuAddToFavoritesArea = createMenuItem(
 				Resources.getString("org.multipage.generator.menuAddToFavorites"));
@@ -232,9 +243,10 @@ public class AreaLocalMenu {
 		menuDisplayArea.setIcon(Images.getIcon("org/multipage/generator/images/clone.png"));
 		
 		int index = start;
-
-		popupMenu.insert(menuCopyAreaTree, index++);
-		popupMenu.insert(menuPasteAreaTree, index++);
+		
+		popupMenu.insert(menuTakeAreaTree, index++);
+		popupMenu.insert(menuCopyTakenAreaTree, index++);
+		popupMenu.insert(menuMoveTakenAreaTree, index++);
 		popupMenu.addSeparator(); index++;
 		
 		if (isAddFavorites) {
@@ -293,14 +305,19 @@ public class AreaLocalMenu {
 		}
 
 		// Add listeners.
-		menuCopyAreaTree.addActionListener(new ActionListener() {
+		menuTakeAreaTree.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				copyAreaTree();
+				takeAreaTree();
 			}
 		});
-		menuPasteAreaTree.addActionListener(new ActionListener() {
+		menuCopyTakenAreaTree.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				pasteAreaTree();
+				copyTakenAreaTree();
+			}
+		});
+		menuMoveTakenAreaTree.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				moveTakenAreaTree();
 			}
 		});
 		if (isAddFavorites) {
@@ -442,8 +459,10 @@ public class AreaLocalMenu {
 			@Override
 			public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
 				
-				// Enable / disable paste area tree trayMenu item.
-				menuPasteAreaTree.setEnabled(GeneratorMainFrame.getFrame().isAreaTreeDataCopy());
+				// Enable / disable pasting of area tree with tray menu item.
+				boolean enable = GeneratorMainFrame.getFrame().isAreaTreeDataCopy();
+				menuCopyTakenAreaTree.setEnabled(enable);
+				menuMoveTakenAreaTree.setEnabled(enable);
 			}
 			@Override
 			public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
@@ -948,17 +967,34 @@ public class AreaLocalMenu {
 		Object sourceObject = parentComponent != null ? parentComponent : this;
 		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
 	}
+	
+	/**
+	 * Take area tree.
+	 */
+	protected void takeAreaTree() {
+		
+		// Get selected area (can be null).
+		takenAreas = listener.getCurrentAreas();
+		takenAreaParent = listener.getCurrentParentArea();
+		
+		GeneratorMainFrame frame = GeneratorMainFrame.getFrame();
+		frame.takeAreasTrees(takenAreas, takenAreaParent);
+	}
 
 	/**
-	 * Copy area tree.
+	 * Copy taken area tree.
 	 */
-	protected void copyAreaTree() {
+	protected void copyTakenAreaTree() {
+		
+		// Check taken area.
+		if (takenAreas == null || takenAreas.isEmpty() || takenAreaParent == null) {
+			return;
+		}
 		
 		// Get selected area (can be null) and copy area tree.
 		Area area = listener.getCurrentArea();
-		Area parentArea = listener.getCurrentParentArea();
-		
-		GeneratorMainFrame.getFrame().copyAreaTree(area, parentArea);
+		GeneratorMainFrame frame = GeneratorMainFrame.getFrame();
+		frame.copyAreaTrees(area);
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
@@ -966,14 +1002,20 @@ public class AreaLocalMenu {
 	}
 
 	/**
-	 * Paste area tree.
+	 * Move taken area tree.
 	 */
-	protected void pasteAreaTree() {
+	protected void moveTakenAreaTree() {
 		
-		// Get selected area and paste area tree.
+		// Check taken area.
+		if (takenAreas == null || takenAreas.isEmpty() || takenAreaParent == null) {
+			return;
+		}
+		
+		// Prepare area tree for copying.
+		GeneratorMainFrame frame = GeneratorMainFrame.getFrame();
 		Area area = listener.getCurrentArea();
-		
-		GeneratorMainFrame.getFrame().pasteAreaTree(area);
+		Area parentArea = listener.getCurrentParentArea();
+		frame.moveAreaTrees(takenAreas, parentArea, area, parentComponent);
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;

@@ -22,6 +22,7 @@ import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.print.PrinterException;
+import java.beans.BeanProperty;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.LinkedList;
@@ -683,7 +684,7 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 			buttonBackground.setVisible(false);// hide it
 		}
 	}
-
+	
 	/**
 	 * Set paragraph alignment.
 	 * @param toolBar

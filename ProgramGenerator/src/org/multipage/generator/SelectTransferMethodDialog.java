@@ -206,18 +206,21 @@ public class SelectTransferMethodDialog extends JDialog {
 		getContentPane().add(labelQuestion);
 		
 		radioBefore = new JRadioButton("org.multipage.generator.textBeforeTargetArea");
+		springLayout.putConstraint(SpringLayout.EAST, radioBefore, -10, SpringLayout.EAST, buttonCancel);
 		buttonGroup.add(radioBefore);
 		springLayout.putConstraint(SpringLayout.NORTH, radioBefore, 16, SpringLayout.SOUTH, labelQuestion);
 		springLayout.putConstraint(SpringLayout.WEST, radioBefore, 65, SpringLayout.WEST, getContentPane());
 		getContentPane().add(radioBefore);
 		
 		radioAfter = new JRadioButton("org.multipage.generator.textAfterTargetArea");
+		springLayout.putConstraint(SpringLayout.EAST, radioAfter, -10, SpringLayout.EAST, getContentPane());
 		buttonGroup.add(radioAfter);
 		springLayout.putConstraint(SpringLayout.NORTH, radioAfter, 6, SpringLayout.SOUTH, radioBefore);
 		springLayout.putConstraint(SpringLayout.WEST, radioAfter, 0, SpringLayout.WEST, radioBefore);
 		getContentPane().add(radioAfter);
 		
 		radioSubarea = new JRadioButton("org.multipage.generator.textSubTargetArea");
+		springLayout.putConstraint(SpringLayout.EAST, radioSubarea, -10, SpringLayout.EAST, getContentPane());
 		buttonGroup.add(radioSubarea);
 		springLayout.putConstraint(SpringLayout.NORTH, radioSubarea, 6, SpringLayout.SOUTH, radioAfter);
 		springLayout.putConstraint(SpringLayout.WEST, radioSubarea, 0, SpringLayout.WEST, radioBefore);

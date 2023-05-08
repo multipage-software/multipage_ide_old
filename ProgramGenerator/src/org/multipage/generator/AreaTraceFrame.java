@@ -1356,8 +1356,11 @@ public class AreaTraceFrame extends JFrame {
 				
 				int action = e.getDropAction();
 				
+				LinkedList<Area> transferredAreas = new LinkedList<Area>();
+				transferredAreas.add((Area)transferredObject);
+				
 				GeneratorMainFrame.transferArea(
-						(Area)transferredObject, transferredParentArea,
+						transferredAreas, transferredParentArea,
 						(Area)droppedObject, droppedParentArea,
 						action, thisComponent);
 			}

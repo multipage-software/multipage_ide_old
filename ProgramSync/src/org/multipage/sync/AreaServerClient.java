@@ -11,6 +11,7 @@ import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.http.HttpResponse;
@@ -23,6 +24,10 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
@@ -152,11 +157,11 @@ public class AreaServerClient {
 	}
 	
 	/**
-	 * A helper function that gets URL of the area with given alias
+	 * A helper function that gets URL of the area with given alias that can provide tray menu items.
 	 * @param areaAlias - can be null for the home area of the Area Server
 	 * @return
 	 */
-	public String getAreaUrl(String areaAlias) {
+	public String getMenuAreaUrl(String areaAlias) {
 		
 		String theUrl = this.url + (areaAlias == null ? "/?a" : "/?alias=" + areaAlias);
 		return theUrl;
@@ -184,7 +189,7 @@ public class AreaServerClient {
 				});
 				
 				// Get home area URL
-				String homeAreaUrl = getAreaUrl(null);
+				String homeAreaUrl = getMenuAreaUrl(null);
 				
 				// Request menu descriptor from area server using the home area
 				Document xml = apiRequestDocument(homeAreaUrl, "loadMenu", response);
@@ -193,7 +198,7 @@ public class AreaServerClient {
 				if (xml == null) {
 					
 					// Add reload menu item
-					adDefaultMenuItems();
+					addDefaultMenuItems();
 					return;
 				}
 				
@@ -267,14 +272,14 @@ public class AreaServerClient {
 					}
 					
 					// Add default menu items.
-					adDefaultMenuItems();
+					addDefaultMenuItems();
 				});
 				
 			}
 			catch (Exception e) {
 				
 				// Add reload menu item
-				adDefaultMenuItems();
+				addDefaultMenuItems();
 				
 				Exception exception = null;
 				String errorMessage = e.getLocalizedMessage();
@@ -305,7 +310,7 @@ public class AreaServerClient {
 	/**
 	 * Add reload menu item
 	 */
-	private void adDefaultMenuItems() {
+	private void addDefaultMenuItems() {
 		
 		SwingUtilities.invokeLater(() -> {
 			

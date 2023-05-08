@@ -33,7 +33,7 @@ import php.java.bridge.Util;
 import php.java.bridge.util.ILogger;
 import php.java.bridge.util.Logger;
 import php.java.servlet.ServletUtil;
-import php.java.servlet.fastcgi.*;
+import php.java.servlet.fastcgi.FastCGIServlet;
 
 /**
  * @author
@@ -50,6 +50,11 @@ public class ProgramServlet extends FastCGIServlet {
 	 * URL parameter for displaying home area
 	 */
 	public static final String displayHomeArea = "a";
+	
+	/**
+	 * URL parameter for displaying home area
+	 */
+	public static final String getTrayMenu = "m";
 	
 	/**
 	 * Login parameters.
@@ -277,7 +282,7 @@ public class ProgramServlet extends FastCGIServlet {
 		}
 		return defaultValue;
 	}
-	
+		
 	/**
 	 * Returns true if the servlet is used only for running web application
 	 * @param request 
@@ -440,7 +445,7 @@ public class ProgramServlet extends FastCGIServlet {
 									
 									// Set connection properties.
 									ideHost.ref = "localhost";
-									xdebugPort.ref = XdebugListener.xdebugPort;
+									xdebugPort.ref = XdebugListener.DEFAULT_PORT;
 									return true;
 								}
 
@@ -594,6 +599,9 @@ public class ProgramServlet extends FastCGIServlet {
 				// Output memory stream and close it
 				byte [] output = memoryOutputStream.toByteArray();
 				_response.getOutputStream().write(output);
+				
+				// TODO: <---DEBUG
+				System.err.format("OUTPUT:\n%s", new String(output));
 			}
 			
 			// Close output streams
@@ -716,7 +724,7 @@ public class ProgramServlet extends FastCGIServlet {
 			_response.getOutputStream().close();
 		}
 	}
-
+	
 	/**
 	 * Sends script to PHP engine
 	 * @param scriptMemoryStream

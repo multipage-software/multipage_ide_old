@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 
 import javax.swing.JButton;
@@ -48,7 +49,7 @@ import javax.swing.event.ChangeListener;
 
 import org.maclan.Area;
 import org.maclan.AreaRelation;
-import org.maclan.AreaTreeData;
+import org.maclan.AreaTreesData;
 import org.maclan.AreasModel;
 import org.maclan.Language;
 import org.maclan.Middle;
@@ -512,7 +513,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	/**
 	 * Area tree data to copy.
 	 */
-	private static AreaTreeData areaTreeDataToCopy;
+	private static AreaTreesData areaTreeDataToCopy = null;
 
 	/**
 	 * Constructor.
@@ -644,12 +645,12 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// Create debug viewer
-		debugViewer = new DebugViewer(this);
+		debugViewer = DebugViewer.getInstance(this);
 		
 		// Set debug viewer listener
 		DebugListener debugger = ProgramBasic.getHttpServer().getDebugger();
 		if (debugger != null) {
-			debugger.setDebugViewerListener(new DebugViewerCallback() {
+			debugger.setDebugViewerListeners(new DebugViewerCallback() {
 
 				@Override
 				public int openFile(String fileUri) {
@@ -3425,20 +3426,21 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	}
 
 	/**
-	 * Copy area tree.
+	 * Take area trees.
 	 * @param area
 	 * @param parentArea 
 	 */
-	public void copyAreaTree(Area area, Area parentAreaParam) {
+	public void takeAreasTrees(List<Area> areas, Area parentAreaParam) {
 		
-		if (area == null) {
-			Utility.show(this, "org.multipage.generator.messageSelectSingleAreaToCopy");
+		if (areas == null || areas.isEmpty()) {
+			Utility.show(this, "org.multipage.generator.messageSelectAreasToCopy");
 			return;
 		}
 		
 		if (parentAreaParam == null) {
 			
 			// Let user select parent area.
+			Area area = areas.get(0);
 			parentAreaParam = SelectSuperAreaDialog.showDialog(this, area);
 			if (parentAreaParam == null) {
 				return;
@@ -3461,7 +3463,8 @@ public class GeneratorMainFrame extends JFrame implements Update {
 				Properties login = ProgramBasic.getLoginProperties();
 				
 				// Create area tree object with callback methods.
-				areaTreeDataToCopy = new AreaTreeData() {
+				areaTreeDataToCopy = new AreaTreesData();
+				AreaTreesData areaTreeData = new AreaTreesData() {
 
 					@Override
 					public boolean existsAreaOutside(Long areaId) {
@@ -3474,12 +3477,17 @@ public class GeneratorMainFrame extends JFrame implements Update {
 						return area != null;
 					}
 				};
-				areaTreeDataToCopy.setCloned(true);
+				areaTreeData.setCloned(true);
 			
 				Long parentAreaId = parentArea != null ? parentArea.getId() : null;
 				
-				MiddleResult result = middle.loadAreaTreeData(login, area.getId(), parentAreaId,
-						areaTreeDataToCopy, this);
+				LinkedList<Long> areaIds = new LinkedList<Long>();
+				for (Area area : areas) {
+					long areaId = area.getId();
+					areaIds.add(areaId);
+				}
+				
+				MiddleResult result = middle.loadAreaTreeData(login, areaIds, parentAreaId, areaTreeDataToCopy, this);
 				return result;
 			}
 		});
@@ -3499,26 +3507,26 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	}
 
 	/**
-	 * Paste area tree.
+	 * Paste area trees.
 	 * @param area
 	 */
-	public void pasteAreaTree(Area area) {
+	public boolean copyAreaTrees(Area area) {
 		
 		// Check data.
 		if (areaTreeDataToCopy == null) {
 			Utility.show(this, "org.multipage.generator.messageCopyAreaFirst");
-			return;
+			return false;
 		}
 		
 		// Check input area.
 		if (area == null) {
 			Utility.show(this, "org.multipage.generator.messageSelectSingleAreaToPaste");
-			return;
+			return false;
 		}
 		
 		if (!area.canImport()) {
 			Utility.show(this, "org.multipage.generator.messageCannotImportToArea", area.getDescriptionForced());
-			return;
+			return false;
 		}
 
 		Progress2Dialog<MiddleResult> progressDlg = null;
@@ -3540,20 +3548,37 @@ public class GeneratorMainFrame extends JFrame implements Update {
 				
 				// Import data.
 				MiddleResult result = areaTreeDataToCopy.saveToDatabase(middle, login, area, null, false, this);
-
 				return result;
 			}
 		});
 					
 		MiddleResult result = progressDlg.getOutput();
+		
 		// On error inform user.
 		if (result != null && result.isNotOK() && result != MiddleResult.CANCELLATION) {
 			result.show(this);
-			return;
+			return false;
 		}
 		
 		long areaId = area.getId();
 		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.importToArea, areaId);
+		return true;
+	}
+	
+	/**
+	 * Move area trees to target area.
+	 * @param areas
+	 * @param parentArea 
+	 * @param targetArea
+	 * @param parentComponent
+	 */
+	public void moveAreaTrees(List<Area> areas, Area parentArea, Area targetArea, Component parentComponent) {
+		
+		// Copy area trees and remove old ones.
+		boolean success = copyAreaTrees(targetArea);
+		if (success) {
+			GeneratorMainFrame.removeAreas(areas, parentArea, parentComponent);
+		}
 	}
 
 	/**
@@ -3574,13 +3599,15 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 * @param action 
 	 * @param parentComponent
 	 */
-	public static void transferArea(Area transferredArea, Area transferredParentArea,
+	public static void transferArea(List<Area> transferredAreas, Area transferredParentArea,
 			Area droppedArea, Area droppedParentArea, int action, Component parentComponent) {
 		
 		// If the transferred and dropped areas are same, inform user and exit.
-		if (droppedArea.equals(transferredArea)) {
-			Utility.show(parentComponent, "org.multipage.generator.messageCannotDropAreaToItself");
-			return;
+		for (Area transferredArea : transferredAreas) {
+			if (droppedArea.equals(transferredArea)) {
+				Utility.show(parentComponent, "org.multipage.generator.messageCannotDropAreaToItself");
+				return;
+			}
 		}
 
 		// Check action. 1 means link, 2 means move
@@ -3599,7 +3626,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		// Set parent area depending on the selected method.
 		Area parentArea = null;
-		Area subArea = transferredArea;
 		
 		switch (method) {
 		case SelectTransferMethodDialog.BEFORE:
@@ -3620,124 +3646,131 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			return;
 		}
 		
-		// When linked, check if a cycle exists in the new areas diagram.
-		if (action == 1) {
-			if (AreasDiagram.existsCircle(parentArea, subArea)) {
-			
-				Utility.show(parentComponent, "org.multipage.generator.messageCycleInAreaDiagramExists");
-				return;
-			}
-		}
-		else {
-
-			// If the transferred area contains the dropped area, inform user and exit.
-			if (AreasDiagram.containsSubarea(transferredArea, droppedArea)) {
+		Boolean confirmed = null;
+		
+		for (Area transferredArea : transferredAreas) {
+		
+			// When linked, check if a cycle exists in the new areas diagram.
+			if (action == 1) {
+				if (AreasDiagram.existsCircle(parentArea, transferredArea)) {
 				
-				Utility.show(parentComponent, "org.multipage.generator.messageAreaCannotMoveToItself");
-				return;
+					Utility.show(parentComponent, "org.multipage.generator.messageCycleInAreaDiagramExists");
+					return;
+				}
 			}
-		}
-		
-		boolean sameParent = parentArea.equals(transferredParentArea);
-		
-		Obj<Boolean> inheritance = new Obj<Boolean>(true);
-		Obj<String> relationNameSub = new Obj<String>();
-		Obj<String> relationNameSuper = new Obj<String>();
-		Obj<Boolean> hideSub = new Obj<Boolean>(true);
-		
-		if (!sameParent) {
-			
-			// Ask user for sub area edge definition.
-			boolean confirmed = AreasDiagram.askNewSubAreaEdge(parentArea, subArea, inheritance, relationNameSub, relationNameSuper,
-					hideSub, parentComponent);
-				
-			if (!confirmed) {
-				return;
-			}
-		}
-		
-		// Prepare prerequisites and update database.
-		Properties login = ProgramBasic.getLoginProperties();
-		Middle middle = ProgramBasic.getMiddle();
-		
-		MiddleResult result = middle.login(login);
-		if (result.isNotOK()) {
-			result.show(parentComponent);
-			return;
-		}
-		
-		boolean error = false;
-		
-		if (!sameParent) {
-			
-			// On move delete old edge.
-			if (action == 2 && transferredParentArea != null) {
-				
-				result = middle.removeIsSubareaEdge(transferredParentArea, transferredArea);
-				if (result.isNotOK()) {
-					error = true;
+			else {
+	
+				// If the transferred area contains the dropped area, inform user and exit.
+				if (AreasDiagram.containsSubarea(transferredArea, droppedArea)) {
+					
+					Utility.show(parentComponent, "org.multipage.generator.messageAreaCannotMoveToItself");
+					return;
 				}
 			}
 			
-			// Connect parent area with sub area.
-			if (!error) {
-				result = middle.connectSimplyAreas(parentArea, subArea, inheritance.ref,
-						relationNameSub.ref, relationNameSuper.ref, hideSub.ref);
-				
-				if (result.isNotOK()) {
-					error = true;
-				}
-			}
-		}
-		
-		// On BEFORE and AFTER update sub areas order.
-		if (!error && (method == SelectTransferMethodDialog.BEFORE || method == SelectTransferMethodDialog.AFTER)) {
+			boolean sameParent = parentArea.equals(transferredParentArea);
 			
-			// Place new area in sub areas and save priorities.
-			LinkedList<Area> subAreas = parentArea.getSubareas();
-			long droppedAreaId = droppedArea.getId();
-			long transferredAreaId = transferredArea.getId();
+			Obj<Boolean> inheritance = new Obj<Boolean>(true);
+			Obj<String> relationNameSub = new Obj<String>();
+			Obj<String> relationNameSuper = new Obj<String>();
+			Obj<Boolean> hideSub = new Obj<Boolean>(true);
 			
-			// Insert new sub area.			
-			LinkedList<Long> subAreasIds = new LinkedList<Long>();
-			for (Area area : subAreas) {
+			if (!sameParent) {
 				
-				long areaId = area.getId();
-				
-				// Skip if it is the transferred area.
-				if (areaId == transferredAreaId) {
-					continue;
-				}
-				
-				// Add the area before the dropped area.
-				if (areaId == droppedAreaId && method == SelectTransferMethodDialog.BEFORE) {
-					subAreasIds.add(transferredAreaId);
-				}
-				
-				subAreasIds.add(areaId);
-				
-				// Add the area after the dropped area.
-				if (areaId == droppedAreaId && method == SelectTransferMethodDialog.AFTER) {
-					subAreasIds.add(transferredAreaId);
+				// Ask user for sub area edge definition.
+				if (confirmed == null) {
+					confirmed = AreasDiagram.askNewSubAreaEdge(parentArea, transferredArea, inheritance, relationNameSub, relationNameSuper,
+							hideSub, parentComponent);
+					
+					if (!confirmed) {
+						return;
+					}
 				}
 			}
 			
-			// Update priorities.
-			result = middle.initAreaSubareasPriorities(parentArea.getId(), subAreasIds);
+			// Prepare prerequisites and update database.
+			Properties login = ProgramBasic.getLoginProperties();
+			Middle middle = ProgramBasic.getMiddle();
+			
+			MiddleResult result = middle.login(login);
 			if (result.isNotOK()) {
-				error = true;
+				result.show(parentComponent);
+				return;
 			}
-		}
-		
-		// Logout from the database.
-		MiddleResult logoutResult = middle.logout(result);
-		if (result.isOK()) {
-			result = logoutResult;
-		}
-		
-		// Display error message.
-		if (result.isNotOK()) {
-			result.show(parentComponent);
+			
+			boolean error = false;
+			
+			if (!sameParent) {
+				
+				// On move delete old edge.
+				if (action == 2 && transferredParentArea != null) {
+					
+					result = middle.removeIsSubareaEdge(transferredParentArea, transferredArea);
+					if (result.isNotOK()) {
+						error = true;
+					}
+				}
+				
+				// Connect parent area with sub area.
+				if (!error) {
+					result = middle.connectSimplyAreas(parentArea, transferredArea, inheritance.ref,
+							relationNameSub.ref, relationNameSuper.ref, hideSub.ref);
+					
+					if (result.isNotOK()) {
+						error = true;
+					}
+				}
+			}
+			
+			// On BEFORE and AFTER update sub areas order.
+			if (!error && (method == SelectTransferMethodDialog.BEFORE || method == SelectTransferMethodDialog.AFTER)) {
+				
+				// Place new area in sub areas and save priorities.
+				LinkedList<Area> subAreas = parentArea.getSubareas();
+				long droppedAreaId = droppedArea.getId();
+				long transferredAreaId = transferredArea.getId();
+				
+				// Insert new sub area.			
+				LinkedList<Long> subAreasIds = new LinkedList<Long>();
+				for (Area area : subAreas) {
+					
+					long areaId = area.getId();
+					
+					// Skip if it is the transferred area.
+					if (areaId == transferredAreaId) {
+						continue;
+					}
+					
+					// Add the area before the dropped area.
+					if (areaId == droppedAreaId && method == SelectTransferMethodDialog.BEFORE) {
+						subAreasIds.add(transferredAreaId);
+					}
+					
+					subAreasIds.add(areaId);
+					
+					// Add the area after the dropped area.
+					if (areaId == droppedAreaId && method == SelectTransferMethodDialog.AFTER) {
+						subAreasIds.add(transferredAreaId);
+					}
+				}
+				
+				// Update priorities.
+				result = middle.initAreaSubareasPriorities(parentArea.getId(), subAreasIds);
+				if (result.isNotOK()) {
+					error = true;
+				}
+			}
+			
+			// Logout from the database.
+			MiddleResult logoutResult = middle.logout(result);
+			if (result.isOK()) {
+				result = logoutResult;
+			}
+			
+			// Display error message.
+			if (result.isNotOK()) {
+				result.show(parentComponent);
+			}
 		}
 
 		// Update data.
@@ -3781,20 +3814,37 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	}
 	
 	/**
-	 * Removes area or a link to the area.
+	 * Removes areas or a links to the areas.
+	 * @param areas
+	 * @param parentArea
+	 * @param parentComponent
+	 */
+	public static void removeAreas(List<Area> areas, Area parentArea, Component parentComponent) {
+		
+		// Areas deletion dialog.
+		HashSet<Area> areaSet = new HashSet<Area>();
+		areaSet.addAll(areas);
+		
+		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areaSet,
+				parentArea);
+		dialog.setVisible(true);
+
+	}
+	
+	/**
+	 * Reomve area or a link to the area.
 	 * @param area
 	 * @param parentArea
 	 * @param parentComponent
 	 */
 	public static void removeArea(Area area, Area parentArea, Component parentComponent) {
+
+		// Delegate the call.
+		HashSet<Area> areaSet = new HashSet<Area>();
+		areaSet.add(area);
 		
-		// Areas deletion dialog.
-		HashSet<Area> areas = new HashSet<Area>();
-		areas.add(area);
-		
-		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areas,
+		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areaSet,
 				parentArea);
 		dialog.setVisible(true);
-
 	}
 }

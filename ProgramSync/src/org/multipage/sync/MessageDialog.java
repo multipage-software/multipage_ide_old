@@ -153,6 +153,9 @@ public class MessageDialog extends JDialog {
 		setControls();
 		
 		loadDialog();
+		
+		// Make the dialog top most window.
+		setAlwaysOnTop(true);
 	}
 	
 	/**
@@ -298,6 +301,7 @@ public class MessageDialog extends JDialog {
 		SimpleAttributeSet attributes = new SimpleAttributeSet();
 		
 		// Display message
+		labelDetail.setVisible(detailsDisplayed);
 		if (detailsDisplayed) {
 			
 			textPane.setText(messageDetails);

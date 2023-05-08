@@ -10,7 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Properties;
 
-import org.maclan.server.XdebugListener.ChannelBreakDownException;
+import org.maclan.server.XdebugListenerOld.ChannelBreakDownException;
 
 /**
  * Holds negatiated Xdebug features
@@ -27,7 +27,7 @@ public class XdebugFeatures {
 	/**
 	 * References to prerequisites
 	 */
-	private XdebugListener xdebugClient;
+	private XdebugListenerOld xdebugClient;
 	private SocketChannel socketChannel;
 
 	/**
@@ -42,7 +42,7 @@ public class XdebugFeatures {
 	 * @throws ChannelBreakDownException 
 	 * @throws Exception 
 	 */
-	public void initialLoad(XdebugListener xdebugClient, SocketChannel socketChannel) throws ChannelBreakDownException {
+	public void initialLoad(XdebugListenerOld xdebugClient, SocketChannel socketChannel) throws ChannelBreakDownException {
 		
 		// Set prerequisites
 		this.xdebugClient = xdebugClient;
@@ -52,7 +52,7 @@ public class XdebugFeatures {
 		features.clear();
 		
 		// Transact features
-		xdebugClient.beginTransaction(XdebugListener.BREAK_ON_FIRST_EXCEPTION);
+		xdebugClient.beginTransaction(XdebugListenerOld.BREAK_ON_FIRST_EXCEPTION);
 		
 		loadStringFeature("language_supports_threads");
 		loadStringFeature("language_name");
@@ -94,10 +94,10 @@ public class XdebugFeatures {
 		}
 		
 		// Post a command to Xdebug server using new transaction
-		xdebugClient.beginTransaction(XdebugListener.BREAK_ON_FIRST_EXCEPTION);
+		xdebugClient.beginTransaction(XdebugListenerOld.BREAK_ON_FIRST_EXCEPTION);
 		
 		String command = String.format("feature_set -n %s -v %s", feature, newValue);
-		XdebugPacket packet = xdebugClient.command(socketChannel, command);
+		XdebugPacketOld packet = xdebugClient.command(socketChannel, command);
 		String sValue = packet.getString("/response/@success");
 		
 		LinkedList<Exception> exceptions = xdebugClient.endTransaction();
@@ -129,7 +129,7 @@ public class XdebugFeatures {
 	private void loadStringFeature(String feature) throws ChannelBreakDownException {
 		
 		String command = String.format("feature_get -n %s", feature);
-		XdebugPacket packet = xdebugClient.command(socketChannel, command);
+		XdebugPacketOld packet = xdebugClient.command(socketChannel, command);
 		String sValue =  packet.getString("/response/text()");
 		features.put(feature, sValue != null ? sValue : "null");
 	}

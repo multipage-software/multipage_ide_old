@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * @author
  *
@@ -123,5 +125,20 @@ public class VersionData implements Element {
 	 */
 	public Long getNewId() {
 		return newId;
+	}
+	
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		VersionData other = (VersionData) obj;
+		return id == other.id;
 	}
 }

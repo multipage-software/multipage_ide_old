@@ -54,8 +54,8 @@ import org.maclan.StartResource;
 import org.maclan.VersionObj;
 import org.maclan.expression.ExpressionSolver;
 import org.maclan.expression.ProcedureParameter;
-import org.maclan.server.XdebugClient.Callback;
-import org.maclan.server.XdebugListener.XdebugStatement;
+import org.maclan.server.XdebugClientOld.Callback;
+import org.maclan.server.XdebugListenerOld.XdebugStatement;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -105,6 +105,40 @@ public class AreaServer {
 	public static final String rightHtmlBracketTag =  "@r;";
 	public static final String atTag = "@at;";
 	public static final String newLineTag = "@nl;";
+	
+	/**
+	 * Constants.
+	 */
+	
+	/**
+	 * Default evaluation of property value.
+	 */
+	private static final int DEFAULT = 0;
+	
+	/**
+	 * Results of metalanguage expressions can be "null".
+	 */
+	private static final int NULL = 1;
+	
+	/**
+	 * Metalanguage property can be a flag of boolean type without any present value.
+	 */
+	private static final int FLAG = 2;
+	
+	/**
+	 * Property must be specified int given tag.
+	 */
+	private static final int REQUIRED_PROPERTY = 4;
+	
+	/**
+	 * The value of property must be specified.
+	 */
+	private static final int REQUIRED_VALUE = 8;
+	
+	/**
+	 * Strict processing of tag property. The property must be present and the value cannot be null.
+	 */
+	private static final int STRICT = REQUIRED_PROPERTY | REQUIRED_VALUE;
 	
 	/**
 	 * Unzipped resources list file name. (The file is stored in servlet temporary
@@ -342,7 +376,7 @@ public class AreaServer {
 		clonedState.breakPointName = state.breakPointName;
 		clonedState.showLocalizedTextIds = state.showLocalizedTextIds;
 		clonedState.listener = state.listener;
-		clonedState.bookmarkReplace = state.bookmarkReplace;
+		clonedState.bookmarkReplacement = state.bookmarkReplacement;
 		clonedState.foundIncludeIdentifiers = state.foundIncludeIdentifiers;
 		clonedState.relatedAreaVersions = state.relatedAreaVersions;
 		clonedState.enablePhp = state.enablePhp;
@@ -392,6 +426,8 @@ public class AreaServer {
 		inputProcessor();
 		// Output processor
 		outputProcessor();
+		// Store processor.
+		storeProcessor();
 		// Image macro processor.
 		imageMacroProcessor();
 		// Variables processor.
@@ -688,7 +724,7 @@ public class AreaServer {
 				if (listBlock != null) {
 					
 					// Get discard parameter.
-					boolean discard = properties.containsKey("discard");
+					boolean discard = server.evaluateProperty(properties, "discard", Boolean.class, false, FLAG);
 					
 					listBlock.setBreaked(discard);
 				}
@@ -741,7 +777,7 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
-				
+
 				Long resourceId = server.getResourceFromProperties(properties).getId();
 				return resourceId.toString();
 			}
@@ -752,7 +788,7 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
-				
+
 				Long mimeId = server.getResourceFromProperties(properties).getMimeTypeId();
 				MimeType mime = server.getMimeType(mimeId);
 				return mime.extension;
@@ -810,14 +846,8 @@ public class AreaServer {
 			throws Exception {
 		
 		// Get resource alias.
-		String resourceAlias = properties.getProperty("res");
-		if (resourceAlias == null) {
-			AreaServer.throwError("server.messageMissingResourceIdAlias");
-		}
-		
-		// Evaluate resource alias.
-		resourceAlias = evaluateText(resourceAlias, String.class, false);
-		
+		String resourceAlias = evaluateProperty(properties, "res", String.class, null, DEFAULT);
+	
 		// Get area.
 		Area area = getAreaFromProperties(this, properties, null);
 		
@@ -829,7 +859,7 @@ public class AreaServer {
 		}
 		
 		// If there is an use parameter.
-		boolean render = evaluateFlag(properties, "render", true);
+		boolean render = evaluateProperty(properties, "render", Boolean.class, false, FLAG);
 		if (state.renderingResources != null && render) {
 			
 			setRenderingResourceExt(resource);
@@ -855,18 +885,18 @@ public class AreaServer {
 	 * Area properties array.
 	 */
 	private static final String [] areaPropertiesArray = {
-		"areaId", "areaAlias", "projectAlias", "area", "startArea", "homeArea", "requestedArea", "thisArea"};
+		"areaId", "areaAlias", "projectAlias", "area", "startArea", "homeArea", "requestedArea", "thisArea", "versionId", "versionId"};
 	
 	/**
 	 * Get area from properties.
 	 * @param server
 	 * @param properties
-	 * @param propertyStart - text that precedes property name
+	 * @param propertyPrefix - text that precedes property name
 	 * @param existsAreaSpecification 
 	 * @return
 	 */
 	protected static Area getAreaFromProperties(AreaServer server,
-			Properties properties, String propertyStart, Obj<Boolean> existsAreaSpecification)
+			Properties properties, String propertyPrefix, Obj<Boolean> existsAreaSpecification)
 					throws Exception {
 		
 		// Reset flag.
@@ -874,87 +904,67 @@ public class AreaServer {
 			existsAreaSpecification.ref = true;
 		}
 		
-		Long areaId = null;
+		Long versionId = null;
 		MiddleResult result;
 		
 		// Get area ID.
-		String areaIdText = properties.getProperty(propertyStart + "areaId");
-		if (areaIdText != null) {
-			
-			// Evaluate area ID.
-			areaId = server.evaluateText(areaIdText, Long.class, true);
-		}
-		
+		Long areaId = server.evaluateProperty(properties, propertyPrefix + "areaId", Long.class, null, NULL);		
 		if (areaId == null) {
-			String aliasText = properties.getProperty(propertyStart + "areaAlias");
-			if (aliasText != null) {
+
+			// Evaluate alias text.
+			String alias = server.evaluateProperty(properties, propertyPrefix + "areaAlias", String.class, null, NULL);
+			if (alias != null) {
 				
-				// Evaluate alias text.
-				String alias = server.evaluateText(aliasText, String.class, true);
-				if (alias != null) {
-					
-					// Get project alias and evaluate it.
-					String projectAlias = properties.getProperty(propertyStart + "projectAlias");
-					if (projectAlias != null) {
-						projectAlias = server.evaluateText(projectAlias, String.class, true);
-					}
-					
-					// Try to get area.
-					Obj<Area> outputArea = new Obj<Area>();
-					result = server.state.middle.loadProjectAreaWithAlias(projectAlias, alias, outputArea);
-					if (result.isNotOK()) {
-						AreaServer.throwError("server.messageAreaAliasNotFound", alias);
-					}
-					return outputArea.ref;
+				// Get project alias and evaluate it.
+				String projectAlias = server.evaluateProperty(properties, propertyPrefix + "projectAlias", String.class, null, NULL);
+				 
+				// Try to get area.
+				Obj<Area> outputArea = new Obj<Area>();
+				result = server.state.middle.loadProjectAreaWithAlias(projectAlias, alias, outputArea);
+				if (result.isNotOK()) {
+					AreaServer.throwError("server.messageAreaAliasNotFound", alias);
 				}
+				return outputArea.ref;
 			}
 		}
 		
 		if (areaId == null) {
 			
-			// Get area expression.
-			String areaText = properties.getProperty(propertyStart + "area");
-			if (areaText != null) {
-				
-				// Evaluate expression.
-				Area outputArea = server.evaluateText(areaText, Area.class, false);
-				if (outputArea != null) {
-					areaId = outputArea.getId();
-				}
-				else {
-					// Throw exception.
-					AreaServer.throwError("server.messageAreaParameterIsNull");
-				}
+			// Get area ID.
+			Area outputArea = server.evaluateProperty(properties, propertyPrefix + "area", Area.class, null, NULL);
+			if (outputArea != null) {
+				areaId = outputArea.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "startArea")) {
+			boolean startArea = server.evaluateProperty(properties, propertyPrefix + "startArea", Boolean.class, false, FLAG);
+			if (startArea) {
 				areaId = server.state.startArea.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "homeArea")) {
+			boolean homeArea = server.evaluateProperty(properties, propertyPrefix + "homeArea", Boolean.class, false, FLAG);
+			if (homeArea) {
 				Obj<Area> area = new Obj<Area>();
 				server.loadHomeAreaData(area);
 				areaId = area.ref.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "requestedArea")) {
+			boolean requestedArea = server.evaluateProperty(properties, propertyPrefix + "requestedArea", Boolean.class, false, FLAG);
+			if (requestedArea) {
 				areaId = server.state.requestedArea.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "thisArea")) {
+			boolean thisArea = server.evaluateProperty(properties, propertyPrefix + "thisArea", Boolean.class, false, FLAG);
+			if (thisArea) {
 				areaId = server.state.area.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "areaSlot")) {
-				
-				// Retrieve slot value.
-				String slotName = properties.getProperty("areaSlot");
-				slotName = server.evaluateText(slotName, String.class, false);
+			String slotName = server.evaluateProperty(properties, propertyPrefix + "areaSlot", String.class, null, NULL);
+			if (slotName != null) {
 				
 				// Load slot value.
 				Object value = server.slotValue(slotName, false, false, 0L);
@@ -964,6 +974,7 @@ public class AreaServer {
 					areaId = area.getId();
 				}
 				else {
+					// Throw exception.
 					throwError("server.messageAreaSlotBadValue", slotName);
 				}
 			}
@@ -977,9 +988,22 @@ public class AreaServer {
 			return server.state.area;
 		}
 		
-		// Load area.
+		// Try to get version ID from version alias.
+		String versionAlias = server.evaluateProperty(properties, propertyPrefix + "versionAlias", String.class, null, DEFAULT);
+		if (versionAlias == null) {
+			
+			VersionObj version = server.getVersion(versionAlias);
+			versionId = version.getId();
+		}
+		
+		// Get version ID.
+		if (versionId == null) {
+			versionId = server.evaluateProperty(properties, propertyPrefix + "versionId", Long.class, null, DEFAULT);
+		}
+			
+		// Load area of given version.
 		Obj<Area> area = new Obj<Area>();
-		result = server.state.middle.loadArea(areaId, area);
+		result = server.state.middle.loadArea(areaId, versionId, area);
 		if (result.isNotOK()) {
 			AreaServer.throwError("server.messageAreaWithIdNotFound", areaId);
 		}
@@ -988,7 +1012,7 @@ public class AreaServer {
 	}
 	
 	/**
-	 * Get slot from propeties.
+	 * Get slot from properties.
 	 * @param server
 	 * @param properties
 	 * @return
@@ -1077,41 +1101,41 @@ public class AreaServer {
 				Area slotArea = getAreaFromProperties(server, properties, existsAreaSpecification);
 
 				// Get slot name.
-				String slotAlias = properties.getProperty("use");
-				if (slotAlias == null) {
-					slotAlias = properties.getProperty("slot");
-				}
-
-				if (slotAlias == null && !existsAreaSpecification.ref) {
+				String slotAlias = null;
+				boolean slotExists = properties.containsKey("slot");
+				if (!slotExists && !existsAreaSpecification.ref) {
 					try {
-						// Get first property name.
+						// Get the first property. It determines the name of required slot.
 						slotAlias = (String) properties.keys().nextElement();
 					}
 					catch (NoSuchElementException e) {
+						// Missing slot name specification.
+						Utility.throwException("org.maclan.server.messageMissingSlota");
 					}
 				}
-				else {
-										
+				else {				
 					// Evaluate slot alias.
-					slotAlias = server.evaluateText(slotAlias, String.class, false);
+					slotAlias = server.evaluateExpression(slotAlias, String.class, null, NULL);
 				}
 
 				// Get slot value.
 				if (slotAlias != null && !slotAlias.isEmpty()) {
 
-					// Get local modifier.
-					boolean local = server.evaluateFlag(properties, "local", true);
+					// Get "local" modifier.
+					boolean local = server.evaluateProperty(properties, "local", Boolean.class, false, FLAG);
 					// Get "skip_default" modifier.
-					boolean skipDefault = server.evaluateFlag(properties, "skipDefault", true);
-					// Parent flag.
-					boolean parent = server.evaluateFlag(properties, "parent", true);
+					boolean skipDefault = server.evaluateProperty(properties, "skipDefault", Boolean.class, false, FLAG);
+					// Get "parent" modifier.
+					boolean parent = server.evaluateProperty(properties, "parent", Boolean.class, false, FLAG);
 					// Get "enableSpecialValue" modifier.
-					boolean enableSpecialValue = server.evaluateFlag(properties, "enableSpecialValue", true);
+					boolean enableSpecialValue = server.evaluateProperty(properties, "enableSpecialValue", Boolean.class, false, FLAG);
 					
+					// Set "this" area.
 					if (slotArea == null) {
 						slotArea = server.state.area;
 					}
 
+					// Load slot from database.
 					Obj<Slot> slot = new Obj<Slot>();
 					
 					MiddleResult result = server.state.middle.loadSlot(slotArea, slotAlias,
@@ -1120,18 +1144,18 @@ public class AreaServer {
 						throwError("server.messageDatabaseError", result.getMessage());
 					}
 
-					// If slot not found.
+					// If slot is not found, throw exception.
 					if (slot.ref == null) {
 						throwError("server.messageSlotNotFoundOrNotInheritable", slotAlias);
 					}
 					
-					// Create possible ID text.
+					// Create text representation of slot ID. It starts with an "S" letter (which means slot).
 					String textId = server.state.showLocalizedTextIds && slot.ref.isLocalized() ? getIdHtml("S", slot.ref.getId()) : "";
 					
-					// In the next lines of code get a provider text value.
+					// Initialize text value.
 					String slotTextValue = null;
 					
-					// Try to use special value.
+					// Try to set special value.
 					if (enableSpecialValue) {
 						String specialValue = slot.ref.getSpecialValueNull();
 						
@@ -1140,22 +1164,22 @@ public class AreaServer {
 						}
 					}
 					if (slotTextValue == null) {
-						// Get slot text value.
+						// Get the text value.
 						slotTextValue = slot.ref.getTextValue();
 					}
 
-					// Return text value.
+					// Returned text value.
 					String returnedText = null;
 					if (local) {
 						
-						// Process the text with an area server clone.
+						// Process the text with cloned area server.
 						returnedText =  textId + server.processTextCloned((Area) slot.ref.getHolder(), slotTextValue);
 					}
 					else {
 						returnedText =  textId + slotTextValue;
 					}
 					
-					// Add meta information about tags source (which is current slot).
+					// Add meta information about tag source (which is currently a slot mentioned in TAG).
 					TagsSource source = TagsSource.newSlot(slot.ref.getId());
 					returnedText = server.addMetaInformation(returnedText, source, server.state);
 					
@@ -1177,23 +1201,16 @@ public class AreaServer {
 		complexSingleTagProcessors.put("INPUT", new ComplexSingleTagProcessor() {
 			
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, Properties properties)
+					throws Exception {
 				
 				// Get slot properties.
 				Slot slot = getSlotFromProperties(server, properties);
 				
-				// Try to get value
-				final String valueKeyName = "value";
-				if (properties.containsKey(valueKeyName)) {
-					
-					// Get expression.
-					String expression = properties.getProperty(valueKeyName);
-					
-					// Try to load value from the external provider
-					Object value = server.evaluateText(expression, null, true);
-					if (value != null) {
-						slot.setValue(value);
-					}
+				// Try to load value from the external provider
+				Object value = server.evaluateProperty(properties, "value", Object.class, null, NULL);
+				if (value != null) {
+					slot.setValue(value);
 				}
 
 				// Input slot.
@@ -1213,7 +1230,8 @@ public class AreaServer {
 		fullTagProcessors.put("OUTPUT", new FullTagProcessor() {
 
 			@Override
-			public String processText(AreaServer server, String innerText, Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, Properties properties)
+					throws Exception {
 				
 				// Load slot from properties.
 				Slot slot = getSlotFromProperties(server, properties);
@@ -1261,6 +1279,127 @@ public class AreaServer {
 	}
 	
 	/**
+	 * STORE processor.
+	 */
+	static int i = 1;
+	private static void storeProcessor() {
+		
+		complexSingleTagProcessors.put("STORE", new ComplexSingleTagProcessor() {
+			
+			@Override
+			public String processTag(AreaServer server, Properties properties)
+					throws Exception {
+				
+				// TODO: <---FINISH Get area from properties.
+				/*Obj<Boolean> existsAreaSpecification = new Obj<Boolean>(false);
+				Area area = getAreaFromProperties(server, properties, existsAreaSpecification);
+				
+				if (existsAreaSpecification.ref) {
+					
+					// Try to get "areaAlias" property.
+					String areaAlias = server.evaluateProperty(properties, "newAlias", String.class, "", NULL);
+					area.setAlias(areaAlias);
+					
+					// Update area alias.
+					server.areaStore(area);
+					
+					return "";
+				}*/
+				
+				// Get slot from properties.
+				Slot slot = getSlotFromProperties(server, properties);
+				
+				// Try to get slot type.
+				String typeText = server.evaluateProperty(properties, "type", String.class, null, NULL);
+				SlotType type =  SlotType.parseType(typeText);
+				slot.setValueMeaning(type);
+				
+				// Try to get slot value.
+				Object value = null;
+				
+				String valueText = server.evaluateProperty(properties, "value", String.class, null, NULL);
+				if (valueText != null) {
+					
+					Obj<Exception> exception = new Obj<Exception>();
+					value = type.parseValue(valueText,
+							// Load enumeration.
+							() -> {
+								try {
+									EnumerationObj enumeration = server.getEnumeration(typeText);
+									return enumeration;
+								}
+								catch (Exception e) {
+									exception.ref = e;
+									return null;
+								}
+							},
+							// Load area reference.
+							() -> {
+								try {
+									Area areaRef = server.getArea(typeText);
+									return areaRef;
+								}
+								catch (Exception e) {
+									exception.ref = e;
+									return null;
+								}
+							});
+					
+					slot.setValue(value);
+				}
+				else {
+					value = slot.getValue();
+				}
+					
+				// Try to get text value target language and set the "localized" flag.
+				String language = server.evaluateProperty(properties, "lang", String.class, null, NULL);
+				boolean isLocalized = SlotType.LOCALIZED_TEXT.equals(type) || (value instanceof String) && (language != null);
+				slot.setLocalized(isLocalized);
+				
+				// Try to get value meaning.
+				String valueMeaning = server.evaluateProperty(properties, "valueMeaning", String.class, null, NULL);
+				slot.setValueMeaning(valueMeaning);
+				
+				// Try to get special value.
+				String specialValue = server.evaluateProperty(properties, "specialValue", String.class, null, NULL);
+				slot.setSpecialValue(specialValue);
+				
+				// Try to get slot access.
+				Character access = null;
+				String accessText = server.evaluateProperty(properties, "access", String.class, null, NULL);
+				if (accessText != null && !accessText.isEmpty()) {
+					access = accessText.charAt(0);
+				}
+				slot.setAccess(access);
+				
+				// Try to get external provider connection string.
+				String externalProvider = server.evaluateProperty(properties, "external", String.class, null, NULL);
+				slot.setExternalProvider(externalProvider);
+				
+				// Try to get other flags.
+				Boolean isDefault = server.evaluateProperty(properties, "isDefault", Boolean.class, true, NULL | FLAG);
+				slot.setDefault(isDefault);
+				Boolean readsInput = server.evaluateProperty(properties, "readsExternal", Boolean.class, true, NULL | FLAG);
+				slot.setReadsInput(readsInput);
+				Boolean writesOutput = server.evaluateProperty(properties, "writesExternal", Boolean.class, true, NULL | FLAG);
+				slot.setWritesOutput(writesOutput);
+				
+				// TODO: <---MAKE Implement following STORE tag properties.
+				/*
+				Boolean lockInput = server.evaluateProperty(properties, "lockInput", Boolean.class, true, NULL | FLAG);
+				Boolean expose = server.evaluateProperty(properties, "expose", Boolean.class, true, NULL | FLAG);
+				Boolean revision = server.evaluateProperty(properties, "revision", Boolean.class, true, NULL | FLAG);
+				*/
+				
+				// Store new slot value and settings.
+				server.slotStore(slot);
+				
+				return "";
+			}
+		});
+	}
+
+	/**
 	 * Get localized text ID html text.
 	 * @param startText 
 	 * @param id
@@ -1283,18 +1422,14 @@ public class AreaServer {
 				
 				server.state.analysis.image_calls++;
 				
-				// Get extra properties.
-				String customPropertiesText = getExtraProperties(properties,
-						areaPropertiesArray, "res");
+				// Get extra properties that are not processed but simply inserted into the result.
+				String customPropertiesText = getExtraProperties(properties, areaPropertiesArray, "res");
 				
-				// Get resource property.
-				String resourceName = properties.getProperty("res");
+				// Get resource name.
+				String resourceName = server.evaluateProperty(properties, "res", String.class, null, NULL);
 				if (resourceName == null) {
 					throwError("server.messageMissingResourceProperty");
 				}
-				
-				// Evaluate resource name.
-				resourceName = server.evaluateText(resourceName, String.class, false);
 				
 				// Get area from properties.
 				Area area = getAreaFromProperties(server, properties, null);
@@ -1383,14 +1518,10 @@ public class AreaServer {
 				server.state.analysis.var_calls++;
 				
 				// Get global variable flag.
-				boolean isGlobalVariable = properties.containsKey("$global");
+				boolean isGlobalVariable = server.evaluateProperty(properties, "$global", Boolean.class, false, FLAG);
 				
-				long superBlock = 0L;
-				String superBlockText = (String) properties.get("$super");
-				
-				if (superBlockText != null) {
-					superBlock = server.evaluateText(superBlockText, Long.class, false);
-				}
+				// Get the number of super block in which the variable will be created.
+				long superBlockNumber = server.evaluateProperty(properties, "$super", Long.class, 0L, DEFAULT);
 				
 				// Do loop for all properties.
 				for (Object key : properties.keySet()) {
@@ -1423,11 +1554,11 @@ public class AreaServer {
 									server.state.blocks.createGlobalVariable(name, resultObject);
 								}
 								else {
-									if (superBlock == 0) {
+									if (superBlockNumber == 0) {
 										server.state.blocks.createVariable(name, resultObject);
 									}
 									else {
-										server.state.blocks.createVariable(name, resultObject, superBlock);
+										server.state.blocks.createVariable(name, resultObject, superBlockNumber);
 									}
 								}
 							}
@@ -1556,9 +1687,6 @@ public class AreaServer {
 				
 				server.state.analysis.anchor_calls++;
 				
-				// Process properties texts.
-				server.processPropertiesTexts(properties);
-
 				// Get URL string.
 				String href = properties.getProperty("href");
 				
@@ -1571,8 +1699,7 @@ public class AreaServer {
 						"href",
 						"res",
 						"file",
-						"download",
-						"versionAlias");
+						"download");
 
 				// If the href exists, use it.
 				if (href != null) {
@@ -1581,24 +1708,10 @@ public class AreaServer {
 
 				long currentLangId = server.state.middle.getCurrentLanguageId();
 				
-				// Get version ID.
-				Long versionId = null;
-				
-				String versionAlias = properties.getProperty("versionAlias");
-				if (versionAlias != null) {
-					
-					versionAlias = server.evaluateText(versionAlias, String.class, false);
-							
-					VersionObj version = server.getVersion(versionAlias);
-					versionId = version.getId();
-				}
-				
-				if (versionId == null) {
-					versionId = server.state.currentVersionId;
-				}
-				
 				Obj<Boolean> existsAreaSpecification = new Obj<Boolean>();
 				Area area = getAreaFromProperties(server, properties, existsAreaSpecification);
+				
+				long versionId = area.getVersionId();
 				long areaId = area.getId();
 				
 				if (existsAreaSpecification.ref) {
@@ -1672,12 +1785,24 @@ public class AreaServer {
 	 */
 	protected VersionObj getVersion(String versionAlias) throws Exception {
 		
+		MiddleResult result = MiddleResult.UNKNOWN_ERROR;
+		
 		Obj<VersionObj> version = new Obj<VersionObj>();
+		boolean isEmptyVersion = versionAlias == null || versionAlias.isEmpty();
 		
 		// Load version object from cache or database table.
-		MiddleResult result = state.middle.loadVersion(versionAlias, version);
-		if (result.isNotOK()) {
-			throwError("server.messageCannotGetVersionWithGivenAlias", versionAlias, result.getMessage());
+		if (!isEmptyVersion) {
+			
+			result = state.middle.loadVersion(versionAlias, version);
+			if (result.isNotOK()) {
+				throwError("server.messageCannotGetVersionWithGivenAlias", versionAlias, result.getMessage());
+			}
+		}
+		else {	
+			result = state.middle.loadVersion(0L, version);
+			if (result.isNotOK()) {
+				throwError("server.messageCannotGetVersionWithGivenAlias", versionAlias, result.getMessage());
+			}
 		}
 		
 		return version.ref;
@@ -1728,52 +1853,33 @@ public class AreaServer {
 			public String processTag(AreaServer server,
 					Properties properties) throws Exception {
 				
-				// Process properties texts.
-				server.processPropertiesTexts(properties);
-				
 				// Get area ID.
 				Area area = getAreaFromProperties(server, properties, null);
 				long areaId = area.getId();
 				
 				// Get resource ID.
-				String resourceName = properties.getProperty("res");
+				String resourceName = server.evaluateProperty(properties, "res", String.class, null, REQUIRED_VALUE);
 				if (resourceName != null) {
 					
-					// Evaluate resource name.
-					resourceName = server.evaluateText(resourceName, String.class, false);
-					
 					// Get file name.
-					String fileName = properties.getProperty("file");
-					
-					// Evaluate file name.
-					if (fileName != null) {
-						fileName = server.evaluateText(fileName, String.class, false);
-					}
+					String fileName = server.evaluateProperty(properties, "file", String.class, null, REQUIRED_VALUE);
 					
 					// Get "download" flag.
-					boolean isDownload = properties.containsKey("download");
+					boolean isDownload = server.evaluateProperty(properties, "download", Boolean.class, false, FLAG);
 
 					// Return resource URL.
 					return server.getResourceUrl(areaId, resourceName, fileName, isDownload);
 				}
 				
 				// Get language ID and evaluate it.
-				Long languageId = null;
-				
-				String languageIdText = properties.getProperty("langId");
-				if (languageIdText != null) {
-					languageId = server.evaluateText(languageIdText, Long.class, true);
-				}
-				
-				// Try to get ID from a language alias.
+				Long languageId = server.evaluateProperty(properties, "langId", Long.class, null, NULL);
 				if (languageId == null) {
 					
-					String languageAlias = properties.getProperty("langAlias");
+					// Try to get ID from a language alias.
+					String languageAlias = server.evaluateProperty(properties, "langAlias", String.class, null, NULL);
 					if (languageAlias != null) {
 						
-						languageAlias = server.evaluateText(languageAlias, String.class, false);
 						Language language = server.getLanguage(languageAlias);
-						
 						languageId = language.id;
 					}
 				}
@@ -1783,22 +1889,10 @@ public class AreaServer {
 				}
 				
 				// Get version ID.
-				Long versionId = null;
-				String versionAlias = properties.getProperty("versionAlias");
-				if (versionAlias != null) {
-					
-					versionAlias = server.evaluateText(versionAlias, String.class, false);
-					
-					VersionObj version = server.getVersion(versionAlias);
-					versionId = version.getId();
-				}
-				
-				if (versionId == null) {
-					versionId = server.state.currentVersionId;
-				}
+				Long versionId = area.getVersionId();
 				
 				// Get other properties.
-				Properties otherProperties = excludeProperties(properties, areaPropertiesArray, "res", "file", "download", "langId", "langAlias", "versionAlias", "localhost");
+				Properties otherProperties = excludeProperties(properties, areaPropertiesArray, "res", "file", "download", "langId", "langAlias", "localhost");
 				
 				// Get area URL.
 				String areaUrl = server.getAreaUrl(areaId, languageId, versionId,
@@ -2279,26 +2373,11 @@ public class AreaServer {
 				
 				if (server.isRendering() && server.state.response != null) {
 					
-					// Process properties texts.
-					server.processPropertiesTexts(properties);
-					
 					// Try to get "name" property.
-					String name = properties.getProperty("name");
-					if (name == null) {
-
-						AreaServer.throwError("server.messageMissingRenderClassName");
-					}
-					
-					// Evaluate name property.
-					name = server.evaluateText(name, String.class, false);
+					String name = server.evaluateProperty(properties, "name", String.class, "", REQUIRED_PROPERTY);
 					
 					// Try to get "text" property.
-					String text = properties.getProperty("text");
-					
-					// Evaluate text property.
-					if (text != null) {
-						text = server.evaluateText(text, String.class, false);
-					}
+					String text = server.evaluateProperty(properties, "text", String.class, "", REQUIRED_PROPERTY);
 					
 					server.state.response.setRenderClass(name, text);
 				}
@@ -2317,22 +2396,6 @@ public class AreaServer {
 			public String processText(AreaServer server, String innerText,
 					Properties properties) throws Exception {
 				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
-				
-				// Get version alias.
-				String alias = properties.getProperty("versionAlias");
-				
-				if (alias == null) {
-					AreaServer.throwError("server.messageMissingAliasInVersion");
-				}
-				
-				// Evaluate alias.
-				alias = server.evaluateText(alias, String.class, false);
-				
-				// Get version.
-				VersionObj version = server.getVersion(alias);
-				
 				// Get version URL.
 				Obj<Boolean> existsAreaSpecification = new Obj<Boolean>();
 				Area area = getAreaFromProperties(server, properties, existsAreaSpecification);
@@ -2340,11 +2403,14 @@ public class AreaServer {
 					area = server.state.area;
 				}
 				
+				// Get version ID.
+				long versionId = area.getVersionId();
+				
 				// Get area URL.
-				String areaUrl = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, version.getId(), null, null);
+				String areaUrl = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, versionId, null, null);
 
 				// Get extra properties.
-				String extraProperties = getExtraProperties(properties, "versionAlias", "href");
+				String extraProperties = getExtraProperties(properties, areaPropertiesArray, "href");
 
 				// Create anchor.
 				String anchor = String.format("<a href=\"%s\"%s>%s</a>", areaUrl, extraProperties, innerText);
@@ -2401,22 +2467,6 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
-				
-				// Get version alias.
-				String alias = properties.getProperty("versionAlias");
-				
-				if (alias == null) {
-					AreaServer.throwError("server.messageMissingAliasInVersion");
-				}
-				
-				// Evaluate alias.
-				alias = server.evaluateText(alias, String.class, false);
-				
-				// Get version.
-				VersionObj version = server.getVersion(alias);
-				
 				// Get version URL.
 				Obj<Boolean> existsAreaSpecification = new Obj<Boolean>();
 				Area area = getAreaFromProperties(server, properties, existsAreaSpecification);
@@ -2424,11 +2474,14 @@ public class AreaServer {
 					area = server.state.area;
 				}
 				
+				// Get version ID.
+				long versionId = area.getVersionId();
+				
 				// Other properties.
-				Properties otherProperties = excludeProperties(properties, null, "versionAlias");
+				Properties otherProperties = excludeProperties(properties, null, areaPropertiesArray);
 				
 				// Get area URL.
-				String areaUrl = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, version.getId(), null, otherProperties);
+				String areaUrl = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, versionId, null, otherProperties);
 				return areaUrl;
 			}
 		});
@@ -2444,29 +2497,25 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
-				
-				// Get version alias.
-				String alias = properties.getProperty("versionAlias");
-				
-				// Get version.
+				// Initialize version object.
 				VersionObj version = null;
 				
-				if (alias == null) {
-					version = server.getVersion(server.state.currentVersionId);
+				// Get version from ID.
+				Long versionId = server.evaluateProperty(properties, "versionId", Long.class, null, DEFAULT);
+				if (versionId != null) {
+					version = server.getVersion(versionId);
 				}
-				else {
-					// Evaluate alias.
-					alias = server.evaluateText(alias, String.class, false);
-					// Get version.
+				
+				// Get version alias.
+				if (version != null) {
+					String alias = server.evaluateProperty(properties, "versionAlias", String.class, null, DEFAULT);
 					version = server.getVersion(alias);
 				}
 				
 				String text = version.getDescription();
 
 				// Get version name.
-				return (server.state.showLocalizedTextIds ? getIdHtml("V", version.getId()) + text : text);
+				return (server.state.showLocalizedTextIds ? getIdHtml("V", versionId) + text : text);
 			}
 		});
 	}
@@ -2481,22 +2530,18 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
-				
-				// Get version alias.
-				String alias = properties.getProperty("versionAlias");
-				
-				// Get version.
+				// Initialize version object.
 				VersionObj version = null;
 				
-				if (alias == null) {
-					version = server.getVersion(server.state.currentVersionId);
+				// Get version from ID.
+				Long versionId = server.evaluateProperty(properties, "versionId", Long.class, null, DEFAULT);
+				if (versionId != null) {
+					version = server.getVersion(versionId);
 				}
-				else {
-					// Evaluate alias.
-					alias = server.evaluateText(alias, String.class, false);
-					// Get version.
+				
+				// Get version alias.
+				if (version != null) {
+					String alias = server.evaluateProperty(properties, "versionAlias", String.class, null, DEFAULT);
 					version = server.getVersion(alias);
 				}
 				
@@ -2504,7 +2549,7 @@ public class AreaServer {
 				String text = String.valueOf(id);
 
 				// Get version name.
-				return (server.state.showLocalizedTextIds ? getIdHtml("V", version.getId()) + text : text);
+				return (server.state.showLocalizedTextIds ? getIdHtml("V", versionId) + text : text);
 			}
 		});
 	}
@@ -2561,7 +2606,7 @@ public class AreaServer {
 								useDefaultValue = (defaultConstant.equals(msPropertyText));
 								if (!useDefaultValue) {
 									
-									String defaultText = server.evaluateText(msPropertyText, String.class, true);
+									String defaultText = server.evaluateExpression(msPropertyText, String.class, null, NULL);
 									if (defaultConstant.equals(defaultText)) {
 										
 										useDefaultValue = true;
@@ -2577,7 +2622,7 @@ public class AreaServer {
 							else {
 								try {
 									// Try to get 
-									timeoutMilliseconds = server.evaluateText(msPropertyText, Long.class, true);
+									timeoutMilliseconds = server.evaluateExpression(msPropertyText, Long.class, null, NULL);
 									if (timeoutMilliseconds == null) {
 										timeoutMilliseconds = AreaServerState.defaultTimeoutValue;
 									}
@@ -2612,19 +2657,12 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
 				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
-				
-				// Get name property.
-				String name = properties.getProperty("name");
-				if (name != null) {
-					
-					// Evaluate name property.
-					name = server.evaluateText(name, String.class, false);
-				}
-				else {
+				// Get the "name" property.
+				String name = server.evaluateProperty(properties, "name", String.class, null, NULL);
+				if (name == null) {
+
 					// Get first property name.
-					Enumeration keys = properties.keys();
+					Enumeration<Object> keys = properties.keys();
 					
 					if (!keys.hasMoreElements()) {
 						throwError("server.messageMissingBookMarkName");
@@ -2633,15 +2671,16 @@ public class AreaServer {
 					name = (String) keys.nextElement();
 				}
 				
-				// If a bookmark value exists, return it.
-				String bookmarkValue = server.state.bookmarkReplace.get(name);
+				// If bookmark value exists, return it.
+				String bookmarkValue = server.state.bookmarkReplacement.get(name);
 				if (bookmarkValue != null) {
 					return bookmarkValue;
 				}
 				
-				//  Otherwise put bookmark and return book mark in text.
-				server.state.bookmarkReplace.put(name, "");
-
+				//  Otherwise put bookmark into a map.
+				server.state.bookmarkReplacement.put(name, "");
+				
+				// Returns a book mark tag which is processed in the next iteration of the Area Server preprocessor.
 				return String.format("[@@BOOKMARK %s]", name);
 			}
 		});
@@ -2656,9 +2695,6 @@ public class AreaServer {
 			@Override
 			public String processText(AreaServer server, String innerText,
 					Properties properties) throws Exception {
-				
-				// Process properties text.
-				server.processPropertiesTexts(properties);
 				
 				// Get name property.
 				String name = properties.getProperty("name");
@@ -2682,7 +2718,7 @@ public class AreaServer {
 				String text = server.processTextCloned(innerText);
 			
                 // Add bookmark replace text.
-				server.state.bookmarkReplace.put(name, text);
+				server.state.bookmarkReplacement.put(name, text);
 				
 				return "";
 			}
@@ -2707,8 +2743,6 @@ public class AreaServer {
 				// Get identifier.
 				String identifier;
 				if (properties.containsKey("name")) {
-					
-					server.processPropertiesTexts(properties);
 					identifier = properties.getProperty("name");
 				}
 				else {
@@ -2752,30 +2786,23 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties)
 					throws Exception {
-
-				// Process properties texts.
-				server.processPropertiesTexts(properties);
 				
 				// Get php property and evaluate it.
-				String php = properties.getProperty("php");
+				Boolean php = server.evaluateProperty(properties, "php", Boolean.class, null, FLAG | NULL);
 				if (php != null) {
-					
-					server.state.enablePhp.ref = server.evaluateText(php, Boolean.class, false);
+					server.state.enablePhp.ref = php;
 				}
 				
 				// Set tabulator.
-				String tabulator = properties.getProperty("tabulator");
+				String tabulator = server.evaluateProperty(properties, "tabulator", String.class, null, NULL);
 				if (tabulator != null) {
-					
-					server.state.tabulator.ref = server.evaluateText(tabulator, String.class, true);
+					server.state.tabulator.ref = tabulator;
 				}
 				
 				// Set web interface directory
-				String webInterface = properties.getProperty("webInterface");
+				String webInterface = server.evaluateProperty(properties, "webInterface", String.class, null, NULL);
 				if (webInterface != null) {
-					
-					webInterface= server.evaluateText(webInterface, String.class, true);
-					
+
 					// Set and check web interface directory path
 					Path path = Paths.get(webInterface);
 					if (!path.isAbsolute()) {
@@ -2789,22 +2816,15 @@ public class AreaServer {
 					server.state.webInterfaceDirectory.ref = path.toString();
 				}
 				
-				// Turn off including <meta ... charset=...> into <head> section of the page.
-				String metaCharset = properties.getProperty("metaCharset");
+				// Include "<meta ... charset=...>" in the "<head>" section of the page.
+				Boolean metaCharset = server.evaluateProperty(properties, "metaCharset", Boolean.class, false, FLAG);
 				if (metaCharset != null) {
-					
-					boolean flag = server.evaluateText(metaCharset, Boolean.class, false);
-					if (flag) {
-						throwError("server.messageMetaCharsetCouldNotBeNull");
-					}
-					server.state.useMetaCharset = flag;
+					server.state.useMetaCharset = metaCharset;
 				}
 				
-				
-				// Get "meta info" property.
-				String metaInfo = properties.getProperty("metaInfo");
+				// Get "meta info" value.
+				String metaInfo = server.evaluateProperty(properties, "metaInfo", String.class, null, NULL);
 				if (metaInfo != null) {
-					metaInfo = server.evaluateText(metaInfo, String.class, false);
 					
 					// Change current Area Server state.
 					if ("false".equals(metaInfo)) {
@@ -2835,7 +2855,10 @@ public class AreaServer {
 					Properties properties) throws Exception {
 				
 				// Get global flag.
-				boolean isGlobal = properties.containsKey("global") || properties.containsKey("$global");
+				Boolean isGlobal = server.evaluateProperty(properties, "global", Boolean.class, null, FLAG);
+				if (isGlobal == null) {
+					server.evaluateProperty(properties, "$global", Boolean.class, false, FLAG);
+				}
 				
 				// Strip meta information.
 				innerText = server.stripMetaInformation(innerText);
@@ -2872,8 +2895,12 @@ public class AreaServer {
 					throw new Exception(exceptionMessage);
 				}
 				
+				// Get flags used when releasing the block.
+				boolean transparentVariables = server.evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+				boolean transparentProcedures = server.evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
+				
 				// Pop block and get result text.
-				String outputText = server.state.blocks.popJavaScriptDescriptor(true);
+				String outputText = server.state.blocks.popJavaScriptDescriptor(transparentVariables, transparentProcedures);
 				
 				// Return final text.
 				return outputText;
@@ -2890,9 +2917,6 @@ public class AreaServer {
 			@Override
 			public String processText(AreaServer server, String innerText,
 					Properties properties) throws Exception {
-				
-				// Process properties texts.
-				server.processPropertiesTexts(properties);
 				
 				// Get level.
 				long level = 1;
@@ -2997,9 +3021,6 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties) throws Exception {
 				
-				// Process properties texts.
-				server.processPropertiesTexts(properties);
-				
 				// Get resource from properties.
 				Resource resource = server.getResourceFromProperties(properties);
 				long resourceId = resource.getId();
@@ -3010,14 +3031,7 @@ public class AreaServer {
 				}
 				
 				// Get name folder and unzip method.
-				String folder = properties.getProperty("folder");
-				if (folder == null) {
-					folder = "#";
-				}
-				folder = server.evaluateText(folder, String.class, true);
-				if (folder == null) {
-					folder = "";
-				}
+				String folder = server.evaluateProperty(properties, "folder", String.class, null, STRICT);
 				
 				// Get web application root directory.
 				String path = null;
@@ -3058,69 +3072,27 @@ public class AreaServer {
 			public String processTag(AreaServer server, Properties properties) throws Exception {
 				
 				// Get "cmd" property.
-				String command = properties.getProperty("cmd");
-				if (command == null) {
-					throwError("server.messageMissingCommandSpecification");
-				}
-				command = server.evaluateText(command, String.class, true);
-				if (command == null) {
-					throwError("server.messageCommandStringIsNull");
-				}
+				String command = server.evaluateProperty(properties, "cmd", String.class, null, DEFAULT);
 				
 				// Get working directory path.
-				String workdir = properties.getProperty("workdir");
-				if (workdir != null) {
-					workdir = server.evaluateText(workdir, String.class, true);
-					if (workdir == null) {
-						throwError("server.messageWorkingDirectoryIsNull");
-					}
-				}
-				else {
+				String workdir = server.evaluateProperty(properties, "workdir", String.class, null, NULL);
+				if (workdir == null) {
 					workdir = server.state.request.getServerRootPath();
 				}
 				
 				// Get timeout in millisecond.
-				String timeoutText = properties.getProperty("timeout");
-				Integer timeout = 100;
-				if (timeoutText != null) {
-					Long timeoutLong = server.evaluateText(timeoutText, Long.class, true);
-					if (timeoutLong == null) {
-						throwError("server.messageTimeoutValueIsNull");
-					}
-					if (timeoutLong > Integer.MAX_VALUE) {
-						throwError("server.messageTimeoutExceedsMaximumValue");
-					}
-				}
+				Integer timeout = server.evaluateProperty(properties, "timeout", Integer.class, null, NULL);
 				
 				// Run the command and get output text from its standard output stream.
 				try {
 					String standardOutput = Utility.runExecutable(workdir, command, timeout, TimeUnit.MILLISECONDS);
 					
-					Boolean output = true;
-					
-					// Enable insertion of the command output.
-					String outputText = properties.getProperty("output");
-					if (outputText != null) {
-						output = server.evaluateText(outputText, Boolean.class, true);
-						if (output == null) {
-							throwError("server.messageOutputValueIsNull");
-						}
-					}
-					
+					// Enable to insert command output into the resuling text.
+					boolean output = server.evaluateProperty(properties, "output", Boolean.class, false, FLAG);
 					if (output) {
 						
-						Boolean escape = true;
-						
-						// Disable escape flag.
-						String escapeText = properties.getProperty("escape");
-						if (escapeText != null) {
-							escape = server.evaluateText(escapeText, Boolean.class, true);
-							if (escape == null) {
-								throwError("server.messageEscapeValueIsNull");
-							}
-						}
-						
-						// Escape '<', '>', '"' and '&' characters.
+						// Enable escape of HTML special characters ('<', '>', '"' and '&' characters).
+						boolean escape = server.evaluateProperty(properties, "escape", Boolean.class, false, FLAG);
 						if (escape) {
 							return Utility.htmlSpecialChars(standardOutput);
 						}
@@ -3131,20 +3103,11 @@ public class AreaServer {
 					
 					String errorMessage = e.getMessage();
 					
-					// Throw exception if needed.
-					String errorText = properties.getProperty("error");
-					if (errorText != null) {
-						
-						Boolean error = server.evaluateText(errorText, Boolean.class, true);
-						if (error == null) {
-							throwError("server.messageErrorValueIsNull");
-						}
-						
-						if (error) {
-							throwErrorText(errorMessage);
-						}
-					}
-					
+					// Enable to throw raised exception and stop Area Server processor.
+					Boolean error = server.evaluateProperty(properties, "escape", Boolean.class, false, FLAG);
+					if (error) {
+						throwErrorText(errorMessage);
+					}					
 					return errorMessage;
 				}
 				
@@ -3162,9 +3125,6 @@ public class AreaServer {
 			@Override
 			public String processTag(AreaServer server, Properties properties) throws Exception {
 				
-				// Process property texts.
-				server.processPropertiesTexts(properties);
-				
 				// Try to get area specification for redirection.
 				Obj<Boolean> existsArea = new Obj<Boolean>();
 				Area area = getAreaFromProperties(server, properties, existsArea);
@@ -3172,23 +3132,15 @@ public class AreaServer {
 				// Set area for redirection.
 				if (existsArea.ref == true && area != null) {
 					
-					// Get language ID and evaluate it.
-					Long languageId = null;
-					
-					String languageIdText = properties.getProperty("langId");
-					if (languageIdText != null) {
-						languageId = server.evaluateText(languageIdText, Long.class, true);
-					}
+					// Get language ID, evaluate it.
+					Long languageId = server.evaluateProperty(properties, "langId", Long.class, null, NULL);
 					
 					// Try to get ID from a language alias.
 					if (languageId == null) {
 						
-						String languageAlias = properties.getProperty("langAlias");
+						String languageAlias = server.evaluateProperty(properties, "langAlias", String.class, null, NULL);
 						if (languageAlias != null) {
-							
-							languageAlias = server.evaluateText(languageAlias, String.class, false);
 							Language language = server.getLanguage(languageAlias);
-							
 							languageId = language.id;
 						}
 					}
@@ -3199,10 +3151,8 @@ public class AreaServer {
 					
 					// Get version ID.
 					Long versionId = null;
-					String versionAlias = properties.getProperty("versionAlias");
+					String versionAlias = server.evaluateProperty(properties, "versionAlias", String.class, null, NULL);
 					if (versionAlias != null) {
-						
-						versionAlias = server.evaluateText(versionAlias, String.class, false);
 						
 						VersionObj version = server.getVersion(versionAlias);
 						versionId = version.getId();
@@ -3221,14 +3171,7 @@ public class AreaServer {
 				}
 				else {
 					// Get "uri" tag property.
-					String uri = properties.getProperty("uri");
-					if (uri == null) {
-						throwError("server.messageMissingUriSpecification");
-					}
-					uri = server.evaluateText(uri, String.class, true);
-					if (uri == null) {
-						throwError("server.messageUriStringIsNull");
-					}
+					String uri = server.evaluateProperty(properties, "uri", String.class, null, DEFAULT);
 					
 					// Set redirection URI.
 					server.state.redirection.setUri(uri, true);
@@ -3255,15 +3198,15 @@ public class AreaServer {
 				}
 				
 				// Get "name" property.
-				String name = properties.getProperty("name");
+				String name = server.evaluateProperty(properties, "name", String.class, null, STRICT | NULL);
 				if (name == null) {
-					throwError("server.messageMissingTrayMenuName");
+					return "";
 				}
 				
 				// Get "action" property.
-				String action = properties.getProperty("url");
+				String action = server.evaluateProperty(properties, "url", String.class, null, STRICT | NULL);
 				if (action == null) {
-					throwError("server.messageMissingTrayMenuAction");
+					return "";
 				}
 				
 				// Set redirection.
@@ -3520,13 +3463,15 @@ public class AreaServer {
 				
 				// Get area from properties.
 				Area area = getAreaFromProperties(server, properties, null);
-				
 				// Push new block descriptor.
 				server.state.blocks.pushNewBlockDescriptor();
 				// Process text.
 				innerText = server.processTextCloned(area, innerText);
+				// Get flags used when releasing the block.
+				boolean transparentVariables = server.evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+				boolean transparentProcedures = server.evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
 				// Pop block descriptor.
-				server.state.blocks.popBlockDescriptor(properties.containsKey("transparent"), false);
+				server.state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
 				
 				// Return text.
 				return innerText;
@@ -3625,18 +3570,14 @@ public class AreaServer {
 					throws Exception {
 				
 				// Get trace name.
-				String traceName = properties.getProperty("name");
-				
-				// Evaluate trace name.
-				if (traceName != null) {
-					traceName = server.evaluateText(traceName, String.class, false);
-				}
+				String traceName = server.evaluateProperty(properties, "name", String.class, null, NULL);
 								
 				// Set break point name.
 				server.state.breakPointName = traceName;
 				
 				// Get flags.
-				boolean decorated = !properties.containsKey("simple");
+				boolean decorated = !server.evaluateProperty(properties, "simple", Boolean.class, false, FLAG);
+				boolean log = server.evaluateProperty(properties, "log", Boolean.class, false, FLAG);
 				
 				// Initialize trace.
 				String trace = decorated ? "<div style='width: 600px'>" : "\n";
@@ -3649,6 +3590,11 @@ public class AreaServer {
 				
 				// Close trace.
 				trace += decorated ? "</div>" : "________________________________________________________\n";
+				
+				// Log the trace result.
+				if (log) {
+					log(trace);
+				}
 				
 				return trace;
 			}
@@ -3681,20 +3627,17 @@ public class AreaServer {
 					throws Exception {
 				
 				// Get break name.
-				String breakName = properties.getProperty("name");
-				
-				// Evaluate break name.
-				if (breakName != null) {
-					breakName = server.evaluateText(breakName, String.class, false);
-				}
-				
+				String breakName = server.evaluateProperty(properties, "name", String.class, null, DEFAULT);
+
 				server.state.breakPointName = breakName;
 				
-				if (properties.containsKey("no")) {
+				// Get the "no" flag. Do not break the Area Server if flag is satisfied.
+				Boolean noBreak = server.evaluateProperty(properties, "no", Boolean.class, null, FLAG | NULL);
+				if (noBreak) {
 					return "";
 				}
 				
-				// Check debug flag.
+				// Check debug flag and if satisfied, run the debugger.
 				Obj<String> ideHost = new Obj<String>();
 				Obj<Integer> xdebugPort = new Obj<Integer>();
 				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
@@ -3794,12 +3737,12 @@ public class AreaServer {
 				}
 				else if (xdebugStatement.is("source")) {
 					
-					// TODO: <---DEBUG SENDING SOURCE CODE
+					// TODO: <---DEBUGGER SENDING SOURCE CODE
 					j.log("SENDING SOURCE CODE");
 				}
 				else if (xdebugStatement.is("step_into")) {
 					
-					// TODO: <---DEBUG setp_into
+					// TODO: <---DEBUGGER setp_into
 					j.log("AREA SERVER DEBUGGER step_into");
 				}
 				return null;
@@ -4032,15 +3975,19 @@ public class AreaServer {
 				index++;
 			}
 			
+			// Get flags used when releasing the block.
+			boolean transparentVariables = server.evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+			boolean transparentProcedures = server.evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
+			
 			// Pop area descriptor.
-			server.state.blocks.popBlockDescriptor(properties.containsKey("transparent"), false);
+			server.state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
 		}
 		else {
 			selectedAreas.addAll(areas);
 		}
 
 		// If there is a "reversed" flag, reverse the list items.
-		boolean reversed = server.evaluateFlag(properties, "reversed", true);
+		boolean reversed = server.evaluateProperty(properties, "reversed", Boolean.class, false, FLAG);
 		if (reversed) {
 			
 			LinkedList<Area> reversedAreas = new LinkedList<Area>();
@@ -4073,13 +4020,14 @@ public class AreaServer {
 	 * @param type
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	public <T> T evaluateText(String text, Class<T> type, boolean enableNull)
 		throws Exception {
 		
 		if (enableNull && text == null) {
 			return null;
 		}
-
+		
 		Object value = null;
 		
 		// If an expression starts with "js:" prefix, evaluate JavaScript expression.
@@ -4116,6 +4064,121 @@ public class AreaServer {
 	}
 	
 	/**
+	 * Evaluate expression.
+	 * @param expressionString
+	 * @param type
+	 * @param defaultValue
+	 * @param flags
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	protected <T> T evaluateExpression(String expressionString, Class<T> type, T defaultValue, int flags)
+			throws Exception {
+		
+		// If the value text is not present, return default value.
+		if (expressionString == null || expressionString.isEmpty()) {
+			return defaultValue;
+		}
+		
+		T value = null;
+	
+		// On simple types just parse the input text with appropriate method or return default value.
+		try { 
+			if (Long.class.equals(type)) {
+				value = (T)(Long) Long.parseLong(expressionString);
+			}
+			else if (Double.class.equals(type)) {
+				value = (T)(Double) Double.parseDouble(expressionString);
+			}
+			else if (Boolean.class.equals(type)) {
+				value = (T)(Boolean) MiddleUtility.parseBoolean(expressionString);
+			}
+		}
+		catch (Exception e) {
+		}
+		if (value != null) {
+			return value;
+		}
+		
+		// When a direct string is identified, return the string value.
+		if (String.class.equals(type) && expressionString != null && expressionString.length() > 0 && expressionString.charAt(0) == '#') {
+			return (T) expressionString.substring(1);
+		}
+		
+		// Get flags.
+		boolean enableNull = (flags & NULL) != 0;
+		
+		// Evaluate value string. If needed, checks for null value.
+		value = evaluateText(expressionString, type, enableNull);
+		
+		// Possibly use the default value.
+		if (value == null) {
+			return defaultValue;
+		}
+		
+		// Return result value taken from evaluated expression.
+		return value;
+	}
+	
+	/**
+	 * Evaluate property.
+	 * @param <T>
+	 * @param properties
+	 * @param name
+	 * @param type
+	 * @param defaultValue
+	 * @param falgs - NULL | FLAG
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	protected <T> T evaluateProperty(Properties properties, String name, Class<T> type, T defaultValue, int flags)
+			throws Exception {
+		
+		// Get value string.
+		String expressionString = properties.getProperty(name);
+		
+		// Get flags.
+		boolean enableFlag = (flags & FLAG) != 0;
+		boolean requiredProperty = (flags & REQUIRED_PROPERTY) != 0;
+		boolean requiredValue = (flags & REQUIRED_VALUE) != 0;
+		
+		// Get conditions.
+		boolean propertyExists = properties.containsKey(name);
+		boolean valueExists = expressionString != null && !expressionString.isEmpty();
+		
+		// If the property is required, check its existence.
+		if (requiredProperty && !propertyExists) {
+			Utility.throwException("org.maclan.server.messagePropertyIsRequired", name, type.getSimpleName());
+		}
+		
+		// If the value is required, check its existence.
+		if (requiredValue && !valueExists) {
+			Utility.throwException("org.maclan.server.messageMissingPropertyValueSpecification", name, type.getSimpleName());
+		}
+		
+		// If the property can be used as a flag without value, check its type.
+		if (enableFlag) {
+			if (!Boolean.class.equals(type)) {
+				Utility.throwException("org.maclan.server.messageFlagPropertyNotEvaluatedBoolean", name, type.getSimpleName());
+			}
+			// If a value of property is not present in the source code, the property is interpreted as a flag.
+			if (!valueExists) {
+				return (T)(Boolean) propertyExists;
+			}
+		}
+		
+		// If the propety doesn't exist, return the default value.
+		if (!propertyExists) {
+			return defaultValue;
+		}
+
+		// Delegate the call.
+		T value = evaluateExpression(expressionString, type, defaultValue, flags);
+		return value;
+	}
+	
+	/**
 	 * Evaluate boolaen flag.
 	 * @param properties
 	 * @param flagName
@@ -4125,7 +4188,7 @@ public class AreaServer {
 	public boolean evaluateFlag(Properties properties, String flagName, boolean enableNoValue)
 		throws Exception {
 		
-		Boolean flag = properties.contains(flagName);
+		Boolean flag = properties.containsKey(flagName);
 		if (!enableNoValue && flag) {
 			
 			String flagValueString = properties.getProperty(flagName);
@@ -4140,7 +4203,7 @@ public class AreaServer {
 	 * Process properties texts.
 	 * @param properties
 	 */
-	private void processPropertiesTexts(Properties properties)
+	private void processPropertyTexts(Properties properties)
 		throws Exception {
 		
 		if (state.processProperties || properties.containsKey("pptext")) {
@@ -4244,7 +4307,7 @@ public class AreaServer {
 			
 			// Set exception flag.
 			if (propagateErrors) {
-				this.state.exceptionThrown = true;
+				this.state.setExceptionThrown(e);
 			}
 			
 			// Insert exception message.
@@ -4732,14 +4795,12 @@ public class AreaServer {
 				}
 			}
 			catch (Exception e) {
-				
 				result = new MiddleResult(null, e.getMessage());
 			}
 		}
 		
 		// Finalize page loading
 		finalizeAreaPageLoading(result, response2);
-		
 		return true;
 	}
 	
@@ -4946,8 +5007,9 @@ public class AreaServer {
 		try {
 			
 			// If the Area Server result is bad, throw exception
-			if (state.exceptionThrown) {
-				Utility.throwException("org.maclan.server.messageErrorInMaclan");
+			if (state.exceptionThrown != null) {
+				String messageText = state.exceptionThrown.getMessageText();
+				Utility.throwException("org.maclan.server.messageErrorInMaclan", messageText);
 			}
 			
 			// Insert menu item tags
@@ -5059,9 +5121,9 @@ public class AreaServer {
 	private void processBookmarks() {
 		
 		// Do loop for all bookmarks.
-		for (String bookmarkName : state.bookmarkReplace.keySet()) {
+		for (String bookmarkName : state.bookmarkReplacement.keySet()) {
 			
-			String value = state.bookmarkReplace.get(bookmarkName);
+			String value = state.bookmarkReplacement.get(bookmarkName);
 			if (value == null) {
 				value = "";
 			}
@@ -5680,7 +5742,6 @@ public class AreaServer {
 		return outputArea.ref;
 	}
 
-
 	/**
 	 * Process area server text.
 	 * @param text
@@ -5696,7 +5757,7 @@ public class AreaServer {
 		while (true) {
 			
 			// If an exception has been thrown, exit the loop.
-			if (state.exceptionThrown) {
+			if (state.exceptionThrown != null) {
 				break;
 			}	
 			
@@ -5751,12 +5812,12 @@ public class AreaServer {
 			if (processLanguageListTags(tagName)) {
 				continue;
 			}
-			// Process meta tag.
-			if (processMetaTags(tagName)) {
+			// Process meta information.
+			if (processMeta(tagName)) {
 				continue;
 			}
-			// Process meta tag tags.
-			if (processMetaTagTags(tagName)) {
+			// Process meta tags.
+			if (processMetaTags(tagName)) {
 				continue;
 			}
 			
@@ -5867,7 +5928,7 @@ public class AreaServer {
 	 */
 	private void checkResponseTimeout() throws Exception {
 		
-		// TODO: <---DEBUG Do not check timeout.
+		// TODO: <---DEBUGGER Do not check timeout.
 		return ;
 		
 //		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
@@ -5901,6 +5962,10 @@ public class AreaServer {
 	 */
 	protected String addMetaInformation(String replacement, TagsSource tagsSource, AreaServerState state) {
 		
+		// TODO: <---REMOVE IT
+		return replacement;
+		
+		/*
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
 		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return replacement;
@@ -5912,6 +5977,7 @@ public class AreaServer {
 		// Wrap text into META tag.
 		String text = String.format("[@@META source=#%s]%s%s[/@@META]", tagsSource, replacement, replacement, breakCommand);
 		return text;
+		*/
 	}
 	
 	/**
@@ -5925,6 +5991,9 @@ public class AreaServer {
 	 */
 	private String addMetaInformation(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state) {
 		
+		// TODO: <---REMOVE IT
+		return replacement;
+		/*
 		// If the PRAGMA "meta" property is set to false, return the result without changes.
 		if (state.enableMetaTags == AreaServerState.metaInfoFalse && !ProgramServlet.areMetaTagsEnabled()) {
 			return replacement;
@@ -5964,6 +6033,7 @@ public class AreaServer {
 		// Wrap result into a META tag.
 		String text =  String.format("[@@META $tag=#%s $start=%d $stop=%d%s]%s%s[/@@META]", tagName, start, stop, propertiesString, replacement, breakCommand);	
 		return text;
+		*/
 	}
 	
 	/**
@@ -6097,7 +6167,7 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		state.position = startTagPosition.ref;
 		
@@ -6108,12 +6178,11 @@ public class AreaServer {
 		replace = addMetaInformation(tagName, properties, state.tagStartPosition, state.position, replace, state);
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
-		
 		state.position = state.tagStartPosition;
 		
 		return true;
 	}
-
+	
 	/**
 	 * Process if tags.
 	 * @param tagName
@@ -6128,6 +6197,9 @@ public class AreaServer {
 		}
 		
 		state.analysis.if_calls++;
+		
+		Obj<Boolean> transparentVariables = new Obj<Boolean>(false);
+		Obj<Boolean> transparentProcedures = new Obj<Boolean>(false);
 
 		// Create structured IF command parser.
 		IfStructuredParser parser = new IfStructuredParser(this, state.text, state.tagStartPosition) {
@@ -6136,15 +6208,14 @@ public class AreaServer {
 					throws Exception {
 				
 				// Process properties' texts.
-				processPropertiesTexts(properties);
+				processPropertyTexts(properties);
 				
-				// Get condition property.
-				String conditionText = properties.getProperty("cond");
-				if (conditionText == null) {
-					throwError("server.messageExpectingConditionProperty");
-				}
-
-				boolean condition = server.evaluateText(conditionText, Boolean.class, false);
+				// Get flags used when releasing the block.
+				transparentVariables.ref = evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+				transparentProcedures.ref = evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
+				
+				// Get condition value.
+				Boolean condition = server.evaluateProperty(properties, "cond", Boolean.class, false, STRICT);
 				return condition;
 			}
 		};
@@ -6169,7 +6240,9 @@ public class AreaServer {
 		// Add block for variables and procedures.
 		state.blocks.pushNewBlockDescriptor();
 		resultText = processTextCloned(state.area, resultText);
-		state.blocks.popBlockDescriptor(true, true);
+		
+		// Get flags used when releasing the block.
+		state.blocks.popBlockDescriptor(transparentVariables.ref, transparentProcedures.ref);
 
 		// Insert result text.
 		state.text.insert(state.tagStartPosition, resultText);
@@ -6202,7 +6275,7 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		// Shift position. Because of errors.
 		state.position = startPosition.ref;
@@ -6246,7 +6319,7 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		// Shift position. Because of errors.
 		state.position = startTagPosition.ref;
@@ -6283,11 +6356,8 @@ public class AreaServer {
 			list = (LinkedList<?>) listObject;
 		}
 
-		// Try to get divider property value.
-		String dividerText = properties.getProperty("divider");
-		if (dividerText != null) {
-			dividerText = evaluateText(dividerText, String.class, false);
-		}
+		// Try to get divider value.
+		String dividerText = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
 		// Get iterator variable name.
 		String iteratorVariableText = properties.getProperty("iterator");
 		// Get item variable name.
@@ -6308,8 +6378,8 @@ public class AreaServer {
 			listDescriptor.createBlockVariable(iteratorVariableText, listDescriptor);
 		}
 
-		// Get local property.
-		boolean local = evaluateFlag(properties, "local", true);
+		// Get the "local" flag value.
+		boolean local = evaluateProperty(properties, "local", Boolean.class, false, FLAG);
 		
 		int count = list.size();
 		
@@ -6390,12 +6460,11 @@ public class AreaServer {
 		}
 
 		// Get flags used when releasing the block.
-		boolean transparent = evaluateFlag(properties, "transparent", true);
-		boolean transparentProcedures = evaluateFlag(properties, "transparentProc", true);
-		boolean transparentVariables = evaluateFlag(properties, "transparentVar", true);
+		boolean transparentVariables = evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+		boolean transparentProcedures = evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
 		
 		// Pop list from the stack.
-		state.blocks.popBlockDescriptor(transparent || transparentProcedures, transparent || transparentVariables);
+		state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
 		
 		// Replace text.
 		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
@@ -6430,14 +6499,13 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		// Shift position because of error report.
 		state.position = textPosition.ref;
 		
-		// Get "count" property.
-		String countText = properties.getProperty("count");
-		Long count = countText != null ? evaluateText(countText, Long.class, true) : null;
+		// Get "count" value.
+		Long count = evaluateProperty(properties, "count", Long.class, null, NULL);
 		
 		// Initialize empty loop flag.
 		boolean emptyLoop = false;
@@ -6450,18 +6518,14 @@ public class AreaServer {
 			throwError("server.messageCountCannotBeNegative");
 		}
 		
-		// Get "from" property.
-		String fromText = properties.getProperty("from");
-		long from = fromText != null ? evaluateText(fromText, Long.class, false) : 0L;
+		// Get "from" value.
+		long from = evaluateProperty(properties, "from", Long.class, 0L, DEFAULT);
 		
 		// Get "to" property.
-		String toText = properties.getProperty("to");
-		Long to = toText != null ? evaluateText(toText, Long.class, true) : null;
-
+		Long to = evaluateProperty(properties, "to", Long.class, 0L, NULL);
 		
 		// Get "step" property.
-		String stepText = properties.getProperty("step");
-		long step = stepText != null ? evaluateText(stepText, Long.class, false) : 1L;
+		long step = evaluateProperty(properties, "step", Long.class, 1L, DEFAULT);
 
 		// Check step property.
 		if (step == 0L) {
@@ -6481,15 +6545,12 @@ public class AreaServer {
 		}
 		
 		// Get divider property.
-		String divider = properties.getProperty("divider");
-		if (divider != null) {
-			divider = evaluateText(divider, String.class, false);
-		}
+		String divider = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
 		
-		// Get index property.
+		// Get index variable name.
 		String indexVariableText = properties.getProperty("index");
 		
-		// Get break property.
+		// Get break variable name.
 		String breakVariableText = properties.getProperty("break");
 		
 		// Get discard variable name.
@@ -6637,7 +6698,7 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		// Shift position because of error report.
 		state.position = textPosition.ref;
@@ -6692,7 +6753,7 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 		
 		// Shift position because of error report.
 		state.position = endPosition.ref;
@@ -6700,13 +6761,13 @@ public class AreaServer {
 		// Get procedure name from properties.
 		if (procedureName == null) {
 			
-			// Try to get procedure name.
+			// Try to get the procedure name.
 			procedureName = properties.getProperty("$name");
 			if (procedureName == null) {
 				procedureName = properties.getProperty("name");
 			}
 			
-			procedureName = evaluateText(procedureName, String.class, false);
+			procedureName = evaluateExpression(procedureName, String.class, "", DEFAULT);
 			
 			if (procedureName.isEmpty()) {
 				throwError("server.messageExpectingProcedureName");
@@ -6716,16 +6777,13 @@ public class AreaServer {
 		// Try to get area and slot.
 		//
 		// Get area from properties.
-		final String knownPropertyStart = "$";
+		final String propertyPrefix = "$";
 		Obj<Boolean> existsAreaSpecification = new Obj<Boolean>(false);
 		
-		Area area = getAreaFromProperties(this, properties, knownPropertyStart, existsAreaSpecification);
+		Area area = getAreaFromProperties(this, properties, propertyPrefix, existsAreaSpecification);
 
 		// Get slot alias from properties.
-		String slotAlias = properties.getProperty(knownPropertyStart + "slot");
-		if (slotAlias != null) {
-			slotAlias = evaluateText(slotAlias, String.class, false);
-		}
+		String slotAlias = evaluateProperty(properties, propertyPrefix + "slot", String.class, null, NULL);
 		
 		// If it is a slot calling.
 		String processedSlotText = "";
@@ -6750,7 +6808,7 @@ public class AreaServer {
 			state.blocks.pushNewBlockDescriptor();
 			
 			// Get parent flag.
-			boolean parent = properties.containsKey("$parent");
+			boolean parent = evaluateProperty(properties, "$parent", Boolean.class, false, FLAG);
 			
 			// Slot area.
 			Area slotArea = existsAreaSpecification.ref ? area : state.area;
@@ -6766,7 +6824,7 @@ public class AreaServer {
 					
 					// Process slot text value.
 					processedSlotText = processTextCloned(slotTextValue);
-					if (!state.exceptionThrown) {
+					if (state.exceptionThrown != null) {
 						
 						// Try to find procedure.
 						procedure = state.blocks.getProcedure(procedureName);
@@ -6821,7 +6879,7 @@ public class AreaServer {
 		state.blocks.pushBlockDescriptor(block);
 		
 		// If the procedure declares full calls, try to find inner text and end position of the call
-		// and set new $inner variable with inner text of this CALL
+		// and set new $inner variable to inner text of this CALL.
 		if (procedure.isFullCall()) {
 			
 			// Call parser.
@@ -6886,13 +6944,10 @@ public class AreaServer {
 		}
 		
 		// Process property texts.
-		processPropertiesTexts(properties);
+		processPropertyTexts(properties);
 
 		// Get divider.
-		String divider = properties.getProperty("divider");
-		if (divider != null) {
-			divider = evaluateText(divider, String.class, false);
-		}
+		String divider = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
 
 		// Shift position because of error report.
 		state.position = textPosition.ref;
@@ -6942,17 +6997,16 @@ public class AreaServer {
 		state.middle.setCurrentLanguageId(state.currentLanguage.id);
 		
 		// Get flags used when releasing the block.
-		boolean transparent = evaluateFlag(properties, "transparent", true);
-		boolean transparentProcedures = evaluateFlag(properties, "transparentProc", true);
-		boolean transparentVariables = evaluateFlag(properties, "transparentVar", true);
+		boolean transparentVariables = evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+		boolean transparentProcedures = evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
 		
 		// Pop block descriptor.
-		state.blocks.popBlockDescriptor(transparent || transparentProcedures, transparent || transparentVariables);
+		state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
 		
 		// Replace text.
 		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
 		state.position = state.tagStartPosition;
-
+		
 		return true;
 	}
 	
@@ -6961,7 +7015,7 @@ public class AreaServer {
 	 * @param tagName
 	 * @return
 	 */
-	private boolean processMetaTags(String tagName) {
+	private boolean processMeta(String tagName) {
 		
 		// Check tag name.
 		if (!tagName.equals("META")) {
@@ -6976,7 +7030,7 @@ public class AreaServer {
 	 * @param tagName
 	 * @return
 	 */
-	private boolean processMetaTagTags(String tagName) {
+	private boolean processMetaTags(String tagName) {
 		
 		// Check tag name.
 		if (!tagName.equals("META_TAG")) {
@@ -7416,6 +7470,34 @@ public class AreaServer {
 		}
 
 		return slot.ref != null;
+	}
+	
+	/**
+	 * Store slot value.
+	 * @param slot
+	 */
+	protected void slotStore(Slot slot)
+			throws Exception {
+		
+		MiddleLight middle = this.state.middle;
+		
+		// Store slot value.
+		MiddleResult result = middle.updateSlotValue(slot);
+		result.throwPossibleException();
+	}
+	
+	/**
+	 * Update area record.
+	 * @param area
+	 */
+	protected void areaStore(Area area)
+			throws Exception{
+		
+		MiddleLight middle = this.state.middle;
+		
+		// Store area record.
+		MiddleResult result = middle.updateArea(area);
+		result.throwPossibleException();
 	}
 
 	/**

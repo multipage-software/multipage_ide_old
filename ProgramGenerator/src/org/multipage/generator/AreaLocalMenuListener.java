@@ -8,6 +8,7 @@
 package org.multipage.generator;
 
 import java.awt.Component;
+import java.util.LinkedList;
 
 import org.maclan.Area;
 
@@ -27,7 +28,17 @@ public class AreaLocalMenuListener {
 		// Override this method.
 		return null;
 	}
-
+	
+	/**
+	 * Get current area.
+	 * @return
+	 */
+	protected LinkedList<Area> getCurrentAreas() {
+		
+		// Override this method.
+		return null;
+	}
+	
 	/**
 	 * Get current parent area.
 	 * @return

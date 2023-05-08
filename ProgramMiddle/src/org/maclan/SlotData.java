@@ -8,6 +8,7 @@
 package org.maclan;
 
 import java.sql.Timestamp;
+import java.util.Objects;
 
 /**
  * 
@@ -41,4 +42,19 @@ public class SlotData {
 	public String externalProvider;
 	public Boolean readsInput;
 	public Boolean writesOutput;
+	
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SlotData other = (SlotData) obj;
+		return Objects.equals(alias, other.alias) && Objects.equals(areaId, other.areaId);
+	}
 }

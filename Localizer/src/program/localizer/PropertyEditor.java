@@ -265,6 +265,8 @@ public class PropertyEditor extends JDialog {
 	private void createPrimaryEditor() {
 		
 		primaryEditor = new TextEditorPane(this, true);
+		Font font = new Font("Consolas", 0, 16);
+		primaryEditor.setTextFont(font);
 		splitPane.setLeftComponent(primaryEditor);
 	}
 
@@ -365,6 +367,8 @@ public class PropertyEditor extends JDialog {
 		
 		// Create new editor and add it to the tab panel.
 		TextEditorPane editor = new TextEditorPane(this, true);
+		Font font = new Font("Consolas", 0, 16);
+		editor.setTextFont(font);
 		tabbedPaneOther.addTab(tabName, editor);
 		
 		// Set text value.

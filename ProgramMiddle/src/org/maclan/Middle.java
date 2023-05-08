@@ -952,15 +952,6 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult insertSlot(Slot slot);
-
-	/**
-	 * Update slot.
-	 * @param slot
-	 * @param newSlot
-	 * @return
-	 */
-	public MiddleResult updateSlot(Slot slot, Slot newSlot,
-			boolean removeCurrentLanguageText);
 	
 	/**
 	 * Update slot revision
@@ -1223,7 +1214,7 @@ public interface Middle extends MiddleLight {
 	 * @param areaTreeData
 	 * @return
 	 */
-	public MiddleResult loadLanguages(AreaTreeData areaTreeData);
+	public MiddleResult loadLanguages(AreaTreesData areaTreeData);
 
 	/**
 	 * Load areas and edges tree.
@@ -1233,7 +1224,7 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadAreasEdgesTreeWithVersions(long areaId,
-			AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
 	 * Load constructor alias.
@@ -1250,7 +1241,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadSlots(AreaTreeData areaTreeData,
+	public MiddleResult loadSlots(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1259,7 +1250,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadLocalizedTexts(AreaTreeData areaTreeData,
+	public MiddleResult loadLocalizedTexts(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1268,11 +1259,12 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadResources(AreaTreeData areaTreeData,
+	public MiddleResult loadResources(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
 	 * Load area tree data.
+	 * @param login
 	 * @param areaId
 	 * @param parentAreaId 
 	 * @param areaTreeData
@@ -1280,7 +1272,19 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadAreaTreeData(Properties login, long areaId,
-			Long parentAreaId, AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
+			Long parentAreaId, AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
+	
+	/**
+	 * Load area tree data.
+	 * @param login
+	 * @param areaIds
+	 * @param parentAreaId
+	 * @param areaTreeData
+	 * @param swingWorkerHelper
+	 * @return
+	 */
+	public MiddleResult loadAreaTreeData(Properties login, LinkedList<Long> areaIds, Long parentAreaId,
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
 	 * Load area tree data.
@@ -1291,7 +1295,7 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadAreaSuperEdgeData(long areaId, Long parentAreaId,
-			AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	/**
 	 * Load resource to stream and set reference.
 	 * @param resourceRef
@@ -1322,7 +1326,7 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult insertLanguagesNewData(LinkedList<DatBlock> datBlocks,
-			AreaTreeData areaTreeData);
+			AreaTreesData areaTreeData);
 
 	/**
 	 * Insert areas data.
@@ -1330,7 +1334,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertAreasData(AreaTreeData areaTreeData,
+	public MiddleResult insertAreasData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1339,18 +1343,20 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertIsSubAreaData(AreaTreeData areaTreeData,
+	public MiddleResult insertIsSubAreaData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
 	 * Insert root "is sub area" edge.
-	 * @param areaTreeData 
+	 * @param areaTreeData
 	 * @param importAreaId
-	 * @param rootAreaId
+	 * @param rootAreaIds
+	 * @param edges
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertIsSubAreaConnection(AreaTreeData areaTreeData, long importAreaId, Long rootAreaId,
+	public MiddleResult insertIsSubAreaConnection(AreaTreesData areaTreeData,
+			long importAreaId, LinkedList<Long> rootAreaIds, LinkedList<IsSubArea> edges,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1359,7 +1365,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertSlotsData(AreaTreeData areaTreeData,
+	public MiddleResult insertSlotsData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
@@ -1368,7 +1374,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertMimeData(AreaTreeData areaTreeData,
+	public MiddleResult insertMimeData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
@@ -1378,7 +1384,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertAreaResourcesData(AreaTreeData areaTreeData,
+	public MiddleResult insertAreaResourcesData(AreaTreesData areaTreeData,
 			LinkedList<DatBlock> datBlocks, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1388,7 +1394,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult updateStartResourcesData(AreaTreeData areaTreeData,
+	public MiddleResult updateStartResourcesData(AreaTreesData areaTreeData,
 			LinkedList<DatBlock> datBlocks, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -1397,7 +1403,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertAreaSourcesData(AreaTreeData areaTreeData,
+	public MiddleResult insertAreaSourcesData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
@@ -1541,7 +1547,7 @@ public interface Middle extends MiddleLight {
 	 * @param areaTreeData
 	 * @return
 	 */
-	public MiddleResult insertVersionsNewData(AreaTreeData areaTreeData);
+	public MiddleResult insertVersionsNewData(AreaTreesData areaTreeData);
 
 	/**
 	 * Update area folder name.
@@ -1814,7 +1820,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertEnumerationsData(AreaTreeData areaTreeData,
+	public MiddleResult insertEnumerationsData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
@@ -1832,7 +1838,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertEnumerationValuesData(AreaTreeData areaTreeData,
+	public MiddleResult insertEnumerationValuesData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	
 	/**
@@ -1851,7 +1857,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertConstructorTrees(AreaTreeData areaTreeData,
+	public MiddleResult insertConstructorTrees(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 	/**
 	 * Update constructor link ID.
@@ -2166,7 +2172,7 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult updateAreaConstructorGroupsHoldersIds(
-			AreaTreeData areaTreeData,
+			AreaTreesData areaTreeData,
 			long importAreaId, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -2247,7 +2253,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertDescriptionData(AreaTreeData areaTreeData,
+	public MiddleResult insertDescriptionData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -2256,7 +2262,7 @@ public interface Middle extends MiddleLight {
 	 * @param areaTreeData
 	 * @return
 	 */
-	public MiddleResult updateDefaultLanguageData(AreaTreeData areaTreeData);
+	public MiddleResult updateDefaultLanguageData(AreaTreesData areaTreeData);
 	
 	/**
 	 * Update area related area.
@@ -2282,7 +2288,7 @@ public interface Middle extends MiddleLight {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult updateAreaRelatedAreas(AreaTreeData areaTreeData,
+	public MiddleResult updateAreaRelatedAreas(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -2931,7 +2937,7 @@ public interface Middle extends MiddleLight {
 	 * @return
 	 */
 	public MiddleResult updateUnlinkedAreasConstructors(
-			AreaTreeData areaTreeData, long importAreaId,
+			AreaTreesData areaTreeData, long importAreaId,
 			long rootAreaId, SwingWorkerHelper<MiddleResult> swingWorkerHelper);
 
 	/**
@@ -3196,6 +3202,15 @@ public interface Middle extends MiddleLight {
 	public MiddleResult updateSlotUnlock(long slotId);
 	
 	/**
+	 * Load slot text value ID.
+	 * @param slot
+	 * @param holder
+	 * @param textValueId
+	 * @return
+	 */
+	public MiddleResult loadSlotTextValueId(Slot slot, Obj<Long> textValueId);
+	
+	/**
 	 * Load slot text value.
 	 * @param slotId
 	 * @param textValue
@@ -3240,7 +3255,7 @@ public interface Middle extends MiddleLight {
 	 * @param datBlocks
 	 * @return
 	 */
-	public MiddleResult importDatStream(AreaTreeData areaTreeData, InputStream datStream,
+	public MiddleResult importDatStream(AreaTreesData areaTreeData, InputStream datStream,
 			LinkedList<DatBlock> datBlocks);
 	
 	/**
@@ -3263,7 +3278,8 @@ public interface Middle extends MiddleLight {
 	
 	/**
 	 * Set GUIDs for areas without them.
-	 * @return
 	 */
 	public MiddleResult updateAreaEmptyGuids();
+
+	
 }

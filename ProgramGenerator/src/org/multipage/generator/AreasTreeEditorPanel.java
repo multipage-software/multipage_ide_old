@@ -13,6 +13,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -27,6 +28,7 @@ import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
@@ -41,6 +43,7 @@ import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -59,6 +62,7 @@ import org.maclan.Area;
 import org.maclan.AreasModel;
 import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.GraphUtility;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
@@ -67,6 +71,7 @@ import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * 
@@ -434,30 +439,47 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		
 		// Get selected area.
 		TreePath [] selectedPaths = tree.getSelectionPaths();
-		if (selectedPaths.length != 1) {
+		if (selectedPaths.length <= 0) {
 			Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
 			return;
 		}
+
+		// Get selected areas.
+		LinkedList<Area> areas = new LinkedList<Area>();
+		Area parentArea = null;
 		
-		// Get parent area.
-		TreePath path = selectedPaths[0];
-		int elementsCount = path.getPathCount();
-		if (elementsCount < 2) {
-			Utility.show(this, "org.multipage.generator.messageCannotRemoveRootArea");
-			return;
+		for (TreePath selectedPath : selectedPaths) {
+			
+			int elementsCount = selectedPath.getPathCount();
+			
+			// Get parent node.
+			DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) selectedPath.getPathComponent(elementsCount - 2);
+			Area newParentArea = getNodeArea(parentNode);
+			
+			if (parentArea != null) {
+				if (parentArea.getId() != newParentArea.getId()) {
+					continue;
+				}
+			}
+			parentArea = newParentArea;
+			
+			// Check root area.
+			if (elementsCount < 2) {
+				Utility.show(this, "org.multipage.generator.messageCannotRemoveRootArea");
+				continue;
+			}
+			
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+			Area area = getNodeArea(node);
+			
+			areas.add(area);
 		}
 		
-		DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) path.getPathComponent(elementsCount - 2);
-		Area parentArea = getNodeArea(parentNode);
-		
-		// Get selected area.
-		DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-		Area area = getNodeArea(node);
-		
 		// Remove area.
-		GeneratorMainFrame.removeArea(area, parentArea, this);
+		GeneratorMainFrame.removeAreas(areas, parentArea, this);
 		
-		reload();
+		// Update GUI.
+		Update.run(Update.GROUP_ALL, EventSource.AREA_EDITOR.userAction(this, null));
 	}
 
 	/**
@@ -698,6 +720,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		AreaLocalMenu areaMenuTree = ProgramGenerator.newAreaLocalMenu(new AreaLocalMenuListener() {
 			@Override
 			protected Area getCurrentArea() {
+				
 				// Get selected area.
 				TreePath [] selectedPaths = tree.getSelectionPaths();
 				if (selectedPaths == null || selectedPaths.length != 1) {
@@ -709,11 +732,32 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 			}
 
 			@Override
+			protected LinkedList<Area> getCurrentAreas() {
+				
+				// Get selected area.
+				TreePath [] selectedPaths = tree.getSelectionPaths();
+				int length = selectedPaths.length;
+				if (selectedPaths == null || length <= 0) {
+					return null;
+				}
+				
+				LinkedList<Area> areas = new LinkedList<Area>();
+				
+				for (int index = 0; index < length; index++) {
+					DefaultMutableTreeNode node = (DefaultMutableTreeNode) selectedPaths[index].getLastPathComponent();
+					Long areaId = (Long) node.getUserObject();
+					Area area = ProgramGenerator.getAreasModel().getArea(areaId);
+					areas.add(area);
+				}
+				return areas;
+			}
+
+			@Override
 			public Area getCurrentParentArea() {
 				
 				// Get selected area and its parent.
 				TreePath [] selectedPaths = tree.getSelectionPaths();
-				if (selectedPaths.length != 1) {
+				if (selectedPaths.length < 1) {
 					return null;
 				}
 				
@@ -1175,9 +1219,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		
 		final Component thisComponent = this;
 		
-		// Set Drag and Drop callback.
 		tree.setDragAndDropCallback(new JTreeDndCallback() {
-
+			
 			@Override
 			public void onNodeDropped(
 					DefaultMutableTreeNodeDnD droppedDndNode,
@@ -1190,13 +1233,41 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				Object transferredObject = transferedDndNode.getUserObject();
 				Object droppedObject = droppedDndNode.getUserObject();
 				
-				if (!(transferredObject instanceof Long && droppedObject instanceof Long)) {
-					e.rejectDrop();
-					return;
+				LinkedList<Area> transferredAreas = new LinkedList<Area>();
+				
+				// Get multiple selected area.
+				TreePath[] multipleSelectedPaths = tree.getMultipleSelectedPaths();
+				if (multipleSelectedPaths != null) {
+					
+					for (TreePath selectedPath : multipleSelectedPaths) {
+						Object pathComponent = selectedPath.getLastPathComponent();
+						if (pathComponent instanceof DefaultMutableTreeNode) {
+							
+							DefaultMutableTreeNode node = (DefaultMutableTreeNode) pathComponent;
+							Object userObject = node.getUserObject();
+							
+							if (userObject instanceof Long) {
+
+								long areaId = (long) userObject;
+								Area area = ProgramGenerator.getArea(areaId);
+								transferredAreas.add(area);
+							}
+						}
+					}
 				}
 				
+				// Get transferred area. 
+				if (transferredAreas.isEmpty()) {
+					if (!(transferredObject instanceof Long && droppedObject instanceof Long)) {
+						e.rejectDrop();
+						return;
+					}
+					
+					Area transferredArea = ProgramGenerator.getArea((long) transferredObject);
+					transferredAreas.add(transferredArea);
+				}
+								
 				// Get areas from the model.
-				Area transferredArea = ProgramGenerator.getArea((long) transferredObject);
 				Area droppedArea = ProgramGenerator.getArea((long) droppedObject);
 				
 				// Get parent areas.
@@ -1226,7 +1297,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				int action = e.getDropAction();
 				
 				GeneratorMainFrame.transferArea(
-						transferredArea, transferredParentArea,
+						transferredAreas, transferredParentArea,
 						droppedArea, droppedParentArea,
 						action, thisComponent);
 				
@@ -1358,8 +1429,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 					: "superareas") + ".png";
 			
 			tabbedPane.setIconAt(0, Images.getIcon(iconPath));
-			tabbedPane.setTitleAt(0, Resources.getString(
-					isSubareas ? "org.multipage.generator.textSubAreasTree" : "org.multipage.generator.textSuperAreasTree"));
+			tabbedPane.setTitleAt(0, Resources.getString(isSubareas ? "org.multipage.generator.textSubAreasTree"
+																	: "org.multipage.generator.textSuperAreasTree"));
 			
 			// Get selected tab.
 			boolean isList = tabbedPane.getSelectedIndex() == 1;

@@ -346,7 +346,7 @@ public class ProgramBasic {
 	 * Start HTTP server.
 	 * @param noLogin 
 	 */
-	public static void startHttpServer(final int portNumber, boolean noLogin) {
+	public static ProgramHttpServer startHttpServer(final int portNumber, boolean noLogin) {
 		
 		// Create new HTTP server.
 		try {
@@ -357,6 +357,7 @@ public class ProgramBasic {
 			Utility.show2(String.format(
 					Resources.getString("org.multipage.basic.messageCannotStartWebServer"), portNumber, e.getMessage()));
 		}
+		return httpServer;
 	}
 	
 	/**

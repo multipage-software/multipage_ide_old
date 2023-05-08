@@ -7,9 +7,11 @@
 
 package org.maclan;
 
+import java.sql.Timestamp;
 import java.util.*;
 
 import org.multipage.gui.StringValueEditor;
+import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
@@ -139,6 +141,11 @@ public class Slot {
 	 * Informs about change of external provider source code.
 	 */
 	private boolean externalChange;
+	
+	/**
+	 * Slot creation timestamp.
+	 */
+	private Timestamp timestamp;
 	
 	/**
 	 * Set "show ID" flag.
@@ -374,8 +381,11 @@ public class Slot {
 	 * Set localized flag
 	 * @param localized
 	 */
-	public void setLocalized(boolean localized) {
-
+	public void setLocalized(Boolean localized) {
+		
+		if (localized == null) {
+			return;
+		}
 		this.localized = localized;
 	}
 
@@ -646,7 +656,21 @@ public class Slot {
 		}
 		return null;
 	}
-
+	
+	/**
+	 * Get enumeration value ID.
+	 * @return
+	 */
+	public Long getEnumerationValueId() {
+		
+		if (value instanceof EnumerationValue) {
+			EnumerationValue enumerationValue = (EnumerationValue) value;
+			long id = enumerationValue.getId();
+			return id;
+		}
+		return null;
+	}
+	
 	/**
 	 * Get color value.
 	 * @return
@@ -754,72 +778,6 @@ public class Slot {
 		updatedExternally = slot.updatedExternally;
 		outputText = slot.outputText;
 	}
-
-	/**
-	 * Returns true value if slot content is equal.
-	 * @param slot
-	 * @return
-	 */
-	public boolean contentEquals(Slot slot) {
-		
-		if (hidden == slot.hidden
-			&& access == slot.access
-			&& alias.equals(slot.alias)
-			&& holder.getId() == slot.getHolder().getId()
-			&& localized == slot.localized
-			&& isDefault == slot.isDefault
-			&& preferred == slot.preferred
-			&& userDefined == slot.userDefined) {
-			
-			
-			if (name != null) {
-				if (!name.equals(slot.name)) {
-					return false;
-				}
-			}
-			else {
-				if (slot.name != null) {
-					return false;
-				}
-			}
-			
-			if (specialValue != null) {
-				if (!specialValue.equals(slot.specialValue)) {
-					return false;
-				}
-			}
-			else {
-				if (specialValue != null) {
-					return false;
-				}
-			}
-			
-			if (valueMeaning != null) {
-				if (!valueMeaning.equals(slot.valueMeaning)) {
-					return false;
-				}
-			}
-			else {
-				if (slot.valueMeaning != null) {
-					return false;
-				}
-			}
-			
-			if (value == slot.value) {
-				return true;
-			}
-			
-			if (value == null && slot.value != null) {
-				return false;
-			}
-			if (slot.value == null && value != null) {
-				return false;
-			}
-			
-			return value.equals(slot.value);
-		}
-		return false;
-	}
 	
 	/**
 	 * Returns true if slot differs from this slot
@@ -828,7 +786,7 @@ public class Slot {
 	 */
 	public boolean differs(Slot slot) {
 		
-		return !this.equals(slot) || !this.contentEquals(slot);
+		return !this.equals(slot) || !this.equalsDeep(slot);
 	}
 	
 	/**
@@ -944,9 +902,24 @@ public class Slot {
 	 * Set access.
 	 * @param access
 	 */
-	public void setAccess(char access) {
-
+	public void setAccess(Character access) {
+		
+		if (access == null) {
+			return;
+		}
 		this.access = access;
+	}
+	
+	/**
+	 * Set access.
+	 * @param accessText
+	 */
+	public void setAccess(String accessText) {
+		
+		if (accessText == null || accessText.length() != 1) {
+			return;
+		}
+		this.access = accessText.charAt(0);
 	}
 
 	/**
@@ -1028,7 +1001,7 @@ public class Slot {
 	}
 
 	/**
-	 * Returns true value if the slots have equal name.
+	 * Returns true value if the slots have equal alias and belong to the same area.
 	 * @param object
 	 * @return
 	 */
@@ -1045,7 +1018,73 @@ public class Slot {
 		
 		return aliasEquals && slotHolderEquals;
 	}
+	
+	/**
+	 * Returns true value if the slots are equal.
+	 * @param object
+	 * @return
+	 */
+	public boolean equalsDeep(Object object) {
+		
+		if (!equals(object)) {
+			return false;
+		}
+		Slot slot = (Slot) object;
 
+		if (!Utility.equalsShallow(value, slot.value)) {
+			return false;
+		}
+		if (valueLoaded != slot.valueLoaded) {
+			return false;
+		}
+		if (localized != slot.localized) {
+			return false;
+		}
+		if (access != slot.access) {
+			return false;
+		}
+		if (hidden != slot.hidden) {
+			return false;
+		}
+		if (!Utility.equalsShallow(descriptionId, slot.descriptionId)) {
+			return false;
+		}
+		if (isDefault != slot.isDefault) {
+			return false;
+		}
+		if (id > 0 && slot.id > 0L && id != slot.id) {
+			return false;
+		}
+		if (!Utility.equalsShallow(name, slot.name)) {
+			return false;
+		}
+		if (!Utility.equalsShallow(valueMeaning, slot.valueMeaning)) {
+			return false;
+		}
+		if (preferred != slot.preferred ) {
+			return false;
+		}
+		if (userDefined != slot.userDefined) {
+			return false;
+		}
+		if (!Utility.equalsShallow(specialValue, slot.specialValue)) {
+			return false;
+		}
+		if (!Utility.equalsShallow(externalProvider, slot.externalProvider)) {
+			return false;
+		}
+		if (writesOutput != slot.writesOutput ) {
+			return false;
+		}
+		if (readsInput != slot.readsInput) {
+			return false;
+		}
+		if (!Utility.equalsShallow(outputText, slot.outputText)) {
+			return false;
+		}
+		
+		return true;
+	}
 	/**
 	 * @return the id
 	 */
@@ -1096,6 +1135,9 @@ public class Slot {
 	 */
 	public void setBooleanValue(Boolean booleanValue) {
 		
+		if (booleanValue == null) {
+			booleanValue = false;
+		}
 		value = booleanValue;
 		localized = false;
 	}
@@ -1126,7 +1168,12 @@ public class Slot {
 	 */
 	public void setAreaValue(Long areaIdValue) {
 		
-		value = new AreaReference(areaIdValue);
+		if (areaIdValue != null) {
+			value = new AreaReference(areaIdValue);
+		}
+		else {
+			value = null;
+		}
 		localized = false;
 	}
 
@@ -1217,11 +1264,14 @@ public class Slot {
 	 * Set color value.
 	 * @param colorValue
 	 */
-	public void setColorValueLong(long colorValue) {
-
-		value = ColorObj.convertLong(colorValue);
+	public void setColorValueLong(Long colorValue) {
 		
 		localized = false;
+		
+		if (colorValue == null) {
+			return;
+		}
+		value = ColorObj.convertLong(colorValue);
 	}
 
 	/**
@@ -1273,7 +1323,11 @@ public class Slot {
 	/**
 	 * @param isDefault the isDefault to set
 	 */
-	public void setDefault(boolean isDefault) {
+	public void setDefault(Boolean isDefault) {
+		
+		if (isDefault == null) {
+			return;
+		}
 		this.isDefault = isDefault;
 	}
 
@@ -1341,6 +1395,9 @@ public class Slot {
 	 */
 	public void setValueMeaning(String valueMeaning) {
 		
+		if (valueMeaning == null) {
+			return;
+		}
 		this.valueMeaning = valueMeaning;
 	}
 	
@@ -1551,7 +1608,7 @@ public class Slot {
 	}
 
 	/**
-	 * Get area ID slot value.
+	 * Get area ID from slot value.
 	 * @return
 	 */
 	public Long getAreaIdValue() {
@@ -1762,5 +1819,31 @@ public class Slot {
 	public void setExternalChange(Boolean externalChange) {
 		
 		this.externalChange = (externalChange == null ? false : externalChange);
+	}
+	
+	/**
+	 * Set date and time of slot creation.
+	 * @param timestamp
+	 */
+	public void setCreated(Timestamp timestamp) {
+		
+		this.timestamp = timestamp;
+	}
+	
+	/**
+	 * Get slot creation time.
+	 * @return
+	 */
+	public Timestamp getCreated() {
+		
+		return timestamp;
+	}
+	
+	/**
+	 * Set the "exposed" flag. Current slot will be exposed to other Area Servers.
+	 * @param exposed
+	 */
+	public void setExposed(boolean exposed) {
+		// TODO: <---MAKE Set slot flag to expose is to other Area Servers.
 	}
 }

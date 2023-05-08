@@ -9,7 +9,10 @@ package org.maclan;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
+import org.maclan.expression.ExpressionSolver;
+import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
 /**
@@ -19,11 +22,11 @@ import org.multipage.util.Resources;
 public enum SlotType {
 	
 	UNKNOWN("middle.textUnknownSlotType", "Unknown"),
-	TEXT("middle.textTextSlotType", "Text"),
+	TEXT("middle.textTextSlotType", ExpressionSolver.stringTypeName),
 	LOCALIZED_TEXT("middle.textLocalizedTextSlotType", "LocalizedText"),
-	INTEGER("middle.textIntegerSlotType", "Integer"),
-	REAL("middle.textRealSlotType", "Real"),
-	BOOLEAN("middle.textBooleanSlotType", "Boolean"), 
+	INTEGER("middle.textIntegerSlotType", ExpressionSolver.longTypeName),
+	REAL("middle.textRealSlotType", ExpressionSolver.doubleTypeName),
+	BOOLEAN("middle.textBooleanSlotType", ExpressionSolver.booleanTypeName), 
 	ENUMERATION("middle.textEnumerationSlotType", "Enumeration"),
 	COLOR("middle.textColorSlotType", "Color"), 
 	AREA_REFERENCE("middle.textAreaSlotType", "AreaReference"),
@@ -70,6 +73,105 @@ public enum SlotType {
 	public static boolean isText(SlotType slotType) {
 		
 		return slotType == SlotType.TEXT || slotType == SlotType.LOCALIZED_TEXT || slotType == SlotType.PATH;
+	}
+	
+	/**
+	 * Check if the input type name corresponds with current type.
+	 * @param typeName
+	 * @return
+	 */
+	public boolean hasName(String typeName) {
+		
+		if (typeText == null || typeName == null) {
+			return false;
+		}
+		
+		boolean success = typeText.equals(typeName);
+		return success;
+	}
+	
+	/**
+	 * Get slot type base on input name.
+	 * @param typeName
+	 * @return
+	 */
+	public static SlotType parseType(String typeName) {
+		
+		// Try to find matching slot type.
+		List<SlotType> allTypes = SlotType.getAll();
+		for (SlotType type : allTypes) {
+			
+			if (type.hasName(typeName)) {
+				return type;
+			}
+		}
+		
+		return  SlotType.UNKNOWN;
+	}
+	
+	/**
+	 * Parse input text and return value of current type.
+	 * @param valueText
+	 * @return
+	 */
+	public Object parseValue(String valueText, Supplier<EnumerationObj> getEnumerationLambda, Supplier<Area> getAreaLambda) 
+			throws Exception{
+		
+		// Check input value.
+		if (valueText == null) {
+			throw new NullPointerException("SlotType.parseValue");
+		}
+		
+		Object value = null;
+		
+		switch (this) {
+		case INTEGER:
+			value = Long.parseLong(valueText);
+			break;
+			
+		case REAL:
+			value = Double.parseDouble(valueText);
+			break;
+			
+		case BOOLEAN:
+			value = MiddleUtility.parseBoolean(valueText);
+			break;
+			
+		case ENUMERATION:
+			if (getEnumerationLambda != null) {
+				value = getEnumerationLambda.get();
+			}
+			if (value == null) {
+				Utility.throwException("org.maclan.messageUnknownEnumerationString", valueText);
+			}
+			break;
+			
+		case COLOR:
+			value = ColorObj.convertString(valueText);
+			if (value == null) {
+				Utility.throwException("org.maclan.messageUnknownColorConstantString", valueText);
+			}
+			break;
+			
+		case AREA_REFERENCE:
+			if (getAreaLambda != null) {
+				value = getAreaLambda.get();
+			}
+			if (value == null) {
+				Utility.throwException("org.maclan.messageUnknownAreaReferenceExpression", valueText);
+			}
+			break;
+			
+		case TEXT:
+		case LOCALIZED_TEXT:
+		case UNKNOWN:
+		case EXTERNAL_PROVIDER:
+		case PATH:
+		default:
+			value = valueText;
+		}
+		
+		return value;
 	}
 	
 	/**

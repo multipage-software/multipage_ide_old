@@ -20,6 +20,7 @@ import org.maclan.MiddleUtility;
 import org.maclan.help.Intellisense;
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
+import org.maclan.server.ProgramHttpServer;
 import org.multipage.basic.GuiWatchDog;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.GeneralGui;
@@ -249,8 +250,9 @@ public class GeneratorMain {
 			}
 			
 			// Start HTTP server.
-			ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUsedLogin());
-			
+			ProgramHttpServer httpServer = ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUsedLogin());
+			DebugViewer.getInstance().attachDebugger(httpServer.getDebugger());
+
 			// Initialize main frame class. Create and show main frame.
 			GeneratorMainFrame mainFrame = new GeneratorMainFrame();
 			

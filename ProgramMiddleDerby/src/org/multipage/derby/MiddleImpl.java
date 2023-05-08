@@ -36,11 +36,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	/**
 	 * Statements.
 	 */
-	private static final String selectTextExists = "SELECT * " +
-	                                               "FROM localized_text " +
-	                                               "WHERE text_id = ? " +
-	                                               "AND language_id = ?";
-
 	private static final String selectTextExistsId = "SELECT * " +
                                                      "FROM localized_text " +
                                                      "WHERE text_id = ?";
@@ -139,30 +134,24 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	                                                          "WHERE area_id = ? " +
 	                                                          "AND subarea_id = ?";
 	
-	private static final String selectAreaSlots = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
+	private static final String selectAreaSlots = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider, reads_input, writes_output, output_text, exposed " +
 	                                              "FROM area_slot " +
 	                                              "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot WHERE area_id = ? GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
 	                                              "WHERE area_slot.area_id = ? " +
 	                                              "ORDER BY alias ASC, revision DESC";
 
-	private static final String selectAreaSlotsNotHidden = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
+	private static final String selectAreaSlotsNotHidden = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider, reads_input, writes_output, output_text, exposed " +
 	                                              "FROM area_slot " +
 	                                              "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot WHERE area_id = ? GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
 	                                              "WHERE area_slot.area_id = ? " +
 	                                              "AND hidden = false " +
 	                                              "ORDER BY alias ASC, revision DESC";
 	
-	private static final String selectAllSlotsNotHidden = "SELECT alias, area_id, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
+	private static final String selectAllSlotsNotHidden = "SELECT alias, area_id, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider, reads_input, writes_output, output_text, exposed " +
 												            "FROM area_slot " +
 												            "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
 												            "WHERE hidden = false " +
 												            "ORDER BY alias ASC, revision DESC";
-	
-	private static final String selectAreaSlotTextValueId = "SELECT localized_text_value_id " +
-	                                                        "FROM area_slot " +
-	                                                        "WHERE alias = ? " +
-	                                                        "AND area_id = ? " +
-	                                                        "AND revision = ?";
 	
 	private static final String selectAreaSlotTextValueIds = "SELECT localized_text_value_id " +
             												 "FROM area_slot " +
@@ -415,15 +404,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 													 + "FROM area_slot "
 													 + "WHERE id = ?";
 
-	private static final String insertTextId = "INSERT INTO text_id (id) " +
-	                                           "VALUES (DEFAULT)";
-
-	private static final String insertLocalizedText = "INSERT INTO localized_text (text_id, language_id, text) " +
-	                                                  "VALUES (?, 0, ?)";
-
-	private static final String insertLocalizedTextLang = "INSERT INTO localized_text (text_id, language_id, text) " +
-	                                                      "VALUES (?, ?, ?)";
-
 	private static final String insertNamespace = "INSERT INTO namespace (description, parent_id, id) " +
 	                                              "VALUES (?, ?, DEFAULT)";
 
@@ -503,11 +483,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	
 	private static final String insertAreaSource = "INSERT INTO area_sources (area_id, resource_id, version_id, not_localized) "
 			 									 + "VALUES (?, ?, ?, ?)";
-
-	private static final String updateText = "UPDATE localized_text " +
-	                                         "SET text = ? " +
-	                                         "WHERE text_id = ? " +
-	                                         "AND language_id = ?";
 
 	private static final String updateNamespaceDescription = "UPDATE namespace " +
 	                                              "SET description = ? " +
@@ -605,12 +580,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 
 	private static final String updateStartLanguage = "UPDATE start_language " +
 	                                                  "SET language_id = ?";
-	
-	private static final String updateAreaSlot = "UPDATE area_slot " +
-	                                             "SET alias = ?, localized_text_value_id = ?, text_value = ?, integer_value = ?, real_value = ?, access = ?, hidden = ?, boolean_value = ?, enumeration_value_id = ?, color = ?, area_value = ?, is_default = ?, name = ?, value_meaning = ?, preferred = ?, user_defined = ?, special_value = ? " +
-	                                             "WHERE alias = ? " +
-	                                             "AND area_id = ? " +
-	                                             "AND revision = ?";
 
 	private static final String updateSlotHolder = "UPDATE area_slot " +
 	                                               "SET area_id = ? " +
@@ -813,12 +782,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 													 + "SET external_provider = ?, reads_input = ?, writes_output = ? "
 													 + "WHERE id = ?";
 
-	private static final String deleteLocalizedText = "DELETE FROM localized_text " +
-	                                                  "WHERE text_id = ?";
-
-	private static final String deleteTextId = "DELETE FROM text_id " +
-	                                           "WHERE id = ?";
-
 	private static final String deleteNamespace = "DELETE FROM namespace " +
 	                                              "WHERE id = ?";
 	
@@ -850,10 +813,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	                                                   "WHERE language_id = ?";
 
 	private static final String deleteStartArea = "DELETE FROM start_area";
-
-	private static final String deleteTextLanguage = "DELETE FROM localized_text " +
-	                                                 "WHERE text_id = ? " +
-	                                                 "AND language_id = ?";
 
 	private static final String deleteAreaSlot = "DELETE FROM area_slot " +
 	                                             "WHERE alias = ? " +
@@ -986,159 +945,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 
 		return text;
 	}
-
-	/**
-	 * Get generated key.
-	 * @param statement
-	 * @return
-	 */
-	private Long getGeneratedKey(PreparedStatement statement)
-		throws SQLException {
-		
-		Long newId = null;
-		
-		try {
-			ResultSet set = statement.getGeneratedKeys();
-			if (set == null) {
-				return null;
-			}
-			if (set.next()) {
-				newId = set.getLong(1);
-				
-				if (newId != null) {
-					set.close();
-					return newId;
-				}
-			}
-			set.close();
-		}
-		catch (SQLException e) {
-			throw e;
-		}
-
-		return null;
-	}
 	
-	/**
-	 * Insert new text in default language.
-	 * @param connection
-	 * @param text
-	 * @return
-	 */
-	private MiddleResult insertText(String text, Obj<Long> textIdOutput) {
-				
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-			
-		try {
-			
-			// Insert new text ID.
-			PreparedStatement statement = connection.prepareStatement(insertTextId, Statement.RETURN_GENERATED_KEYS);
-			statement.execute();
-			
-			Long textId = getGeneratedKey(statement);
-			if (textId == null) {
-				result = MiddleResult.RECORD_ID_NOT_GENERATED;
-			}
-						
-			// Close statement.
-			statement.close();
-			
-			// If ID created.
-			if (textId != null) {
-				// Insert command.
-				statement = connection.prepareStatement(insertLocalizedText);
-				statement.setLong(1, textId);
-				statement.setString(2, text);
-				
-				statement.execute();
-				statement.close();
-				
-				textIdOutput.ref = textId;
-			}
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-
-		return result;
-	}
-
-	/**
-	 * Update language text.
-	 * @param textId
-	 * @param languageId
-	 * @param text
-	 * @return
-	 */
-	public MiddleResult updateLanguageText(long languageId, long textId, String text) {
-		
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-			
-		try {
-			boolean textExists = false;
-			
-			// Check if the localized text already exists.
-			PreparedStatement statement = connection.prepareStatement(selectTextExists);
-			statement.setLong(1, textId);
-			statement.setLong(2, languageId);
-			
-			ResultSet set = statement.executeQuery();
-			if (set.next()) {
-				textExists = true;
-			}
-			
-			statement.close();
-			
-			statement = null;
-			
-			if (textExists) {
-				// Update existing text.
-				statement = connection.prepareStatement(updateText);
-				statement.setString(1, text);
-				statement.setLong(2, textId);
-				statement.setLong(3, languageId);
-			}
-			else {
-				// Insert new text.
-				statement = connection.prepareStatement(insertLocalizedTextLang);
-				statement.setLong(1, textId);
-				statement.setLong(2, languageId);
-				statement.setString(3, text);
-			}
-			
-			statement.execute();
-			
-			// Close statement.
-			statement.close();
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-
-		return result;	
-	}
-
-	/**
-	 * Update text.
-	 * @param textId
-	 * @param text
-	 * @return
-	 */
-	private MiddleResult updateText(long textId, String text) {
-		
-		return updateLanguageText(currentLanguageId, textId, text);
-	}
-
 	/**
 	 * Update language text.
 	 * @param login
@@ -1164,87 +971,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		}
 		
 		return result;
-	}
-
-	/**
-	 * Remove text.
-	 * @param textId
-	 * @return
-	 */
-	private MiddleResult removeText(long textId) {
-				
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-			
-		try {
-			// Delete localized text.
-			PreparedStatement statement = connection.prepareStatement(deleteLocalizedText);
-			statement.setLong(1, textId);
-			
-			statement.execute();
-			// Close statement.
-			statement.close();
-			
-			// Delete text ID.
-			statement = connection.prepareStatement(deleteTextId);
-			statement.setLong(1, textId);
-			
-			statement.execute();
-			// Close.
-			statement.close();
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-
-		return result;
-	}
-	
-	/**
-	 * Remove language text.
-	 * @param textId
-	 * @param languageId
-	 * @return
-	 */
-	public MiddleResult removeLanguageText(long languageId, long textId) {
-	
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-			
-		try {
-			// Create DELETE command.
-			PreparedStatement statement = connection.prepareStatement(deleteTextLanguage);
-			statement.setLong(1, textId);
-			statement.setLong(2, languageId);
-			
-			statement.execute();
-
-			// Close statement.
-			statement.close();
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-
-		return result;
-	}
-
-	/**
-	 * Delete current language text.
-	 * @param textId
-	 * @return
-	 */
-	public MiddleResult removeCurrentLanguageText(long textId) {
-
-		return removeLanguageText(currentLanguageId, textId);
 	}
 
 	/**
@@ -6268,6 +5994,10 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		slot.setSpecialValue(set.getString("special_value"));
 		// Set external provider.
 		slot.setExternalProvider(set.getString("external_provider"));
+		slot.setReadsInput(set.getBoolean("reads_input"));
+		slot.setWritesOutput(set.getBoolean("writes_output"));
+		slot.setOutputText(set.getString("output_text"));
+		slot.setExposed(set.getBoolean("exposed"));
 		
 		// Set slot ID.
 		slot.setId(set.getLong("id"));
@@ -6408,60 +6138,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				
 				// Load slot helper
 				loadSlotHelper(set, editedSlot);
-			}
-
-			// Close statement.
-			statement.close();
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-
-		return result;
-	}
-	
-	/**
-	 * Load slot text value ID.
-	 * @param slot
-	 * @param holder
-	 * @param textValueId
-	 * @return
-	 */
-	private MiddleResult loadSlotTextValueId(Slot slot, Obj<Long> textValueId) {
-		
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-			
-		try {
-			String command;
-			SlotHolder holder = slot.getHolder();
-			
-			// Select command depending on slot holder.
-			if (holder instanceof Area) {
-			
-				command = selectAreaSlotTextValueId;
-			}
-			else {
-				return MiddleResult.UNKNOWN_SLOT_HOLDER_TYPE;
-			}
-			
-			// Create statement.
-			PreparedStatement statement = connection.prepareStatement(command);
-			statement.setString(1, slot.getAlias());
-			statement.setLong(2, holder.getId());
-			statement.setLong(3, slot.getRevision());
-			
-			ResultSet set = statement.executeQuery();
-			if (set.next()) {
-				
-				textValueId.ref = (Long) set.getObject("localized_text_value_id");
-			}
-			else {
-				result = MiddleResult.ELEMENT_DOESNT_EXIST;
 			}
 
 			// Close statement.
@@ -6741,61 +6417,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	}
 	
 	/**
-	 * Load slot revision
-	 * @param slot
-	 * @param revision
-	 * @return
-	 */
-	public MiddleResult loadSlotHeadRevision(Slot slot, Obj<Long> revision) {
-		
-		revision.ref = null;
-		
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-		
-		if (result.isOK()) {
-			
-			PreparedStatement statement = null;
-			ResultSet set = null;
-			
-			try {
-				// Prepare statement.
-				statement = connection.prepareStatement("SELECT revision FROM area_slot WHERE alias = ? AND area_id = ? ORDER BY revision DESC FETCH FIRST 1 ROWS ONLY");
-				statement.setString(1, slot.getAlias());
-				statement.setLong(2, slot.getHolder().getId());
-				
-				set = statement.executeQuery();
-				if (set.next()) {
-					revision.ref = set.getLong("revision");
-				}
-				else {
-					revision.ref = 0L;
-				}
-			}
-			catch (SQLException e) {
-				result = MiddleResult.sqlToResult(e);
-			}
-			finally {
-				try {
-					if (set != null) {
-						set.close();
-					}
-					if (statement != null) {
-						statement.close();
-					}
-				}
-				catch (SQLException e) {
-				}
-			}
-		}
-		
-		return result;
-	}
-	
-	/**
 	 * Update slot revision
 	 * @param slotId
 	 * @param revision
@@ -6868,185 +6489,6 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		return result;
 	}
 	
-	/**
-	 * Update slot.
-	 * @param slot
-	 * @param newSlot
-	 * @return
-	 */
-	public MiddleResult updateSlot(Slot slot, Slot newSlot,
-			boolean removeCurrentLanguageText) {
-		
-		// Check connection.
-		MiddleResult result = checkConnection();
-		if (result.isNotOK()) {
-			return result;
-		}
-		
-		// Get current revision number
-		Obj<Long> revision = new Obj<Long>();
-		result = loadSlotHeadRevision(slot, revision);
-		if (result.isNotOK()) {
-			return result;
-		}
-		if (revision.ref == null) {
-			return MiddleResult.ERROR_GETTING_REVISION;
-		}
-		
-		// Get slot localized text.
-		Obj<Long> textValueId = new Obj<Long>();
-		result = loadSlotTextValueId(slot, textValueId);
-		if (result.isNotOK()) {
-			return result;
-		}
-		
-		// Initialize "remove localized text" flag.
-		boolean tryRemoveLocalizedText = true;
-
-		try {
-			// Get command depending on slot holder.
-			SlotHolder holder = slot.getHolder();
-			String command = null;
-			
-			if (holder instanceof Area) {
-				
-				command = updateAreaSlot;
-			}
-			else {
-				result = MiddleResult.UNKNOWN_SLOT_HOLDER_TYPE;
-			}
-			
-			if (result.isOK()) {
-				// Prepare statement.
-				PreparedStatement statement = connection.prepareStatement(command);
-				
-				statement.setString(18, slot.getAlias());
-				statement.setLong(19, holder.getId());
-				long revisionNumber = revision.ref;
-				statement.setLong(20, revisionNumber);
-				
-				statement.setString(1, newSlot.getAlias());
-				
-				// Reset values.
-				statement.setNull(2, Types.BIGINT);
-				statement.setString(3, null);
-				statement.setNull(4, Types.BIGINT);
-				statement.setNull(5, Types.DOUBLE);
-				statement.setString(6, Character.toString(newSlot.getAccess()));
-				statement.setBoolean(7, newSlot.isHidden());
-				statement.setNull(8, Types.BOOLEAN);
-				statement.setNull(9, Types.BIGINT);
-				statement.setNull(10, Types.BIGINT);
-				statement.setNull(11, Types.BIGINT);
-				statement.setBoolean(12, newSlot.isDefault());
-				String name = newSlot.getName();
-				statement.setString(13, name.isEmpty() ? null : name);
-				statement.setString(14, newSlot.getValueMeaning());
-				statement.setBoolean(15, newSlot.isPreferred());
-				statement.setBoolean(16, newSlot.isUserDefined());
-				statement.setString(17, newSlot.getSpecialValueNull());
-				
-				// Get value type.
-				SlotType type = newSlot.getType();
-				
-				// On localized text.
-				if (type == SlotType.LOCALIZED_TEXT) {
-				
-					// Get localized text and save it.
-					String text = newSlot.getTextValue();
-					if (textValueId.ref == null) {
-						result = insertText(text, textValueId);
-					}
-					else {
-						result = updateText(textValueId.ref, text);
-					}
-					if (result.isOK()) {
-						
-						statement.setLong(2, textValueId.ref);
-						tryRemoveLocalizedText = false;
-					}
-				}
-				else if (type == SlotType.TEXT || type == SlotType.PATH) {
-					
-					// Get localized text and save it.
-					String text = newSlot.getTextValue();
-					statement.setString(3, text);
-				}
-				else if (type == SlotType.INTEGER) {
-
-					// Get long value.
-					long number = newSlot.getIntegerValue();
-					statement.setLong(4, number);
-				}
-				else if (type == SlotType.REAL) {
-					
-					// Get double value.
-					Double number = newSlot.getRealValue();
-					statement.setDouble(5, number);
-				}
-				else if (type == SlotType.BOOLEAN) {
-					
-					// Get boolean value.
-					Boolean booleanValue = newSlot.getBooleanValue();
-					statement.setBoolean(8, booleanValue);
-				}
-				else if (type == SlotType.ENUMERATION) {
-					
-					// Get enumeration value ID.
-					long enumerationValueId = newSlot.getEnumerationValue().getId();
-					statement.setLong(9, enumerationValueId);
-				}
-				else if (type == SlotType.COLOR) {
-					
-					// Get long value.
-					long colorLong = newSlot.getColorLong();
-					statement.setLong(10, colorLong);
-				}
-				else if (type == SlotType.AREA_REFERENCE) {
-					
-					// Get area ID.
-					Long areaIdLong = newSlot.getAreaIdValue();
-					if (areaIdLong != null) {
-						statement.setLong(11, areaIdLong);
-					}
-				}
-				else {
-					if (newSlot.getValue() == null) {
-						// On remove localized text.
-						if (textValueId.ref != null && removeCurrentLanguageText) {
-							statement.setLong(2, textValueId.ref);
-							
-							result = removeCurrentLanguageText(textValueId.ref);
-							
-							// Do not remove text.
-							tryRemoveLocalizedText = false;
-						}
-					}
-					else {
-						result = MiddleResult.UNKNOWN_SLOT_VALUE_TYPE;
-					}
-				}
-				
-				if (result.isOK()) {
-					statement.execute();
-
-					// Remove the localized text.
-					if (tryRemoveLocalizedText && textValueId.ref != null) {
-						result = removeText(textValueId.ref);
-					}
-				}
-	
-				// Close statement.
-				statement.close();
-			}
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-		
-		return result;
-	}
 	
 	/**
 	 * Load dictionary.
@@ -8603,7 +8045,18 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 */
 	@Override
 	public MiddleResult loadAreaTreeData(Properties login, long areaId, Long parentAreaId,
-			AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
+		
+		// TODO Auto-generated method stub
+		return null;	
+	}
+	
+	/**
+	 * Load area tree data.
+	 */
+	@Override
+	public MiddleResult loadAreaTreeData(Properties login, LinkedList<Long> areaIds, Long parentAreaId,
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Initialize progress bar.
 		if (swingWorkerHelper != null) {
@@ -8614,8 +8067,10 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		MiddleResult result = login(login);
 		if (result.isOK()) {
 
-			// Load area tree.
-			areaTreeData.setRootAreaId(areaId);
+			// Load area trees.
+			for (Long areaId : areaIds) {
+				areaTreeData.addRootAreaId(areaId);
+			}
 			
 			result = loadLanguages(areaTreeData);
 			
@@ -8623,10 +8078,22 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				result = loadStartLanguage(areaTreeData);
 				
 				if (result.isOK()) {
-					result = loadAreasEdgesTreeWithVersions(areaId, areaTreeData, swingWorkerHelper);
+					
+					for (Long areaId : areaIds) {
+						result = loadAreasEdgesTreeWithVersions(areaId, areaTreeData, swingWorkerHelper);
+						if (result.isNotOK()) {
+							break;
+						}
+					}
 					
 					if (result.isOK()) {
-						result = loadAreaSuperEdgeData(areaId, parentAreaId, areaTreeData, swingWorkerHelper);
+						
+						for (Long areaId : areaIds) {
+							result = loadAreaSuperEdgeData(areaId, parentAreaId, areaTreeData, swingWorkerHelper);
+							if (result.isNotOK()) {
+								break;
+							}
+						}
 					
 						if (result.isOK()) {
 							result = loadConstructors(areaTreeData, swingWorkerHelper);
@@ -8683,7 +8150,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 */
 	@Override
 	public MiddleResult loadAreaSuperEdgeData(long areaId, Long parentAreaId,
-			AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		if (parentAreaId == null) {
 			return MiddleResult.OK;
@@ -8709,6 +8176,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			if (set.next()) {
 				
 				areaTreeData.addRootSuperEdge(
+						parentAreaId,
+						areaId,
 						(Boolean) set.getObject("inheritance"),
 						(String) set.getObject("name_sub"),
 						(String) set.getObject("name_super"),
@@ -8750,7 +8219,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	private MiddleResult loadDescriptions(AreaTreeData areaTreeData,
+	private MiddleResult loadDescriptions(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 
 		// Check connection.
@@ -8837,7 +8306,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	private MiddleResult loadConstructors(AreaTreeData areaTreeData,
+	private MiddleResult loadConstructors(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -8891,7 +8360,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param areaTreeData
 	 * @return
 	 */
-	private MiddleResult loadStartLanguage(AreaTreeData areaTreeData) {
+	private MiddleResult loadStartLanguage(AreaTreesData areaTreeData) {
 		
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -8916,7 +8385,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param areaTreeData
 	 * @return
 	 */
-	public MiddleResult loadLanguages(AreaTreeData areaTreeData) {
+	public MiddleResult loadLanguages(AreaTreesData areaTreeData) {
 		
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -8962,7 +8431,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @return
 	 */
 	public MiddleResult loadAreasEdgesTreeWithVersions(long areaId,
-			AreaTreeData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
+			AreaTreesData areaTreeData, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -9105,7 +8574,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @return
 	 */
 	private MiddleResult loadAreaSourcesData(long areaId,
-			AreaTreeData areaTreeData) {
+			AreaTreesData areaTreeData) {
 
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -9227,7 +8696,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param areaTreeData
 	 * @return
 	 */
-	private MiddleResult loadHomeArea(AreaTreeData areaTreeData) {
+	private MiddleResult loadHomeArea(AreaTreesData areaTreeData) {
 		
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -9255,7 +8724,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadSlots(AreaTreeData areaTreeData,
+	public MiddleResult loadSlots(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -9347,7 +8816,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert enumerations data.
 	 */
 	@Override
-	public MiddleResult insertEnumerationsData(AreaTreeData areaTreeData,
+	public MiddleResult insertEnumerationsData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -9406,7 +8875,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadLocalizedTexts(AreaTreeData areaTreeData,
+	public MiddleResult loadLocalizedTexts(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -9480,7 +8949,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	private MiddleResult loadEnumerations(AreaTreeData areaTreeData,
+	private MiddleResult loadEnumerations(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -9527,7 +8996,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper 
 	 * @return
 	 */
-	public MiddleResult loadResources(AreaTreeData areaTreeData,
+	public MiddleResult loadResources(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -9863,7 +9332,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Add new languages data.
 	 */
 	@Override
-	public MiddleResult insertLanguagesNewData(LinkedList<DatBlock> datBlocks, AreaTreeData areaTreeData) {
+	public MiddleResult insertLanguagesNewData(LinkedList<DatBlock> datBlocks, AreaTreesData areaTreeData) {
 		
 		LinkedList<Object []> languageAliasesIds = new LinkedList<Object []>();
 		// Load language aliases.
@@ -9903,7 +9372,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert new versions.
 	 */
 	@Override
-	public MiddleResult insertVersionsNewData(AreaTreeData areaTreeData) {
+	public MiddleResult insertVersionsNewData(AreaTreesData areaTreeData) {
 		
 		LinkedList<Object []> versionAliasesIds = new LinkedList<Object []>();
 		// Load versions' aliases.
@@ -10070,7 +9539,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param version
 	 * @return
 	 */
-	private MiddleResult insertVersionData(AreaTreeData areaTreeData, VersionData version) {
+	private MiddleResult insertVersionData(AreaTreesData areaTreeData, VersionData version) {
 				
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -10138,7 +9607,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertAreasData(AreaTreeData areaTreeData,
+	public MiddleResult insertAreasData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -10255,7 +9724,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param newTextId
 	 * @return
 	 */
-	private MiddleResult insertLocalizedTextData(AreaTreeData areaTreeData,
+	private MiddleResult insertLocalizedTextData(AreaTreesData areaTreeData,
 			Long oldTextId, Obj<Long> newTextId) {
 		
 		// Insert default text.
@@ -10293,12 +9762,14 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert root "is sub area" edge.
 	 * @param areaTreeData
 	 * @param importAreaId
-	 * @param rootAreaId
+	 * @param rootAreaIds
+	 * @param edges
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertIsSubAreaConnection(AreaTreeData areaTreeData,
-			long importAreaId, Long rootAreaId,
+	@Override
+	public MiddleResult insertIsSubAreaConnection(AreaTreesData areaTreeData,
+			long importAreaId, LinkedList<Long> rootAreaIds, LinkedList<IsSubArea> edges,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -10307,44 +9778,54 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			return result;
 		}
 		
-		PreparedStatement statement = null;
+		// Check parameters.
+		int size = rootAreaIds.size();
+		if (size != edges.size()) {
+			return MiddleResult.BAD_PARAMETER;
+		}
 		
-		try {
+		for (int index = 0; index < size; index++) {
 			
-			// INSERT statement.
-			statement = connection.prepareStatement(insertIsSubAreaEdgeSimple);
-			statement.setLong(1, importAreaId);
-			statement.setLong(2, rootAreaId);
+			IsSubArea edge = edges.get(index);
+			long rootAreaId = rootAreaIds.get(index);
 			
-			IsSubArea edge = areaTreeData.rootSuperEdge;
-			if (edge != null) {
-				
-				statement.setBoolean(3, edge.inheritance != null ? edge.inheritance : false);
-				statement.setString(4, edge.nameSub);
-				statement.setString(5, edge.nameSuper);
-				statement.setBoolean(6, edge.hideSub != null ? edge.hideSub : false);
-			}
-			else {
-				statement.setBoolean(3, false);
-				statement.setObject(4, null);
-				statement.setObject(5, null);
-				statement.setBoolean(6, false);
-			}
-			
-			statement.executeUpdate();
-		}
-		catch (SQLException e) {
-			
-			result = MiddleResult.sqlToResult(e);
-		}
-		finally {
-			// Close objects.
+			PreparedStatement statement = null;
 			try {
-				if (statement != null) {
-					statement.close();
+				
+				// INSERT statement.
+				statement = connection.prepareStatement(insertIsSubAreaEdgeSimple);
+				statement.setLong(1, importAreaId);
+				statement.setLong(2, rootAreaId);
+				
+				if (edge != null) {
+					
+					statement.setBoolean(3, edge.inheritance != null ? edge.inheritance : false);
+					statement.setString(4, edge.nameSub);
+					statement.setString(5, edge.nameSuper);
+					statement.setBoolean(6, edge.hideSub != null ? edge.hideSub : false);
 				}
+				else {
+					statement.setBoolean(3, false);
+					statement.setObject(4, null);
+					statement.setObject(5, null);
+					statement.setBoolean(6, false);
+				}
+				
+				statement.executeUpdate();
 			}
-			catch (Exception e) {
+			catch (SQLException e) {
+				
+				result = MiddleResult.sqlToResult(e);
+			}
+			finally {
+				// Close objects.
+				try {
+					if (statement != null) {
+						statement.close();
+					}
+				}
+				catch (Exception e) {
+				}
 			}
 		}
 
@@ -10357,7 +9838,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertIsSubAreaData(AreaTreeData areaTreeData,
+	public MiddleResult insertIsSubAreaData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 				
 		// Check connection.
@@ -10429,7 +9910,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertSlotsData(AreaTreeData areaTreeData,
+	public MiddleResult insertSlotsData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -10585,7 +10066,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult insertMimeData(AreaTreeData areaTreeData,
+	public MiddleResult insertMimeData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -10726,7 +10207,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert area resources data.
 	 */
 	@Override
-	public MiddleResult insertAreaResourcesData(AreaTreeData areaTreeData, LinkedList<DatBlock> datBlocks,
+	public MiddleResult insertAreaResourcesData(AreaTreesData areaTreeData, LinkedList<DatBlock> datBlocks,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 
         // Check connection.
@@ -10822,7 +10303,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	private MiddleResult insertResourceData(ResourceRef resourceRef, AreaTreeData areaTreeData, LinkedList<DatBlock> datBlocks,
+	private MiddleResult insertResourceData(ResourceRef resourceRef, AreaTreesData areaTreeData, LinkedList<DatBlock> datBlocks,
 			Obj<Long> resourceId, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 
 		resourceId.ref = null;
@@ -10904,7 +10385,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * @param swingWorkerHelper
 	 * @return
 	 */
-	public MiddleResult updateStartResourcesData(AreaTreeData areaTreeData,
+	public MiddleResult updateStartResourcesData(AreaTreesData areaTreeData,
 			LinkedList<DatBlock> datBlocks, SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -10993,7 +10474,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert area sources from area tree data into the database.
 	 */
 	@Override
-	public MiddleResult insertAreaSourcesData(AreaTreeData areaTreeData,
+	public MiddleResult insertAreaSourcesData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -11471,6 +10952,11 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		}
 
 		long versionId = version.getId();
+		
+		// Check default version. The default version cannot be updated.
+		if (versionId == 0L) {
+			return MiddleResult.CANNOT_UPDATE_DEFAULT_VERSION;
+		}
 		
 		// Get description ID.
 		Obj<Long> descriptionId = new Obj<Long>();
@@ -12848,7 +12334,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert enumeration values data.
 	 */
 	@Override
-	public MiddleResult insertEnumerationValuesData(AreaTreeData areaTreeData,
+	public MiddleResult insertEnumerationValuesData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -12976,7 +12462,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert constructor trees.
 	 */
 	@Override
-	public MiddleResult insertConstructorTrees(AreaTreeData areaTreeData,
+	public MiddleResult insertConstructorTrees(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -15858,7 +15344,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 */
 	@Override
 	public MiddleResult updateAreaConstructorGroupsHoldersIds(
-			AreaTreeData areaTreeData,
+			AreaTreesData areaTreeData,
 			long importAreaId,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
@@ -16564,7 +16050,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Insert description data.
 	 */
 	@Override
-	public MiddleResult insertDescriptionData(AreaTreeData areaTreeData,
+	public MiddleResult insertDescriptionData(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -16641,7 +16127,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Load default language data.
 	 */
 	@Override
-	public MiddleResult updateDefaultLanguageData(AreaTreeData areaTreeData) {
+	public MiddleResult updateDefaultLanguageData(AreaTreesData areaTreeData) {
 
 		// Check connection.
 		MiddleResult result = checkConnection();
@@ -16743,7 +16229,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Update related areas.
 	 */
 	@Override
-	public MiddleResult updateAreaRelatedAreas(AreaTreeData areaTreeData,
+	public MiddleResult updateAreaRelatedAreas(AreaTreesData areaTreeData,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 
 
@@ -18733,7 +18219,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 */
 	@Override
 	public MiddleResult updateUnlinkedAreasConstructors(
-			AreaTreeData areaTreeData, long importAreaId, long rootAreaId,
+			AreaTreesData areaTreeData, long importAreaId, long rootAreaId,
 			SwingWorkerHelper<MiddleResult> swingWorkerHelper) {
 		
 		// Check connection.
@@ -20001,7 +19487,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 		}
 		
 		// Create cache.
-		AreaTreeData areaTreeData = new AreaTreeData();
+		AreaTreesData areaTreeData = new AreaTreesData();
 		
 		// Load cache from input stream.
 		MiddleResult result = areaTreeData.readXmlDataStream(xmlStream);
@@ -20019,7 +19505,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	 * Import data from DAT stream.
 	 */
 	@Override
-	public MiddleResult importDatStream(AreaTreeData areaTreeData, InputStream datStream,
+	public MiddleResult importDatStream(AreaTreesData areaTreeData, InputStream datStream,
 			LinkedList<DatBlock> datBlocks) {
 		
 		// Check input stream.

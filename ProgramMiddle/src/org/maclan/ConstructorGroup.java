@@ -932,4 +932,19 @@ public class ConstructorGroup extends ConstructorSubObject implements Identified
 			constructorHolder.wasLinked();
 		}
 	}
+
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ConstructorGroup other = (ConstructorGroup) obj;
+		return id == other.id;
+	}
 }

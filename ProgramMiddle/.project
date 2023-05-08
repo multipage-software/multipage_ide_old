@@ -35,4 +35,11 @@
 		<nature>sf.eclipse.javacc.javaccnature</nature>
 		<nature>org.eclipse.wst.common.project.facet.core.nature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>src/org/maclan/server/AreaServer_TrayMenu.vsdx</name>
+			<type>1</type>
+			<locationURI>PROJECT_LOC/src/org/maclan/AreaServer.vsdx</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>

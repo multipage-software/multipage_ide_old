@@ -10,6 +10,8 @@ package org.maclan;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -220,6 +222,15 @@ public interface MiddleLight {
 	public MiddleResult loadArea(long areaId, Obj<Area> area);
 	
 	/**
+	 * Load area.
+	 * @param areaId
+	 * @param versionId
+	 * @param area
+	 * @return
+	 */
+	public MiddleResult loadArea(long areaId, long versionId, Obj<Area> area);
+	
+	/**
 	 * Load basic area.
 	 * @param area
 	 * @return
@@ -270,6 +281,23 @@ public interface MiddleLight {
 	 */
 	public MiddleResult loadLanguageNoFlag(
 			String alias, Language language);
+	
+	/**
+	 * Get generated key.
+	 * @param statement
+	 * @return
+	 */
+	public Long getGeneratedKey(PreparedStatement statement)
+			throws SQLException;
+	
+	/**
+	 * Insert new text in default language.
+	 * @param connection
+	 * @param text
+	 * @return
+	 */
+	public MiddleResult insertText(String text, Obj<Long> textIdOutput);
+	
 	/**
 	 * Load home area.
 	 * @param homeArea
@@ -337,7 +365,16 @@ public interface MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadSlotValue(Slot slot);
-
+	
+	/**
+	 * Load slot text value ID.
+	 * @param slot
+	 * @param holder
+	 * @param textValueId
+	 * @return
+	 */
+	public MiddleResult loadSlotTextValueId(Slot slot, Obj<Long> textValueId);
+	
 	/**
 	 * Load area slot.
 	 * @param area
@@ -365,6 +402,14 @@ public interface MiddleLight {
 	 */
 	public MiddleResult loadSlot(Area area, String alias, int hint,
 			boolean inherit, boolean parent, boolean skipDefault, Obj<Slot> slot, boolean loadValue);
+	
+	/**
+	 * Check if the input slot changes.
+	 * @param slot
+	 * @param slotChanges
+	 * @return
+	 */
+	public MiddleResult loadSlotChanges(Slot slot, Obj<Boolean> slotChanges);
 
 	/**
 	 * Load area slot with inheritance level.
@@ -395,6 +440,37 @@ public interface MiddleLight {
 	 * @return
 	 */
 	public MiddleResult loadAreaSlotsRefDataEx(Area area, boolean isDefaultValue);
+	
+	/**
+	 * Load slot revision
+	 * @param slot
+	 * @param revision
+	 * @return
+	 */
+	public MiddleResult loadSlotHeadRevision(Slot slot, Obj<Long> revision);
+	
+	/**
+	 * Update slot.
+	 * @param slot
+	 * @param newSlot
+	 * @return
+	 */
+	public MiddleResult updateSlot(Slot slot, Slot newSlot,
+			boolean removeCurrentLanguageText);
+	
+	/**
+	 * Update slot value.
+	 * @param slot
+	 * @return
+	 */
+	public MiddleResult updateSlotValue(Slot slot);
+	
+	/**
+	 * Update area record.
+	 * @param area
+	 * @return
+	 */
+	public MiddleResult updateArea(Area area);	
 	
 	/**
 	 * Update slot text value

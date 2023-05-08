@@ -42,6 +42,7 @@ public class ShowHtmlMessageDialog extends JDialog {
 		
 		ShowHtmlMessageDialog dialog = new ShowHtmlMessageDialog(parent);
 		dialog.textPane.setText(htmlMessage);
+		dialog.textPane.setCaretPosition(0);
 		dialog.setVisible(true);
 		
 		return;

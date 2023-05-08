@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-  <string>C:\from_master\multipage_ide\ProgramAddIns\src\org\multipage\addinloader\properties</string>
+  <string>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties</string>
   <boolean>true</boolean>
   <java.awt.Rectangle>
     <x>0</x>
@@ -221,100 +221,37 @@
     <height>330</height>
   </java.awt.Rectangle>
   <java.awt.Rectangle>
-    <x>540</x>
-    <y>0</y>
+    <x>893</x>
+    <y>25</y>
     <width>974</width>
-    <height>1047</height>
+    <height>905</height>
   </java.awt.Rectangle>
   <linked-list>
     <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\GeneralGui\src\org\multipage\gui\properties\messages_cz_CZ.properties</filePath>
-      <tabName>GeneralGui</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>232</column1>
-        <otherColumns>317</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramBasic\src\org\multipage\basic\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Basic</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>236</column1>
-        <otherColumns>324</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramGenerator\src\org\multipage\generator\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Generator</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>267</column1>
-        <otherColumns>323</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramBuilderDynamic\src\program\builder\dynamic\properties\messages_en_US.properties</filePath>
-      <tabName>Dynamic</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>244</column1>
-        <otherColumns>524</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramHelp\src\org\maclan\help\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Help</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>243</column1>
-        <otherColumns>304</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramTranslator\src\org\multipage\translator\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Translator</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>265</column1>
-        <otherColumns>311</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramSync\src\org\multipage\sync\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Sync</tabName>
-      <columns>
-        <column0>30</column0>
-        <column1>282</column1>
-        <otherColumns>281</otherColumns>
-      </columns>
-    </program.localizer.LocalizerItem>
-    <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramMiddle\src\org\maclan\properties\messages_cz_CZ.properties</filePath>
+      <filePath>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties\messages_cz_CZ.properties</filePath>
       <tabName>Middle</tabName>
       <columns>
         <column0>30</column0>
-        <column1>264</column1>
-        <otherColumns>321</otherColumns>
+        <column1>326</column1>
+        <otherColumns>356</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
     <program.localizer.LocalizerItem>
-      <filePath>C:\from_master\multipage_ide\ProgramAddIns\src\org\multipage\addinloader\properties\messages_en_US.properties</filePath>
-      <tabName>AddInLoader</tabName>
+      <filePath>C:\from_backup\multipage_ide\ProgramGenerator\src\org\multipage\generator\properties\messages_cz_CZ.properties</filePath>
+      <tabName>Generator</tabName>
       <columns>
         <column0>30</column0>
-        <column1>298</column1>
-        <otherColumns>347</otherColumns>
+        <column1>259</column1>
+        <otherColumns>200</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
   </linked-list>
-  <int>2</int>
+  <int>1</int>
   <java.awt.Rectangle>
-    <x>711</x>
-    <y>74</y>
+    <x>995</x>
+    <y>13</y>
     <width>707</width>
-    <height>502</height>
+    <height>1039</height>
   </java.awt.Rectangle>
-  <int>152</int>
+  <int>366</int>
 </settings>

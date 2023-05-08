@@ -5055,6 +5055,27 @@ public class Utility {
 		long now = calendar.getTimeInMillis();
 		return now;
 	}
+	
+	/**
+	 * Check if two input values are equal.
+	 * @param value1
+	 * @param value2
+	 * @return
+	 */
+	public static boolean equalsShallow(Object value1, Object value2) {
+		
+		if (value1 == null && value2 == null) {
+			return true;
+		}
+		boolean success = false;
+		if (value1 != null) {
+			success = value1.equals(value2);
+		}
+		else if (value2 != null) {
+			success = value2.equals(value1);
+		}
+		return success;
+	}
 
 	/**
 	 * Make deep check of equivalence of two input objects.
@@ -5887,7 +5908,7 @@ public class Utility {
 			IOUtils.copy(inputStream, outputStream);
 		}
 		catch (Exception e) {
-			// TODO: <---DEBUG Eexception.
+			// TODO: <---DEBUG Exception.
 			show2("Expose %s error. Line no. %d", fileName, e.getStackTrace()[0].getLineNumber());
 			throwException("org.multipage.gui.messageCannotExposeApplicationFile", e.getLocalizedMessage());
 		}

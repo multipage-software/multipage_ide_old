@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * Resource reference.
  * @author
@@ -54,5 +56,20 @@ public class ResourceRef {
 				+ isProtected + ", isVisible=" + isVisible + ", text=" + text
 				+ ", dataStart=" + dataStart + ", dataEnd=" + dataEnd
 				+ ", newResourceId=" + newResourceId + "]";
+	}
+
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ResourceRef other = (ResourceRef) obj;
+		return Objects.equals(resourceId, other.resourceId);
 	}
 }

@@ -13,6 +13,8 @@ import java.awt.dnd.*;
 import java.util.*;
 
 import javax.swing.*;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.*;
 
 import org.multipage.util.*;
@@ -101,6 +103,11 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 	 * Enable Drag and Drop flag.
 	 */
 	private boolean enableDragAdnDrop = true;
+	
+	/**
+	 * Selected tree paths.
+	 */
+	protected TreePath[] multipleSelectedPaths = null;
 
 	/**
 	 * Constructor.
@@ -115,8 +122,40 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 		dragSource.createDefaultDragGestureRecognizer(this,
 				DnDConstants.ACTION_COPY | DnDConstants.ACTION_MOVE | DnDConstants.ACTION_LINK,
 		        this);
+		
+		// Set selection listener.
+		setListeners();
 	}
-
+	
+	/**
+	 * Set selection listener.
+	 */
+	private void setListeners() {
+		
+		addTreeSelectionListener(new TreeSelectionListener() {
+			
+			@Override
+			public void valueChanged(TreeSelectionEvent e) {
+				
+				// Set last multiple selection.
+				TreePath[] paths = e.getPaths();
+				if (paths != null && paths.length > 1 && multipleSelectedPaths == null) {
+					multipleSelectedPaths = paths;
+				}
+			}
+		});
+	}
+	
+	/**
+	 * Get multiple selected paths.
+	 * @return
+	 */
+	public TreePath[] getMultipleSelectedPaths() {
+		
+		TreePath[] paths = multipleSelectedPaths;
+		multipleSelectedPaths = null;
+		return paths;
+	}
 	/**
 	 * Clear all marked nodes.
 	 */
@@ -360,6 +399,9 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 		if (dndCallback != null) {
 			dndCallback.onNodeDropped(droppedDndNode, droppedNodeParent,
 					transferedDndNode, transferredNodeParent.ref, e);
+			
+			// Reset multiple selection.
+			multipleSelectedPaths = null;
 		}
 	}
 
@@ -396,6 +438,10 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 	@Override
 	public void dragEnter(DropTargetDragEvent e) {
 		
+		// Try to select multiple tree nodes.
+		if (multipleSelectedPaths != null) {
+			SwingUtilities.invokeLater(() -> addSelectionPaths(multipleSelectedPaths));
+		}
 	}
 
 	@Override

@@ -524,7 +524,7 @@ public class LoggingDialog extends JDialog {
 	private JButton buttonStepSingleItem;
 	private JButton buttonRunItems;
 	private JButton buttonBreakItems;
-	private JPanel panel;
+	private JPanel panelMetaParser;
 	private JSplitPane splitPane;
 	private JPanel panelBottom;
 	private JTextPane textPaneMetaTags;
@@ -669,13 +669,13 @@ public class LoggingDialog extends JDialog {
 		textQueueMessage.setContentType("text/html");
 		scrollPaneQueueMessageDescription.setViewportView(textQueueMessage);
 		
-		panel = new JPanel();
-		tabbedPane.addTab("META parser", null, panel, null);
-		panel.setLayout(new BorderLayout(0, 0));
+		panelMetaParser = new JPanel();
+		tabbedPane.addTab("org.multipage.generator.textMetaParser", null, panelMetaParser, null);
+		panelMetaParser.setLayout(new BorderLayout(0, 0));
 		
 		splitPane = new JSplitPane();
 		splitPane.setResizeWeight(0.5);
-		panel.add(splitPane);
+		panelMetaParser.add(splitPane);
 		
 		JScrollPane scrollPaneLeft = new JScrollPane();
 		splitPane.setLeftComponent(scrollPaneLeft);
@@ -690,7 +690,7 @@ public class LoggingDialog extends JDialog {
 		scrollPaneRight.setViewportView(treeMetaTags);
 		
 		panelBottom = new JPanel();
-		panel.add(panelBottom, BorderLayout.SOUTH);
+		panelMetaParser.add(panelBottom, BorderLayout.SOUTH);
 		
 		JButton buttonParse = new JButton("Parse");
 		buttonParse.addActionListener(new ActionListener() {

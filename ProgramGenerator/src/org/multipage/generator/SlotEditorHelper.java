@@ -36,6 +36,7 @@ import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * @author 
@@ -401,6 +402,7 @@ public class SlotEditorHelper {
 		// Create new slot.
 		Slot newSlot = new Slot(holder, alias);
 		
+		long id = editedSlot.getId();
 		long revision = editedSlot.getRevision();
 		boolean localizedTextSelected = editor.getCheckLocalizedText().isSelected();
 		char access = editedSlot.getAccess();
@@ -417,11 +419,11 @@ public class SlotEditorHelper {
 		Object value = getValue();
 		String valueMeaning = getValueMeaning();
 		
+		newSlot.setId(id);
 		newSlot.setRevision(revision);
 		newSlot.setValue(value);
 		newSlot.setValueMeaning(valueMeaning);
-		newSlot.setLocalized(value instanceof String
-			&& localizedTextSelected);
+		newSlot.setLocalized(value instanceof String && localizedTextSelected);
 		newSlot.setAccess(access);
 		newSlot.setHidden(hidden);
 		newSlot.setDefault(isDefault);
@@ -445,7 +447,22 @@ public class SlotEditorHelper {
 		Slot newSlot = loadCurrentSlot();
 		newSlot.resetEmptyText();
 		editedSlot.resetEmptyText();
-		return !editedSlot.contentEquals(newSlot);
+		
+		Obj<Boolean> slotChanges = new Obj<Boolean>(true);
+		
+		try {
+			// Check if the edited slot is changed.
+			Middle middle = ProgramBasic.loginMiddle();
+			
+			slotChanges = new Obj<Boolean>();
+			MiddleResult result = middle.loadSlotChanges(newSlot, slotChanges);
+			
+			middle.logout(result);
+		}
+		catch (Exception e) {
+		}
+		
+		return slotChanges.ref;
 	}
 
 	/**
@@ -578,15 +595,29 @@ public class SlotEditorHelper {
 			// Make new revision of slot or update slot.
 			else {
 				
-				if (newRevision) {
-					result = middle.insertSlotRevision(editedSlot, newSlot);
-				}
-				else {
-					result = middle.updateSlot(editedSlot, newSlot, localizedTextSelected);
-				}
+				// If slot was changed, ask user and make updates.
+				Obj<Boolean> slotChanges = new Obj<Boolean>();
+				result = middle.loadSlotChanges(newSlot, slotChanges);
 				if (result.isOK()) {
 					
-					newSlot.setId(editedSlot.getId());
+					boolean success = true;
+					if (slotChanges.ref) {
+						String slotDescription = editedSlot.getNameForGenerator();
+						success = Utility.ask(this.editor.getComponent(), "org.multipage.generator.messageSlotChangesSaveIt", slotDescription);
+						
+						// Save slot changes.
+						if (success) {
+							if (newRevision) {
+								result = middle.insertSlotRevision(editedSlot, newSlot);
+							}
+							else {
+								result = middle.updateSlot(editedSlot, newSlot, localizedTextSelected);
+							}
+							if (result.isOK()) {
+								newSlot.setId(editedSlot.getId());
+							}	
+						}
+					}
 				}
 			}
 

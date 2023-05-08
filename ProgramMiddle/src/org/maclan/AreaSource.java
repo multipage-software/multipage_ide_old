@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * @author
  *
@@ -63,4 +65,18 @@ public class AreaSource {
 				+ ", notLocalized=" + notLocalized + "]";
 	}
 	
+	/**
+	 * Check if input object equals this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		AreaSource other = (AreaSource) obj;
+		return Objects.equals(areaId, other.areaId);
+	}
 }

@@ -31,7 +31,7 @@ import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
 import org.maclan.Area;
-import org.maclan.AreaTreeData;
+import org.maclan.AreaTreesData;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
@@ -77,7 +77,7 @@ public class ExportDialog extends JDialog {
 	/**
 	 * Area tree data.
 	 */
-	private AreaTreeData areaTreeData;
+	private AreaTreesData areaTreeData;
 	
 	// $hide<<$
 	/**
@@ -332,7 +332,7 @@ public class ExportDialog extends JDialog {
 				
 				Middle middle = ProgramBasic.getMiddle();
 				Properties login = ProgramBasic.getLoginProperties();
-				areaTreeData = new AreaTreeData();
+				areaTreeData = new AreaTreesData();
 				
 				Long parentAreaId = parentArea != null ? parentArea.getId() : null;
 				

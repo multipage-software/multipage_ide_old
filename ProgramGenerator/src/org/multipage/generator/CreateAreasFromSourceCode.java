@@ -26,6 +26,7 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
@@ -38,6 +39,8 @@ import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
+import javax.swing.JCheckBox;
+import javax.swing.JTextField;
 
 /**
  * 
@@ -120,6 +123,9 @@ public class CreateAreasFromSourceCode extends JDialog {
 	 * Components.
 	 */
 	private JSplitPane splitPane;
+	private JTextField textSlotName;
+	private JCheckBox checkFilesToAreas;
+	private JLabel labelAreaSlot;
 	
 
 	/**
@@ -166,7 +172,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 		buttonAdd.setPreferredSize(new Dimension(100, 25));
 		buttonAdd.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				onAddSource();
+				onAddSources();
 			}
 		});
 		getContentPane().add(buttonAdd);
@@ -198,8 +204,8 @@ public class CreateAreasFromSourceCode extends JDialog {
 		getContentPane().add(splitPane);
 		
 		scrollPane = new JScrollPane();
+		springLayout.putConstraint(SpringLayout.SOUTH, labelSourceOverview, -3, SpringLayout.NORTH, scrollPane);
 		splitPane.setLeftComponent(scrollPane);
-		springLayout.putConstraint(SpringLayout.SOUTH, labelSourceOverview, -17, SpringLayout.NORTH, scrollPane);
 		springLayout.putConstraint(SpringLayout.NORTH, scrollPane, 39, SpringLayout.NORTH, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, scrollPane, -300, SpringLayout.EAST, getContentPane());
 		springLayout.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, getContentPane());
@@ -213,6 +219,28 @@ public class CreateAreasFromSourceCode extends JDialog {
 		});
 		scrollPane.setViewportView(tree);
 		springLayout.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.NORTH, buttonCreate);
+		
+		checkFilesToAreas = new JCheckBox("org.multipage.generator.textFilesToAreas");
+		springLayout.putConstraint(SpringLayout.SOUTH, checkFilesToAreas, -4, SpringLayout.SOUTH, buttonCreate);
+		checkFilesToAreas.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onCheckFilesToAreas();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.WEST, checkFilesToAreas, 0, SpringLayout.WEST, labelSourceOverview);
+		getContentPane().add(checkFilesToAreas);
+		
+		labelAreaSlot = new JLabel("org.multipage.generator.textAreaSlotName");
+		springLayout.putConstraint(SpringLayout.WEST, labelAreaSlot, 16, SpringLayout.EAST, checkFilesToAreas);
+		springLayout.putConstraint(SpringLayout.SOUTH, labelAreaSlot, -19, SpringLayout.SOUTH, getContentPane());
+		getContentPane().add(labelAreaSlot);
+		
+		textSlotName = new JTextField();
+		textSlotName.setText("file");
+		springLayout.putConstraint(SpringLayout.NORTH, textSlotName, -3, SpringLayout.NORTH, labelAreaSlot);
+		springLayout.putConstraint(SpringLayout.WEST, textSlotName, 3, SpringLayout.EAST, labelAreaSlot);
+		getContentPane().add(textSlotName);
+		textSlotName.setColumns(15);
 	}
 	
 	/**
@@ -223,26 +251,28 @@ public class CreateAreasFromSourceCode extends JDialog {
 		saveDialog();
 		dispose();
 	}
-
+	
 	/**
-	 * On add source
+	 * Update states of GUI controls.
 	 */
-	protected void onAddSource() {
+	private void updateControlsState() {
 		
-		String source = Utility.chooseDirectory2(this, "org.multipage.generator.textSelectSourceFileOrDirectory");
+		// Get selection. 
+		boolean filesToAreas = checkFilesToAreas.isSelected();
 		
-		// Initialize pointer to tree node
-		try {
-			DefaultMutableTreeNode node = new DefaultMutableTreeNode(new Area(new File(source)));
-			root.add(node);
-			processSource(node);
-		}
-		catch (Exception e) {
-		}
-		
-		treeModel.reload(root);
+		// Select edit box for the user to enter a slot name.
+		textSlotName.setEnabled(filesToAreas);
 	}
 	
+	/**
+	 * On check box that determines if files should create areas or area slots
+	 */
+	protected void onCheckFilesToAreas() {
+		
+		// Update GUI state.
+		updateControlsState();
+	}
+
 	/**
 	 * On import
 	 */
@@ -264,33 +294,83 @@ public class CreateAreasFromSourceCode extends JDialog {
 		saveDialog();
 		dispose();
 	}
+
+	/**
+	 * On "add sources" event.
+	 */
+	protected void onAddSources() {
+		
+		// Select directory.
+		String source = Utility.chooseDirectory2(this, "org.multipage.generator.textSelectSourceFileOrDirectory");
+		
+		// Get "files to areas" flag from check box control.
+		boolean filesToAreas = checkFilesToAreas.isSelected();
+		
+		// Get created slot name.
+		String fileSlotName = null;
+		if (filesToAreas) {
+			fileSlotName = textSlotName.getText();
+		}
+		
+		// Create tree nodes.
+		final String encoding = "UTF-8";
+		try {
+			File rootFile = new File(source);
+			Area rootArea = new Area(rootFile, fileSlotName, encoding);
+			
+			DefaultMutableTreeNode node = new DefaultMutableTreeNode(rootArea);
+			root.add(node);
+			
+			processSourceFiles(node, fileSlotName, encoding);
+		}
+		catch (Exception e) {
+		}
+		
+		treeModel.reload(root);
+		Utility.expandAll(tree, true);
+		tree.addSelectionRow(0);
+	}
 	
 	/**
 	 * Add new source file or directory
-	 * @param source
-	 * @param root 
+	 * @param node
+	 * @param fileSlotName 
+	 * @param encoding
 	 */
-	private void processSource(DefaultMutableTreeNode node) throws Exception {
+	private void processSourceFiles(DefaultMutableTreeNode node, String fileSlotName, String encoding)
+			throws Exception {
 		
+		// Get area and associated file object.
 		Area area = (Area) node.getUserObject();
 		
-		Object userObject = area.getUser();
-		if (userObject instanceof File) {
-			
-			// List directory files and sub directories.
-			File directory = (File) userObject;
-			if (directory.isDirectory()) {
+		File file = area.getFile();
+		if (file == null) {
+			return;
+		}
+		
+		// Process possible child files.
+		if (file.isDirectory()) {
+			for (File childFile : file.listFiles()) {
 				
-				for (File subDirectory : directory.listFiles()) {
-					if (subDirectory.isDirectory()) {
-						
-						// Create new node.
-						DefaultMutableTreeNode subNode = new DefaultMutableTreeNode(new Area(subDirectory));
-						node.add(subNode);
-						
-						// Call recursively this method.
-						processSource(subNode);
-					}
+				boolean isChildDirectory = childFile.isDirectory();
+				boolean createChildNodes = (isChildDirectory || fileSlotName != null);
+				DefaultMutableTreeNode childNode = null;
+				
+				// Create child node.
+				if (createChildNodes) {
+					
+					Area childArea = new Area(childFile, fileSlotName, encoding);
+					childNode = new DefaultMutableTreeNode(childArea);
+					node.add(childNode);
+				}
+				// Add new file provider to the current area.
+				else {
+					area.addFileProvider(childFile, fileSlotName, encoding);
+				}
+				
+				// Call recursively this method for a child node.
+				if (childNode != null) {
+					processSourceFiles(childNode, fileSlotName, encoding);
 				}
 			}
 		}
@@ -305,7 +385,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 			throws Exception {
 		
 		Area area = (Area) node.getUserObject();
-		Enumeration children = node.children();
+		Enumeration<TreeNode> children = node.children();
 		
 		if (root.equals(node)) {
 			area = this.area;
@@ -341,6 +421,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 		localize();
 		
 		loadDialog();
+		updateControlsState();
 	}
 	
 	/**
@@ -385,6 +466,8 @@ public class CreateAreasFromSourceCode extends JDialog {
 		Utility.localize(buttonAdd);
 		Utility.localize(labelSourceOverview);
 		Utility.localize(buttonCreate);
+		Utility.localize(checkFilesToAreas);
+		Utility.localize(labelAreaSlot);
 	}
 	
 	/**

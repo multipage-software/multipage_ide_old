@@ -145,7 +145,7 @@ public class ConfirmAreasConnect extends JDialog {
 		getContentPane().setLayout(null);
 
 		checkBoxInherit = new JCheckBox("org.multipage.generator.textInheritFromSuperArea");
-		checkBoxInherit.setBounds(52, 18, 195, 23);
+		checkBoxInherit.setBounds(80, 18, 195, 23);
 		getContentPane().add(checkBoxInherit);
 		
 		labelRelationNameSub = new JLabel("org.multipage.generator.textRelationNameSub");
@@ -153,7 +153,7 @@ public class ConfirmAreasConnect extends JDialog {
 		getContentPane().add(labelRelationNameSub);
 		
 		textNameSub = new JTextField();
-		textNameSub.setBounds(16, 65, 275, 20);
+		textNameSub.setBounds(16, 65, 260, 20);
 		getContentPane().add(textNameSub);
 		textNameSub.setColumns(10);
 		
@@ -184,13 +184,13 @@ public class ConfirmAreasConnect extends JDialog {
 		getContentPane().add(labelRelationNameSuper);
 		
 		textNameSuper = new JTextField();
-		textNameSuper.setBounds(16, 110, 275, 20);
+		textNameSuper.setBounds(16, 110, 260, 20);
 		getContentPane().add(textNameSuper);
 		textNameSuper.setColumns(10);
 		
 		checkHideSubAreas = new JCheckBox("org.multipage.generator.textHideSubAreas");
 		checkHideSubAreas.setSelected(true);
-		checkHideSubAreas.setBounds(52, 137, 154, 23);
+		checkHideSubAreas.setBounds(80, 137, 154, 23);
 		getContentPane().add(checkHideSubAreas);
 		
 		labelMessage = new JLabel("");

@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * 
  * @author
@@ -39,5 +41,20 @@ public class IsSubArea {
 				+ ", nameSub=" + nameSub + ", nameSuper=" + nameSuper
 				+ ", positionId=" + positionId + ", hideSub=" + hideSub
 				+ ", recursion=" + recursion + ", mark=" + mark + "]";
+	}
+
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		IsSubArea other = (IsSubArea) obj;
+		return Objects.equals(id, other.id) && Objects.equals(subAreaId, other.subAreaId);
 	}
 }

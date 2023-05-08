@@ -107,6 +107,7 @@ public class MiddleResult {
 	public static final MiddleResult VERSION_NOT_FOUND = new MiddleResult("middle.resultVersionNotFound", null);
 	public static final MiddleResult AREA_NOT_FOUND = new MiddleResult("middle.resultAreaNotFound", null);
 	public static final MiddleResult EXPECTING_VERSION_ID = new MiddleResult("middle.resultExpectingVersionId", null);
+	public static final MiddleResult CANNOT_UPDATE_DEFAULT_VERSION = new MiddleResult("middle.resultCannotUpdateDefaultVersion", null);
 	public static final MiddleResult EXPECTING_AREA_ID = new MiddleResult("middle.resultExpectingAreaId", null);
 	public static final MiddleResult EXPECTING_RESOURCE_ID = new MiddleResult("middle.resultExpectingResourceId", null);
 	public static final MiddleResult BAD_PARAMETER = new MiddleResult("middle.resultBadParameter", null);

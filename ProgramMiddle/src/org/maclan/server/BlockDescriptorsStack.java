@@ -80,13 +80,15 @@ public class BlockDescriptorsStack {
 	
 	/**
 	 * Pop JavaScript descriptor.
-	 * @param transparent - if is true the variables and procedures are added to the first super block
+	 * @param transparentProc - if is true, variables in this are added to the first super block
+	 *                      but only if they don't already exist in the super block.
+	 * @param transparentProc - if is true, procedures in this block are added to the first super block
 	 *                      but only if they don't already exist in the super block.
 	 */
-	public String popJavaScriptDescriptor(boolean transparent)
+	public String popJavaScriptDescriptor(boolean transparentVar, boolean transparentProc)
 		throws Exception {
 		
-		BlockDescriptor descriptor = (BlockDescriptor) popBlockDescriptor(transparent, transparent);
+		BlockDescriptor descriptor = (BlockDescriptor) popBlockDescriptor(transparentVar, transparentProc);
 		if (descriptor instanceof JavaScriptBlockDescriptor) {
 			
 			JavaScriptBlockDescriptor javaScriptDescriptor = (JavaScriptBlockDescriptor) descriptor;
@@ -110,12 +112,12 @@ public class BlockDescriptorsStack {
 	
 	/**
 	 * Pop block descriptor.
+	 * @param transparentVariables  - if is true the variables are added to the first super block
+	 *                                but only if they don't already exist in the super block.	 * 
 	 * @param transparentProcedures - if is true the procedures are added to the first super block
 	 *                                but only if they don't already exist in the super block.
-	 * @param transparentVariables  - if is true the variables are added to the first super block
-	 *                                but only if they don't already exist in the super block.
 	 */
-	public BlockDescriptor popBlockDescriptor(boolean transparentProcedures, boolean transparentVariables)
+	public BlockDescriptor popBlockDescriptor(boolean transparentVariables, boolean transparentProcedures)
 		throws Exception {
 		
 		// If there is only initial descriptor throw exception.
@@ -125,11 +127,11 @@ public class BlockDescriptorsStack {
 		// Remove top of the stack.
 		try {
 			BlockDescriptor descriptor = stack.removeFirst();
-			if (transparentProcedures) {
-				useProcedures(descriptor);
-			}
 			if (transparentVariables) {
 				useVariables(descriptor);
+			}
+			if (transparentProcedures) {
+				useProcedures(descriptor);
 			}
 			descriptor.afterBlockRemoved();
 			

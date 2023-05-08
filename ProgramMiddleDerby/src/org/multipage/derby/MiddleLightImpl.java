@@ -1,5 +1,4 @@
 /*
- * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -28,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -50,6 +50,8 @@ import org.maclan.MimeType;
 import org.maclan.Resource;
 import org.maclan.ServerCache;
 import org.maclan.Slot;
+import org.maclan.SlotHolder;
+import org.maclan.SlotType;
 import org.maclan.StartResource;
 import org.maclan.VersionData;
 import org.maclan.VersionObj;
@@ -124,10 +126,20 @@ public class MiddleLightImpl implements MiddleLight {
 	                                                 "WHERE language_id = ? " +
 	                                                 "AND text_id = ?";
 	
+	private static final String selectTextId = "SELECT text_id " +
+											   "FROM localized_text " +
+											   "WHERE text = ? " +
+											   "AND language_id = ?";
+	
 	protected static final String selectDefaultLanguageText = "SELECT text " +
 	                                                          "FROM localized_text " +
 	                                                          "WHERE language_id = 0 " +
 	                                                          "AND text_id = ?";
+	
+	private static final String selectTextExists = "SELECT * " +
+										           "FROM localized_text " +
+										           "WHERE text_id = ? " +
+										           "AND language_id = ?";
 	
 	private static final String selectResourceText = "SELECT text " +
 	                                                 "FROM resource " +
@@ -151,11 +163,18 @@ public class MiddleLightImpl implements MiddleLight {
 															            "AND resource.id = area.start_resource " +
 															            "AND mime_type.id = resource.mime_type_id";
 
+	private static final String selectAreaVersion = "SELECT get_localized_text(description_id, ?) AS description, alias, visible, localized, filename, version_id, folder, file_extension, " +
+		                                            "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area, constructor_holder_id, project_root, " +
+		                                            "EXISTS( SELECT * FROM area_sources WHERE area_id = area.id ) AS is_start_resource " +
+                                                    "FROM area " +
+                                                    "WHERE id = ? " +
+                                                    "AND version_id = ?";
+	
 	private static final String selectArea = "SELECT get_localized_text(description_id, ?) AS description, alias, visible, localized, filename, version_id, folder, file_extension, " +
-		                                     "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area, constructor_holder_id, project_root, " +
-		                                     "EXISTS( SELECT * FROM area_sources WHERE area_id = area.id ) AS is_start_resource " +
-                                             "FROM area " +
-                                             "WHERE id = ?";
+								             "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area, constructor_holder_id, project_root, " +
+								             "EXISTS( SELECT * FROM area_sources WHERE area_id = area.id ) AS is_start_resource " +
+								             "FROM area " +
+								             "WHERE id = ?";
 
 	private static final String selectAreaSubAreas = "SELECT area.id, get_localized_text(area.description_id, ?) AS description, area.visible, area.localized, is_subarea.inheritance, area.alias, is_subarea.name_sub, is_subarea.name_super, is_subarea.recursion, area.filename, area.version_id, area.folder, start_resource, " +
 			                                         "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area, constructor_holder_id, file_extension, project_root, " +
@@ -199,6 +218,10 @@ public class MiddleLightImpl implements MiddleLight {
 	                                                    "WHERE alias = ? " +
 	                                                    "AND area_id = ?";
 
+	protected static final String selectSlot = "SELECT alias, area_id, revision, created, localized_text_value_id, text_value, integer_value, real_value, access, hidden, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, user_defined, preferred, special_value, area_value, external_provider, reads_input, writes_output, output_text " +
+											   "FROM area_slot " +
+											   "WHERE id = ?";
+
 	private static final String selectAreaSlotsRef = "SELECT alias, revision, access, is_default, special_value, external_provider, external_change, reads_input, writes_output, id " +
 	                                                 "FROM area_slot " +
 	                                                 "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
@@ -217,6 +240,13 @@ public class MiddleLightImpl implements MiddleLight {
     	                                                 "INNER JOIN (SELECT alias AS slot_alias, area_id AS slot_area_id, MAX(revision) AS last_revision FROM area_slot GROUP BY alias, area_id) lst " +
     	                                                 "ON alias = slot_alias AND area_id = slot_area_id AND revision = last_revision " +
             											 "WHERE id = ? ";
+	
+	
+	private static final String selectAreaSlotTextValueId = "SELECT localized_text_value_id " +
+	                                                        "FROM area_slot " +
+	                                                        "WHERE alias = ? " +
+	                                                        "AND area_id = ? " +
+	                                                        "AND revision = ?";
 	
 	protected static final String selectStartArea = "SELECT area_id " +
 	                                                "FROM start_area";
@@ -263,6 +293,15 @@ public class MiddleLightImpl implements MiddleLight {
 
 	private static final String insertMime = "INSERT INTO mime_type (type, extension, preference) " +
 	                                         "VALUES (?, ?, ?)";
+
+	private static final String insertTextId = "INSERT INTO text_id (id) " +
+	                                           "VALUES (DEFAULT)";
+
+	private static final String insertLocalizedText = "INSERT INTO localized_text (text_id, language_id, text) " +
+	                                                  "VALUES (?, 0, ?)";
+	
+	protected static final String insertLocalizedTextLang = "INSERT INTO localized_text (text_id, language_id, text) " +
+            											  "VALUES (?, ?, ?)";
 	
 	protected static final String selectEnumerations = "SELECT id, description " +
 			                                           "FROM enumeration " +
@@ -315,10 +354,29 @@ public class MiddleLightImpl implements MiddleLight {
 													 + "FROM area_slot "
 													 + "WHERE id = ?";
 	
+	private static final String updateAreaSlot = "UPDATE area_slot " +
+									             "SET alias = ?, localized_text_value_id = ?, text_value = ?, integer_value = ?, real_value = ?, access = ?, hidden = ?, boolean_value = ?, enumeration_value_id = ?, color = ?, area_value = ?, is_default = ?, name = ?, value_meaning = ?, preferred = ?, user_defined = ?, special_value = ? " +
+									             "WHERE alias = ? " +
+									             "AND area_id = ? " +
+									             "AND revision = ?";
+	
+	private static final String updateSlotValue = "UPDATE area_slot "
+											    + "SET text_value = ?, integer_value = ?, real_value = ?, boolean_value = ?, "
+											    + "enumeration_value_id = ?, color = ?, area_value = ?, "
+											    + "value_meaning = ?, "
+											    + "input_lock = TRUE "
+											    + "WHERE id = ? "
+											    + "AND (input_lock IS NULL OR input_lock = FALSE)";
+	
 	private static final String updateSlotTextValue = "UPDATE area_slot "
 												    + "SET text_value = ?, input_lock = TRUE "
 												    + "WHERE id = ? "
 												    + "AND (input_lock IS NULL OR input_lock = FALSE)";
+	
+	protected static final String updateText = "UPDATE localized_text " +
+											   "SET text = ? " +
+											   "WHERE text_id = ? " +
+											   "AND language_id = ?";
 	
 	private static final String updateSlotInputLock = "UPDATE area_slot "
 												   + "SET input_lock = ? "
@@ -336,6 +394,16 @@ public class MiddleLightImpl implements MiddleLight {
 	private static final String updateSlotExternalChange = "UPDATE area_slot "
 														 + "SET external_change = ? "
 														 + "WHERE id = ?";
+	
+	private static final String deleteTextLanguage = "DELETE FROM localized_text " +
+										             "WHERE text_id = ? " +
+										             "AND language_id = ?";
+	
+	private static final String deleteLocalizedText = "DELETE FROM localized_text " +
+            										  "WHERE text_id = ?";
+
+	private static final String deleteTextId = "DELETE FROM text_id " +
+											   "WHERE id = ?";
 	
 	/**
 	 * Listener.
@@ -1026,6 +1094,49 @@ public class MiddleLightImpl implements MiddleLight {
 
 		return text;
 	}
+	
+	/**
+	 * Get localized text ID.
+	 * @param text
+	 * @param languageId
+	 * @param textId
+	 * @return
+	 */
+	public MiddleResult getTextId(String text, long languageId, Obj<Long> textId) {
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		try {
+			// Create statement.
+			PreparedStatement statement = connection.prepareStatement(selectTextId);
+			statement.setString(1, text);
+			statement.setLong(2, languageId);
+			
+			ResultSet set = statement.executeQuery();
+			if (set.next()) {
+				
+				// Get text.
+				textId.ref = set.getLong("text_id");
+			}
+			else {
+				result = MiddleResult.NO_RECORD;
+			}
+
+			// Close objects.
+			set.close();
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+		
+		return result;
+	}
 
 	/**
 	 * Load resource text to string.
@@ -1513,7 +1624,6 @@ public class MiddleLightImpl implements MiddleLight {
 	 * Load area.
 	 * @param areaId
 	 * @param area
-	 * @return
 	 */
 	@Override
 	public MiddleResult loadArea(long areaId, Obj<Area> area) {
@@ -1550,7 +1660,77 @@ public class MiddleLightImpl implements MiddleLight {
 						set.getBoolean("visible"), set.getString("alias"));
 				newArea.setLocalized(set.getBoolean("localized"));
 				newArea.setFileName(set.getString("filename"));
-				newArea.setVersionId(set.getLong("version_id"));
+				newArea.setFolder(set.getString("folder"));
+				newArea.setFileExtension(set.getString("file_extension"));
+				newArea.setIsConstructorArea(set.getBoolean("is_constructor_area"));
+				newArea.setConstructorHolderId((Long) set.getObject("constructor_holder_id"));
+				newArea.setProjectRoot((Boolean) set.getObject("project_root"));
+				newArea.setIsStartResource(set.getBoolean("is_start_resource"));
+
+				// Put the new area to a cache.
+				cache.putArea(newArea);
+				area.ref = newArea;
+			}
+			else {
+				result = MiddleResult.NO_RECORD;
+			}
+			
+			// Close objects.
+			set.close();
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;
+	}
+	
+	/**
+	 * Load area of given version.
+	 * @param areaId
+	 * @param versionId
+	 * @param area
+	 * @return
+	 */
+	@Override
+	public MiddleResult loadArea(long areaId, long versionId, Obj<Area> area) {
+
+		MiddleResult result = MiddleResult.OK;
+
+		// Return existing area.
+		Area cachedArea = cache.getArea(areaId);
+		if (cachedArea != null) {
+			area.ref = cachedArea;
+			return MiddleResult.OK;
+		}
+		
+		// Check connection.
+		result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		try {
+			
+			// Load area.
+			PreparedStatement statement = connection.prepareStatement(selectAreaVersion);
+			statement.setLong(1, currentLanguageId);
+			statement.setLong(2, areaId);
+			statement.setLong(3, versionId);
+			
+			ResultSet set = statement.executeQuery();
+			if (set.next()) {
+				
+				areas_loaded++;
+				
+				// Create new area.
+				Area newArea = new Area(areaId, set.getString("description"),
+						set.getBoolean("visible"), set.getString("alias"));
+				newArea.setLocalized(set.getBoolean("localized"));
+				newArea.setFileName(set.getString("filename"));
+				newArea.setVersionId(versionId);
 				newArea.setFolder(set.getString("folder"));
 				newArea.setFileExtension(set.getString("file_extension"));
 				newArea.setIsConstructorArea(set.getBoolean("is_constructor_area"));
@@ -1930,6 +2110,89 @@ public class MiddleLightImpl implements MiddleLight {
 			// Close objects.
 			set.close();
 			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;
+	}
+	
+	/**
+	 * Get generated key.
+	 * @param statement
+	 * @return
+	 */
+	@Override
+	public Long getGeneratedKey(PreparedStatement statement)
+		throws SQLException {
+		
+		Long newId = null;
+		
+		try {
+			ResultSet set = statement.getGeneratedKeys();
+			if (set == null) {
+				return null;
+			}
+			if (set.next()) {
+				newId = set.getLong(1);
+				
+				if (newId != null) {
+					set.close();
+					return newId;
+				}
+			}
+			set.close();
+		}
+		catch (SQLException e) {
+			throw e;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Insert new text in default language.
+	 * @param connection
+	 * @param text
+	 * @return
+	 */
+	@Override
+	public MiddleResult insertText(String text, Obj<Long> textIdOutput) {
+				
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			
+			// Insert new text ID.
+			PreparedStatement statement = connection.prepareStatement(insertTextId, Statement.RETURN_GENERATED_KEYS);
+			statement.execute();
+			
+			Long textId = getGeneratedKey(statement);
+			if (textId == null) {
+				result = MiddleResult.RECORD_ID_NOT_GENERATED;
+			}
+						
+			// Close statement.
+			statement.close();
+			
+			// If ID created.
+			if (textId != null) {
+				// Insert command.
+				statement = connection.prepareStatement(insertLocalizedText);
+				statement.setLong(1, textId);
+				statement.setString(2, text);
+				
+				statement.execute();
+				statement.close();
+				
+				textIdOutput.ref = textId;
+			}
 		}
 		catch (SQLException e) {
 			
@@ -2388,6 +2651,183 @@ public class MiddleLightImpl implements MiddleLight {
 	}
 	
 	/**
+	 * Check if the input slot changes.
+	 * @param slot
+	 * @param slotChanges
+	 * @return
+	 */
+	@Override
+	public MiddleResult loadSlotChanges(Slot slot, Obj<Boolean> slotChanges) {
+		
+		// Initialize output value. (Not known if changed/unchanged.)
+		slotChanges.ref = null;
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		PreparedStatement statement = null;
+		ResultSet set = null;
+		Long areaId = null;
+		Long enumValueId = null;
+		
+		Slot loadedSlot = new Slot();
+		
+		try {
+			
+			statement = connection.prepareStatement(selectSlot);
+			
+			long slotId = slot.getId();
+			statement.setLong(1, slotId);
+			
+			set = statement.executeQuery();
+			if (set.next()) {
+				
+				String alias = set.getString("alias");
+				loadedSlot.setAlias(alias);
+
+				areaId = set.getLong("area_id");
+
+				String textValue = null;
+				Long localizedTextId = (Long) set.getObject("localized_text_value_id");
+				if (localizedTextId != null) {
+					textValue = getText(localizedTextId);
+					if (textValue != null) {
+						loadedSlot.setLocalizedTextValue(textValue);
+					}
+				}
+				else {
+					textValue = set.getString("text_value");
+					if (textValue != null) {
+						loadedSlot.setTextValue(textValue);
+					}
+				}
+				
+				Long integerValue = (Long) set.getObject("integer_value");
+				if (integerValue != null) {
+					loadedSlot.setIntegerValue(integerValue);
+				}
+				
+				Double doubleValue = (Double) set.getObject("real_value");
+				if (doubleValue != null) {
+					loadedSlot.setRealValue(doubleValue);
+				}	
+				
+				String accessText = set.getString("access");
+				if (accessText == null) {
+					accessText = String.valueOf(Slot.privateAccess);
+				}
+				loadedSlot.setAccess(accessText);
+				
+				boolean hidden = set.getBoolean("hidden");
+				loadedSlot.setHidden(hidden);
+				
+				Boolean booleanValue = (Boolean) set.getObject("boolean_value");
+				if (booleanValue != null) {
+					loadedSlot.setBooleanValue(booleanValue);
+				}
+				
+				Long color = (Long) set.getObject("color");
+				if (color != null) {
+					loadedSlot.setColorValueLong(color);
+				}
+				
+				Long descriptionId = (Long) set.getObject("description_id");
+				loadedSlot.setDescriptionId(descriptionId);
+				
+				boolean isDefault = set.getBoolean("is_default");
+				loadedSlot.setDefault(isDefault);
+					
+				String name = set.getString("name");
+				loadedSlot.setName(name);
+				
+				String valueMeaning = set.getString("value_meaning");
+				loadedSlot.setValueMeaning(valueMeaning);
+				
+				boolean userDefined = set.getBoolean("user_defined");
+				loadedSlot.setUserDefined(userDefined);
+				
+				boolean preferred = set.getBoolean("preferred");
+				loadedSlot.setPreferred(preferred);
+				
+				String specialValue = set.getString("special_value");
+				loadedSlot.setSpecialValue(specialValue);
+				
+				Long areaValue = (Long) set.getObject("area_value");
+				if (areaValue != null) {
+					loadedSlot.setAreaValue(areaValue);
+				}
+				
+				String externalProvider = set.getString("external_provider");
+				loadedSlot.setExternalProvider(externalProvider);
+				
+				Boolean readsInput = (Boolean) set.getObject("reads_input");
+				loadedSlot.setReadsInput(readsInput);
+				
+				Boolean writesOutput = (Boolean) set.getObject("writes_output");
+				loadedSlot.setWritesOutput(writesOutput);
+				
+				enumValueId = (Long) set.getObject("enumeration_value_id");
+				
+				slots_loaded++;
+			}
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+		finally {
+			if (set != null) {
+				try {
+					set.close();
+				}
+				catch (Exception e) {
+				}
+			}
+			if (statement != null) {
+				try {
+					statement.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		// Load slot area.
+		if (result.isOK() && areaId != null) {
+			
+			Obj<Area> area = new Obj<Area>();
+			result = loadArea(areaId, area);
+			
+			if (result.isNotOK()) {
+				result = MiddleResult.AREA_NOT_FOUND;
+				return result;
+			}
+			
+			loadedSlot.setHolder(area.ref);
+		}
+			
+		
+		// Load and set enumeration value.
+		if (result.isOK() && enumValueId != null) {
+			try {
+				Obj<EnumerationValue> enumValue = new Obj<EnumerationValue>();
+				result = loadEnumerationValue(enumValueId, enumValue);
+			}
+			catch (Exception e) {
+				result = MiddleResult.exceptionToResult(e);
+			}
+		}
+		
+		// Compare loaded slot with the input slot.
+		slotChanges.ref = !slot.equalsDeep(loadedSlot);
+		
+		return result;
+	}
+	
+	/**
 	 * Load area slot with inheritance level.
 	 * @param area
 	 * @param alias
@@ -2658,6 +3098,482 @@ public class MiddleLightImpl implements MiddleLight {
 		
 		return result;
 	}
+
+	/**
+	 * Load slot text value ID.
+	 * @param slot
+	 * @param holder
+	 * @param textValueId
+	 * @return
+	 */
+	@Override
+	public MiddleResult loadSlotTextValueId(Slot slot, Obj<Long> textValueId) {
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			String command;
+			SlotHolder holder = slot.getHolder();
+			
+			// Select command depending on slot holder.
+			if (holder instanceof Area) {
+			
+				command = selectAreaSlotTextValueId;
+			}
+			else {
+				return MiddleResult.UNKNOWN_SLOT_HOLDER_TYPE;
+			}
+			
+			// Create statement.
+			PreparedStatement statement = connection.prepareStatement(command);
+			statement.setString(1, slot.getAlias());
+			statement.setLong(2, holder.getId());
+			statement.setLong(3, slot.getRevision());
+			
+			ResultSet set = statement.executeQuery();
+			if (set.next()) {
+				
+				textValueId.ref = (Long) set.getObject("localized_text_value_id");
+			}
+			else {
+				result = MiddleResult.ELEMENT_DOESNT_EXIST;
+			}
+
+			// Close statement.
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;
+	}
+	
+	/**
+	 * Update language text.
+	 * @param textId
+	 * @param languageId
+	 * @param text
+	 * @return
+	 */
+	public MiddleResult updateLanguageText(long languageId, long textId, String text) {
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			boolean textExists = false;
+			
+			// Check if the localized text already exists.
+			PreparedStatement statement = connection.prepareStatement(selectTextExists);
+			statement.setLong(1, textId);
+			statement.setLong(2, languageId);
+			
+			ResultSet set = statement.executeQuery();
+			if (set.next()) {
+				textExists = true;
+			}
+			
+			statement.close();
+			
+			statement = null;
+			
+			if (textExists) {
+				// Update existing text.
+				statement = connection.prepareStatement(updateText);
+				statement.setString(1, text);
+				statement.setLong(2, textId);
+				statement.setLong(3, languageId);
+			}
+			else {
+				// Insert new text.
+				statement = connection.prepareStatement(insertLocalizedTextLang);
+				statement.setLong(1, textId);
+				statement.setLong(2, languageId);
+				statement.setString(3, text);
+			}
+			
+			statement.execute();
+			
+			// Close statement.
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;	
+	}
+
+	/**
+	 * Update text.
+	 * @param textId
+	 * @param text
+	 * @return
+	 */
+	protected MiddleResult updateText(long textId, String text) {
+		
+		return updateLanguageText(currentLanguageId, textId, text);
+	}
+
+	/**
+	 * Load slot revision
+	 * @param slot
+	 * @param revision
+	 * @return
+	 */
+	@Override
+	public MiddleResult loadSlotHeadRevision(Slot slot, Obj<Long> revision) {
+		
+		revision.ref = null;
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		if (result.isOK()) {
+			
+			PreparedStatement statement = null;
+			ResultSet set = null;
+			
+			try {
+				// Prepare statement.
+				statement = connection.prepareStatement("SELECT revision FROM area_slot WHERE alias = ? AND area_id = ? ORDER BY revision DESC FETCH FIRST 1 ROWS ONLY");
+				statement.setString(1, slot.getAlias());
+				statement.setLong(2, slot.getHolder().getId());
+				
+				set = statement.executeQuery();
+				if (set.next()) {
+					revision.ref = set.getLong("revision");
+				}
+				else {
+					revision.ref = 0L;
+				}
+			}
+			catch (SQLException e) {
+				result = MiddleResult.sqlToResult(e);
+			}
+			finally {
+				try {
+					if (set != null) {
+						set.close();
+					}
+					if (statement != null) {
+						statement.close();
+					}
+				}
+				catch (SQLException e) {
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Update slot.
+	 * @param slot
+	 * @param newSlot
+	 * @return
+	 */
+	@Override
+	public MiddleResult updateSlot(Slot slot, Slot newSlot,
+			boolean removeCurrentLanguageText) {
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		// Get current revision number
+		Obj<Long> revision = new Obj<Long>();
+		result = loadSlotHeadRevision(slot, revision);
+		if (result.isNotOK()) {
+			return result;
+		}
+		if (revision.ref == null) {
+			return MiddleResult.ERROR_GETTING_REVISION;
+		}
+		
+		// Get old slot localized text.
+		Obj<Long> textValueId = new Obj<Long>();
+		result = loadSlotTextValueId(slot, textValueId);
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		// Initialize "remove localized text" flag.
+		boolean tryRemoveLocalizedText = true;
+
+		try {
+			// Get command depending on slot holder.
+			SlotHolder holder = slot.getHolder();
+			String command = null;
+			
+			if (holder instanceof Area) {
+				
+				command = updateAreaSlot;
+			}
+			else {
+				result = MiddleResult.UNKNOWN_SLOT_HOLDER_TYPE;
+			}
+			
+			if (result.isOK()) {
+				// Prepare statement.
+				PreparedStatement statement = connection.prepareStatement(command);
+				
+				statement.setString(18, slot.getAlias());
+				statement.setLong(19, holder.getId());
+				long revisionNumber = revision.ref;
+				statement.setLong(20, revisionNumber);
+				
+				statement.setString(1, newSlot.getAlias());
+				
+				// Reset values.
+				statement.setNull(2, Types.BIGINT);
+				statement.setString(3, null);
+				statement.setNull(4, Types.BIGINT);
+				statement.setNull(5, Types.DOUBLE);
+				statement.setString(6, Character.toString(newSlot.getAccess()));
+				statement.setBoolean(7, newSlot.isHidden());
+				statement.setNull(8, Types.BOOLEAN);
+				statement.setNull(9, Types.BIGINT);
+				statement.setNull(10, Types.BIGINT);
+				statement.setNull(11, Types.BIGINT);
+				statement.setBoolean(12, newSlot.isDefault());
+				String name = newSlot.getName();
+				statement.setString(13, name.isEmpty() ? null : name);
+				statement.setString(14, newSlot.getValueMeaning());
+				statement.setBoolean(15, newSlot.isPreferred());
+				statement.setBoolean(16, newSlot.isUserDefined());
+				statement.setString(17, newSlot.getSpecialValueNull());
+				
+				// Get value type.
+				SlotType type = newSlot.getType();
+				
+				// On localized text.
+				if (type == SlotType.LOCALIZED_TEXT) {
+				
+					// Get localized text and save it.
+					String text = newSlot.getTextValue();
+					if (textValueId.ref == null) {
+						result = insertText(text, textValueId);
+					}
+					else {
+						result = updateText(textValueId.ref, text);
+					}
+					if (result.isOK()) {
+						
+						statement.setLong(2, textValueId.ref);
+						tryRemoveLocalizedText = false;
+					}
+				}
+				else if (type == SlotType.TEXT || type == SlotType.PATH) {
+					
+					// Get localized text and save it.
+					String text = newSlot.getTextValue();
+					statement.setString(3, text);
+				}
+				else if (type == SlotType.INTEGER) {
+
+					// Get long value.
+					long number = newSlot.getIntegerValue();
+					statement.setLong(4, number);
+				}
+				else if (type == SlotType.REAL) {
+					
+					// Get double value.
+					Double number = newSlot.getRealValue();
+					statement.setDouble(5, number);
+				}
+				else if (type == SlotType.BOOLEAN) {
+					
+					// Get boolean value.
+					Boolean booleanValue = newSlot.getBooleanValue();
+					statement.setBoolean(8, booleanValue);
+				}
+				else if (type == SlotType.ENUMERATION) {
+					
+					// Get enumeration value ID.
+					long enumerationValueId = newSlot.getEnumerationValue().getId();
+					statement.setLong(9, enumerationValueId);
+				}
+				else if (type == SlotType.COLOR) {
+					
+					// Get long value.
+					long colorLong = newSlot.getColorLong();
+					statement.setLong(10, colorLong);
+				}
+				else if (type == SlotType.AREA_REFERENCE) {
+					
+					// Get area ID.
+					Long areaIdLong = newSlot.getAreaIdValue();
+					if (areaIdLong != null) {
+						statement.setLong(11, areaIdLong);
+					}
+				}
+				else {
+					if (newSlot.getValue() == null) {
+						// On remove localized text.
+						if (textValueId.ref != null && removeCurrentLanguageText) {
+							statement.setLong(2, textValueId.ref);
+							
+							result = removeCurrentLanguageText(textValueId.ref);
+							
+							// Do not remove text.
+							tryRemoveLocalizedText = false;
+						}
+					}
+					else {
+						result = MiddleResult.UNKNOWN_SLOT_VALUE_TYPE;
+					}
+				}
+				
+				if (result.isOK()) {
+					statement.execute();
+
+					// Remove the localized text.
+					if (tryRemoveLocalizedText && textValueId.ref != null) {
+						result = removeText(textValueId.ref);
+					}
+				}
+	
+				// Close statement.
+				statement.close();
+			}
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Update slot value.
+	 * @param slot
+	 * @return
+	 */
+	@Override
+	public MiddleResult updateSlotValue(Slot slot) {
+
+		// TODO: <---MAKE Copy the method into PostreSQL middle layer implementation.
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		PreparedStatement statement = null;
+		try {
+			
+			// Determine slot ID, slot type and slot value and value meaning.
+			long slotId = slot.getId();
+			SlotType slotType = slot.getType();
+			Object value = slot.getValue();
+			String valueMeaning = slot.getValueMeaning();
+			
+			// Get old slot localized text.
+			Obj<Long> textValueId = new Obj<Long>();
+			result = loadSlotTextValueId(slot, textValueId);
+			if (result.isNotOK()) {
+				return result;
+			}
+			String textValue = slot.getTextValue();
+			
+			// Prepare statement.
+			statement = connection.prepareStatement(updateSlotValue);
+			
+			statement.setString(1, null);
+			statement.setNull(2, Types.BIGINT);
+			statement.setNull(3, Types.DOUBLE);
+			statement.setNull(4, Types.BOOLEAN);
+			statement.setNull(5, Types.BIGINT);
+			statement.setNull(6, Types.BIGINT);
+			statement.setNull(7, Types.BIGINT);
+			
+			switch (slotType) {
+			// On localized text.
+			case LOCALIZED_TEXT:
+				Obj<Long> textIdOutput = new Obj<Long>();
+				// Insert new localized text.
+				result = insertText(textValue, textIdOutput);
+				if (result.isOK()) {
+					
+					statement.setLong(4, textIdOutput.ref);
+				}
+				break;
+			// On text.
+			case TEXT:
+			case PATH:
+			case EXTERNAL_PROVIDER:
+				statement.setString(1, slot.getTextValue());
+				break;
+			// On integer number.
+			case INTEGER:
+				statement.setLong(2, slot.getIntegerValue());
+				break;
+			// On real number.
+			case REAL:
+				statement.setDouble(3, slot.getRealValue());
+				break;
+			// On boolean value.
+			case BOOLEAN:
+				statement.setBoolean(4, slot.getBooleanValue());
+				break;
+			// On enumeration.
+			case ENUMERATION:
+				statement.setLong(5, slot.getEnumerationValue().getId());
+				break;
+			// On color.
+			case COLOR:
+				statement.setLong(6, slot.getColorLong());
+				break;
+			// On area reference value.
+			case AREA_REFERENCE:
+				statement.setLong(7, slot.getAreaIdValue());
+				break;
+			// On unknown value type.
+			default:
+				if (value != null) {
+					result = MiddleResult.UNKNOWN_SLOT_VALUE_TYPE;
+				}
+			}
+			
+			statement.setString(8, valueMeaning);
+			statement.setLong(9, slotId);
+			
+			statement.executeUpdate();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+		finally {
+			if (statement != null) {
+				try {
+					statement.close();
+				}
+				catch (SQLException e) {
+				}
+			}
+		}
+		
+		return result;
+	}
 	
 	/**
 	 * Update slot text value
@@ -2674,10 +3590,10 @@ public class MiddleLightImpl implements MiddleLight {
 			return result;
 		}
 		
+		PreparedStatement statement = null;
 		try {
-			
 			// Prepare statement.
-			PreparedStatement statement = connection.prepareStatement(updateSlotTextValue);
+			statement = connection.prepareStatement(updateSlotTextValue);
 			
 			statement.setString(1, textValue);
 			statement.setLong(2, slotId);
@@ -2692,6 +3608,61 @@ public class MiddleLightImpl implements MiddleLight {
 		catch (SQLException e) {
 			
 			result = MiddleResult.sqlToResult(e);
+		}
+		finally {
+			if (statement != null) {
+				try {
+					statement.close();
+				}
+				catch (SQLException e) {
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Update area record.
+	 * @param area
+	 * @return
+	 */
+	@Override
+	public MiddleResult updateArea(Area area) {
+		
+		// Get area properties.
+		String areaAlias = area.getAlias();
+		long areaId = area.getId();
+		
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+		
+		PreparedStatement statement = null;
+		try {
+			String updateAreas = "UPDATE area SET alias = ? WHERE id = ?";
+			// Prepare statement.
+			statement = connection.prepareStatement(updateAreas);
+			
+			statement.setString(1, areaAlias);
+			statement.setLong(2, areaId);
+			
+			statement.executeUpdate();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+		finally {
+			if (statement != null) {
+				try {
+					statement.close();
+				}
+				catch (SQLException e) {
+				}
+			}
 		}
 		
 		return result;
@@ -4897,6 +5868,87 @@ public class MiddleLightImpl implements MiddleLight {
 			}
 		}
 		
+		return result;
+	}
+	
+	/**
+	 * Remove language text.
+	 * @param textId
+	 * @param languageId
+	 * @return
+	 */
+	public MiddleResult removeLanguageText(long languageId, long textId) {
+	
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			// Create DELETE command.
+			PreparedStatement statement = connection.prepareStatement(deleteTextLanguage);
+			statement.setLong(1, textId);
+			statement.setLong(2, languageId);
+			
+			statement.execute();
+
+			// Close statement.
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
+		return result;
+	}
+	
+	/**
+	 * Delete current language text.
+	 * @param textId
+	 * @return
+	 */
+	public MiddleResult removeCurrentLanguageText(long textId) {
+
+		return removeLanguageText(currentLanguageId, textId);
+	}
+	
+	/**
+	 * Remove text.
+	 * @param textId
+	 * @return
+	 */
+	protected MiddleResult removeText(long textId) {
+				
+		// Check connection.
+		MiddleResult result = checkConnection();
+		if (result.isNotOK()) {
+			return result;
+		}
+			
+		try {
+			// Delete localized text.
+			PreparedStatement statement = connection.prepareStatement(deleteLocalizedText);
+			statement.setLong(1, textId);
+			
+			statement.execute();
+			// Close statement.
+			statement.close();
+			
+			// Delete text ID.
+			statement = connection.prepareStatement(deleteTextId);
+			statement.setLong(1, textId);
+			
+			statement.execute();
+			// Close.
+			statement.close();
+		}
+		catch (SQLException e) {
+			
+			result = MiddleResult.sqlToResult(e);
+		}
+
 		return result;
 	}
 }

@@ -54,12 +54,12 @@ import org.xml.sax.SAXParseException;
  * @author
  *
  */
-public class AreaTreeData {
+public class AreaTreesData {
 	
 	/**
 	 * Root area ID.
 	 */
-	public Long rootAreaId;
+	public LinkedList<Long> rootAreaIds = new LinkedList<Long>();
 
 	/**
 	 * Home area ID.
@@ -72,9 +72,9 @@ public class AreaTreeData {
 	public Long startLanguageId;
 
 	/**
-	 * Root area super edge.
+	 * Root areas super edges.
 	 */
-	public IsSubArea rootSuperEdge;
+	public LinkedList<IsSubArea> rootSuperEdges = new LinkedList<IsSubArea>();
 	
 	/**
 	 * List of languages.
@@ -157,12 +157,12 @@ public class AreaTreeData {
 	private boolean cloned = false;
 
 	/**
-	 * Set root area ID.
+	 * Add root area ID.
 	 * @param areaId
 	 */
-	public void setRootAreaId(Long areaId) {
+	public void addRootAreaId(Long areaId) {
 		
-		rootAreaId = areaId;
+		rootAreaIds.add(areaId);
 	}
 
 	/**
@@ -238,6 +238,180 @@ public class AreaTreeData {
 		areaDataList.add(areaData);
 		
 		return areaData;
+	}
+	
+	/**
+	 * Add area data.
+	 * @param areaTreeData - input sub tree
+	 * @param inputArea - area to connect
+	 * @param parentAreaId - parent of the area
+	 */
+	public void connectAreaTree(AreaTreesData areaTreeData, Area inputArea, Long parentAreaId) {
+		
+		rootAreaIds = areaTreeData.rootAreaIds;
+		homeAreaId = areaTreeData.homeAreaId;
+		startLanguageId = areaTreeData.startLanguageId;
+		rootSuperEdges = areaTreeData.rootSuperEdges;
+		
+		for (LanguageRef languageRef : areaTreeData.languageRefList) {
+			if (!languageRefList.contains(languageRef)) {
+				languageRefList.add(languageRef);
+				break;
+			}
+		}
+		
+		for (AreaData areaData : areaTreeData.areaDataList) {
+			if (!areaDataList.contains(areaData)) {
+				areaDataList.add(areaData);
+				break;
+			}
+		}
+		
+		for (IsSubArea isSubArea : areaTreeData.isSubAreaList) {
+			if (!isSubAreaList.contains(isSubArea)) {
+				isSubAreaList.add(isSubArea);
+				break;
+			}
+		}
+		
+		long inputAreaId = inputArea.getId();
+		
+		boolean connected = false;
+		for (long rootAreaId : rootAreaIds) {
+			
+			// If the input parent area equals to the tree root, make connection. 
+			if (parentAreaId == rootAreaId) {
+				
+				IsSubArea isSubArea = new IsSubArea();
+				isSubArea.id = rootAreaId;
+				isSubArea.subAreaId = inputAreaId;
+				isSubAreaList.add(isSubArea);
+				
+				connected = true;
+			}
+			// If the input area equals to the tree root, connect all its input sub areas to the tree root.
+			else if (inputAreaId == rootAreaId) {
+				
+				for (Area inputSubArea : inputArea.getSubareas()) {
+					
+					IsSubArea isSubArea = new IsSubArea();
+					isSubArea.id = rootAreaId;
+					isSubArea.subAreaId = inputSubArea.getId();
+					isSubAreaList.add(isSubArea);
+					
+					connected = true;
+				}
+			}
+		}
+		
+		if (!connected) {
+			AreaData treeArea = areaTreeData.getArea(inputAreaId);
+			AreaData treeAreaForParent = areaTreeData.getArea(parentAreaId);
+			
+			// If the parent of input area equals to some tree area, put the input area into tree node children.
+			if (treeAreaForParent != null) {
+				
+				IsSubArea isSubArea = new IsSubArea();
+				isSubArea.id = parentAreaId;
+				isSubArea.subAreaId = inputAreaId;
+				isSubAreaList.add(isSubArea);
+			}
+			// If the input area equals to some tree node, add the input sub areas to the unified node.
+			else if (treeArea != null) {
+
+				for (Area inputSubArea : inputArea.getSubareas()) {
+					
+					IsSubArea isSubArea = new IsSubArea();
+					isSubArea.id = inputAreaId;
+					isSubArea.subAreaId = inputSubArea.getId();
+					isSubAreaList.add(isSubArea);
+				}
+			}
+		}
+		
+		for (SlotData item : areaTreeData.slotDataList) {
+			if (!slotDataList.contains(item)) {
+				slotDataList.add(item);
+				break;
+			}
+		}
+		
+		for (LocText item : areaTreeData.locTextList) {
+			if (!locTextList.contains(item)) {
+				locTextList.add(item);
+				break;
+			}
+		}
+		
+		for (AreaResourceRef item : areaTreeData.areasResourcesRefs) {
+			if (!areasResourcesRefs.contains(item)) {
+				areasResourcesRefs.add(item);
+				break;
+			}
+		}
+		
+		for (ResourceRef item : areaTreeData.resourceRefList) {
+			if (!resourceRefList.contains(item)) {
+				resourceRefList.add(item);
+				break;
+			}
+		}
+		
+		for (Mime item : areaTreeData.mimeList) {
+			if (!mimeList.contains(item)) {
+				mimeList.add(item);
+				break;
+			}
+		}
+		
+		for (VersionData item : areaTreeData.versions) {
+			if (!versions.contains(item)) {
+				versions.add(item);
+				break;
+			}
+		}
+		
+		for (EnumerationData item : areaTreeData.enumerations) {
+			if (!enumerations.contains(item)) {
+				enumerations.add(item);
+				break;
+			}
+		}
+		
+		for (EnumerationValueData item : areaTreeData.enumerationValues) {
+			if (!enumerationValues.contains(item)) {
+				enumerationValues.add(item);
+				break;
+			}
+		}
+		
+		for (ConstructorGroup item : areaTreeData.constructorGroupList) {
+			if (!constructorGroupList.contains(item)) {
+				constructorGroupList.add(item);
+				break;
+			}
+		}
+
+		for (DescriptionData item : areaTreeData.descriptionDataList) {
+			if (!descriptionDataList.contains(item)) {
+				descriptionDataList.add(item);
+				break;
+			}
+		}
+		
+		for (AreaData item : areaTreeData.areasShouldLinkConstructors) {
+			if (!areasShouldLinkConstructors.contains(item)) {
+				areasShouldLinkConstructors.add(item);
+				break;
+			}
+		}
+		
+		for (AreaSource item : areaTreeData.areasSources) {
+			if (!areasSources.contains(item)) {
+				areasSources.add(item);
+				break;
+			}
+		}
 	}
 	
 	/**
@@ -321,20 +495,28 @@ public class AreaTreeData {
 	
 	/**
 	 * Add root area super edge.
+	 * @param subAreaId 
+	 * @param areaId 
 	 * @param inheritance
 	 * @param nameSub
 	 * @param nameSuper
 	 * @param hideSub
 	 */
-	public void addRootSuperEdge(Boolean inheritance, String nameSub, String nameSuper,
+	public void addRootSuperEdge(long areaId, Long subAreaId, Boolean inheritance, String nameSub, String nameSuper,
 			Boolean hideSub) {
 		
-		rootSuperEdge = new IsSubArea();
+		IsSubArea rootSuperEdge = new IsSubArea();
 		
+		rootSuperEdge.id = areaId;
+		rootSuperEdge.subAreaId = subAreaId;
 		rootSuperEdge.inheritance = inheritance;
 		rootSuperEdge.nameSub = nameSub;
 		rootSuperEdge.nameSuper = nameSuper;
 		rootSuperEdge.hideSub = hideSub;
+		
+		if (rootSuperEdges != null) {
+			rootSuperEdges.add(rootSuperEdge);
+		}
 	}
 
 	/**
@@ -393,7 +575,7 @@ public class AreaTreeData {
 		slotData.revision = revision;
 		slotData.created = created;
 		slotData.localizedTextValueId = localizedTextValueId;
-		slotData.textValue = externalProvider != null ? null : textValue;
+		slotData.textValue = textValue;
 		slotData.integerValue = integerValue;
 		slotData.realValue = realValue;
 		slotData.access = access;
@@ -706,7 +888,7 @@ public class AreaTreeData {
 			
 			// Insert root area ID.
 			Element element = document.createElement("RootAreaId");
-			attribute2(element, "id", rootAreaId);
+			attribute2(element, "id", rootAreaIds);
 			root.appendChild(element);
 			
 			// Insert home area ID.
@@ -720,6 +902,7 @@ public class AreaTreeData {
 			root.appendChild(element);
 			
 			// Insert root edge.
+			IsSubArea rootSuperEdge = rootSuperEdges.getFirst();
 			if (rootSuperEdge != null) {
 				element = document.createElement("RootSuperEdge");
 			
@@ -1207,7 +1390,8 @@ public class AreaTreeData {
 	        }
 	        
 	        // Initialize root super edge.
-	        rootSuperEdge = new IsSubArea();
+	        IsSubArea rootSuperEdge = new IsSubArea();
+	        rootSuperEdges.add(rootSuperEdge);
 	        
 	        Node root = document.getFirstChild();
 	        
@@ -1220,7 +1404,7 @@ public class AreaTreeData {
 	        	
 	        	if (tableName.equals("RootAreaId")) {
 	        		Long id = attributeLong(tableNode, "id");
-	        		setRootAreaId(id);
+	        		addRootAreaId(id);
 	        	}
 	        	else if (tableName.equals("HomeAreaId")) {
 	        		Long id = attributeLong(tableNode, "id");
@@ -1829,22 +2013,33 @@ public class AreaTreeData {
 		// Reset flags.
 		resetAreasEdgesMarks();
 		
-		// Create areas tree.
-		AreaData rootAreaData = getAreaData(rootAreaId);
-		if (rootAreaData == null) {
-			return MiddleResult.ROOT_AREA_DATA_NOT_FOUND;
-		}
-		createAreasTree(rootAreaData);
-		
-		float progressStep = 100.0f / 18.0f;
-		float progress = progressStep;
-		
-		// DAT blocks list.
-		LinkedList<DatBlock> datBlocks = new LinkedList<DatBlock>();
-		
-		// Check area tree continuity.
-		if (isAllAreasEdgesMarked()) {
+		// List of input trees.
+		LinkedList<AreaData> treeList = new LinkedList<AreaData>();
+		for (long rootAreaId : rootAreaIds) {
 			
+			// Create areas tree and add id into the list.
+			AreaData rootAreaData = getAreaData(rootAreaId);
+			if (rootAreaData == null) {
+				return MiddleResult.ROOT_AREA_DATA_NOT_FOUND;
+			}
+			
+			createAreasTree(rootAreaData);
+			treeList.add(rootAreaData);
+		}
+		
+		// Check area trees continuity.
+		if (!areAllAreaEdgesMarked()) {
+			result = new MiddleResult("org.maclan.messageAreaTreesNotContinuous", null);
+		}
+		if (result.isOK()) {
+			
+			// Save each tree to the database.
+			float progressStep = 100.0f / 18.0f;
+			float progress = progressStep;
+			
+			// DAT blocks list.
+			LinkedList<DatBlock> datBlocks = new LinkedList<DatBlock>();
+
 			if (swingWorkerHelper != null) {
 				swingWorkerHelper.setProgressBar((int) progress);
 				progress += progressStep;
@@ -1930,8 +2125,13 @@ public class AreaTreeData {
 														}
 														
 														// Connect new tree root area with import area.
-														result = middle.insertIsSubAreaConnection(this, importAreaId,
-																getNewAreaId(rootAreaId), swingWorkerHelper);
+														LinkedList<Long> newRootAreaIds = new LinkedList<Long>();
+														for (AreaData rootAreaData : treeList) {
+															long rootAreaId = rootAreaData.id;
+															newRootAreaIds.add(getNewAreaId(rootAreaId));
+														}
+														result = middle.insertIsSubAreaConnection(this, importAreaId, newRootAreaIds, rootSuperEdges, swingWorkerHelper);
+														
 														if (result.isOK()) {
 															
 															if (swingWorkerHelper != null) {
@@ -1944,7 +2144,15 @@ public class AreaTreeData {
 															if (result.isOK()) {
 																
 																// Link unlinked area constructors.
-																result = middle.updateUnlinkedAreasConstructors(this, importAreaId, getNewAreaId(rootAreaId), swingWorkerHelper);
+																for (AreaData rootAreaData : treeList) {
+																	long rootAreaId = rootAreaData.id;
+																	
+																	result = middle.updateUnlinkedAreasConstructors(this, importAreaId, getNewAreaId(rootAreaId), swingWorkerHelper);
+																	if (result.isNotOK()) {
+																		break;
+																	}
+																}
+																
 																if (result.isOK()) {
 																	
 																	if (swingWorkerHelper != null) {
@@ -2007,11 +2215,10 @@ public class AreaTreeData {
 																							}
 																							
 																							// Import DAT stream.
-																							if (datStream != null) {
+																							if (datStream != null && datBlocks != null && !datBlocks.isEmpty()) {
 																								result = middle.importDatStream(this, datStream, datBlocks);
 																							}
 																							if (result.isOK()) {
-																								
 																								if (swingWorkerHelper != null) {
 																									swingWorkerHelper.setProgressBar((int) progress);
 																									progress += progressStep;
@@ -2039,18 +2246,14 @@ public class AreaTreeData {
 						}
 					}
 				}
-			}
+			}//<---
+		}
 			
-			// Logout from database.
-			MiddleResult logoutResult = middle.logout(result);
-			if (result.isOK()) {
-				result = logoutResult;
-			}
+		// Logout from database.
+		MiddleResult logoutResult = middle.logout(result);
+		if (result.isOK()) {
+			result = logoutResult;
 		}
-		else {
-			result = new MiddleResult("middle.messageAreaTreeNotContinuous", null);
-		}
-		
 		return result;
 	}
 	/**
@@ -2230,7 +2433,7 @@ public class AreaTreeData {
 	 * Return true value if all areas' and edges' marks are set.
 	 * @return
 	 */
-	private boolean isAllAreasEdgesMarked() {
+	private boolean areAllAreaEdgesMarked() {
 		
 		for (AreaData areaData : areaDataList) {
 			if (!areaData.mark) {
@@ -3033,6 +3236,17 @@ public class AreaTreeData {
 		
 		return null;
 	}
+	
+	/**
+	 * Returns true value if an area with ID exists in the tree.
+	 * @param areaId
+	 * @return
+	 */
+	public boolean existsArea(long areaId) {
+		
+		AreaData area = getArea(areaId);
+		return area != null;
+	}
 
 	/**
 	 * Get area that should link constructor.
@@ -3056,9 +3270,9 @@ public class AreaTreeData {
 
 	/**
 	 * Set flag that informs about area data that are cloned (not imported).
-	 * @param copied
+	 * @param cloned
 	 */
-	public void setCloned(boolean copied) {
+	public void setCloned(boolean cloned) {
 		
 		this.cloned = cloned;
 	}

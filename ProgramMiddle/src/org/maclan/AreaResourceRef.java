@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * Area resource reference.
  * @author
@@ -26,4 +28,21 @@ public class AreaResourceRef {
 		return "AreaResourceRef [areaId=" + areaId + ", resourceId="
 				+ resourceId + ", localDescription=" + localDescription + "]";
 	}
+	
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		AreaResourceRef other = (AreaResourceRef) obj;
+		return Objects.equals(areaId, other.areaId);
+	}
+	
+	
 }

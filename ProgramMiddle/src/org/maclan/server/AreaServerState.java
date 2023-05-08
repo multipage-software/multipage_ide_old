@@ -178,7 +178,7 @@ public class AreaServerState {
 	/**
 	 * Bookmark replace map.
 	 */
-	public HashMap<String, String> bookmarkReplace = new HashMap<String, String>();
+	public HashMap<String, String> bookmarkReplacement = new HashMap<String, String>();
 	
 	/**
 	 * Found include identifiers.
@@ -250,7 +250,7 @@ public class AreaServerState {
 	/**
 	 * Exception flag.
 	 */
-	public boolean exceptionThrown = false;
+	public MaclanException exceptionThrown = null;
 	
 	/**
 	 * Tray trayMenu result.
@@ -270,7 +270,7 @@ public class AreaServerState {
 	/**
 	 * Process META tags or not.
 	 */
-	public boolean processMetaTags = true;
+	public boolean processMetaTags = false;
 	
 	/**
 	 * Xdebug client.
@@ -286,5 +286,17 @@ public class AreaServerState {
 		breakPointName = state.breakPointName;
 		exceptionThrown = state.exceptionThrown;
 		trayMenu = state.trayMenu;
+	}
+	
+	/**
+	 * Set exception thrown.
+	 * @param exception
+	 */
+	public void setExceptionThrown(Exception exception) {
+		
+		if (exceptionThrown == null) {
+			exceptionThrown = new MaclanException();
+		}
+		exceptionThrown.exception = exception;
 	}
 }

@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import org.multipage.gui.IdentifiedTreeNode;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * Graph node.
@@ -466,37 +465,51 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	
 	/**
 	 * Create area.
-	 * @param directory
+	 * @param file
+	 * @param fileSlotName
+	 * @param encoding
 	 */
-	public Area(File directory) {
+	public Area(File file, String fileSlotName, String encoding) {
 		this();
 		
-		if (!directory.isDirectory()) {
+		String fileName = file.getName();
+		
+		// Set area description. 
+		this.description = fileName;
+		this.setReadOnly(false);
+		this.userObject = file;
+		
+		// Check file slot name.
+		if (fileSlotName == null) {
 			return;
 		}
 		
-		// Set description and remember directory
-		this.description = directory.getName();
-		this.setReadOnly(false);
-		this.userObject = directory;
+		// Add file provider to the area.
+		addFileProvider(file, fileSlotName, encoding);
+	}
+	
+	/**
+	 * Add new slot. The slot is connected to the file acting as an external provider of code.
+	 * @param file
+	 * @param fileSlotName
+	 * @param encoding
+	 */
+	public void addFileProvider(File file, String fileSlotName, String encoding) {
 		
-		// List directory files and add external providers.
-		for (File file : directory.listFiles()) {
-			
-			if (file.isFile()) {
-				
-				String fileName = file.getName();
-				Slot externalProvider = new Slot(this, fileName);
-				externalProvider.setUserDefined(true);
-				
-				externalProvider.setExternalProvider(ExternalLinkParser.formatFileLink("UTF-8", file.toString()));
-				externalProvider.setValueMeaning(SlotType.EXTERNAL_PROVIDER);
-				externalProvider.setReadsInput(true);
-				externalProvider.setWritesOutput(true);
-				
-				addSlot(externalProvider);
-			}
+		if (fileSlotName == null) {
+			fileSlotName = file.getName();
 		}
+		
+		Slot externalProvider = new Slot(this, fileSlotName);
+		externalProvider.setUserDefined(true);
+		
+		String fileName = file.toString();
+		externalProvider.setExternalProvider(ExternalLinkParser.formatFileLink(encoding, fileName));
+		externalProvider.setValueMeaning(SlotType.EXTERNAL_PROVIDER);
+		externalProvider.setReadsInput(true);
+		externalProvider.setWritesOutput(true);
+		
+		addSlot(externalProvider);
 	}
 
 	/**
@@ -515,10 +528,24 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	}
 
 	/**
+	 * Get user object.
 	 * @return the userObject
 	 */
 	public Object getUser() {
 		return userObject;
+	}
+	
+	/**
+	 * Get file object.
+	 * @return
+	 */
+	public File getFile() {
+		
+		if (!(userObject instanceof File)) {
+			return null;
+		}
+		File file = (File) userObject;
+		return file;
 	}
 
 	/**
@@ -1237,7 +1264,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 * @param subAreaId
 	 * @return
 	 */
-	// TODO: obsolete
+	@Deprecated
 	public String getSubRelationName(long subAreaId) {
 		
 		DependentArea subArea = getDependentArea(subareas, subAreaId);
@@ -1257,7 +1284,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 * @param superAreaId
 	 * @return
 	 */
-	// TODO: obsolete
+	@Deprecated
 	public String getSuperRelationName(long superAreaId) {
 		
 		DependentArea superArea = getDependentArea(superareas, superAreaId);
@@ -2162,7 +2189,7 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 * Get children.
 	 */
 	@Override
-	public LinkedList getChildren() {
+	public LinkedList<Area.DependentArea> getChildren() {
 		
 		return subareas;
 	}

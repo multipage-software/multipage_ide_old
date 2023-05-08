@@ -30,7 +30,7 @@ import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 
 import org.maclan.Area;
-import org.maclan.AreaTreeData;
+import org.maclan.AreaTreesData;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
@@ -117,7 +117,7 @@ public class ImportDialog extends JDialog {
 	/**
 	 * Area tree data.
 	 */
-	private AreaTreeData areaTreeData;
+	private AreaTreesData areaTreeData;
 	
 	/**
 	 * Original sub name.
@@ -165,7 +165,8 @@ public class ImportDialog extends JDialog {
 		dialog.setVisible(true);
 
 		if (dialog.confirm) {
-			return dialog.areaTreeData.rootAreaId;
+			Long rootAreaId = dialog.areaTreeData.rootAreaIds.getFirst();
+			return rootAreaId;
 		}
 		return null;
 	}
@@ -373,7 +374,7 @@ public class ImportDialog extends JDialog {
 	 */
 	private void loadAreaTreeData() {
 		
-		areaTreeData = new AreaTreeData();
+		areaTreeData = new AreaTreesData();
 		
 		// Create and execute progress dialog.
 		ProgressDialog<MiddleResult> progressDlg = new ProgressDialog<MiddleResult>(this,
@@ -417,7 +418,7 @@ public class ImportDialog extends JDialog {
 		else {
 			
 			// Show edge sub name.
-			String subName = areaTreeData.rootSuperEdge.nameSub;
+			String subName = areaTreeData.rootSuperEdges.getFirst().nameSub;
 			if (subName == null) {
 				subName = "";
 			}
@@ -425,7 +426,7 @@ public class ImportDialog extends JDialog {
 			textSubName.setText(subName);
 			
 			// Remember original sub name.
-			originalSubName = areaTreeData.rootSuperEdge.nameSub;
+			originalSubName = areaTreeData.rootSuperEdges.getFirst().nameSub;
 		}
 	}
 
@@ -524,8 +525,8 @@ public class ImportDialog extends JDialog {
 		if (nameSub.isEmpty()) {
 			nameSub = null;
 		}
-		if (areaTreeData.rootSuperEdge != null) {
-			areaTreeData.rootSuperEdge.nameSub = nameSub;
+		if (areaTreeData.rootSuperEdges != null) {
+			areaTreeData.rootSuperEdges.getFirst().nameSub = nameSub;
 		}
 				
 		final boolean importLanguage = checkImportLanguage.isSelected();
@@ -594,7 +595,9 @@ public class ImportDialog extends JDialog {
 		}
 		
 		// Update root area ID.
-		areaTreeData.rootAreaId = areaTreeData.getNewAreaId(areaTreeData.rootAreaId);
+		Long rootAreaId = areaTreeData.rootAreaIds.removeFirst();
+		rootAreaId = areaTreeData.getNewAreaId(rootAreaId);
+		areaTreeData.rootAreaIds.addFirst(rootAreaId);
 		
 		confirm = true;
 		dispose();

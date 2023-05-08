@@ -1,0 +1,5 @@
+bookmark
+exp
+php
+charset
+uri

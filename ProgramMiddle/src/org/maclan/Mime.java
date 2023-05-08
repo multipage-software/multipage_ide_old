@@ -7,6 +7,8 @@
 
 package org.maclan;
 
+import java.util.Objects;
+
 /**
  * MIME data.
  * @author
@@ -29,5 +31,20 @@ public class Mime {
 	public String toString() {
 		return "Mime [mimeId=" + mimeId + ", extension=" + extension
 				+ ", type=" + type + ", preference=" + preference + "]";
+	}
+
+	/**
+	 * Check if input object equals to this object.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Mime other = (Mime) obj;
+		return Objects.equals(mimeId, other.mimeId);
 	}
 }

@@ -22,8 +22,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.net.URI;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -36,6 +39,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
@@ -44,13 +48,16 @@ import javax.swing.ListCellRenderer;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.table.TableModel;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.StyleSheet;
 
 import org.maclan.server.AreaServerSignal;
 import org.maclan.server.DebugListener;
-import org.maclan.server.XdebugListener;
-import org.maclan.server.XdebugPacket;
+import org.maclan.server.DebugListenerSession;
+import org.maclan.server.XdebugListenerOld;
+import org.maclan.server.XdebugPacketOld;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.Callback;
 import org.multipage.gui.ConditionalEvents;
@@ -64,9 +71,8 @@ import org.multipage.util.DOM;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import java.awt.Insets;
 
 /**
  * This is GUI for debugging
@@ -80,6 +86,11 @@ public class DebugViewer extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	
+	/**
+	 * GUI watchdog timeout in ms.
+	 */
+	private static final int WATCHDOG_TIMEOUT_MS = 1000;
+	
 	// $hide>>$
 	/**
 	 * Window boundary
@@ -87,11 +98,30 @@ public class DebugViewer extends JFrame {
 	private static Rectangle bounds;
 	
 	/**
+	 * Text constants that are dislpayed with the dialog.
+	 */
+	private static String textConnected = "org.multipage.generator.textDebuggerConnected";
+    private static String textNotConnected = "org.multipage.generator.textDebuggerNotConnected";
+    
+    /**
+     * Load text resources.
+     */
+    private static void loadTextResources() {
+    		
+    	// Load static texts from text resources.
+		textConnected = Resources.getString(textConnected);
+		textNotConnected = Resources.getString(textNotConnected);
+    }
+    
+	/**
 	 * Set default data.
 	 */
 	public static void setDefaultData() {
 		
 		bounds = new Rectangle();
+		
+		// Load static texts from text resources.
+		loadTextResources();
 	}
 	
 	/**
@@ -104,6 +134,9 @@ public class DebugViewer extends JFrame {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		
+		// Load static texts from text resources.
+		loadTextResources();
 	}
 	
 	/**
@@ -114,6 +147,33 @@ public class DebugViewer extends JFrame {
 		throws IOException {
 		
 		outputStream.writeObject(bounds);
+	}
+	
+	/**
+	 * Debug viewer singleton object.
+	 */
+    private static DebugViewer instance;
+    
+    /**
+     * Get debug viewer singleton.
+     * @param parent 
+     * @return
+     */
+    public static DebugViewer getInstance(Component parent) {
+        if (instance == null) {
+            instance = new DebugViewer(parent);
+        }
+        return instance;
+    }
+    
+    /**
+     * Get debug viewer singleton.
+     * @return
+     */
+	public static DebugViewer getInstance() {
+		
+		// Delegate the call.
+		return getInstance(null);
 	}
 	
 	/**
@@ -221,7 +281,7 @@ public class DebugViewer extends JFrame {
 
 			boolean matches = Utility.matches(messageText, filterString, caseSensitive, wholeWords, exactMatch);
 			
-			// TODO: <---DEBUG Check filter match.
+			// TODO: <---DEBUGGER Check filter match.
 			j.log("FILTER MATCH %b", matches);
 			
 			return matches;
@@ -255,11 +315,31 @@ public class DebugViewer extends JFrame {
 			return "";
 		}
 	}
-	
+		
+	/**
+	 * Reference to currently attached debug listener;
+	 */
+	private DebugListener attachedDebugger = null;
+
 	/**
 	 * Object status
 	 */
 	private Object status;
+	
+	/**
+	 * GUI watchdog timer.
+	 */
+	private Timer watchdogTimer = null;
+	
+	/**
+	 * Current server socket address.
+	 */
+	private SocketAddress serverSocketAddress = null;
+	
+	/**
+	 * Current client socket address.
+	 */
+	private SocketAddress clientSocketAddress = null;
 
 	// $hide<<$
 	
@@ -291,16 +371,16 @@ public class DebugViewer extends JFrame {
 	private JButton buttonStepOver;
 	private JList listWatch;
 	private JList listStack;
-	
-	/**
-	 * Create the frame.
-	 * @param parentComponent 
-	 */
-	public DebugViewer(Component parentComponent) {
-		
+
+    /**
+     * Constructor.
+     * @param parent 
+     */
+    private DebugViewer(Component parent) {
+    	
 		initComponents();
-		postCreate(); // $hide$
-	}
+		postCreate(); // $hide$    	
+    }
 
 	/**
 	 * Initialize components
@@ -462,6 +542,61 @@ public class DebugViewer extends JFrame {
 		sl_panelSearch.putConstraint(SpringLayout.SOUTH, checkExactMatch, 0, SpringLayout.SOUTH, checkCaseSensitive);
 		checkExactMatch.setOpaque(false);
 		panelSearch.add(checkExactMatch);
+		
+		panelProcesses = new JPanel();
+		tabbedPane.addTab("Processes", null, panelProcesses, null);
+		SpringLayout sl_panelProcesses = new SpringLayout();
+		panelProcesses.setLayout(sl_panelProcesses);
+		
+		scrollPaneProcesses = new JScrollPane();
+		sl_panelProcesses.putConstraint(SpringLayout.NORTH, scrollPaneProcesses, 3, SpringLayout.NORTH, panelProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.WEST, scrollPaneProcesses, 3, SpringLayout.WEST, panelProcesses);
+		scrollPaneProcesses.setPreferredSize(new Dimension(150, 100));
+		panelProcesses.add(scrollPaneProcesses);
+		
+		scrollPaneThreads = new JScrollPane();
+		sl_panelProcesses.putConstraint(SpringLayout.NORTH, scrollPaneThreads, 3, SpringLayout.SOUTH, scrollPaneProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.WEST, scrollPaneThreads, 3, SpringLayout.WEST, panelProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.SOUTH, scrollPaneThreads, -3, SpringLayout.SOUTH, panelProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.EAST, scrollPaneThreads, 0, SpringLayout.EAST, scrollPaneProcesses);
+		
+		JLabel labelProcesses = new JLabel("Processes:");
+		scrollPaneProcesses.setColumnHeaderView(labelProcesses);
+		panelProcesses.add(scrollPaneThreads);
+		
+		scrollPaneAreaServerStack = new JScrollPane();
+		sl_panelProcesses.putConstraint(SpringLayout.NORTH, scrollPaneAreaServerStack, 3, SpringLayout.NORTH, panelProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.WEST, scrollPaneAreaServerStack, 3, SpringLayout.EAST, scrollPaneProcesses);
+		
+		JPanel panelAuxProcesses = new JPanel();
+		scrollPaneProcesses.setViewportView(panelAuxProcesses);
+		panelAuxProcesses.setLayout(new BorderLayout(0, 0));
+		
+		tableProcesses = new JTable();
+		panelAuxProcesses.add(tableProcesses, BorderLayout.CENTER);
+		sl_panelProcesses.putConstraint(SpringLayout.SOUTH, scrollPaneAreaServerStack, -3, SpringLayout.SOUTH, panelProcesses);
+		sl_panelProcesses.putConstraint(SpringLayout.EAST, scrollPaneAreaServerStack, -3, SpringLayout.EAST, panelProcesses);
+		
+		JLabel labelThreads = new JLabel("Threads:");
+		scrollPaneThreads.setColumnHeaderView(labelThreads);
+		
+		JPanel panelAuxThreads = new JPanel();
+		scrollPaneThreads.setViewportView(panelAuxThreads);
+		panelAuxThreads.setLayout(new BorderLayout(0, 0));
+		
+		tableThreads = new JTable();
+		panelAuxThreads.add(tableThreads, BorderLayout.CENTER);
+		panelProcesses.add(scrollPaneAreaServerStack);
+		
+		JLabel labelAreaServerStack = new JLabel("Stack:");
+		scrollPaneAreaServerStack.setColumnHeaderView(labelAreaServerStack);
+		
+		JPanel panelAuxAreaServerStack = new JPanel();
+		scrollPaneAreaServerStack.setViewportView(panelAuxAreaServerStack);
+		panelAuxAreaServerStack.setLayout(new BorderLayout(0, 0));
+		
+		tableAreaServerStack = new JTable();
+		panelAuxAreaServerStack.add(tableAreaServerStack, BorderLayout.CENTER);
 		buttonSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onSendCommand();
@@ -531,15 +666,26 @@ public class DebugViewer extends JFrame {
 		toolBar.add(buttonExit);
 				
 		panelStatus = new JPanel();
-		panelStatus.setPreferredSize(new Dimension(10, 18));
+		panelStatus.setPreferredSize(new Dimension(10, 25));
 		getContentPane().add(panelStatus, BorderLayout.SOUTH);
 		FlowLayout fl_panelStatus = new FlowLayout(FlowLayout.RIGHT, 5, 5);
 		panelStatus.setLayout(fl_panelStatus);
 		
+		buttonConnected = new JButton("");
+		buttonConnected.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onConnectedClick();
+			}
+		});
+		buttonConnected.setPreferredSize(new Dimension(80, 16));
+		buttonConnected.setAlignmentY(0.0f);
+		buttonConnected.setMargin(new Insets(0, 0, 0, 0));
+		panelStatus.add(buttonConnected);
+		
 		labelStatus = new JLabel("status");
 		panelStatus.add(labelStatus);
 	}
-
+	
 	/**
 	 * Post creation
 	 */
@@ -555,6 +701,137 @@ public class DebugViewer extends JFrame {
 		initWatch();
 		
 		loadDialog();
+		
+		// Update dialog status panel.
+		updateStatusPanel();
+		
+		// Start watch dog.
+		startWatchDog();
+	}
+	
+	/**
+	 * Starts watch dog that polls miscelaneous debug states.
+	 */
+	private void startWatchDog() {
+		
+		watchdogTimer = new Timer(WATCHDOG_TIMEOUT_MS, new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        onWatchdogTick();
+		    }
+		});
+		watchdogTimer.setRepeats(true);
+		watchdogTimer.setCoalesce(true);
+		watchdogTimer.setInitialDelay(WATCHDOG_TIMEOUT_MS);
+		watchdogTimer.setDelay(WATCHDOG_TIMEOUT_MS);
+		watchdogTimer.start();
+	}
+	
+	/**
+	 * Dospose watchdog.
+	 */
+	private void disposeWatchdog() {
+		
+		// Stop GUI watchdog.
+		if (watchdogTimer != null) {
+			watchdogTimer.stop();
+		}
+	}
+
+
+	/**
+	 * Attach debugger.
+	 * @param debugger
+	 */
+	public void attachDebugger(DebugListener debugger) {
+		
+		// Remember debugger reference.
+		this.attachedDebugger = debugger;
+		
+		// Add new lambda methods to the DebugListener object to connect callbacks comming from the debug listener (server).
+		debugger.acceptConnectionLambda = session -> {
+			
+			try {
+				// Set current server and client socket adresses.
+				this.serverSocketAddress = session.getListenerSocket().getLocalAddress();
+				this.clientSocketAddress = session.getRemoteProbeSocket().getRemoteAddress();
+
+				SwingUtilities.invokeLater(() -> {
+					
+					// Update dialog status panel.
+					updateStatusPanel();
+					
+					// Show dialog window.
+					DebugViewer.this.setVisible(true);
+				});
+				
+				// TODO: <---REMOVE IT
+				j.log("\nVIEW ACCEPTED CONNECTION %s", session.getRemoteProbeSocket().toString());
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		};
+		debugger.inputPacketLambda = inputPacket -> {
+			
+			// TODO: <---REMOVE IT
+			j.log("VIEW INPUT PACKET %s", inputPacket);
+		};
+	}
+	
+	/**
+	 * On repeated watchdog ticks.
+	 */
+	protected void onWatchdogTick() {
+		
+		// Update GUI elements.
+		updateSessionView();
+		updateStatusPanel();
+	}
+
+	/**
+	 * Update session view with list of current debug sessions.
+	 */
+	private void updateSessionView() {
+		
+		// Check attached debugger..
+		if (attachedDebugger == null) {
+			return;
+		}
+		
+		// Get session list of the debugger.
+		List<DebugListenerSession> sessions = attachedDebugger.getSessions();
+		TableModel model = tableProcesses.getModel();
+		
+		// TODO: <---REMOVE IT
+		if (sessions != null && !sessions.isEmpty()) {
+			j.log("SESSIONS %s", sessions.toArray());
+		}
+	}
+
+	/**
+	 * Update status panel.
+	 */
+	private void updateStatusPanel() {
+		
+		if (serverSocketAddress != null && clientSocketAddress != null) {
+			
+			buttonConnected.setText(textConnected);
+			buttonConnected.setBackground(Color.GREEN);
+		}
+		else {
+			buttonConnected.setText(textNotConnected);
+			buttonConnected.setBackground(Color.RED);
+		}
+	}
+	
+	/**
+	 * On click "connected/not connected button".
+	 */
+	protected void onConnectedClick() {
+		
+		if (serverSocketAddress != null && clientSocketAddress != null) {
+			Utility.show(this, "org.multipage.generator.messageDebuggerConnectionDetails", serverSocketAddress, clientSocketAddress);
+		}
 	}
 
 	/**
@@ -563,7 +840,7 @@ public class DebugViewer extends JFrame {
 	protected void onOpen() {
 		
 		// Start debugger
-		XdebugListener.getSingleton().startDebugging();
+		XdebugListenerOld.getSingleton().startDebugging();
 	}
 	
 	/**
@@ -572,12 +849,13 @@ public class DebugViewer extends JFrame {
 	protected void onClose() {
 		
 		// Stop debugger
-		XdebugListener.getSingleton().stopDebugging();
+		XdebugListenerOld.getSingleton().stopDebugging();
 		
 		saveDialog();
+		disposeWatchdog();
 		dispose();
 	}
-
+	
 	/**
 	 * Load dialog
 	 */
@@ -722,7 +1000,7 @@ public class DebugViewer extends JFrame {
 	 */
 	public void onSessionStateChanged(DebugListener debugger, boolean ready) {
 		
-		// TODO: <---FINISH IT OR REMOVE IT
+		// TODO: <---DEBUGGER FINISH IT OR REMOVE IT
 	}
 
 	/**
@@ -816,7 +1094,7 @@ public class DebugViewer extends JFrame {
 			return;
 		}
 		
-		// TODO: <---FINISH
+		// TODO: <---DEBUGGER FINISH
 	}
 	
 	/**
@@ -839,7 +1117,7 @@ public class DebugViewer extends JFrame {
 	private void startDebugging() throws Exception {
 		
 		// Start debug viewer.
-		boolean accepted = XdebugListener.getSingleton().startDebugging();
+		boolean accepted = XdebugListenerOld.getSingleton().startDebugging();
 		//pageReloadException(!accepted);
 	}
 	
@@ -865,7 +1143,7 @@ public class DebugViewer extends JFrame {
 		// Process run command
 		try {
 			startDebugging();
-			// TODO: <---FINISH
+			// TODO: <---DEBUGGER FINISH
 			//String resultText = responsePacket.getPacketText();
 			//consolePrint(resultText);
 		}
@@ -886,6 +1164,14 @@ public class DebugViewer extends JFrame {
 	private JCheckBox checkCaseSensitive;
 	private JCheckBox checkWholeWords;
 	private JCheckBox checkExactMatch;
+	private JPanel panelProcesses;
+	private JScrollPane scrollPaneProcesses;
+	private JScrollPane scrollPaneThreads;
+	private JScrollPane scrollPaneAreaServerStack;
+	private JTable tableThreads;
+	private JTable tableAreaServerStack;
+	private JTable tableProcesses;
+	private JButton buttonConnected;
 
 	
 	/**
@@ -893,7 +1179,7 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void step(String command) {
 		
-		// TODO: <---MAKE Transmit "step" Xdebug signal.
+		// TODO: <---DEBUGGER MAKE Transmit "step" Xdebug signal.
 		ConditionalEvents.transmit(this, AreaServerSignal.debugStatement, command);
 		
 //		// Process step into command
@@ -940,7 +1226,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void showOutput() {
 		
-		// TODO: <---FINISH
+		// TODO: <---DEBUGGER FINISH
 		/*
 		try {
 			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommandT("eval", "ob_get_contents()");
@@ -964,7 +1250,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void showStackDump() {
 		
-		// TODO: <---REFACTOR Process run command
+		// TODO: <---DEBUGGER REFACTOR Process run command
 		/*try {
 			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand("stack_get");
 			if (!responsePacket.isEmpty()) {
@@ -1072,7 +1358,7 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void processContext(int number) {
 		
-		// TODO: <---REFACTOR
+		// TODO: <---DEBUGGER REFACTOR
 		// Process context_get command
 		/*try {
 			String command = String.format("context_get -c %s", number);
@@ -1274,7 +1560,7 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onExit() {
 		
-		XdebugListener client = XdebugListener.getSingleton();
+		XdebugListenerOld client = XdebugListenerOld.getSingleton();
 		if (client == null) {
 			return;
 		}
@@ -1288,7 +1574,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void establishWatchDog() {
 		
-		XdebugListener client = XdebugListener.getSingleton();
+		XdebugListenerOld client = XdebugListenerOld.getSingleton();
 		if (client == null) {
 			return;
 		}
@@ -1335,7 +1621,7 @@ public class DebugViewer extends JFrame {
 		ConditionalEvents.receiver(this, AreaServerSignal.debugResponse, message -> {
 			
 			// Get response packet.
-			XdebugPacket responsePacket = message.getRelatedInfo();
+			XdebugPacketOld responsePacket = message.getRelatedInfo();
 			if (responsePacket == null) {
 				logException("org.multipage.generator.messageNullDebugResponsePacket");
 				return;
@@ -1405,7 +1691,7 @@ public class DebugViewer extends JFrame {
 	 * Write error packet to log panel.
 	 * @param errorPacket
 	 */
-	private void logException(XdebugPacket errorPacket) {
+	private void logException(XdebugPacketOld errorPacket) {
 		
 		// Get transaction ID.
 		String transactionId = errorPacket.getString("/response/@transaction_id");

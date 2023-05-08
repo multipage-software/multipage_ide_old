@@ -10,12 +10,16 @@
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="forms-1.3.0.jar" sourcepath="forms-1.3.0-src.zip"/>
+	<classpathentry kind="lib" path="C:/library/forms-1.3.0.jar" sourcepath="forms-1.3.0-src.zip"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramGenerator"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramTranslator"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ProgramHelp"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="miglayout15-swing.jar" sourcepath="miglayout-src.zip"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/library/miglayout15-swing.jar" sourcepath="miglayout-src.zip"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

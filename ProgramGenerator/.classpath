@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramHelp"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramTranslator"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/JavaBridge"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/BuildNumber"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramBasic"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ProgramAddIns"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -30,5 +20,15 @@
 	<classpathentry kind="lib" path="C:/library/javafx-sdk-14.0.1/lib/javafx.fxml.jar"/>
 	<classpathentry kind="lib" path="C:/library/javafx-sdk-14.0.1/lib/javafx.media.jar"/>
 	<classpathentry kind="lib" path="C:/library/apache_commons/commons-imaging-1.0-alpha3-bin/commons-imaging-1.0-alpha3/commons-imaging-1.0-alpha3.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramAddIns"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralGui"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GeneralUtil"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramBasic"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramMiddle"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/BuildNumber"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramTranslator"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramSync"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ProgramHelp"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/JavaBridge"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -47,7 +47,7 @@ public abstract class ProgramHttpServer {
 	public MiddleResult startDebugClient() {
 		
 		try {
-			debugger = XdebugListener.createInstance();
+			debugger = XdebugListener.getInstance();
 			debugger.activate();
 			return MiddleResult.OK;
 		}

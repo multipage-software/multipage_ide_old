@@ -33,7 +33,9 @@ maclan(tag('PROCEDURE'), type('Complex')).
 maclan(tag('CALL'), type('SimpleOrComplex')).
 maclan(tag('PACK'), type('Complex')).
 maclan(tag('BLOCK'), type('Complex')).
+maclan(tag('INPUT'), type('Complex')).
 maclan(tag('OUTPUT'), type('Complex')).
+maclan(tag('STORE'), type('Complex')).
 maclan(tag('TRACE'), type('Simple')).
 maclan(tag('BREAK'), type('Simple')).
 maclan(tag('PPTEXT'), type('Complex')).
@@ -63,6 +65,8 @@ maclan(tag('AREA_NAME'), property('homeArea'), type('Area')).
 maclan(tag('AREA_NAME'), property('requestedArea'), type('Area')).
 maclan(tag('AREA_NAME'), property('thisArea'), type('Area')).
 maclan(tag('AREA_NAME'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('AREA_NAME'), property('versionId'), type('VersionId')).
+maclan(tag('AREA_NAME'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('AREA_ID'), property('areaId'), type('AreaId')).
 maclan(tag('AREA_ID'), property('areaAlias'), type('AreaAlias')).
@@ -72,6 +76,8 @@ maclan(tag('AREA_ID'), property('homeArea'), type('Area')).
 maclan(tag('AREA_ID'), property('requestedArea'), type('Area')).
 maclan(tag('AREA_ID'), property('thisArea'), type('Area')).
 maclan(tag('AREA_ID'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('AREA_ID'), property('versionId'), type('VersionId')).
+maclan(tag('AREA_ID'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('AREA_ALIAS'), property('areaId'), type('AreaId')).
 maclan(tag('AREA_ALIAS'), property('areaAlias'), type('AreaAlias')).
@@ -81,6 +87,8 @@ maclan(tag('AREA_ALIAS'), property('homeArea'), type('Area')).
 maclan(tag('AREA_ALIAS'), property('requestedArea'), type('Area')).
 maclan(tag('AREA_ALIAS'), property('thisArea'), type('Area')).
 maclan(tag('AREA_ALIAS'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('AREA_ALIAS'), property('versionId'), type('VersionId')).
+maclan(tag('AREA_ALIAS'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('SUBAREAS'), property('list'), type('VarName')).
 maclan(tag('SUBAREAS'), property('first'), type('VarName')).
@@ -95,6 +103,8 @@ maclan(tag('SUBAREAS'), property('homeArea'), type('Area')).
 maclan(tag('SUBAREAS'), property('requestedArea'), type('Area')).
 maclan(tag('SUBAREAS'), property('thisArea'), type('Area')).
 maclan(tag('SUBAREAS'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('SUBAREAS'), property('versionId'), type('VersionId')).
+maclan(tag('SUBAREAS'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('SUPERAREAS'), property('list'), type('VarName')).
 maclan(tag('SUPERAREAS'), property('first'), type('VarName')).
@@ -109,6 +119,8 @@ maclan(tag('SUPERAREAS'), property('homeArea'), type('Area')).
 maclan(tag('SUPERAREAS'), property('requestedArea'), type('Area')).
 maclan(tag('SUPERAREAS'), property('thisArea'), type('Area')).
 maclan(tag('SUPERAREAS'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('SUPERAREAS'), property('versionId'), type('VersionId')).
+maclan(tag('SUPERAREAS'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('TAG'), property('slot'), type('SlotAlias')).
 maclan(tag('TAG'), property('local'), type('Boolean')).
@@ -123,6 +135,8 @@ maclan(tag('TAG'), property('homeArea'), type('Area')).
 maclan(tag('TAG'), property('requestedArea'), type('Area')).
 maclan(tag('TAG'), property('thisArea'), type('Area')).
 maclan(tag('TAG'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('TAG'), property('versionId'), type('VersionId')).
+maclan(tag('TAG'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('LANGUAGES'), property('divider'), type('String')).
 maclan(tag('LANGUAGES'), property('transparent'), type('Boolean')).
@@ -139,6 +153,8 @@ maclan(tag('RESOURCE_ID'), property('homeArea'), type('Area')).
 maclan(tag('RESOURCE_ID'), property('requestedArea'), type('Area')).
 maclan(tag('RESOURCE_ID'), property('thisArea'), type('Area')).
 maclan(tag('RESOURCE_ID'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('RESOURCE_ID'), property('versionId'), type('VersionId')).
+maclan(tag('RESOURCE_ID'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('RESOURCE_EXT'), property('res'), type('ResourceAlias')).
 maclan(tag('RESOURCE_EXT'), property('render'), type('Boolean')).
@@ -150,6 +166,8 @@ maclan(tag('RESOURCE_EXT'), property('homeArea'), type('Area')).
 maclan(tag('RESOURCE_EXT'), property('requestedArea'), type('Area')).
 maclan(tag('RESOURCE_EXT'), property('thisArea'), type('Area')).
 maclan(tag('RESOURCE_EXT'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('RESOURCE_EXT'), property('versionId'), type('VersionId')).
+maclan(tag('RESOURCE_EXT'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('RESOURCE_VALUE'), property('res'), type('ResourceAlias')).
 maclan(tag('RESOURCE_VALUE'), property('render'), type('Boolean')).
@@ -162,6 +180,8 @@ maclan(tag('RESOURCE_VALUE'), property('homeArea'), type('Area')).
 maclan(tag('RESOURCE_VALUE'), property('requestedArea'), type('Area')).
 maclan(tag('RESOURCE_VALUE'), property('thisArea'), type('Area')).
 maclan(tag('RESOURCE_VALUE'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('RESOURCE_VALUE'), property('versionId'), type('VersionId')).
+maclan(tag('RESOURCE_VALUE'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('VERSION_ANCHOR'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('VERSION_ANCHOR'), property('areaId'), type('AreaId')).
@@ -172,6 +192,8 @@ maclan(tag('VERSION_ANCHOR'), property('homeArea'), type('Area')).
 maclan(tag('VERSION_ANCHOR'), property('requestedArea'), type('Area')).
 maclan(tag('VERSION_ANCHOR'), property('thisArea'), type('Area')).
 maclan(tag('VERSION_ANCHOR'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('VERSION_ANCHOR'), property('versionId'), type('VersionId')).
+maclan(tag('VERSION_ANCHOR'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('VERSION_URL'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('VERSION_URL'), property('areaId'), type('AreaId')).
@@ -182,6 +204,8 @@ maclan(tag('VERSION_URL'), property('homeArea'), type('Area')).
 maclan(tag('VERSION_URL'), property('requestedArea'), type('Area')).
 maclan(tag('VERSION_URL'), property('thisArea'), type('Area')).
 maclan(tag('VERSION_URL'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('VERSION_URL'), property('versionId'), type('VersionId')).
+maclan(tag('VERSION_URL'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('VERSION_NAME'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('VERSION_NAME'), property('areaId'), type('AreaId')).
@@ -192,6 +216,8 @@ maclan(tag('VERSION_NAME'), property('homeArea'), type('Area')).
 maclan(tag('VERSION_NAME'), property('requestedArea'), type('Area')).
 maclan(tag('VERSION_NAME'), property('thisArea'), type('Area')).
 maclan(tag('VERSION_NAME'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('VERSION_NAME'), property('versionId'), type('VersionId')).
+maclan(tag('VERSION_NAME'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('VERSION_ID'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('VERSION_ID'), property('areaId'), type('AreaId')).
@@ -202,6 +228,8 @@ maclan(tag('VERSION_ID'), property('homeArea'), type('Area')).
 maclan(tag('VERSION_ID'), property('requestedArea'), type('Area')).
 maclan(tag('VERSION_ID'), property('thisArea'), type('Area')).
 maclan(tag('VERSION_ID'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('VERSION_ID'), property('versionId'), type('VersionId')).
+maclan(tag('VERSION_ID'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('LIST'), property('list'), type('Collection')).
 maclan(tag('LIST'), property('iterator'), type('VarName')).
@@ -237,6 +265,8 @@ maclan(tag('IMAGE'), property('homeArea'), type('Area')).
 maclan(tag('IMAGE'), property('requestedArea'), type('Area')).
 maclan(tag('IMAGE'), property('thisArea'), type('Area')).
 maclan(tag('IMAGE'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('IMAGE'), property('versionId'), type('VersionId')).
+maclan(tag('IMAGE'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('GET'), property('exp'), type('Expression')).
 
@@ -249,6 +279,8 @@ maclan(tag('A'), property('homeArea'), type('Area')).
 maclan(tag('A'), property('requestedArea'), type('Area')).
 maclan(tag('A'), property('thisArea'), type('Area')).
 maclan(tag('A'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('A'), property('versionId'), type('VersionId')).
+maclan(tag('A'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('ANCHOR'), property('href'), type('String')).
 maclan(tag('ANCHOR'), property('areaId'), type('AreaId')).
@@ -259,6 +291,8 @@ maclan(tag('ANCHOR'), property('homeArea'), type('Area')).
 maclan(tag('ANCHOR'), property('requestedArea'), type('Area')).
 maclan(tag('ANCHOR'), property('thisArea'), type('Area')).
 maclan(tag('ANCHOR'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('ANCHOR'), property('versionId'), type('VersionId')).
+maclan(tag('ANCHOR'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('IF'), property('cond'), type('Boolean')).
 maclan(tag('ELSEIF'), property('cond'), type('Boolean')).
@@ -283,6 +317,8 @@ maclan(tag('CALL'), property('$homeArea'), type('Area')).
 maclan(tag('CALL'), property('$requestedArea'), type('Area')).
 maclan(tag('CALL'), property('$thisArea'), type('Area')).
 maclan(tag('CALL'), property('$areaSlot'), type('SlotAlias')).
+maclan(tag('CALL'), property('$versionId'), type('VersionId')).
+maclan(tag('CALL'), property('$versionAlias'), type('VersionAlias')).
 maclan(tag('CALL'), property('$parent'), type('Boolean')).
 maclan(tag('CALL'), property('$inner'), type('Boolean')).
 maclan(tag('CALL'), property('transparent'), type('Boolean')).
@@ -305,16 +341,71 @@ maclan(tag('BLOCK'), property('homeArea'), type('Area')).
 maclan(tag('BLOCK'), property('requestedArea'), type('Area')).
 maclan(tag('BLOCK'), property('thisArea'), type('Area')).
 maclan(tag('BLOCK'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('BLOCK'), property('versionId'), type('VersionId')).
+maclan(tag('BLOCK'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('BLOCK'), property('transparent'), type('Boolean')).
 maclan(tag('BLOCK'), property('transparentProc'), type('Boolean')).
 maclan(tag('BLOCK'), property('transparentVar'), type('Boolean')).
 
+maclan(tag('INPUT'), property('value'), type('Expression')).
+maclan(tag('INPUT'), property('slot'), type('SlotAlias')).
+maclan(tag('INPUT'), property('skipDefault'), type('Boolean')).
+maclan(tag('INPUT'), property('parent'), type('Boolean')).
+maclan(tag('INPUT'), property('areaId'), type('AreaId')).
+maclan(tag('INPUT'), property('areaAlias'), type('AreaAlias')).
+maclan(tag('INPUT'), property('area'), type('Area')).
+maclan(tag('INPUT'), property('startArea'), type('Area')).
+maclan(tag('INPUT'), property('homeArea'), type('Area')).
+maclan(tag('INPUT'), property('requestedArea'), type('Area')).
+maclan(tag('INPUT'), property('thisArea'), type('Area')).
+maclan(tag('INPUT'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('INPUT'), property('versionId'), type('VersionId')).
+maclan(tag('INPUT'), property('versionAlias'), type('VersionAlias')).
+
 maclan(tag('OUTPUT'), property('transparent'), type('Boolean')).
 maclan(tag('OUTPUT'), property('transparentProc'), type('Boolean')).
 maclan(tag('OUTPUT'), property('transparentVar'), type('Boolean')).
+maclan(tag('OUTPUT'), property('slot'), type('SlotAlias')).
+maclan(tag('OUTPUT'), property('skipDefault'), type('Boolean')).
+maclan(tag('OUTPUT'), property('parent'), type('Boolean')).
+maclan(tag('OUTPUT'), property('areaId'), type('AreaId')).
+maclan(tag('OUTPUT'), property('areaAlias'), type('AreaAlias')).
+maclan(tag('OUTPUT'), property('area'), type('Area')).
+maclan(tag('OUTPUT'), property('startArea'), type('Area')).
+maclan(tag('OUTPUT'), property('homeArea'), type('Area')).
+maclan(tag('OUTPUT'), property('requestedArea'), type('Area')).
+maclan(tag('OUTPUT'), property('thisArea'), type('Area')).
+maclan(tag('OUTPUT'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('OUTPUT'), property('versionId'), type('VersionId')).
+maclan(tag('OUTPUT'), property('versionAlias'), type('VersionAlias')).
+
+maclan(tag('STORE'), property('slot'), type('SlotAlias')).
+maclan(tag('STORE'), property('skipDefault'), type('Boolean')).
+maclan(tag('STORE'), property('parent'), type('Boolean')).
+maclan(tag('STORE'), property('areaId'), type('AreaId')).
+maclan(tag('STORE'), property('areaAlias'), type('AreaAlias')).
+maclan(tag('STORE'), property('area'), type('Area')).
+maclan(tag('STORE'), property('startArea'), type('Area')).
+maclan(tag('STORE'), property('homeArea'), type('Area')).
+maclan(tag('STORE'), property('requestedArea'), type('Area')).
+maclan(tag('STORE'), property('thisArea'), type('Area')).
+maclan(tag('STORE'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('STORE'), property('versionId'), type('VersionId')).
+maclan(tag('STORE'), property('versionAlias'), type('VersionAlias')).
+maclan(tag('STORE'), property('value'), type('Expression')).
+maclan(tag('STORE'), property('type'), type('Type')).
+maclan(tag('STORE'), property('lang'), type('String')).
+maclan(tag('STORE'), property('valueMeaning'), type('String')).
+maclan(tag('STORE'), property('specialValue'), type('String')).
+maclan(tag('STORE'), property('access'), type('String')).
+maclan(tag('STORE'), property('external'), type('String')).
+maclan(tag('STORE'), property('isDefault'), type('Boolean')).
+maclan(tag('STORE'), property('readsExternal'), type('Boolean')).
+maclan(tag('STORE'), property('writesExternal'), type('Boolean')).
 
 maclan(tag('TRACE'), property('name'), type('String')).
 maclan(tag('TRACE'), property('simple'), type('Boolean')).
+maclan(tag('TRACE'), property('log'), type('Boolean')).
 
 maclan(tag('BREAK'), property('name'), type('String')).
 maclan(tag('BREAK'), property('no'), type('Boolean')).
@@ -330,7 +421,8 @@ maclan(tag('URL'), property('areaSlot'), type('SlotAlias')).
 maclan(tag('URL'), property('res'), type('ResourceAlias')).
 maclan(tag('URL'), property('localhost'), type('LocalHost')).
 maclan(tag('URL'), property('langAlias'), type('String')).
-maclan(tag('URL'), property('versionAlias'), type('String')).
+maclan(tag('URL'), property('versionId'), type('VersionId')).
+maclan(tag('URL'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('URL'), property('download'), type('Boolean')).
 maclan(tag('URL'), property('file'), type('String')).
 
@@ -347,6 +439,8 @@ maclan(tag('USING'), property('homeArea'), type('Area')).
 maclan(tag('USING'), property('requestedArea'), type('Area')).
 maclan(tag('USING'), property('thisArea'), type('Area')).
 maclan(tag('USING'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('USING'), property('versionId'), type('VersionId')).
+maclan(tag('USING'), property('versionAlias'), type('VersionAlias')).
 
 maclan(tag('RENDER_CLASS'), property('name'), type('RenderedClass')).
 maclan(tag('RENDER_CLASS'), property('text'), type('String')).
@@ -403,6 +497,9 @@ maclan(tag('UNZIP'), property('startArea'), type('Area')).
 maclan(tag('UNZIP'), property('homeArea'), type('Area')).
 maclan(tag('UNZIP'), property('requestedArea'), type('Area')).
 maclan(tag('UNZIP'), property('thisArea'), type('Area')).
+maclan(tag('UNZIP'), property('areaSlot'), type('SlotAlias')).
+maclan(tag('UNZIP'), property('versionId'), type('VersionId')).
+maclan(tag('UNZIP'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('UNZIP'), property('res'), type('ResourceAlias')).
 maclan(tag('UNZIP'), property('folder'), type('FolderPath')).
 
@@ -420,6 +517,8 @@ maclan(tag('REDIRECT'), property('homeArea'), type('Area')).
 maclan(tag('REDIRECT'), property('requestedArea'), type('Area')).
 maclan(tag('REDIRECT'), property('thisArea'), type('Area')).
 maclan(tag('REDIRECT'), property('areaSlot'), type('Slot')).
+maclan(tag('REDIRECT'), property('versionId'), type('VersionId')).
+maclan(tag('REDIRECT'), property('versionAlias'), type('VersionAlias')).
 maclan(tag('REDIRECT'), property('uri'), type('uri')).
 maclan(tag('REDIRECT'), property('langId'), type('uri')).
 maclan(tag('REDIRECT'), property('langAlias'), type('uri')).
