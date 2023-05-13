@@ -246,7 +246,7 @@
       </columns>
     </program.localizer.LocalizerItem>
   </linked-list>
-  <int>1</int>
+  <int>0</int>
   <java.awt.Rectangle>
     <x>995</x>
     <y>13</y>

@@ -12,9 +12,6 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.HashMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.multipage.util.j;
 
@@ -36,28 +33,10 @@ public class XdebugListener extends DebugListener {
 	private int INCOMING_BUFFER_SIZE = 1024;
 	
 	/**
-	 * Current Xdebug sessions. Maps incomming socket request to Xdebug session.
-	 */
-	private HashMap<InetSocketAddress, XdebugListenerSession> sessionsMap = null;
-	
-	/**
 	 * Singleton object.
 	 */
     private static XdebugListener instance;
-  
-    /**
-     * Listening port number.
-     */
-    private int listenerPort = DEFAULT_PORT;
      
-    /**
-     * Constructor.
-     */
-    private XdebugListener() {
-    	
-        sessionsMap = new HashMap<InetSocketAddress, XdebugListenerSession>();
-    }
-    
     /**
      * Get singleton object.
      * @return
@@ -115,40 +94,53 @@ public class XdebugListener extends DebugListener {
             AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
             InetSocketAddress socketAddress = new InetSocketAddress("localhost", port);
             server.bind(socketAddress);
-            server.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+            server.accept(server, new CompletionHandler<AsynchronousSocketChannel, AsynchronousServerSocketChannel>() {
                 
-				public void completed(AsynchronousSocketChannel client, Void attachment) {
-                	
-					// Create and remember new session object.
-					XdebugListenerSession session = new XdebugListenerSession(server, client, attachment);
-					XdebugListener.this.sessions.add(session);
-					
-					// Call the "accept connection" lambda.
-					onAcceptConnection(session);
-                	
-                    // Read incomming Xdebug data packet.
-                    ByteBuffer buffer = ByteBuffer.allocate(INCOMING_BUFFER_SIZE);
-                    client.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
-                        public void completed(Integer result, ByteBuffer buffer) {
-                        	
-                            buffer.flip();
-                            
-                            XdebugInputPacket inputPacket = XdebugInputPacket.readPacket(buffer);
-                            onInputPacket(inputPacket);
-                            
-                            buffer.clear();
-                            // receive more data from the client
-                            client.read(buffer, buffer, this);
-                        }
-						public void failed(Throwable exc, ByteBuffer buffer) {
-                            // handle the failure
-                        }
-                    });
-                    
-                    // Accept next Xdebug connection.
-                    server.accept(null, this);
+            	// When connection completed...
+            	@Override
+				public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
+					try {
+						// Create and remember new session object.
+						XdebugListenerSession session = new XdebugListenerSession(server, client);
+						XdebugListener.this.sessions.add(session);
+						
+						// Call the "accept connection" lambda.
+						onAcceptConnection(session);
+	                	
+	                    // Read incomming Xdebug data packet.
+	                    ByteBuffer buffer = ByteBuffer.allocate(INCOMING_BUFFER_SIZE);
+	                    client.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
+	                        public void completed(Integer result, ByteBuffer buffer) {
+	                        	
+	                        	try {
+		                            buffer.flip();
+		                            
+		                            XdebugPacket inputPacket = XdebugPacket.readPacket(buffer);
+		                            session.initialize(inputPacket);
+		                            onInputPacket(session, inputPacket);
+		                            
+		                            buffer.clear();
+		                            // receive more data from the client
+		                            client.read(buffer, buffer, this);
+	                        	}
+	                        	catch (Exception e) {
+	                        	}
+	                        }
+							public void failed(Throwable exc, ByteBuffer buffer) {
+	                            // handle the failure
+	                        }
+	                    });
+	                    
+	                    // Accept next Xdebug connection.
+	                    server.accept(null, this);
+					}
+					catch (Exception e) {
+						
+					}
                 }
-                public void failed(Throwable exc, Void attachment) {
+				
+				// If the connection failed...
+                public void failed(Throwable exception, AsynchronousServerSocketChannel server) {
                     // handle the failure
                 }
             });
@@ -176,12 +168,13 @@ public class XdebugListener extends DebugListener {
 	
 	/**
 	 * On input packet.
+	 * @param session 
 	 * @param inputPacket
 	 */
-    private void onInputPacket(XdebugInputPacket inputPacket) {
+    private void onInputPacket(XdebugListenerSession session, XdebugPacket inputPacket) {
 		
 		if (inputPacketLambda != null) {
-			inputPacketLambda.accept(inputPacket);
+			inputPacketLambda.accept(session, inputPacket);
 		}
 	}
 }

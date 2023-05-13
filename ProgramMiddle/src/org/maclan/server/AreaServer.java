@@ -3680,7 +3680,7 @@ public class AreaServer {
 		long stateHash = state.hashCode();
 		
 		// Area server state locator.
-		String areaServerStateLocator = String.format("debug://%s/?pid=%d&amp;tid=%d&amp;aid=%d&amp;stateHash=%d", areaServer, processId, threadId, areaId, stateHash);
+		String areaServerStateLocator = String.format("debug://%s/?pid=%d&amp;tid=%d&amp;aid=%d&amp;statehash=%d", areaServer, processId, threadId, areaId, stateHash);
 		
 		state.debugClient = XdebugClient.connectNewClient(ideHostName, xdebugPort, areaServerStateLocator);
 	}

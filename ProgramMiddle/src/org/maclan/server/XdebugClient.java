@@ -6,12 +6,13 @@
  */
 package org.maclan.server;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 import org.maclan.server.XdebugClientOld.Callback;
 import org.multipage.gui.Utility;
-import org.multipage.util.j;
 
 /**
  * Xdebug probe for Area Server (a client connected to the XdebugServer).
@@ -86,7 +87,7 @@ public class XdebugClient {
 	        clientSocketChannel = SocketChannel.open();
 	        clientSocketChannel.configureBlocking(false);
 	
-	        // Connect to the server
+	        // Connect to the server.
 	        clientSocketChannel.connect(serverSocketAddress);
 			
 	        while (!clientSocketChannel.finishConnect()) {
@@ -100,13 +101,36 @@ public class XdebugClient {
 	            }
 	        }
 	        
-	        // TODO: <---REMOVE IT
-	        j.log("XDEBUG CLIENT CONNECTED TO PORT %d", xdebugPort);
+	        // Send INIT packet.
+	        XdebugPacket initPacket = XdebugPacket.createInitPacket(areaServerStateLocator);
+	        sendPacket(clientSocketChannel, initPacket);
 		}
 		catch (Exception e) {
 			Utility.throwException("org.maclan.server.messageXdebugConnectionError",
 								   ideHostName, xdebugPort, e.getLocalizedMessage());
 		}
+	}
+	
+	/**
+	 * Send Xdebug packet.
+	 * @param clientSocketChannel
+	 * @throws IOException 
+	 */
+	private void sendPacket(SocketChannel clientSocketChannel, XdebugPacket packet)
+			throws Exception {
+		
+		if (clientSocketChannel == null) {
+			return;
+		}
+		
+		// Write packet byte content to the socket channel.
+		byte [] packetBytes = packet.getBytes();
+		if (packetBytes == null) {
+			return;
+		}
+		
+		ByteBuffer buffer = ByteBuffer.wrap(packetBytes);
+		clientSocketChannel.write(buffer);
 	}
 
 	public boolean checkActive() {
