@@ -22,7 +22,6 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.maclan.server.XdebugPacket.UriParameters;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.w3c.dom.Document;
@@ -42,7 +41,7 @@ public class XdebugPacket {
 	/**
 	 * Field for parsed debugger URI.
 	 */
-	public static class UriParameters {
+	public static class XdebugClientParameters {
 		
 		// Computer name.
 		public String computer;
@@ -364,7 +363,7 @@ public class XdebugPacket {
 	 * @param debuggerUri
 	 * @return
 	 */
-	public static UriParameters parseDebuggedUri(String debuggerUri) 
+	public static XdebugClientParameters parseDebuggedUri(String debuggerUri) 
 			throws Exception {
 		
 		// Create URI matcher with regular expression.
@@ -374,7 +373,7 @@ public class XdebugPacket {
 		int groupCount = matcher.groupCount();
 		if (success && groupCount == 5) {
 			
-			UriParameters parsedUri = new UriParameters();
+			XdebugClientParameters parsedUri = new XdebugClientParameters();
 		    parsedUri.computer = matcher.group("computer");
 		    parsedUri.pid = matcher.group("pid");
 		    parsedUri.tid = matcher.group("tid");

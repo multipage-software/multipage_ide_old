@@ -14,6 +14,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.multipage.gui.CallbackNoArg;
+import org.multipage.gui.Utility;
 
 /**
  * 
@@ -76,6 +77,28 @@ public abstract class DebugListener {
 	}
 	
 	/**
+	 * Find session with session ID.
+	 * @param sessionId
+	 * @throws Exception 
+	 */
+	public DebugListenerSession getSession(long sessionId)
+			throws Exception {
+		
+		DebugListenerSession foundSession = null;
+		
+		for (DebugListenerSession session : sessions) {
+			if (session.sessionId == sessionId) {
+				
+				if (foundSession != null) {
+					Utility.throwException("org.maclan.server.messageDuplicitSessionIds", sessionId);
+				}
+				foundSession = session;
+			}
+		}
+		return foundSession;
+	}
+	
+	/**
 	 * Stop debugging
 	 */
 	public abstract void stopDebugging();
@@ -84,4 +107,5 @@ public abstract class DebugListener {
 	 * Close debugger
 	 */
 	public abstract void close();
+
 }

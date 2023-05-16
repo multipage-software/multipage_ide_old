@@ -8,8 +8,11 @@ package org.maclan.server;
 
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.Hashtable;
+import java.util.function.Consumer;
 
-import org.maclan.server.XdebugPacket.UriParameters;
+import org.maclan.server.XdebugPacket.XdebugClientParameters;
+import org.multipage.util.Obj;
 
 /**
  * Xdebug listener session object that stores session states.
@@ -31,7 +34,13 @@ public class XdebugListenerSession extends DebugListenerSession {
 	/**
 	 * Client parameters.
 	 */
-	public UriParameters clientParameters = null;
+	public XdebugClientParameters clientParameters = null;
+	
+	/**
+	 * Xdebug transactions. These commands are either waiting for sending via Xdebug protocol or waiting for
+	 * response from debugging client (the debugging probe).
+	 */
+	private Hashtable<Integer, XdebugTransaction> transactions = new Hashtable<Integer, XdebugTransaction>();
 	
 	/**
 	 * Cosntructor.
@@ -69,5 +78,48 @@ public class XdebugListenerSession extends DebugListenerSession {
 			return "";
 		}
 		return clientParameters.pid;
+	}
+	
+	/**
+	 * Send Xdebug command.
+	 * @param commandName
+	 * @param arguments
+	 * @param responseLambda
+	 * @return
+	 */
+	public int prepareCommand(String commandName, String [][] arguments, Consumer<XdebugPacket> responseLambda) {
+		
+
+		// Create new Xdebug command.
+		XdebugCommand command = XdebugCommand.create(commandName, arguments);
+		
+		// Prepare new transaction in the current session.
+		XdebugTransaction newTransaction = XdebugTransaction.create(command, responseLambda);
+		int transactionId = newTransaction.id;
+		transactions.put(transactionId, newTransaction);
+		return transactionId;
+	}
+
+	/**
+	 * Load specific features from the client and save  them in session state.
+	 * @param featureNames
+	 */
+	public void loadFeaturesFromClient(String ... featureNames) {
+		
+		// Prepare commands that will be sent to the debug client.
+		for (String featureName : featureNames) {
+			prepareCommand(XdebugCommand.FEATURE_GET, new String [][] {{"-n", featureName}}, responsePacket -> {
+				
+			});
+		}
+	}
+	
+	/**
+	 * Send IDE features to the debugging client (the debugging probe).
+	 * @param ideFeatureValues
+	 */
+	public void sendIdeFeaturesToClient(String[][] ideFeatureValues) {
+		// TODO Auto-generated method stub
+		
 	}
 }

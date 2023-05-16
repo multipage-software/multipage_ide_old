@@ -73,7 +73,7 @@ public class DebugListenerSession {
 		
 		// Set members.
 		this.sessionId = generateNewSessionId();
-		this.clientSocket = (InetSocketAddress) client.getLocalAddress();
+		this.clientSocket = (InetSocketAddress) client.getRemoteAddress();
 		this.server = server;
 	}
 	
