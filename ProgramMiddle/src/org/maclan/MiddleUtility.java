@@ -1095,13 +1095,13 @@ public class MiddleUtility {
 		
 		// Remove file "unzipped.txt" located in temporary directory of web server.
 		// The file contains IDs of previously unzipped resources.
-		File unzippedFile = new File(request.getServerTempPath() + File.separator + AreaServer.unzippedFileName);
+		File unzippedFile = new File(request.getServerTempPath() + File.separator + AreaServer.UNZIPPED_FILENAME);
 		if (unzippedFile.exists()) {
 			
 			unzippedFile.delete();
 			messages.add(String.format(
 					Resources.getString("middle.server.messageClearServerRemovedFile"),
-					AreaServer.unzippedFileName));
+					AreaServer.UNZIPPED_FILENAME));
 		}
 		
 		// Inform user about exceptions.

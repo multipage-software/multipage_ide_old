@@ -6,13 +6,27 @@
  */
 package org.maclan.server;
 
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.Hashtable;
+import java.nio.channels.CompletionHandler;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.function.Consumer;
 
-import org.maclan.server.XdebugPacket.XdebugClientParameters;
+import javax.swing.SwingUtilities;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.multipage.gui.Utility;
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
+import org.multipage.util.j;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 /**
  * Xdebug listener session object that stores session states.
@@ -20,6 +34,43 @@ import org.multipage.util.Obj;
  *
  */
 public class XdebugListenerSession extends DebugListenerSession {
+	
+	/**
+	 * Sesson constants
+	 */
+	private static final int FEATURE_NEGOTIATION_TIMEOUT_MS = 5000;
+	
+	/**
+	 * Xdebug protocol constants.
+	 */
+	public static final int UNINITIALIZED = 0;
+	public static final int NEGOTIATE_XDEBUG_FEATURES = 1;
+	public static final int ACCEPT_XDEBUG_COMMANDS = 2;
+	
+	/**
+	 * Xdebug protocol state.
+	 */
+	public int xdebugProtocolState = UNINITIALIZED;
+	
+	/**
+	 * Incomming buffer size.
+	 */
+	private int INPUT_BUFFER_SIZE = 1024;
+	private int LENGTH_BUFFER_SIZE = 16;
+	private int PACKET_BUFFER_SIZE = INPUT_BUFFER_SIZE;
+	private int PACKET_BUFFER_INCREASE = PACKET_BUFFER_SIZE;
+	
+	/**
+	 * Input and packet buffers that can receive Xdebug packets comming from socket connection.
+	 */
+	public ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
+	public ByteBuffer packetLengthBuffer = ByteBuffer.allocate(LENGTH_BUFFER_SIZE);
+	public ByteBuffer packetBuffer = ByteBuffer.allocate(PACKET_BUFFER_SIZE);
+	
+	/**
+	 * Input buffer synchronization object.
+	 */
+	protected Object inputBufferSync = new Object();
 	
 	/**
 	 * List of debugged URIs.
@@ -40,7 +91,12 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * Xdebug transactions. These commands are either waiting for sending via Xdebug protocol or waiting for
 	 * response from debugging client (the debugging probe).
 	 */
-	private Hashtable<Integer, XdebugTransaction> transactions = new Hashtable<Integer, XdebugTransaction>();
+	public LinkedHashMap<Integer, XdebugTransaction> transactions = new LinkedHashMap<Integer, XdebugTransaction>();
+	
+	/**
+	 * Feature map for the session.
+	 */
+	public LinkedHashMap<String, XdebugFeature> features = new LinkedHashMap<String, XdebugFeature>();
 	
 	/**
 	 * Cosntructor.
@@ -55,16 +111,129 @@ public class XdebugListenerSession extends DebugListenerSession {
 		super(server, client);
 	}
 	
+	private static int pass = 0;
+	
+	/**
+	 * Consume single response bytes from input buffer. This bytes can be incomplete.
+	 * @throws Exception 
+	 */
+	public boolean readInputBuffer()
+			throws Exception {
+		
+		// Prepare input buffer for reading.
+		inputBuffer.flip();
+		
+		// Check input bytes.
+		if (!inputBuffer.hasRemaining()) {
+			return false;
+		}
+		
+		// Initialization.
+		Obj<ByteBuffer> outputBuffer = new Obj<ByteBuffer>(null);
+		Obj<Boolean> terminated = new Obj<Boolean>(false);
+		
+		// TODO: <---DEBUG Llog the length buffer remaining capacity.
+		j.log(1, "#%d LENGTH BUFFER: %d bytes remains", ++pass, packetLengthBuffer.remaining());
+		
+		// Read the "packet length" from the input buffer. The length is NULL terminated.
+		outputBuffer.ref = packetLengthBuffer;
+		Utility.readUntil(inputBuffer, outputBuffer, 0, XdebugResponse.NULL_SYMBOL, terminated);
+		packetLengthBuffer = outputBuffer.ref;
+    	if (!terminated.ref) {
+        	return false;
+    	}
+    	
+    	// Read the packet from the input buffer. The packet data are NULL terminated.
+    	outputBuffer.ref = packetBuffer;
+    	Utility.readUntil(inputBuffer, outputBuffer, PACKET_BUFFER_INCREASE, XdebugResponse.NULL_SYMBOL, terminated);
+    	packetBuffer = outputBuffer.ref;
+    	if (!terminated.ref) {
+        	return false;
+    	}
+    	
+    	// Get expected packet length.
+    	packetLengthBuffer.flip();
+    	int packetLengthSize = packetLengthBuffer.limit();
+    	if (packetLengthSize <= 0) {
+    		Utility.throwException("org.maclan.server.messageXdebugPacketLengthNotFound");
+    	}
+    	
+    	byte [] packetLengthBytes = new byte[packetLengthSize];
+    	packetLengthBuffer.get(packetLengthBytes);
+    	String packetLengthString = new String(packetLengthBytes, "UTF-8");
+    	int expectedPacketLength  = Integer.parseInt(packetLengthString);
+    	
+    	// Restore packet length buffer for writing.
+    	packetLengthBuffer.clear();
+
+    	// Get packet bytes.
+    	packetBuffer.flip();
+    	int packetBufferLength = packetBuffer.limit();
+    	if (packetBufferLength <= 0) {
+    		Utility.throwException("org.maclan.server.messageXdebugPacketNotFound");
+    	}
+    	if (packetBufferLength != expectedPacketLength) {
+    		Utility.throwException("org.maclan.server.messageXdebugUnexpectedPacketLength",packetBufferLength, expectedPacketLength);
+    	}
+    	return true;
+	}
+	
+	/**
+	 * Pull response packet from the input buffer.
+	 * @return
+	 */
+	public XdebugResponse readPacket()
+			throws Exception {
+		
+        // Initialization.
+		Document xml = null;
+        Exception exception = null;
+        try {
+            
+            int packetLength = packetBuffer.limit();
+
+            // Convert body bytes to UTF-8.
+        	byte [] packetBytes = new byte[packetLength];
+        	packetBuffer.get(packetBytes);
+            String packetString = new String(packetBytes, "UTF-8");
+            
+            // TODO: <---DEBUG IT
+            //j.log("READ PACKET: %s", packetString);
+        
+            // Parse the XML string into a Document
+	        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+	        DocumentBuilder builder = factory.newDocumentBuilder();
+	        
+	        xml = builder.parse(new InputSource(new StringReader(packetString)));
+        }
+        catch (Exception e) {
+        	exception = e;
+        }
+        
+        // Reuse the packet buffer for new writing.
+        packetBuffer.clear();
+        
+        // Use the resulting Document
+        if (xml == null) {
+        	// Throw exception.
+        	Utility.throwException("org.maclan.server.messageCannotReceiveXdebugPacket", exception.getLocalizedMessage());
+        }
+        
+        // Create new packet object.
+    	XdebugResponse newPacket = new XdebugResponse(xml);
+    	return newPacket;
+	}
+	
 	/**
 	 * initialize session using input packet.
 	 * @param inputPacket
 	 * @throws Exception 
 	 */
-	public void initialize(XdebugPacket inputPacket) 
+	public void initialize(XdebugResponse inputPacket) 
 			throws Exception {
 		
 		debuggedUri = inputPacket.GetDebuggedUri();
-		clientParameters = XdebugPacket.parseDebuggedUri(debuggedUri);
+		clientParameters = XdebugResponse.parseDebuggedUri(debuggedUri);
 	}
 	
 	/**
@@ -87,9 +256,8 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * @param responseLambda
 	 * @return
 	 */
-	public int prepareCommand(String commandName, String [][] arguments, Consumer<XdebugPacket> responseLambda) {
+	public int createTransaction(String commandName, String [][] arguments, Consumer<XdebugResponse> responseLambda) {
 		
-
 		// Create new Xdebug command.
 		XdebugCommand command = XdebugCommand.create(commandName, arguments);
 		
@@ -104,16 +272,356 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * Load specific features from the client and save  them in session state.
 	 * @param featureNames
 	 */
-	public void loadFeaturesFromClient(String ... featureNames) {
+	public void loadFeaturesFromClient(String ... featureNames)
+		throws Exception {
 		
 		// Prepare commands that will be sent to the debug client.
 		for (String featureName : featureNames) {
-			prepareCommand(XdebugCommand.FEATURE_GET, new String [][] {{"-n", featureName}}, responsePacket -> {
+			createTransaction(XdebugCommand.FEATURE_GET, new String [][] {{"-n", featureName}}, responsePacket -> {
+				finishTransaction(responsePacket, nextTransaction -> {
+					
+					// Get feature.
+					j.log("FINISH TRANSACTION");
+				});
+			});
+		}
+		// Send command via Xdebug protocol.
+		beginTransactions(transactions, FEATURE_NEGOTIATION_TIMEOUT_MS);
+	}
+
+	/**
+	 * Start sending commands via Xdebug protocol.
+	 * @param transactions 
+	 * @param timeoutMs - if the timeout value is negative the current thread is blocked until all responses are received. 
+	 */
+	private synchronized void beginTransactions(LinkedHashMap<Integer, XdebugTransaction> transactions, int timeoutMs)
+			throws Exception {
+		
+		// Loop through all transactions.
+		for (XdebugTransaction transaction : transactions.values()) {
+			beginTransaction(transaction);
+		}
+	}
+	
+	/**
+	 * Begin Xdebug transaction. The method sends Xdebug command
+	 * @param transaction
+	 */
+	private void beginTransaction(XdebugTransaction transaction)
+		throws Exception {
+		
+		try {
+			// Get Xdebug command and transaction ID.
+			XdebugCommand command = transaction.command;
+			int transactionId = transaction.id;
+			
+			// Compile Xdebug command string that will be sent to the Xdebug client.
+			CharBuffer commandString = command.compile(transactionId);
+			
+			// Send command bytes to the Xdebug client. On completion event check if the number of bytes sent macthes.
+			CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
+			
+			// Encode packet bytes. Add NULL byte at the end of the message.
+			ByteBuffer buffer = encoder.encode(commandString);
+			int limit = buffer.limit();
+			buffer.position(limit - 1);
+			buffer.put(XdebugCommand.NULL_SYMBOL);
+			buffer.flip();
+			
+			// Get the number of bytes to send.
+			int bytesLength = buffer.limit();
+			transaction.setBytesToWrite(bytesLength);
+			
+			// Create lock for completion of the transaction.
+			Lock lockSending = new Lock();
+			
+			// Send Xdebug command.
+			sendBytes(buffer, transaction, new CompletionHandler<Integer, XdebugTransaction>() {
 				
+				// When sending bytes to the debugging client succeded.
+				@Override
+				public void completed(Integer bytesWritten, XdebugTransaction transaction) {
+					
+					// Check the number of written bytes.
+					transaction.checkWrittenBytes(bytesWritten);
+					
+					// TODO: <---DEBUG Display number of bytes written.
+					CharBuffer command = transaction.command.compile(transaction.id);
+					
+					// Notinfy completion.
+					Lock.notify(lockSending);
+				}
+				
+				// On sending error.
+				@Override
+				public void failed(Throwable exception, XdebugTransaction transaction) {
+					
+					// Set transaction error.
+					transaction.setWriteException(exception);
+				}
+			});
+			
+			// Wait for completion of transaction.
+			Lock.waitFor(lockSending);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Process Xdebug packet.
+	 * @param listener
+	 * @param inputPacket
+	 * @throws Exception 
+	 */
+	public void processXdebugPacket(XdebugResponse inputPacket)
+			throws Exception {
+		
+		// On INIT packet.
+		if (xdebugProtocolState == UNINITIALIZED && inputPacket.isInit()) {
+			
+			// Check session.
+			checkXdebugSession(listener, inputPacket);
+			// Start negotiating features.
+			xdebugProtocolState = NEGOTIATE_XDEBUG_FEATURES;
+			
+			SwingUtilities.invokeLater(() -> {
+				try {
+					// Do negotiate.
+					negotiateXdebugFeatures();
+				}
+				catch (Exception e) {
+					showMessage("org.multipage.generator.messageXdebugFeatureNegotiationError", e.getLocalizedMessage());
+				}
+			});
+			return;
+		}
+		
+		// On NEGOTIATE FEATURES.
+		if (xdebugProtocolState == NEGOTIATE_XDEBUG_FEATURES) {
+			// Process feature responses.
+			SwingUtilities.invokeLater(() -> {
+				try {
+					processXdebugFeatureResponse(inputPacket);
+				}
+				catch (Exception e) {
+					// Handle exception.
+					showException(e);
+				}
+			});
+			return;
+		}
+		
+		// On Xdebug command response.
+		if (xdebugProtocolState == ACCEPT_XDEBUG_COMMANDS) {
+			// Process command response.
+			SwingUtilities.invokeLater(() -> {
+				try {
+					// Do process command response.
+					processXdebugCommandResponse(inputPacket);
+				}
+				catch (Exception e) {
+					// Handle exception.
+					showException(e);
+				}
 			});
 		}
 	}
 	
+	/**
+	 * Show message.
+	 * @param stringResourceId
+	 * @param message
+	 */
+	private void showMessage(String stringResourceId, String message) {
+		
+		if (listener != null) {
+			listener.showMessage(stringResourceId, message);
+		}
+	}
+
+	/**
+	 * Show exception.
+	 * @param exception
+	 */
+	private void showException(Exception exception) {
+		
+		if (listener != null) {
+			listener.showException(exception);
+		}
+	}
+
+	/**
+	 * Process Xdebug feature response.
+	 * @param inputPacket
+	 * @return
+	 * @throws Exception 
+	 */
+	private void processXdebugFeatureResponse(XdebugResponse inputPacket)
+			throws Exception {
+		
+		// Get transaction ID.
+		int transactionId = inputPacket.getTransactionId();
+		
+		// Find transaction object with matching transaction ID.
+		XdebugTransaction transaction = transactions.get(transactionId);
+		
+		// If the transaction was not found, throw exception.
+		if (transaction == null) {
+			Utility.throwException("org.maclan.server.messageTransactionNotFound", transactionId);
+		}
+		
+		// Get Xdebug feature and add it to feature map.
+		XdebugFeature feature = inputPacket.getFeature();
+		String featureName = feature.name;
+		features.put(featureName, feature);
+	}
+	
+	/**
+	 * Process Xdebug command response.
+	 * @param inputPacket
+	 */
+	private void processXdebugCommandResponse(XdebugResponse inputPacket)
+			throws Exception {
+		
+		// Get transaction ID.
+		int transactionId = inputPacket.getTransactionId();
+		
+		// Find transaction object with matching transaction ID.
+		XdebugTransaction transaction = transactions.get(transactionId);
+		
+		// If the transaction was not found, throw exception.
+		if (transaction == null) {
+			Utility.throwException("org.maclan.server.messageTransactionNotFound", transactionId);
+		}
+		
+		// Call reponse lambda for the transaction.
+		transaction.responseLambda.accept(inputPacket);
+	}
+	
+	/**
+	 * Negotiate Xdebug features.
+	 * @throws Exception 
+	 */
+	private void negotiateXdebugFeatures() 
+			throws Exception {
+		
+		// Get Xdebug client (the debugging probe) features and save them into the session state.
+		loadFeaturesFromClient(
+				"language_supports_thread", 
+				"language_name", 
+				"language_version", 
+				"encoding", 
+				"protocol_version", 
+				"supports_async", 
+				"data_encoding", 
+				"breakpoint_languages", 
+				"breakpoint_types", 
+				"multiple_sessions", 
+				"max_children", 
+				"max_data", 
+				"max_depth", 
+				"breakpoint_details", 
+				"extended_properties", 
+				"notify_ok", 
+				"resolved_breakpoints", 
+				"supported_encodings", 
+				"supports_postmortem", 
+				"show_hidden");		
+		
+		// Send IDE features to the client (the debugging probe).
+		sendIdeFeaturesToClient(new String [][] {
+			    {"encoding", "UTF-8"},
+				{"multiple_sessions", "1"},
+				{"max_children", "SESSION"},
+				{"max_data", "SESSION"},
+				{"max_depth", "SESSION"},
+				{"breakpoint_details", "1"},
+				{"extended_properties", "0"},
+				{"notify_ok", "1"},
+				{"show_hidden", "1"}});
+	}
+
+	/**
+	 * Initialize Xdebug session.
+	 * @param listener 
+	 * @param inputPacket
+	 * @throws Exception 
+	 */
+	private void checkXdebugSession(XdebugListener listener, XdebugResponse inputPacket)
+			throws Exception {
+		
+		// Check IDE key.
+		Obj<String> foundIdeKey = new Obj<String>();
+		boolean matches = inputPacket.checkIdeKey(XdebugResponse.MULTIPAGE_IDE_KEY, foundIdeKey);
+		if (!matches) {
+			Utility.throwException("org.multipage.generator.messageXdebugIdeKeyDoesntMatch",
+					foundIdeKey.ref, XdebugResponse.MULTIPAGE_IDE_KEY);
+		}
+		
+		// Check debugged application ID.
+		Obj<String> foundAppId = new Obj<String>();
+		matches = inputPacket.checkAppId(XdebugResponse.APPLICATION_ID, foundAppId);
+		if (!matches) {
+			Utility.throwException("org.multipage.generator.messageXdebugAppIdDoesntMatch",
+					foundAppId.ref, XdebugResponse.APPLICATION_ID);
+		}
+		
+		// Check debugged language name.
+		Obj<String> languageName = new Obj<String>();
+		matches = inputPacket.checkLanguage(XdebugResponse.LANGUAGE_NAME, languageName);
+		if (!matches) {
+			Utility.throwException("org.multipage.generator.messageXdebugLanguageNameDoesntMatch",
+					languageName.ref, XdebugResponse.LANGUAGE_NAME);
+		}
+		
+		// Check debugged protocol version.
+		Obj<String> protocolVersion = new Obj<String>();
+		matches = inputPacket.checkProtocolVersion(XdebugResponse.PROTOCOL_VERSION, protocolVersion);
+		if (!matches) {
+			Utility.throwException("org.multipage.generator.messageXdebugProtocolVersionDoesntMatch",
+					protocolVersion.ref, XdebugResponse.PROTOCOL_VERSION);
+		}
+		
+		// Get debugged process URI.
+		String debuggedUri = inputPacket.GetDebuggedUri();
+		if (debuggedUri == null) {
+			Utility.throwException("org.multipage.generator.messageXdebugNullFileUri");
+		}
+		
+		// Check debugged URIs.
+		if (!debuggedUri.equals(debuggedUri)) {
+			Utility.throwException("org.multipage.generator.messageXdebugBadSession");
+		}
+	}
+		
+	/**
+	 * Get protocol state.
+	 * @return
+	 */
+	public String getProtocolStateText() {
+		
+		switch (xdebugProtocolState) {
+		case UNINITIALIZED:
+			return "UNINITIALIZED";
+		case NEGOTIATE_XDEBUG_FEATURES:
+			return "NEGOTIATE_XDEBUG_FEATURES";
+		case ACCEPT_XDEBUG_COMMANDS:
+			return "ACCEPT_XDEBUG_COMMANDS";
+		}
+		return "UNKNOWN";
+	}
+
+	/**
+	 * Finish transaction.
+	 * @param responsePacket
+	 */
+	private void finishTransaction(XdebugResponse responsePacket, Consumer<XdebugTransaction> finishTransactionLambda) {
+		
+
+	}
+
 	/**
 	 * Send IDE features to the debugging client (the debugging probe).
 	 * @param ideFeatureValues

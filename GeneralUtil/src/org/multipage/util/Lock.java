@@ -39,6 +39,17 @@ public class Lock {
 	}
 	
 	/**
+	 * Clear lock so that it can be reused.
+	 * @param lock
+	 */
+	public static void clear(Lock lock) {
+		
+		synchronized (lock) {
+			lock.notified = false;
+		}
+	}
+	
+	/**
 	 * Wait for lock
 	 * @param lock
 	 * @return true if the waiting state has been interrupted

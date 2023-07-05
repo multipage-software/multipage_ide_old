@@ -14,6 +14,7 @@ import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Menu;
@@ -102,6 +103,7 @@ import java.util.zip.ZipInputStream;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultCellEditor;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -6116,5 +6118,167 @@ public class Utility {
 		// Add listener and set component flag.
 		document.addDocumentListener(listener);
 		textField.setName(alreadySet);
+	}
+	
+	/**
+	 * Set table cell editor font. 
+	 * @param table
+	 * @param font
+	 */
+    public static void setCellEditorFont(JTable table, Font font) {
+    	
+    	DefaultCellEditor editor = (DefaultCellEditor) table.getDefaultEditor(Object.class);
+    	Component component = editor.getComponent();
+    	component.setFont(font);
+    }
+    
+    /**
+     * Read bytes from input buffer until the terminal symbol is found. If the terminal is not found set
+     * the "terimnated" flag to false. 
+     * @param inputBuffer
+     * @param outputBuffer 
+     * @param terminalSymbol
+     * @param successfullyTerminated
+     * @return
+     */
+	public static ByteBuffer readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol, Obj<Boolean> successfullyTerminated) {
+		
+		// Initialization.
+		int terminalLength = terminalSymbol.length;
+		int terminalIndex = 0;
+		
+		// Do loop.
+		while (inputBuffer.hasRemaining()) {
+			
+			// Read current byte from the buffer.
+			byte theByte = inputBuffer.get();
+			
+			// Disply input byte.
+			String className = Thread.currentThread().getStackTrace()[2].getClassName();
+			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
+				if (theByte != 0) {
+					System.out.format("|%c", (char) theByte);
+				}
+				else {
+					System.out.format("|%c\n", (char) 0x2588);
+				}
+			}
+			
+			// Try to match bytes with the terminal symbol.
+			if (theByte == terminalSymbol[terminalIndex]) {
+				terminalIndex++;
+				if (terminalIndex >= terminalLength) {
+					break;
+				}
+				continue;
+			}
+			
+			// Check buffer capacity.
+			int limit = outputBuffer.ref.limit();
+			int capacity = outputBuffer.ref.capacity();
+			if (!outputBuffer.ref.hasRemaining() && limit >= capacity) {
+				
+				// Increase buffer capacity.
+				int increasedCapacity = outputBuffer.ref.capacity() + bufferIncrease;
+				ByteBuffer increasedOutputBuffer = ByteBuffer.allocate(increasedCapacity);
+				
+				outputBuffer.ref.flip();
+				
+				increasedOutputBuffer.put(outputBuffer.ref);
+				outputBuffer.ref = increasedOutputBuffer;
+			}
+			
+			// Output current byte.
+			outputBuffer.ref.put(theByte);
+		}
+		
+		// If the termnal symbol was not found, set the output flag to false value.
+		successfullyTerminated.ref = terminalIndex >= terminalLength;
+		
+		// Return the output buffer.
+		return outputBuffer.ref;
+	}
+	
+	/**
+	 * Read bytes from input array until the terminal symbol is found. If the terminal is not found set
+     * the "terimnated" flag to false.
+	 * @param inputBytes
+	 * @param outputBuffer
+	 * @param bufferIncrease
+	 * @param terminalSymbol
+	 * @param successfullyTerminated
+	 */
+	public static ByteBuffer readUntil(byte [] inputBytes, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte[] terminalSymbol,
+			Obj<Boolean> successfullyTerminated) {
+		
+		// Initialization.
+		int terminalLength = terminalSymbol.length;
+		int terminalIndex = 0;
+		int inputLength = inputBytes.length;
+
+		// Do loop.
+		for (int index = 0; index < inputLength; index++) {
+			
+			// Read current byte from the buffer.
+			byte theByte = inputBytes[index];
+			
+			// Disply input byte.
+			String className = Thread.currentThread().getStackTrace()[2].getClassName();
+			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
+				if (theByte != 0) {
+					System.out.format("|%c", (char) theByte);
+				}
+				else {
+					System.out.format("|%c\n", (char) 0x2588);
+				}
+			}
+			
+			// Try to match bytes with the terminal symbol.
+			if (theByte == terminalSymbol[terminalIndex]) {
+				terminalIndex++;
+				if (terminalIndex >= terminalLength) {
+					break;
+				}
+				continue;
+			}
+			
+			// Check buffer capacity.
+			int limit = outputBuffer.ref.limit();
+			int capacity = outputBuffer.ref.capacity();
+			if (!outputBuffer.ref.hasRemaining() && limit >= capacity) {
+				
+				// Increase buffer capacity.
+				int increasedCapacity = outputBuffer.ref.capacity() + bufferIncrease;
+				ByteBuffer increasedOutputBuffer = ByteBuffer.allocate(increasedCapacity);
+				
+				outputBuffer.ref.flip();
+				
+				increasedOutputBuffer.put(outputBuffer.ref);
+				outputBuffer.ref = increasedOutputBuffer;
+			}
+			
+			// Output current byte.
+			outputBuffer.ref.put(theByte);
+		}
+		
+		// If the termnal symbol was not found, set the output flag to false value.
+		successfullyTerminated.ref = terminalIndex >= terminalLength;
+		
+		// Return the output buffer.
+		return outputBuffer.ref;
+	}
+	
+	/**
+	 * Prepare input buffer for reuse.
+	 */
+	public static void reuseInputBuffer(ByteBuffer inputBuffer) {
+		
+		// Herein prepare input buffer for next write operation.
+		if (inputBuffer.hasRemaining()) {
+			inputBuffer.compact();
+		}
+		else {
+			inputBuffer.clear();
+		}
 	}
 }

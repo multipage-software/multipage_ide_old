@@ -6,10 +6,15 @@
  */
 package org.multipage.util;
 
+import java.io.IOException;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 /**
  * @author user
@@ -38,13 +43,46 @@ public class j {
 	private static final Object synclog = new Object();
 	
 	/**
+	 * Log message stop symbol.
+	 */
+	private static final byte[] STOP_SYMBOL = { 0, 0 } ;
+	
+	/**
+	 * Open consoles for mutlitask logging.
+	 */
+	private static InetSocketAddress [] openConsoles = {
+			new InetSocketAddress("localhost", 48000),
+			new InetSocketAddress("localhost", 48001),
+			new InetSocketAddress("localhost", 48002),
+		};
+	public static Socket [] openConsoleSockets = new Socket [openConsoles.length];
+	
+	/**
+	 * Lambda function to ensure that the consoles application is running.
+	 */
+	public static Supplier<Boolean> ensureConsolesRunningLambda = null;
+
+	/**
 	 * Log formatted message on stdout or stderr or on "test"
-	 * displayDelta - if is true, the delta time between time stamps is displayed
+	 * displayDelta - if is true, the delta time between time stamps is displayed.
+	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
+	 * @param strings
+	 */
+	synchronized public static void log(String parameter, Object ... strings) {
+		
+		// Delegate the call.
+		log(-1, parameter, strings);
+	}
+	
+	/**
+	 * Log formatted message on stdout or stderr or on "test"
+	 * displayDelta - if is true, the delta time between time stamps is displayed.
+	 * @param consoleIndex - index of Eclipse output console; if the index is -1, then use STDOUT 
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
 	 */
 	@SuppressWarnings("resource")
-	synchronized public static void log(Object parameter, Object ... strings) {
+	public synchronized static void log(int consoleIndex, Object parameter, Object ... strings) {
 		
 		synchronized (synclog) {
 			
@@ -59,7 +97,7 @@ public class j {
 			lastTimeStampMs = currentTimeMs;
 			
 			if (logTimeDelta) {
-				System.err.format("delta %dms ", timeDeltaMs);
+				formatToConsole(consoleIndex, "delta %dms ", timeDeltaMs);
 			}
 			
 			if (parameter instanceof LogParameter) {
@@ -80,7 +118,7 @@ public class j {
 						os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
 					}
 					else {
-						System.err.format(indentation + timeStampText + type + '\n', strings);
+						formatToConsole(consoleIndex, indentation + timeStampText + type + '\n', strings);
 					}
 					
 				}
@@ -89,16 +127,83 @@ public class j {
 						os.format(indentation + timeStampText + type);
 					}
 					else {
-						System.err.format(indentation + timeStampText + type + '\n');
+						formatToConsole(consoleIndex, indentation + timeStampText + type + '\n');
 					}
 				}
 			}
 			else {
-				System.err.format(indentation + parameter.toString() + '\n', strings);
+				formatToConsole(consoleIndex, indentation + parameter.toString() + '\n', strings);
 			}
 		}
 	}
 	
+	/**
+	 * Output formatted text to appropriate output console.
+	 * @param consoleIndex
+	 * @param format
+	 * @param strings
+	 * @throws Exception 
+	 */
+	private static void formatToConsole(int consoleIndex, String format, Object... strings) {
+		
+		int count = openConsoles.length;
+		
+		if (consoleIndex > 0 && consoleIndex < count) {
+			
+			String message = String.format(format, strings);
+			try {
+				byte [] bytes = message.getBytes("UTF-8");
+				
+				// Try to get socket connected to a given console.
+				Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
+				
+				// Write the log message to the console.
+				consoleSocket.getOutputStream().write(bytes);
+				consoleSocket.getOutputStream().write(STOP_SYMBOL);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else {
+			System.err.format(format, strings);
+		} 
+	}
+	
+	/**
+	 * Get connected socket.
+	 * @param consoleIndex
+	 * @return
+	 * @throws IOException 
+	 * @throws UnknownHostException 
+	 */
+	private static Socket getConnectedSocket(int consoleIndex)
+			throws Exception {
+		
+		Socket socket = openConsoleSockets[consoleIndex];
+		if (socket == null) {
+			
+			// Ensurte that the consoles are running.
+			if (ensureConsolesRunningLambda == null) {
+				throw new IllegalStateException();
+			}
+			Boolean running = ensureConsolesRunningLambda.get();
+			if (!running) {
+				throw new IllegalStateException();
+			}
+			
+			// Connect to given port.
+			InetSocketAddress socketAddress = openConsoles[consoleIndex];
+			
+			String server = socketAddress.getHostName();
+			int port = socketAddress.getPort();
+			
+			socket = new Socket(server, port);
+			openConsoleSockets[consoleIndex] = socket;
+		}
+		return socket;
+	}
+
 	/**
 	 * Log time stamp next time the message is displayed.
 	 */
@@ -124,7 +229,7 @@ public class j {
 		
 		// Try to load string resource.
 		String message = Resources.getString(stringResource);
-		log(message, strings);
+		log(-1, message, strings);
 	}
 	
 	/**

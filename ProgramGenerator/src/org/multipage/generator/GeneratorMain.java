@@ -11,8 +11,11 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import org.maclan.MiddleResult;
@@ -21,15 +24,17 @@ import org.maclan.help.Intellisense;
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
 import org.maclan.server.ProgramHttpServer;
-import org.multipage.basic.GuiWatchDog;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Consoles;
 import org.multipage.gui.GeneralGui;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenu;
 import org.multipage.sync.ProgramSync;
 import org.multipage.sync.SyncMain;
 import org.multipage.translator.ProgramDictionary;
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
+import org.multipage.util.RepeatedTask;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.j;
 
@@ -47,9 +52,16 @@ public class GeneratorMain {
 	public static final String defaultCountry = "US";
 	
 	/**
+	 * GUI watchdog delay and idle timeout in milliseconds.
+	 */
+	private static final long GUI_WATCHDOG_DELAY_MS = 3000;
+	private static final long GUI_WATCHDOG_MS = 1000;
+	
+	/**
 	 * Serialized data location.
 	 */
 	private static final String serilizedDataLocation = "org.multipage.generator.settings";
+	
 	
 	/**
 	 * Application state serializer.
@@ -73,6 +85,9 @@ public class GeneratorMain {
 	 * @param useLogin
 	 */
 	public static void main(String applicationNaming, String[] args, String pathToMiddleObjects, final boolean useLogin) {
+		
+		// Initialize logging consoles enabled for multitasks.
+		Consoles.initialize();
 		
 		// Set default application naming. It is used for example for application user directory
 		MiddleUtility.setApplicationNaming(applicationNaming);
@@ -114,9 +129,6 @@ public class GeneratorMain {
 		
 		// Set Sync main application title
 		SyncMain.setMainApplicationTitleCallback(() -> { return ProgramGenerator.getApplicationTitle(); });
-		
-		// Start GUI watch dog.
-		GuiWatchDog.start();
 		
 		// Load application properties.
 		MiddleUtility.loadApplicationProperties();
@@ -200,6 +212,7 @@ public class GeneratorMain {
 	
 	/**
 	 * User interface.
+	 * @throws Exception 
 	 */
 	protected static void userInterface() {
 
@@ -270,6 +283,9 @@ public class GeneratorMain {
 			
 			// Show main frame
 			mainFrame.setVisible(true);
+			
+			// Start GUI watchdog.
+			SwingUtilities.invokeLater(() -> GeneratorMain.startGuiWatchdog());
 		}
 		else {
 			// Close application.
@@ -280,10 +296,94 @@ public class GeneratorMain {
 	}
 	
 	/**
+	 * Starts the GUI main thread watch dog.
+	 * @throws Exception 
+	 */
+	private static void startGuiWatchdog() {
+		
+		try {			
+			RepeatedTask.loopNonBlocking("GUI-WathdogThread", GUI_WATCHDOG_MS, GUI_WATCHDOG_DELAY_MS, (exit, exception) -> {
+				
+	            // Check if main window is active.
+				JFrame mainFrame = GeneratorMainFrame.getFrame();
+				if (mainFrame == null) {
+					return exit;
+				}
+				
+				Obj<Boolean> isActive = new Obj<Boolean>(false);
+				Lock lock = new Lock();
+				SwingUtilities.invokeLater(() -> {
+					isActive.ref = true;
+					Lock.notify(lock);
+				});
+				boolean lockTimeout = Lock.waitFor(lock, GUI_WATCHDOG_MS);
+				if (lockTimeout) {
+					isActive.ref = false;
+				}
+				
+				if (!isActive.ref) {
+					
+					// Save application state.
+					MiddleUtility.saveServerProperties();
+					// Save serialized data.
+					serializer.startSavingSerializedStates();
+					
+					// Kill all threads and exit the application.
+					GeneratorMain.InterruptAllThreads();
+					
+					System.exit(-1);
+				}
+				return exit;
+			});
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Stop GUI watchdog.
+	 */
+	public static void stopGuiWatchDog() {
+		
+		RepeatedTask.stopTask("GUI-WathdogThread");
+	}
+
+	/**
+	 * Interrupt all currently running threads.
+	 */
+	public static void InterruptAllThreads() {
+		
+        Thread currentThread = Thread.currentThread();
+        long currentThreadId = currentThread.getId();
+
+        Set<Thread> allThreads = Thread.getAllStackTraces().keySet();
+        System.out.format("\nInterrupting %d threads:\n", allThreads.size());
+        
+        Obj<Integer> index = new Obj<Integer>(1);
+        
+        allThreads.stream().forEach(thread -> {
+        	
+        	long threadId = thread.getId();
+        	if (threadId == currentThreadId) {
+        		return;
+        	}
+        	
+            System.out.format("%d. Thread [%x] %s interrupted.\n", index.ref++, threadId, thread.getName());
+        	try {
+        		thread.interrupt();
+        	}
+        	catch (Exception e) {
+        		e.printStackTrace();
+        	}
+        });
+	}
+	
+	/**
 	 * Close application.
 	 */
 	private static void closeApplication() {
-			
+		
 		// Close HTTP server.
 		ProgramBasic.stopHttpServer();
 		// Stop Sync.
@@ -292,7 +392,12 @@ public class GeneratorMain {
 		MiddleUtility.saveServerProperties();
 		// Save serialized data.
 		serializer.startSavingSerializedStates();
-		// Stop GUI watch dog.
-		GuiWatchDog.stop();
+		
+		// Stop all repeted tasks.
+		boolean success = RepeatedTask.stopAllTasks();
+		if (!success) {
+			// Interrupt all running threads.
+			InterruptAllThreads();
+		}
 	}
 }

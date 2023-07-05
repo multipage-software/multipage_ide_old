@@ -523,8 +523,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// Set static member.
 		mainFrame = this;
 		
-		//RestartApplication.runRestartWathdog();
-		
 		// Set close action.
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		// Set window description and icon.
@@ -1016,6 +1014,9 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 * Close main frame window.
 	 */
 	public void closeWindow() {
+		
+		// Stop GUI watchdog.
+		GeneratorMain.stopGuiWatchDog();
 		
 		// Call on close method.
 		onClose();
@@ -1570,7 +1571,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 * On help about trayMenu item.
 	 */
 	public void onHelpAboutMenu() {
-	
+			
 		// Open about dialog window.
 		AboutDialogBase aboutDlg = ProgramGenerator.newAboutDialog(this);
 		aboutDlg.setVisible(true);

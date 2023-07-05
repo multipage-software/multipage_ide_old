@@ -56,6 +56,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import javax.swing.text.html.HTMLDocument;
@@ -64,12 +65,10 @@ import javax.swing.text.html.StyleSheet;
 import org.maclan.server.AreaServerSignal;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugListenerSession;
-import org.maclan.server.XdebugCommand;
+import org.maclan.server.XdebugClientParameters;
 import org.maclan.server.XdebugListener;
 import org.maclan.server.XdebugListenerOld;
 import org.maclan.server.XdebugListenerSession;
-import org.maclan.server.XdebugPacket;
-import org.maclan.server.XdebugPacket.XdebugClientParameters;
 import org.maclan.server.XdebugPacketOld;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.Callback;
@@ -85,6 +84,10 @@ import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
 import org.w3c.dom.Node;
+import javax.swing.JPopupMenu;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JMenuItem;
 
 /**
  * This is GUI for debugging
@@ -104,11 +107,14 @@ public class DebugViewer extends JFrame {
 	private static final int WATCHDOG_TIMEOUT_MS = 1000;
 	
 	/**
-	 * Xdebug protocol constants.
+	 * Table font size.
 	 */
-	private static final int UNINITIALIZED = 0;
-	private static final int NEGOTIATE_XDEBUG_FEATURES = 1;
-	private static final int ACCEPT_XDEBUG_COMMANDS = 2;
+	private static final int TABLE_FONT_SIZE = 9;
+	
+	/**
+	 * Table header height.
+	 */
+	private static final int TABLE_HEADER_HEIGHT = 12;
 	
 	// $hide>>$
 	/**
@@ -349,11 +355,6 @@ public class DebugViewer extends JFrame {
 	 * Attached listener.
 	 */
 	private DebugListener attachedListener = null;
-	
-	/**
-	 * Xdebug protocol state.
-	 */
-	private int xdebugProtocolState = UNINITIALIZED;
 
 	// $hide<<$
 	
@@ -576,8 +577,20 @@ public class DebugViewer extends JFrame {
 		panelProcesses.add(scrollPaneProcesses, BorderLayout.CENTER);
 		
 		tableProcesses = new JTable();
+		tableProcesses.setRowHeight(12);
+		tableProcesses.setFont(new Font("Tahoma", Font.PLAIN, 9));
 		tableProcesses.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
 		scrollPaneProcesses.setViewportView(tableProcesses);
+		
+		JPopupMenu popupMenu = new JPopupMenu();
+		menuDisplaySessionProperties = new JMenuItem("org.multipage.generator.messageDisplayXdebugSessionProperties");
+		menuDisplaySessionProperties.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displaySession();
+			}
+		});
+		popupMenu.add(menuDisplaySessionProperties);
+		addPopup(tableProcesses, popupMenu);
 		
 		JPanel panelThreads = new JPanel();
 		sl_panelDebuggers.putConstraint(SpringLayout.NORTH, panelThreads, 3, SpringLayout.SOUTH, panelProcesses);
@@ -594,6 +607,8 @@ public class DebugViewer extends JFrame {
 		panelThreads.add(scrollPaneThreads, BorderLayout.CENTER);
 		
 		tableThreads = new JTable();
+		tableThreads.setFont(new Font("Tahoma", Font.PLAIN, 9));
+		tableThreads.setRowHeight(12);
 		scrollPaneThreads.setViewportView(tableThreads);
 		
 		JPanel panelThreadStack = new JPanel();
@@ -700,7 +715,7 @@ public class DebugViewer extends JFrame {
 		labelStatus = new JLabel("status");
 		panelStatus.add(labelStatus);
 	}
-	
+
 	/**
 	 * Post creation
 	 */
@@ -764,7 +779,7 @@ public class DebugViewer extends JFrame {
         columnModel.getColumn(1).setPreferredWidth(100);
         columnModel.getColumn(2).setPreferredWidth(50);
         columnModel.getColumn(3).setPreferredWidth(50);
-
+        
         // Create the table renderer.
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
         renderer.setHorizontalAlignment(JLabel.CENTER);
@@ -772,6 +787,15 @@ public class DebugViewer extends JFrame {
         
         // Set the JTable properties.
         tableProcesses.setPreferredScrollableViewportSize(tableProcesses.getPreferredSize());
+        
+        // Set column editor font size.
+        Font tableFont = tableProcesses.getFont().deriveFont(TABLE_FONT_SIZE);
+        Utility.setCellEditorFont(tableProcesses, tableFont);
+        
+        // Set column font size.
+        JTableHeader header = tableProcesses.getTableHeader();
+        header.setFont(tableFont);
+        header.setPreferredSize(new Dimension(0, TABLE_HEADER_HEIGHT));
 	}
 	
 	/**
@@ -804,6 +828,52 @@ public class DebugViewer extends JFrame {
         
         // Set the JTable properties.
         tableThreads.setPreferredScrollableViewportSize(tableThreads.getPreferredSize());
+        
+        // Set column editor font size.
+        Font tableFont = tableThreads.getFont().deriveFont(TABLE_FONT_SIZE);
+        Utility.setCellEditorFont(tableThreads, tableFont);
+        
+        // Set column font size.
+        JTableHeader header = tableThreads.getTableHeader();
+        header.setFont(tableFont);
+        header.setPreferredSize(new Dimension(0, TABLE_HEADER_HEIGHT));
+	}
+	
+	/**
+	 * Display session information.
+	 * @throws Exception 
+	 */
+	protected void displaySession() {
+		
+		// Get current selected session.
+		int selectedRow = tableProcesses.getSelectedRow();
+		if (selectedRow < 0) {
+			return;
+		}
+		
+		Object cellValue = tableProcesses.getModel().getValueAt(selectedRow, 0);
+		if (!(cellValue instanceof Long)) {
+			return;
+		}
+		
+		Long sessionId = (Long) cellValue;
+		if (attachedListener == null) {
+			return;
+		}
+		
+		try {
+			// Display session properties. Also dsplay connection URL.
+			DebugListenerSession session = attachedListener.getSession(sessionId);
+			if (session instanceof XdebugListenerSession) {
+				
+				XdebugListenerSession xdebugSession = (XdebugListenerSession) session;
+				XdebugSessionDialog.showDialog(this, xdebugSession);
+			}
+		}
+		catch (Exception e) {
+			String errorMessage = e.getLocalizedMessage();
+			Utility.show2(this, errorMessage);
+		}
 	}
 	
 	/**
@@ -841,10 +911,13 @@ public class DebugViewer extends JFrame {
 	 */
 	public void attachDebugger(DebugListener listener) {
 		
+		// Assign debug viewer.
+		listener.setViewerComponent(this);
+		
 		// Add new lambda methods to the DebugListener object to connect callbacks comming from the debug listener (server).
 		
-		// Accept incomming debug connections.
-		listener.acceptConnectionLambda = session -> {
+		// Accept Xdebug sessions.
+		listener.acceptSessionLambda = session -> {
 			
 			try {
 				SwingUtilities.invokeLater(() -> {
@@ -867,7 +940,7 @@ public class DebugViewer extends JFrame {
 			try {
 				// Xdebug protocol rules.
 				if (listener instanceof XdebugListener && session instanceof XdebugListenerSession) {
-					processXdebugProtocol((XdebugListener) listener, (XdebugListenerSession) session, inputPacket);
+					updateSessionView();
 				}
 			}
 			catch (Exception e) {
@@ -884,169 +957,6 @@ public class DebugViewer extends JFrame {
 	private void onDebugProtocolError(Exception exception) {
 		
 		Utility.show(this, "org.multipage.generator.messageXdebugProtocolException", exception.getLocalizedMessage());
-	}
-
-	/**
-	 * Process Xdebug protocol.
-	 * @param listener
-	 * @param session 
-	 * @param inputPacket
-	 * @throws Exception 
-	 */
-	private void processXdebugProtocol(XdebugListener listener, XdebugListenerSession session, XdebugPacket inputPacket)
-			throws Exception {
-		
-		// On INIT packet
-		if (xdebugProtocolState == UNINITIALIZED && inputPacket.isInit()) {
-			
-			// Initialize session.
-			initializeXdebugSession(session, listener, inputPacket);
-			// Start negotiating features.
-			xdebugProtocolState = NEGOTIATE_XDEBUG_FEATURES;
-			
-			SwingUtilities.invokeLater(() -> {
-				// Do negotiate.
-				negotiateXdebugFeatures(session);
-				// Enable to accept Xdebug commands.
-				xdebugProtocolState = ACCEPT_XDEBUG_COMMANDS;
-			});
-			return;
-		}
-		
-		// On NEGOTIATE FEATURES.
-		if (xdebugProtocolState == NEGOTIATE_XDEBUG_FEATURES) {
-			// Process feature responses.
-			SwingUtilities.invokeLater(() -> processXdebugFeatureResponse(inputPacket));
-			return;
-		}
-		
-		// On Xdebug command response.
-		if (xdebugProtocolState == ACCEPT_XDEBUG_COMMANDS) {
-			// Process command response.
-			SwingUtilities.invokeLater(() -> {
-				// Do process command response.
-				processXdebugCommandResponse(session, inputPacket);
-			});
-		}
-	}
-	
-	/**
-	 * Initialize Xdebug session.
-	 * @param session 
-	 * @param listener 
-	 * @param inputPacket
-	 * @throws Exception 
-	 */
-	private void initializeXdebugSession(XdebugListenerSession session, XdebugListener listener, XdebugPacket inputPacket)
-			throws Exception {
-		
-		// Check IDE key.
-		Obj<String> foundIdeKey = new Obj<String>();
-		boolean matches = inputPacket.checkIdeKey(XdebugPacket.MULTIPAGE_IDE_KEY, foundIdeKey);
-		if (!matches) {
-			Utility.throwException("org.multipage.generator.messageXdebugIdeKeyDoesntMatch",
-					foundIdeKey.ref, XdebugPacket.MULTIPAGE_IDE_KEY);
-		}
-		
-		// Check debugged application ID.
-		Obj<String> foundAppId = new Obj<String>();
-		matches = inputPacket.checkAppId(XdebugPacket.APPLICATION_ID, foundAppId);
-		if (!matches) {
-			Utility.throwException("org.multipage.generator.messageXdebugAppIdDoesntMatch",
-					foundAppId.ref, XdebugPacket.APPLICATION_ID);
-		}
-		
-		// Check debugged language name.
-		Obj<String> languageName = new Obj<String>();
-		matches = inputPacket.checkLanguage(XdebugPacket.LANGUAGE_NAME, languageName);
-		if (!matches) {
-			Utility.throwException("org.multipage.generator.messageXdebugLanguageNameDoesntMatch",
-					languageName.ref, XdebugPacket.LANGUAGE_NAME);
-		}
-		
-		// Check debugged protocol version.
-		Obj<String> protocolVersion = new Obj<String>();
-		matches = inputPacket.checkProtocolVersion(XdebugPacket.PROTOCOL_VERSION, protocolVersion);
-		if (!matches) {
-			Utility.throwException("org.multipage.generator.messageXdebugProtocolVersionDoesntMatch",
-					protocolVersion.ref, XdebugPacket.PROTOCOL_VERSION);
-		}
-		
-		// Get debugged process URI.
-		String debuggedUri = inputPacket.GetDebuggedUri();
-		if (debuggedUri == null) {
-			Utility.throwException("org.multipage.generator.messageXdebugNullFileUri");
-		}
-		
-		// Check debugged URIs.
-		if (!debuggedUri.equals(session.debuggedUri)) {
-			Utility.throwException("org.multipage.generator.messageXdebugBadSession");
-		}
-		
-		// Assign Xdebug listener.
-		session.listener = listener;
-	}
-	
-	/**
-	 * Negotiate Xdebug features.
-	 * @param session 
-	 */
-	private void negotiateXdebugFeatures(XdebugListenerSession session) {
-		
-		// Get Xdebug client (the debugging probe) features and save them into the session state.
-		session.loadFeaturesFromClient(
-				"language_supports_thread", 
-				"language_name", 
-				"language_version", 
-				"encoding", 
-				"protocol_version", 
-				"supports_async", 
-				"data_encoding", 
-				"breakpoint_languages", 
-				"breakpoint_types", 
-				"multiple_sessions", 
-				"max_children", 
-				"max_data", 
-				"max_depth", 
-				"breakpoint_details", 
-				"extended_properties", 
-				"notify_ok", 
-				"resolved_breakpoints", 
-				"supported_encodings", 
-				"supports_postmortem", 
-				"show_hidden");		
-		
-		// Send IDE features to the client (the debugging probe).
-		session.sendIdeFeaturesToClient(new String [][] {
-			    {"encoding", "UTF-8"},
-				{"multiple_sessions", "1"},
-				{"max_children", "SESSION"},
-				{"max_data", "SESSION"},
-				{"max_depth", "SESSION"},
-				{"breakpoint_details", "1"},
-				{"extended_properties", "0"},
-				{"notify_ok", "1"},
-				{"show_hidden", "1"}});
-	}
-	
-	/**
-	 * Process Xdebug feature response.
-	 * @param inputPacket
-	 * @return
-	 */
-	private Object processXdebugFeatureResponse(XdebugPacket inputPacket) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	/**
-	 * Process Xdebug command response.
-	 * @param session 
-	 * @param inputPacket
-	 */
-	private void processXdebugCommandResponse(XdebugListenerSession session, XdebugPacket inputPacket) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	/**
@@ -1213,17 +1123,12 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onOpen() {
 		
-		// Start debugger
-		XdebugListenerOld.getSingleton().startDebugging();
 	}
 	
 	/**
 	 * Called when a user closes this window with click on window close button
 	 */
 	protected void onClose() {
-		
-		// Stop debugger
-		XdebugListenerOld.getSingleton().stopDebugging();
 		
 		saveDialog();
 		disposeWatchdog();
@@ -1268,6 +1173,7 @@ public class DebugViewer extends JFrame {
 		Utility.localize(labelProcesses);
 		Utility.localize(labelThreads);
 		Utility.localize(labelThreadStack);
+		Utility.localize(menuDisplaySessionProperties);
 	}
 
 	/**
@@ -1549,6 +1455,7 @@ public class DebugViewer extends JFrame {
 	private JTable tableThreads;
 	private JLabel labelThreadStack;
 	private JTable tableStack;
+	private JMenuItem menuDisplaySessionProperties;
 
 	
 	/**
@@ -2245,6 +2152,23 @@ public class DebugViewer extends JFrame {
 		
 		SwingUtilities.invokeLater(() -> {
 			AlertWithTimeout.showDialog(this, message, timeout);
+		});
+	}
+	private static void addPopup(Component component, final JPopupMenu popup) {
+		component.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
 		});
 	}
 }

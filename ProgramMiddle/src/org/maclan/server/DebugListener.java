@@ -7,6 +7,7 @@
 
 package org.maclan.server;
 
+import java.awt.Component;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,14 +35,14 @@ public abstract class DebugListener {
 	protected static CallbackNoArg enableListener = null;
 	
     /**
-     * Invoked when new connection to debug server has been accepted.
+     * Invoked when a new Xdebug session should be accepted.
      */
-    public Consumer<XdebugListenerSession> acceptConnectionLambda = null;
+    public Consumer<XdebugListenerSession> acceptSessionLambda = null;
 	
     /**
      * Invoked when input packet has been received by the debug server.
      */
-    public BiConsumer<DebugListenerSession, XdebugPacket> inputPacketLambda = null;
+    public BiConsumer<DebugListenerSession, XdebugResponse> inputPacketLambda = null;
     
 	
 	/**
@@ -99,6 +100,12 @@ public abstract class DebugListener {
 	}
 	
 	/**
+	 * Get current debug viewer component.
+	 * @param debugViewerComponent
+	 */
+	public abstract void setViewerComponent(Component debugViewerComponent);
+	
+	/**
 	 * Stop debugging
 	 */
 	public abstract void stopDebugging();
@@ -107,5 +114,4 @@ public abstract class DebugListener {
 	 * Close debugger
 	 */
 	public abstract void close();
-
 }

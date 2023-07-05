@@ -7,5 +7,12 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/library/apache_commons/commons-imaging-1.0-alpha3-bin/commons-imaging-1.0-alpha3/commons-imaging-1.0-alpha3.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.ui.console_3.11.400.v20221012-0524.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.jface_3.28.0.v20221024-1426.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.ui.workbench_3.127.0.v20221024-2137.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.core.runtime_3.26.100.v20221021-0005.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.osgi_3.18.200.v20221116-1324.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.osgi.service.prefs_1.1.2.202109301733.jar"/>
+	<classpathentry kind="lib" path="C:/library/eclipse_lib/org.eclipse.equinox.common_3.17.0.v20221108-1156.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

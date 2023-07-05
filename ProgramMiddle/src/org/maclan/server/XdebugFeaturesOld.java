@@ -17,7 +17,7 @@ import org.maclan.server.XdebugListenerOld.ChannelBreakDownException;
  * @author user
  *
  */
-public class XdebugFeatures {
+public class XdebugFeaturesOld {
 	
 	/**
 	 * Exceptions

@@ -187,6 +187,7 @@ public class ProgramGenerator {
 		LoggingSettingsDialog.setDefaultData();
 		SignAddInDialog.setDefaultData();
 		GenKeyDialog.setDefaultData();
+		XdebugSessionDialog.setDefaultData();
 	}
 	
 	/**
@@ -251,6 +252,7 @@ public class ProgramGenerator {
 		LoggingSettingsDialog.serializeData(inputStream);
 		SignAddInDialog.serializeData(inputStream);
 		GenKeyDialog.serializeData(inputStream);
+		XdebugSessionDialog.serializeData(inputStream);
 	}
 	
 	/**
@@ -314,6 +316,7 @@ public class ProgramGenerator {
 		LoggingSettingsDialog.serializeData(outputStream);
 		SignAddInDialog.serializeData(outputStream);
 		GenKeyDialog.serializeData(outputStream);
+		XdebugSessionDialog.serializeData(outputStream);
 	}
 	
 	/**

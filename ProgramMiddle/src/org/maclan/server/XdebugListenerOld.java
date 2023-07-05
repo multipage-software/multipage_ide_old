@@ -6,6 +6,7 @@
  */
 package org.maclan.server;
 
+import java.awt.Component;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -107,7 +108,7 @@ public class XdebugListenerOld extends DebugListener {
 	/**
 	 * Negotiated features
 	 */
-	private XdebugFeatures xdebugFeatures = new XdebugFeatures();
+	private XdebugFeaturesOld xdebugFeatures = new XdebugFeaturesOld();
 
 	/**
 	 * Socket service thread
@@ -174,7 +175,7 @@ public class XdebugListenerOld extends DebugListener {
 	/**
 	 * Send name class
 	 */
-	static class XdebugStatement {
+	static class XdebugStatementOld {
 		
 		/**
 		 * Response wrappers.
@@ -212,7 +213,7 @@ public class XdebugListenerOld extends DebugListener {
 		 * Constructor
 		 * @param commandName
 		 */
-		public XdebugStatement(String commandName) {
+		public XdebugStatementOld(String commandName) {
 			
 			this(commandName, null);
 		}
@@ -222,7 +223,7 @@ public class XdebugListenerOld extends DebugListener {
 		 * @param commandName
 		 * @param parameters
 		 */
-		public XdebugStatement(String commandName, HashMap<String, String> parameters) {
+		public XdebugStatementOld(String commandName, HashMap<String, String> parameters) {
 			
 			this.name = commandName;
 			this.parameters = parameters;
@@ -233,7 +234,7 @@ public class XdebugListenerOld extends DebugListener {
 		 * @param commandName
 		 * @param data
 		 */
-		public XdebugStatement(String commandName, Object data) {
+		public XdebugStatementOld(String commandName, Object data) {
 			
 			this.name = commandName;
 			
@@ -326,7 +327,7 @@ public class XdebugListenerOld extends DebugListener {
 		/**
 		 * Check if command name equals
 		 */
-		synchronized public boolean equals(XdebugStatement command) {
+		synchronized public boolean equals(XdebugStatementOld command) {
 			
 			return this.name.equals(command.name);
 		}
@@ -344,7 +345,7 @@ public class XdebugListenerOld extends DebugListener {
 		 * @param commandText
 		 * @return
 		 */
-		public static XdebugStatement parse(String commandText) {
+		public static XdebugStatementOld parse(String commandText) {
 			
 			// Command name parser.
 			final Pattern nameRegex = Pattern.compile("^\\s*(?<name>\\w+)");
@@ -379,7 +380,7 @@ public class XdebugListenerOld extends DebugListener {
 				while (true);
 				
 				// Create Xdebug command and return it.
-				XdebugStatement xdebugCommand = new XdebugStatement(commandName, parameters);
+				XdebugStatementOld xdebugCommand = new XdebugStatementOld(commandName, parameters);
 				return xdebugCommand;
 			}
 			
@@ -526,7 +527,7 @@ public class XdebugListenerOld extends DebugListener {
 	/**
 	 * Xdebug name
 	 */
-	private XdebugStatement command = new XdebugStatement(nop, null);
+	private XdebugStatementOld command = new XdebugStatementOld(nop, null);
 
 	/**
 	 * List of pending connections.
@@ -697,7 +698,7 @@ public class XdebugListenerOld extends DebugListener {
 	 * @return
 	 * @throws Exception 
 	 */
-	private XdebugPacketOld resultOf(XdebugStatement command) throws Exception {
+	private XdebugPacketOld resultOf(XdebugStatementOld command) throws Exception {
 		
 		// If no response, return empty packet
 		if (command.exceptions == null && command.response == null) {
@@ -939,7 +940,7 @@ public class XdebugListenerOld extends DebugListener {
 			 * @param command
 			 * @return
 			 */
-			private boolean isStop(XdebugStatement command) {
+			private boolean isStop(XdebugStatementOld command) {
 				
 				return command.isStop();
 			}
@@ -949,7 +950,7 @@ public class XdebugListenerOld extends DebugListener {
 			 * @param command
 			 * @return
 			 */
-			private boolean is(XdebugStatement command) {
+			private boolean is(XdebugStatementOld command) {
 				
 				return !command.isEmpty();
 			}
@@ -1138,7 +1139,7 @@ public class XdebugListenerOld extends DebugListener {
 			 */
 			private XdebugPacketOld sendThrough(SocketChannel connection, String commandName, String data, LinkedList<Exception> exceptions) {
 				
-				XdebugStatement command = new XdebugStatement(commandName, data);
+				XdebugStatementOld command = new XdebugStatementOld(commandName, data);
 				sendThrough(connection, command);
 				exceptions.clear();
 				exceptions.addAll(0, command.exceptions);
@@ -1151,7 +1152,7 @@ public class XdebugListenerOld extends DebugListener {
 			 * @param command
 			 * @throws Exception 
 			 */
-			private void sendThrough(SocketChannel connection, XdebugStatement command) {
+			private void sendThrough(SocketChannel connection, XdebugStatementOld command) {
 				
 				try {
 					// Check if name exists
@@ -1653,5 +1654,11 @@ public class XdebugListenerOld extends DebugListener {
 		
 		// Return empty packet
 		return XdebugPacketOld.empty;
+	}
+
+	@Override
+	public void setViewerComponent(Component debugViewerComponent) {
+		// TODO Auto-generated method stub
+		
 	}
 }

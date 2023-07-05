@@ -54,12 +54,9 @@ import org.maclan.StartResource;
 import org.maclan.VersionObj;
 import org.maclan.expression.ExpressionSolver;
 import org.maclan.expression.ProcedureParameter;
-import org.maclan.server.XdebugClientOld.Callback;
-import org.maclan.server.XdebugListenerOld.XdebugStatement;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * @author
@@ -144,12 +141,27 @@ public class AreaServer {
 	 * Unzipped resources list file name. (The file is stored in servlet temporary
 	 * directory.
 	 */
-	public static final String unzippedFileName = "unzipped.txt";
+	public static final String UNZIPPED_FILENAME = "unzipped.txt";
+
+	/**
+     * List of supported text encodings.
+     */
+	private static final LinkedList<String> SUPPORTED_ENCODINGS = new LinkedList<String>();
+	
+	/**
+	 * Number of JavaScript engines in the pool.
+	 */
+	private static final int JAVASCRIPT_ENGINE_COUNT = 10;
 
 	/**
 	 * Area ID of the page which source code has to be displayed.
 	 */
 	private static Long showSourceCodeForAreaId;
+	
+	/**
+	 * Synchronized container for future JavaScript engine pool.
+	 */
+	private static Obj<ArrayList<ScriptingEngine>> javaScriptEnginePool = new Obj<ArrayList<ScriptingEngine>>(null);
 
 	/**
 	 * Show page source code.
@@ -183,6 +195,16 @@ public class AreaServer {
 	 * Involve user action in the logging process. A lambda function.
 	 */
 	private static Runnable logInvolveUserLambda = null;
+	
+	/**
+	 * Static constructor.
+	 */
+	static {
+		
+		// List supported text encodings.
+		SUPPORTED_ENCODINGS.add("UTF-8");
+		SUPPORTED_ENCODINGS.add("UTF-16");
+    }
 	
 	/**
 	 * Set "can log" lambda function.
@@ -364,6 +386,7 @@ public class AreaServer {
 		clonedState.languages = state.languages;
 		clonedState.analysis = state.analysis;
 		clonedState.text = new StringBuilder(textValue);
+		clonedState.encoding = state.encoding;
 		clonedState.level = state.level;
 		clonedState.area = area;
 		clonedState.requestedArea = state.requestedArea;
@@ -3248,7 +3271,7 @@ public class AreaServer {
 		// If not rendering, use servlet temporary file.
 		if (!isRendering())  {
 			
-			Path path = Paths.get(state.request.getServerTempPath() + File.separator + unzippedFileName);
+			Path path = Paths.get(state.request.getServerTempPath() + File.separator + UNZIPPED_FILENAME);
 			
 			TreeSet<Long> resourceIds = Utility.loadLongsFromFile(path);
 			resourceIds.add(resourceId);
@@ -3280,7 +3303,7 @@ public class AreaServer {
 		// If not rendering, use servlet temporary file.
 		if (!isRendering()) {
 			
-			Path path = Paths.get(state.request.getServerTempPath() + File.separator + unzippedFileName);
+			Path path = Paths.get(state.request.getServerTempPath() + File.separator + UNZIPPED_FILENAME);
 			
 			TreeSet<Long> resourceIds = Utility.loadLongsFromFile(path);
 			
@@ -3647,8 +3670,6 @@ public class AreaServer {
 					if (server.state.debugClient == null) {
 						server.connectViaXdebug(ideHost.ref, xdebugPort.ref);
 					}
-					// Accept Xdebug statements.
-					server.acceptXdebugStatements();
 				}
 				else {
 					if (breakName != null) {
@@ -3686,68 +3707,31 @@ public class AreaServer {
 	}
 	
 	/**
-	 * Accept incoming Xdebug statements.
+	 * Accept incoming debugging statements.
 	 */
-	protected void acceptXdebugStatements()
+	protected void debuggedPoint()
 			throws Exception {
 		
-		// Get Xdebug client.
-		XdebugClient xdebugClient = state.debugClient;
-		
-		// Check debugger connection state.
-		if (!xdebugClient.checkActive()) {
-			AreaServer.throwError("org.maclan.server.messageXdebugConnectionInterrupted");
-		}
-		
-		// Enter main loop for communication with debugger window.
-		xdebugClient.communicate(new Callback() {
-			@Override
-			protected String accept(XdebugStatement xdebugStatement) {
-				
-				// On setting and getting features...
-				if (xdebugStatement.is("feature_set")) {
+		// If the debugger is enabled and the connection is established, do debugging.
+		if (state.debugClient != null && state.debugClient.isConnected()) {
+			
+            // Accept incoming debug commands. This method inside itself turns into a loop.
+			state.debugClient.acceptCommands(command -> {
+				try {
+					// Process the incomming Xdebug commands with the Xdebug probe.
+					XdebugResponse resultPacket = state.debugClient.xdebugProbe(AreaServer.this, command);
 					
-					// Get feature name.
-					String featureName = xdebugStatement.getFeatureName();
-					if (featureName == null) {
-						return null;
-					}
-					
-					// On show hidden properties...
-					if ("show_hidden".equals(featureName)) {
-						// Wrap response text with XML.
-						String response = xdebugStatement.compileResponse("success=\"1\"");
-						return response;
-					}
+					// Return the packet to be sent to the debugger server (ie. the IDE that can display the debug information).
+					return resultPacket;
 				}
-				else if (xdebugStatement.is("feature_get")) {
+				catch (Exception e) {
 					
-					// Get feature name.
-					String featureName = xdebugStatement.getFeatureName();
-					if (featureName == null) {
-						return null;
-					}
-					
-					// On show hidden properties...
-					if ("show_hidden".equals(featureName)) {
-						// Wrap response text with XML.
-						String response = xdebugStatement.compileResponse("success=\"1\"", "1");
-						return response;
-					}
+					// Create error packet and return it to the debugger server.
+					XdebugResponse errorPacket = XdebugResponse.createErrorPacket(command, e);
+                    return errorPacket;
 				}
-				else if (xdebugStatement.is("source")) {
-					
-					// TODO: <---DEBUGGER SENDING SOURCE CODE
-					j.log("SENDING SOURCE CODE");
-				}
-				else if (xdebugStatement.is("step_into")) {
-					
-					// TODO: <---DEBUGGER setp_into
-					j.log("AREA SERVER DEBUGGER step_into");
-				}
-				return null;
-			}
-		});
+			});
+        }
 	}
 
 	/**
@@ -4329,16 +4313,6 @@ public class AreaServer {
 		// Return sub state text.
 		return subState.text.toString();
 	}
-	
-	/**
-	 * Number of JavaScript engines in the pool.
-	 */
-	private static final int javaScriptEnginesCount = 10;
-	
-	/**
-	 * Synchronized container for future JavaScript engine pool.
-	 */
-	private static Obj<ArrayList<ScriptingEngine>> javaScriptEnginePool = new Obj<ArrayList<ScriptingEngine>>(null);
 
 	/**
 	 * Create JavaScript engines.
@@ -4358,7 +4332,7 @@ public class AreaServer {
 				int count = javaScriptEnginePool.ref.size();
 				
 				// Refill the pool.
-				for (int index = count; index < javaScriptEnginesCount; index++) {
+				for (int index = count; index < JAVASCRIPT_ENGINE_COUNT; index++) {
 					
 					// Create scripting engine.
 					ScriptingEngine engine = new ScriptingEngine();
@@ -5988,8 +5962,13 @@ public class AreaServer {
 	 * @param replaceent
 	 * @param state
 	 * @return
+	 * @throws Exception 
 	 */
-	private String addMetaInformation(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state) {
+	private String addMetaInformation(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state)
+			throws Exception {
+		
+		// Accept Xdebug statements.
+		debuggedPoint();
 		
 		// TODO: <---REMOVE IT
 		return replacement;
@@ -8918,5 +8897,32 @@ public class AreaServer {
 		}
 		
 		return path.toString();
+	}
+	
+	/**
+	 * Get current encoding.
+	 * @return
+	 */
+	public String getCurrentEncoding() {
+		
+		return state.encoding;
+	}
+	
+	/**
+	 * Get supported text encodings of the Area Server.
+	 * @param areaServer
+	 * @return
+	 */
+	public static String getSupportedEncodings() {
+		
+		String encodings = "";
+		String divider = "";
+		
+		for (String encoding : SUPPORTED_ENCODINGS) {
+			encodings += divider + encoding;
+			divider = ", ";
+		}
+		
+		return encodings;
 	}
 }

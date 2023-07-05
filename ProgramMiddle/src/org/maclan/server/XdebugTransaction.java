@@ -7,8 +7,11 @@
 package org.maclan.server;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
 /**
  * Xdebug transaction object. The transaction sends a command and waits for response.
@@ -51,7 +54,17 @@ public class XdebugTransaction {
 	/**
 	 * Lambda function that can receive command result.
 	 */
-	public Consumer<XdebugPacket> responseLambda = null;
+	public Consumer<XdebugResponse> responseLambda = null;
+
+	/**
+	 * Set exception thrown when sending this command to the Xdebug client.
+	 */
+	private Throwable writeException = null;
+	
+	/**
+     * Number of bytes to send.
+     */
+	private int bytesToWrite = 0;
 	
 	/**
 	 * Create new transaction for the command.
@@ -59,13 +72,45 @@ public class XdebugTransaction {
 	 * @param responseLambda 
 	 * @return
 	 */
-	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugPacket> responseLambda) {
+	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugResponse> responseLambda) {
 		
 		XdebugTransaction transaction = new XdebugTransaction();
-		transaction.id = generateNewTransactionId();
+		transaction.id = command.transactionId = generateNewTransactionId();
 		transaction.command = command;
 		transaction.responseLambda = responseLambda;
 		return transaction;
 	}
-
+	
+	/**
+	 * Check completed bytes.
+	 * @param bytesWritten
+	 */
+	public void checkWrittenBytes(int bytesWritten) {
+		
+		if (bytesWritten != bytesToWrite) {
+			String errorMessage = String.format(Resources.getString("org.maclan.server.messageXdebugBytesNotWritten"), bytesToWrite, bytesWritten);
+			this.writeException = new Exception(errorMessage);
+		}
+		else {
+			this.writeException = null;
+		};
+	}
+	
+	/**
+	 * Set sending error.
+	 * @param writeException
+	 */
+	public void setWriteException(Throwable writeException) {
+		
+		this.writeException = writeException;
+	}
+	
+	/**
+	 * Set number of bytes sent.
+	 * @param bytesToWrite
+	 */
+	public void setBytesToWrite(int bytesToWrite) {
+		
+		this.bytesToWrite  = bytesToWrite;
+	}
 }

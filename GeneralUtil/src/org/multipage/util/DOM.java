@@ -1,5 +1,7 @@
 /**
+ * Copyright 2010-2018 (C) vakol
  * 
+ * Created on : 31-07-2018
  */
 package org.multipage.util;
 

@@ -7,10 +7,11 @@
 package org.maclan.server;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 
 import org.multipage.util.Obj;
 
@@ -51,16 +52,17 @@ public class DebugListenerSession {
 	 * Session ID.
 	 */
 	public int sessionId = -1;
-
-	/**
-	 * Client socket address.
-	 */
-	public InetSocketAddress clientSocket = null;
 	
 	/**
-	 * Socket servver reference.
+	 * Client socket reference.
+	 */
+	public AsynchronousSocketChannel client = null;
+	
+	/**
+	 * Socket server reference.
 	 */
 	public AsynchronousServerSocketChannel server = null;
+
 	
 	/**
 	 * Cosntructor.
@@ -73,7 +75,7 @@ public class DebugListenerSession {
 		
 		// Set members.
 		this.sessionId = generateNewSessionId();
-		this.clientSocket = (InetSocketAddress) client.getRemoteAddress();
+		this.client = client;
 		this.server = server;
 	}
 	
@@ -91,10 +93,13 @@ public class DebugListenerSession {
 	
 	/**
 	 * Get debug client (the probe) socket address.
+	 * @throws IOException 
 	 */
-	public InetSocketAddress getClientSocket() {
+	public InetSocketAddress getClientSocket()
+			throws IOException {
 		
-		return clientSocket;
+		InetSocketAddress socketAddress = (InetSocketAddress) client.getRemoteAddress();
+		return socketAddress;
 	}
 
 	/**
@@ -104,5 +109,19 @@ public class DebugListenerSession {
 	public String getPid() {
 		
 		return "";
+	}
+	
+	/**
+	 * Send bytes to the debugging client (the debugging probe).
+	 * @param bytes
+	 * @param session
+	 * @param completionHandler
+	 */
+	protected void sendBytes(ByteBuffer bytes, XdebugTransaction transaction, CompletionHandler<Integer, XdebugTransaction> completionHandler) {
+		
+		// Write bytes.
+		synchronized (client) {
+			client.write(bytes, transaction, completionHandler);
+		}
 	}
 }

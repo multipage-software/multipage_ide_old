@@ -14,7 +14,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 
-import org.maclan.server.XdebugListenerOld.XdebugStatement;
+import org.maclan.server.XdebugListenerOld.XdebugStatementOld;
 import org.multipage.util.Obj;
 
 /**
@@ -69,7 +69,7 @@ public class XdebugClientOld {
 		 * Accept Xdebug statement.
 		 * @param xdebugStatement
 		 */
-		protected String accept(XdebugStatement xdebugStatement) {
+		protected String accept(XdebugStatementOld xdebugStatement) {
 			// Override it.
 			return null;
 		}
@@ -262,7 +262,7 @@ public class XdebugClientOld {
 							
 							String statementText = new String(inputBuffer.array(), protocolEncoding);
 							
-							XdebugStatement xdebugStatement = XdebugStatement.parse(statementText);
+							XdebugStatementOld xdebugStatement = XdebugStatementOld.parse(statementText);
 							if (xdebugStatement == null) {
 								return;
 							}

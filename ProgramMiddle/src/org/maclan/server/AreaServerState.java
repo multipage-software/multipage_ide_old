@@ -106,6 +106,11 @@ public class AreaServerState {
 	public StringBuilder text;
 	
 	/**
+	 * Supported encoding.
+	 */
+	public String encoding;
+	
+	/**
 	 * CSS lookup table.
 	 */
 	public CssLookupTable cssLookupTable = new CssLookupTable();
