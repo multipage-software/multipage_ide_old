@@ -296,8 +296,8 @@ public class XdebugClient {
 				    // If the stop symbol was found in the input buffer, parse the command bytes and process the command.
 			    	XdebugCommand command = XdebugCommand.parseCommand(commandBuffer.ref);
 			    	
-			    	// TODO: <---DEBUG IT
-			    	//j.log("READ COMMAND: %s", command.getText());
+				    // TODO: <---DEUG Log connads received by client.
+			    	//j.log(1, "READ COMMAND: %s", command.getText());
 			    	
 			        XdebugResponse responsePacket = processCommandLambda.apply(command);
 			        

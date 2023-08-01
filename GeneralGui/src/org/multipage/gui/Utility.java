@@ -169,6 +169,7 @@ import org.apache.commons.io.IOUtils;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -179,6 +180,11 @@ import com.ibm.icu.text.CharsetMatch;
  *
  */
 public class Utility {
+	
+	/**
+	 * Buffer size.
+	 */
+	private static final int BUFFER_SIZE = 1024;
 	
 	/**
 	 * Standard headers.
@@ -6139,9 +6145,9 @@ public class Utility {
      * @param outputBuffer 
      * @param terminalSymbol
      * @param successfullyTerminated
-     * @return
+     * @return true value if the end of obuffer has been reached
      */
-	public static ByteBuffer readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol, Obj<Boolean> successfullyTerminated) {
+	public static boolean readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol, Obj<Boolean> successfullyTerminated) {
 		
 		// Initialization.
 		int terminalLength = terminalSymbol.length;
@@ -6154,7 +6160,7 @@ public class Utility {
 			byte theByte = inputBuffer.get();
 			
 			// Disply input byte.
-			String className = Thread.currentThread().getStackTrace()[2].getClassName();
+			/*String className = Thread.currentThread().getStackTrace()[2].getClassName();
 			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
 				if (theByte != 0) {
 					System.out.format("|%c", (char) theByte);
@@ -6162,7 +6168,7 @@ public class Utility {
 				else {
 					System.out.format("|%c\n", (char) 0x2588);
 				}
-			}
+			}*/
 			
 			// Try to match bytes with the terminal symbol.
 			if (theByte == terminalSymbol[terminalIndex]) {
@@ -6189,14 +6195,21 @@ public class Utility {
 			}
 			
 			// Output current byte.
-			outputBuffer.ref.put(theByte);
+			try {
+				outputBuffer.ref.put(theByte);
+			}
+			catch (Exception e) {
+				j.log("LIMIT = %d\tCAPACITY = %d", limit, capacity);
+				e.printStackTrace();
+			}
 		}
 		
 		// If the termnal symbol was not found, set the output flag to false value.
 		successfullyTerminated.ref = terminalIndex >= terminalLength;
 		
-		// Return the output buffer.
-		return outputBuffer.ref;
+		// Return a value indicating wheter the input buffer has remaining bytes.
+		boolean endOfBuffer = !inputBuffer.hasRemaining();
+		return endOfBuffer;
 	}
 	
 	/**
@@ -6217,12 +6230,13 @@ public class Utility {
 		int inputLength = inputBytes.length;
 
 		// Do loop.
+		boolean terminateIt = false;
 		for (int index = 0; index < inputLength; index++) {
 			
 			// Read current byte from the buffer.
 			byte theByte = inputBytes[index];
 			
-			// Disply input byte.
+			// TODO: <---TEST Display input byte.
 			String className = Thread.currentThread().getStackTrace()[2].getClassName();
 			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
 				if (theByte != 0) {
@@ -6237,9 +6251,11 @@ public class Utility {
 			if (theByte == terminalSymbol[terminalIndex]) {
 				terminalIndex++;
 				if (terminalIndex >= terminalLength) {
-					break;
+					terminateIt = true;
 				}
-				continue;
+			}
+			else {
+				terminalIndex = 0;
 			}
 			
 			// Check buffer capacity.
@@ -6259,6 +6275,11 @@ public class Utility {
 			
 			// Output current byte.
 			outputBuffer.ref.put(theByte);
+			
+			// Terminate the loop.
+			if (terminateIt) {
+				break;
+			}
 		}
 		
 		// If the termnal symbol was not found, set the output flag to false value.
@@ -6280,5 +6301,71 @@ public class Utility {
 		else {
 			inputBuffer.clear();
 		}
+	}
+	
+	/**
+	 * Split input bytes to the array of strings.
+	 * @param inputBytes
+	 * @param dividerSymbol
+	 * @param terminalSymbol
+	 * @return
+	 * @throws Exception 
+	 */
+	public static List<String> splitBytesToStrings(byte[] inputBytes, int bufferIncrease, byte [] dividerSymbol, byte [] terminalSymbol)
+			throws Exception {
+		
+		LinkedList<String> stringList = new LinkedList<String>();
+		
+		int dividerIndex = 0;
+		int dividerLastIndex = dividerSymbol.length - 1;
+		
+		int terminalIndex = 0;
+		int terminalLastIndex = terminalSymbol.length - 1;
+		
+		// Create byte array.
+		ArrayList<Byte> byteArray = new ArrayList<Byte>();
+		
+		for (byte inputByte : inputBytes) {
+			
+			// Exit the loop.
+			if (inputByte == terminalSymbol[terminalIndex]) {
+				if (terminalIndex >= terminalLastIndex) {
+					break;
+				}
+				terminalIndex++;
+			}
+			else {
+				terminalIndex = 0;
+			}
+			
+			// Check divider index.
+			if (inputByte == dividerSymbol[dividerIndex]) {
+				if (dividerIndex >= dividerLastIndex) {
+					
+					int length = byteArray.size();
+					byte [] bytes = new byte[length];
+					
+					for (int index = 0; index < length; index++) {
+						bytes[index] = byteArray.get(index);
+					}
+					
+					String listItem = new String(bytes, "UTF-8");
+					stringList.add(listItem);
+
+					byteArray.clear();
+
+					dividerIndex = 0;
+					continue;
+				}
+				
+				dividerIndex++;
+				continue;
+			}
+
+			// Add byte to output buffer.
+			byteArray.add(inputByte);
+		}
+				
+		return stringList;
 	}
 }

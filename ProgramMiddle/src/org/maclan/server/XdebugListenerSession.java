@@ -58,14 +58,26 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private int INPUT_BUFFER_SIZE = 1024;
 	private int LENGTH_BUFFER_SIZE = 16;
 	private int PACKET_BUFFER_SIZE = INPUT_BUFFER_SIZE;
-	private int PACKET_BUFFER_INCREASE = PACKET_BUFFER_SIZE;
 	
 	/**
 	 * Input and packet buffers that can receive Xdebug packets comming from socket connection.
 	 */
 	public ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
-	public ByteBuffer packetLengthBuffer = ByteBuffer.allocate(LENGTH_BUFFER_SIZE);
-	public ByteBuffer packetBuffer = ByteBuffer.allocate(PACKET_BUFFER_SIZE);
+	public Obj<ByteBuffer> lengthBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LENGTH_BUFFER_SIZE));
+	public Obj<ByteBuffer> xmlBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(PACKET_BUFFER_SIZE));
+	
+	/**
+	 * Input reader states and constants.
+	 */
+	private static final int READ_LENGTH = 0;
+	private static final int READ_XML = 1;
+	
+	private int inputReaderState = READ_LENGTH;
+	
+	/**
+	 * Length of the XML packet received from the input socket.
+	 */
+	private int xmlLength = -1;
 	
 	/**
 	 * Input buffer synchronization object.
@@ -111,117 +123,128 @@ public class XdebugListenerSession extends DebugListenerSession {
 		super(server, client);
 	}
 	
-	private static int pass = 0;
-	
 	/**
-	 * Consume single response bytes from input buffer. This bytes can be incomplete.
-	 * @throws Exception 
+	 * Read Xdebug responses from the input buffer.
+	 * @param xdebugResponseLambda
+	 * @return returns true if the XML has been received
+	 * @throws Exception
 	 */
-	public boolean readInputBuffer()
+	public boolean readXdebugResponses(Consumer<XdebugResponse> xdebugResponseLambda)
 			throws Exception {
 		
 		// Prepare input buffer for reading.
 		inputBuffer.flip();
 		
-		// Check input bytes.
+		// If there are no remaining bytes in the input buffer, return false value.
 		if (!inputBuffer.hasRemaining()) {
+			
+			// TODO: <---DEBUG
+			j.log("FULL BUFFER");
 			return false;
 		}
 		
-		// Initialization.
-		Obj<ByteBuffer> outputBuffer = new Obj<ByteBuffer>(null);
-		Obj<Boolean> terminated = new Obj<Boolean>(false);
+		boolean xmlAccepted = false;
 		
-		// TODO: <---DEBUG Llog the length buffer remaining capacity.
-		j.log(1, "#%d LENGTH BUFFER: %d bytes remains", ++pass, packetLengthBuffer.remaining());
+		// Read until end of input buffer.
+		boolean endOfReading = false;
+		while (!endOfReading) {
+			
+			Obj<Boolean> terminated = new Obj<Boolean>(false);
+			
+			// Determine protocol state from input byte value and invoke related action.
+			switch (inputReaderState) {
+			
+			case READ_LENGTH:
+				endOfReading = Utility.readUntil(inputBuffer, lengthBuffer, LENGTH_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
+				if (terminated.ref) {
+					inputReaderState = READ_XML;
+					xmlLength = getXmlLength(lengthBuffer);
+				}
+				break;
+				
+			case READ_XML:
+				endOfReading = Utility.readUntil(inputBuffer, xmlBuffer, PACKET_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
+				if (terminated.ref) {
+					inputReaderState = READ_LENGTH;
+					XdebugResponse xdebugResponse = getXmlContent(xmlBuffer);
+					xdebugResponseLambda.accept(xdebugResponse);
+					xmlAccepted = true;
+				}
+				break;
+			}
+		}
 		
-		// Read the "packet length" from the input buffer. The length is NULL terminated.
-		outputBuffer.ref = packetLengthBuffer;
-		Utility.readUntil(inputBuffer, outputBuffer, 0, XdebugResponse.NULL_SYMBOL, terminated);
-		packetLengthBuffer = outputBuffer.ref;
-    	if (!terminated.ref) {
-        	return false;
-    	}
-    	
-    	// Read the packet from the input buffer. The packet data are NULL terminated.
-    	outputBuffer.ref = packetBuffer;
-    	Utility.readUntil(inputBuffer, outputBuffer, PACKET_BUFFER_INCREASE, XdebugResponse.NULL_SYMBOL, terminated);
-    	packetBuffer = outputBuffer.ref;
-    	if (!terminated.ref) {
-        	return false;
-    	}
-    	
-    	// Get expected packet length.
-    	packetLengthBuffer.flip();
-    	int packetLengthSize = packetLengthBuffer.limit();
-    	if (packetLengthSize <= 0) {
-    		Utility.throwException("org.maclan.server.messageXdebugPacketLengthNotFound");
-    	}
-    	
-    	byte [] packetLengthBytes = new byte[packetLengthSize];
-    	packetLengthBuffer.get(packetLengthBytes);
-    	String packetLengthString = new String(packetLengthBytes, "UTF-8");
-    	int expectedPacketLength  = Integer.parseInt(packetLengthString);
-    	
-    	// Restore packet length buffer for writing.
-    	packetLengthBuffer.clear();
-
-    	// Get packet bytes.
-    	packetBuffer.flip();
-    	int packetBufferLength = packetBuffer.limit();
-    	if (packetBufferLength <= 0) {
-    		Utility.throwException("org.maclan.server.messageXdebugPacketNotFound");
-    	}
-    	if (packetBufferLength != expectedPacketLength) {
-    		Utility.throwException("org.maclan.server.messageXdebugUnexpectedPacketLength",packetBufferLength, expectedPacketLength);
-    	}
-    	return true;
+		return xmlAccepted;
 	}
 	
 	/**
-	 * Pull response packet from the input buffer.
+	 * Get XML length.
+	 * @param lengthBuffer
 	 * @return
+	 * @throws Exception 
 	 */
-	public XdebugResponse readPacket()
+	private int getXmlLength(Obj<ByteBuffer> lengthBuffer)
 			throws Exception {
 		
-        // Initialization.
-		Document xml = null;
-        Exception exception = null;
-        try {
-            
-            int packetLength = packetBuffer.limit();
-
-            // Convert body bytes to UTF-8.
-        	byte [] packetBytes = new byte[packetLength];
-        	packetBuffer.get(packetBytes);
-            String packetString = new String(packetBytes, "UTF-8");
-            
-            // TODO: <---DEBUG IT
-            //j.log("READ PACKET: %s", packetString);
+		// Prepare the length buffer for reading the XML length.
+		lengthBuffer.ref.flip();
+		
+		// Get the length of the buffer contents. Create byte array to hold the buffer contents.
+		int arrayLength = lengthBuffer.ref.limit();
+		byte [] bytes = new byte [arrayLength];
+		
+		// Read buffer contents into the byte array.
+		lengthBuffer.ref.get(bytes);
+		
+		// Convert bytes into UTF-8 encoded string.
+		String lengthText = new String(bytes, "UTF-8");
+		
+		// Get the length of the XML from the string.
+		int xmlLength = Integer.parseInt(lengthText);
+		
+		// Reset the length buffer.
+		lengthBuffer.ref.clear();
+		
+		// Return result.
+		return xmlLength;
+	}
+	
+	/**
+	 * Get Xdebug XML response.
+	 * @param xmlBuffer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugResponse getXmlContent(Obj<ByteBuffer> xmlBuffer)
+				throws Exception {
+		
+		// Prepare the XML buffer for reading the XML content.
+		xmlBuffer.ref.flip();
+		
+		// Get the length of the XML buffer. Create byte array to hold the buffer contents.
+		int arrayLength = xmlBuffer.ref.limit();
+		byte [] bytes = new byte [arrayLength];
+		
+		// Read buffer contents into the byte array.
+		xmlBuffer.ref.get(bytes);
+		
+		// Convert bytes into UTF-8 encoded string, the XML.
+		String xmlText = new String(bytes, "UTF-8");
+		
+        // Parse the XML string into a Document.
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
         
-            // Parse the XML string into a Document
-	        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-	        DocumentBuilder builder = factory.newDocumentBuilder();
-	        
-	        xml = builder.parse(new InputSource(new StringReader(packetString)));
-        }
-        catch (Exception e) {
-        	exception = e;
-        }
-        
-        // Reuse the packet buffer for new writing.
-        packetBuffer.clear();
-        
-        // Use the resulting Document
-        if (xml == null) {
-        	// Throw exception.
-        	Utility.throwException("org.maclan.server.messageCannotReceiveXdebugPacket", exception.getLocalizedMessage());
-        }
-        
+        Document xml = builder.parse(new InputSource(new StringReader(xmlText)));
+		
         // Create new packet object.
-    	XdebugResponse newPacket = new XdebugResponse(xml);
-    	return newPacket;
+    	XdebugResponse xmlResponse = new XdebugResponse(xml);
+    	
+    	// Reset the XML buffer.
+    	xmlBuffer.ref.clear();
+    	
+    	// Return XML response.
+    	return xmlResponse;
 	}
 	
 	/**
@@ -370,12 +393,12 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
-	 * Process Xdebug packet.
+	 * Process Xdebug responses.
 	 * @param listener
 	 * @param inputPacket
 	 * @throws Exception 
 	 */
-	public void processXdebugPacket(XdebugResponse inputPacket)
+	public void processXdebugResponse(XdebugResponse inputPacket)
 			throws Exception {
 		
 		// On INIT packet.

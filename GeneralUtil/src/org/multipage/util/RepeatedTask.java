@@ -164,7 +164,7 @@ public class RepeatedTask {
 			// Task loop.
 			try {
 				
-				// Delay start.
+				// Start delay.
 				if (startDelayMs > 0) {
 					Thread.sleep(startDelayMs);
 				}
@@ -175,7 +175,7 @@ public class RepeatedTask {
 					// Invoke lambda function.
 					exception.ref = null;
 		        	task.running = taskLambda.apply(task.running, exception);
-		        	
+
 		        	// Idle timeout.
 		        	Thread.sleep(idleTime);
 		        	

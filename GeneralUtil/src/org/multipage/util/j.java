@@ -7,12 +7,14 @@
 package org.multipage.util;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
@@ -21,6 +23,11 @@ import java.util.function.Supplier;
  *
  */
 public class j {
+	
+	/**
+	 * Format of time stamps.
+	 */
+	public static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 	
 	/**
 	 * Display time stamp switch
@@ -43,9 +50,10 @@ public class j {
 	private static final Object synclog = new Object();
 	
 	/**
-	 * Log message stop symbol.
+	 * Log message divider and stop symbols.
 	 */
-	private static final byte[] STOP_SYMBOL = { 0, 0 } ;
+	private static final byte[] DIVIDER_SYMBOL = { 0, 0 };
+	private static final byte[] STOP_SYMBOL = { 0, 0, 0, 0 } ;
 	
 	/**
 	 * Open consoles for mutlitask logging.
@@ -97,7 +105,7 @@ public class j {
 			lastTimeStampMs = currentTimeMs;
 			
 			if (logTimeDelta) {
-				formatToConsole(consoleIndex, "delta %dms ", timeDeltaMs);
+				formatToConsole(consoleIndex, timeStamp, "delta %dms ", timeDeltaMs);
 			}
 			
 			if (parameter instanceof LogParameter) {
@@ -118,7 +126,7 @@ public class j {
 						os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
 					}
 					else {
-						formatToConsole(consoleIndex, indentation + timeStampText + type + '\n', strings);
+						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', strings);
 					}
 					
 				}
@@ -127,12 +135,12 @@ public class j {
 						os.format(indentation + timeStampText + type);
 					}
 					else {
-						formatToConsole(consoleIndex, indentation + timeStampText + type + '\n');
+						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n');
 					}
 				}
 			}
 			else {
-				formatToConsole(consoleIndex, indentation + parameter.toString() + '\n', strings);
+				formatToConsole(consoleIndex, timeStamp, indentation + parameter.toString() + '\n', strings);
 			}
 		}
 	}
@@ -140,11 +148,12 @@ public class j {
 	/**
 	 * Output formatted text to appropriate output console.
 	 * @param consoleIndex
+	 * @param timeStamp
 	 * @param format
 	 * @param strings
 	 * @throws Exception 
 	 */
-	private static void formatToConsole(int consoleIndex, String format, Object... strings) {
+	private static void formatToConsole(int consoleIndex, Timestamp timeStamp, String format, Object... strings) {
 		
 		int count = openConsoles.length;
 		
@@ -158,8 +167,12 @@ public class j {
 				Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
 				
 				// Write the log message to the console.
-				consoleSocket.getOutputStream().write(bytes);
-				consoleSocket.getOutputStream().write(STOP_SYMBOL);
+				OutputStream stream = consoleSocket.getOutputStream();
+				stream.write(timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT).getBytes("UTF-8"));	
+				stream.write(DIVIDER_SYMBOL);
+				stream.write(bytes);
+				stream.write(STOP_SYMBOL);
+				stream.flush();
 			}
 			catch (Exception e) {
 				e.printStackTrace();

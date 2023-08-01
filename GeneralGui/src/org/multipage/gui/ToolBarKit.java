@@ -61,7 +61,14 @@ public class ToolBarKit {
 				actionLambda.run();
 			}
 		});
-		toolBarButton.setToolTipText(Resources.getString(toolTipResoure));
+		String tooltipText = null;
+		if (toolTipResoure.startsWith("#")) {
+			tooltipText = toolTipResoure.substring(1);
+		}
+		else {
+			tooltipText = Resources.getString(toolTipResoure);
+		}
+		toolBarButton.setToolTipText(tooltipText);
 		
 		ImageIcon icon = Images.getIcon(iconPictureName);
 		if (icon != null) {

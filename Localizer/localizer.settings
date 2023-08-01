@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-  <string>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties</string>
+  <string>C:\from_backup\multipage_ide\GeneralGui\src\org\multipage\gui\properties</string>
   <boolean>true</boolean>
   <java.awt.Rectangle>
     <x>0</x>
@@ -245,8 +245,17 @@
         <otherColumns>200</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
+    <program.localizer.LocalizerItem>
+      <filePath>C:\from_backup\multipage_ide\GeneralGui\src\org\multipage\gui\properties\messages_cz_CZ.properties</filePath>
+      <tabName>GUIUtils</tabName>
+      <columns>
+        <column0>30</column0>
+        <column1>274</column1>
+        <otherColumns>298</otherColumns>
+      </columns>
+    </program.localizer.LocalizerItem>
   </linked-list>
-  <int>0</int>
+  <int>2</int>
   <java.awt.Rectangle>
     <x>995</x>
     <y>13</y>

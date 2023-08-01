@@ -8,6 +8,7 @@ package org.maclan.server;
 
 import java.awt.Component;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -34,7 +35,7 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Listener idle timeout. 
 	 */
-	private static final long XDEBUG_RESULT_IDLE_MS = 200;
+	private static final long XDEBUG_RESULT_IDLE_MS = 5000;
 	
 	/**
 	 * Singleton object.
@@ -115,6 +116,7 @@ public class XdebugListener extends DebugListener {
 	 * Opens listener port.
 	 * @param port
 	 */
+	private static int readOpCounter = 1;
 	private void openListenerPort(int port)
 			throws Exception {
 		
@@ -147,13 +149,15 @@ public class XdebugListener extends DebugListener {
 					Obj<Integer> readingIndex = new Obj<Integer>(0);
 					
 					// Enter non blocking loop.
-					RepeatedTask.loopNonBlocking(taskName, -1, XDEBUG_RESULT_IDLE_MS, (exit, exception) -> {
+					RepeatedTask.loopNonBlocking(taskName, -1, 0, (exit, exception) -> {
 						
 						// Clear the socket reader lock.
-						Lock.clear(socketReaderLock);
+						socketReaderLock = new Lock();
 
 						// TODO: <---DEBUG Count number of reads.
 						j.log("- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
+						
+						// TODO: <---FIX Missing synchronization of input packets.
 						
 						// Read Xdebug data packet bytes.
 	                    client.read(session.inputBuffer, session, new CompletionHandler<Integer, XdebugListenerSession>() {
@@ -164,22 +168,56 @@ public class XdebugListener extends DebugListener {
 	                        		return;
 	                        	}
 	                        	
+	                        	// TODO: <---DEBUG
+	                        	j.log("<<<READ COUNTER %d>>>", readOpCounter);
+	                        	
+	                        	// TODO: <---DEBUG Remove whole cndition.
+	                        	/*if (readOpCounter == 4)	{
+	                        		
+	                        		// Read input buffer.
+	                        		session.inputBuffer.flip();
+	                        		int length = session.inputBuffer.limit();
+	                        		byte [] bytes = new byte [length];
+	                        		session.inputBuffer.get(bytes);
+	                        		String inputContent = null;
+	                        		try {
+										inputContent = new String(bytes, "UTF-8");
+										j.log("INPUT BUFFER: %s", inputContent);
+									}
+	                        		catch (Exception e) {
+										e.printStackTrace();
+									}
+	                        		
+	                        		// Read packet buffer.
+	                        		session.xmlBuffer.ref.flip();
+	                        		length = session.xmlBuffer.ref.limit();
+	                        		bytes = new byte [length];
+	                        		session.xmlBuffer.ref.get(bytes);
+	                        		String packetContent = null;
+	                        		try {
+										packetContent = new String(bytes, "UTF-8");
+										j.log("PACKET BUFFER: %s", packetContent);
+									}
+	                        		catch (Exception e) {
+										e.printStackTrace();
+									}
+	                        		j.log("BREAK");
+	                        	}*/
+	                        	
 								try {
 	                        		// Pull received bytes from the input buffer and put them into the packet buffer.
-	                        		while (session.readInputBuffer()) {
-	                        			
-			                            // Pull incomming Xdebug response packet from the session input buffer.
-			                            XdebugResponse inputPacket = session.readPacket();
-			                            
-			                    		// Herein prepare input buffer for next write operation.
-			                            Utility.reuseInputBuffer(session.inputBuffer);
-			                            
-			                            // Process OTHER incomming packet.
-			                            session.processXdebugPacket(inputPacket);
-			                            
-			                            // Call input packet lambda.
-			                            onInputPacket(session, inputPacket);
-		                        	}
+	                        		session.readXdebugResponses(xdebugResponse -> {
+	                        			try {
+				                            // Process incomming Xdebug responses.
+				                            session.processXdebugResponse(xdebugResponse);
+				                            
+				                            // Input packet callback.
+				                            onInputPacket(session, xdebugResponse);
+	                        			}
+	                        			catch (Exception e) {
+	                        				e.printStackTrace();
+	                        			}
+		                        	});
 	                        		
 	                        		// Again prepare input buffer for next write operation.
 	                        		Utility.reuseInputBuffer(session.inputBuffer);
@@ -187,6 +225,8 @@ public class XdebugListener extends DebugListener {
 	                        	catch (Exception e) {
 	                        		exception.ref = e;
 	                        	}
+								
+								j.log("<<<LOCK %d NOTIFIED>>>", readOpCounter);
 								
 	                        	// Notify the listener lock.
 	                        	Lock.notify(socketReaderLock);
@@ -204,6 +244,13 @@ public class XdebugListener extends DebugListener {
 	                    if (timeoutEllapsed) {
 	                    	j.log("TIMEOUT %dms ELLAPSED", XDEBUG_RESULT_IDLE_MS);
 	                    }
+	                    else {
+	                    	j.log("<<<LOCK %d RELEASED>>>", readOpCounter);
+	                    	readOpCounter++;
+	                    }
+	                    
+	                    // TODO: <---DEBUG
+	                    session.inputBuffer = ByteBuffer.allocate(1024);
 	                    return exit;
 					});
 				}

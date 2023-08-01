@@ -599,9 +599,6 @@ public class ProgramServlet extends FastCGIServlet {
 				// Output memory stream and close it
 				byte [] output = memoryOutputStream.toByteArray();
 				_response.getOutputStream().write(output);
-				
-				// TODO: <---DEBUG
-				System.err.format("OUTPUT:\n%s", new String(output));
 			}
 			
 			// Close output streams

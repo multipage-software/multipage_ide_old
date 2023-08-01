@@ -6,9 +6,7 @@
  */
 package org.maclan.server;
 
-import java.io.StringReader;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,7 +26,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
-import org.xml.sax.InputSource;
 
 /**
  * Xdebug packet object.
