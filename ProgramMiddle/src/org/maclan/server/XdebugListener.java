@@ -131,15 +131,14 @@ public class XdebugListener extends DebugListener {
 			public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
         		
         		// TODO: <---REMOVE IT
-        		j.log("");
-        		j.log("----------------------------------------------------------------");
+        		j.log(1, "----------------------------------------------------------------");
 				try {
 					// Create and remember new session object.
 					XdebugListenerSession session = new XdebugListenerSession(server, client);
 					XdebugListener.this.sessions.add(session);
 					
 					// TODO: <---DEBUG Create session object.
-					j.log("CREATE SESSION %x", session.hashCode());
+					j.log(1, "CREATE SESSION %x", session.hashCode());
 					
 					// Call the "accept session" lambda.
 					onAcceptSession(session);
@@ -155,54 +154,21 @@ public class XdebugListener extends DebugListener {
 						socketReaderLock = new Lock();
 
 						// TODO: <---DEBUG Count number of reads.
-						j.log("- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
+						j.log(1, "- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
 						
 						// TODO: <---FIX Missing synchronization of input packets.
 						
 						// Read Xdebug data packet bytes.
 	                    client.read(session.inputBuffer, session, new CompletionHandler<Integer, XdebugListenerSession>() {
 	                        public void completed(Integer result, XdebugListenerSession session) {
-	                        	
+	    						
 	                        	// If nothing read, exit the method.
 	                        	if (result <= -1) {
 	                        		return;
 	                        	}
 	                        	
 	                        	// TODO: <---DEBUG
-	                        	j.log("<<<READ COUNTER %d>>>", readOpCounter);
-	                        	
-	                        	// TODO: <---DEBUG Remove whole cndition.
-	                        	/*if (readOpCounter == 4)	{
-	                        		
-	                        		// Read input buffer.
-	                        		session.inputBuffer.flip();
-	                        		int length = session.inputBuffer.limit();
-	                        		byte [] bytes = new byte [length];
-	                        		session.inputBuffer.get(bytes);
-	                        		String inputContent = null;
-	                        		try {
-										inputContent = new String(bytes, "UTF-8");
-										j.log("INPUT BUFFER: %s", inputContent);
-									}
-	                        		catch (Exception e) {
-										e.printStackTrace();
-									}
-	                        		
-	                        		// Read packet buffer.
-	                        		session.xmlBuffer.ref.flip();
-	                        		length = session.xmlBuffer.ref.limit();
-	                        		bytes = new byte [length];
-	                        		session.xmlBuffer.ref.get(bytes);
-	                        		String packetContent = null;
-	                        		try {
-										packetContent = new String(bytes, "UTF-8");
-										j.log("PACKET BUFFER: %s", packetContent);
-									}
-	                        		catch (Exception e) {
-										e.printStackTrace();
-									}
-	                        		j.log("BREAK");
-	                        	}*/
+	                        	j.log(1, "<<<READ COUNTER %d>>>", readOpCounter);
 	                        	
 								try {
 	                        		// Pull received bytes from the input buffer and put them into the packet buffer.
@@ -219,14 +185,14 @@ public class XdebugListener extends DebugListener {
 	                        			}
 		                        	});
 	                        		
-	                        		// Again prepare input buffer for next write operation.
+	                        		// Prepare input buffer for the next write operation.
 	                        		Utility.reuseInputBuffer(session.inputBuffer);
 	                        	}
 	                        	catch (Exception e) {
 	                        		exception.ref = e;
 	                        	}
 								
-								j.log("<<<LOCK %d NOTIFIED>>>", readOpCounter);
+								j.log(1, "<<<LOCK %d NOTIFIED>>>", readOpCounter);
 								
 	                        	// Notify the listener lock.
 	                        	Lock.notify(socketReaderLock);
@@ -242,10 +208,10 @@ public class XdebugListener extends DebugListener {
 	                    
 	                    // TODO: <---DEBUG Timeout ellapsed.
 	                    if (timeoutEllapsed) {
-	                    	j.log("TIMEOUT %dms ELLAPSED", XDEBUG_RESULT_IDLE_MS);
+	                    	j.log(1, "TIMEOUT %dms ELLAPSED", XDEBUG_RESULT_IDLE_MS);
 	                    }
 	                    else {
-	                    	j.log("<<<LOCK %d RELEASED>>>", readOpCounter);
+	                    	j.log(1, "<<<LOCK %d RELEASED>>>", readOpCounter);
 	                    	readOpCounter++;
 	                    }
 	                    

@@ -11,19 +11,17 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
@@ -33,12 +31,14 @@ import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
 import javax.swing.JToolBar;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.multipage.util.Obj;
+import org.multipage.util.RepeatedTask;
 import org.multipage.util.j;
 
 /**
@@ -52,6 +52,11 @@ public class Consoles extends JFrame {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * Text panel MIME content type.
+	 */
+	private String TEXT_PANE_MIME_TYPE = "text/html";
 
 	/**
 	 * Application start up timeout in milliseconds.
@@ -71,17 +76,27 @@ public class Consoles extends JFrame {
 	/**
 	 * Message record class.
 	 */
-	private static final class MessageRecord {
+	public static final class MessageRecord {
+		
+		/**
+		 * Flag that can switch between message timestamps and console timestamps.
+		 */
+		public static boolean useConsoleTimeStamps = false;
 		
 		/**
 		 * Timestamp.
 		 */
-		LocalTime timestamp = null;
+		private LocalTime timestamp = null;
 		
 		/**
 		 * Record text.
 		 */
-		String messageText = null;
+		private String messageText = null;
+		
+		/**
+		 * Time when the message was written into the console
+		 */
+		private LocalTime consoleWriteTime = null;
 		
 		/**
 		 * Constructor.
@@ -94,39 +109,69 @@ public class Consoles extends JFrame {
 			this.timestamp = timestamp;
 			this.messageText = messageString;
 		}
+		
+		/**
+		 * Get string representation of the log record.
+		 */
+		@Override
+		public String toString() {
+			
+			return (useConsoleTimeStamps ? consoleWriteTime : timestamp) + messageText;
+		}
 	}
 
 	/**
 	 * Console class.
 	 */
 	private static final class Console {
-
-		/**
-		 * Console name.
-		 */
-		String name = null;
-
+		
 		/**
 		 * Console text pane.
 		 */
-		JTextPane textPane = null;
+		protected JTextPane textPane = null;
 
 		/**
 		 * Minimum and maximum timestamps.
 		 */
-		LocalTime minimumTimestamp = null;
-		LocalTime maximumTimestamp = null;
+		protected LocalTime minimumTimestamp = null;
+		protected LocalTime maximumTimestamp = null;
 		
 		/**
 		 * Console port number.
 		 */
-		int port = -1;
-
+		protected int port = -1;
+		
+		/**
+		 * Incomming buffer size.
+		 */
+		private static final int INPUT_BUFFER_SIZE = 1024;
+		private static final int TIMESTAMP_BUFFER_SIZE = 16;
+		private static final int LOG_MESSAGE_BUFFER_SIZE = INPUT_BUFFER_SIZE;
+		
+		/**
+		 * Console input buffers.
+		 */
+		protected ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
+		public Obj<ByteBuffer> timestampBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
+		public Obj<ByteBuffer> logMessageBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LOG_MESSAGE_BUFFER_SIZE));
+		/**
+		 * Input reader states and constants.
+		 */
+		private static final int READ_TIMESTAMP = 0;
+		private static final int READ_LOG_MESSAGE = 1;
+		
+		private int inputReaderState = READ_TIMESTAMP;
+		
+		/**
+		 * Last read timestamp.
+		 */
+		private LocalTime readTimestamp = null;
+		
 		/**
 		 * Message record list that maps time axis to the records.
 		 */
-		LinkedList<MessageRecord> consoleRecords = new LinkedList<>();
-
+		protected LinkedList<MessageRecord> consoleRecords = new LinkedList<>();
+		
 		/**
 		 * 
 		 * @param consoleName
@@ -134,8 +179,7 @@ public class Consoles extends JFrame {
 		 * @param port
 		 */
 		public Console(String consoleName, JTextPane textPane, int port) {
-
-			name = consoleName;
+			
 			this.textPane = textPane;
 			this.port = port;
 		}
@@ -143,12 +187,14 @@ public class Consoles extends JFrame {
 		/**
 		 * Add new message record.
 		 * 
-		 * @param messageString
+		 * @param messageRecord
 		 */
-		public void addMessageRecord(String messageString) {
+		public void addMessageRecord(MessageRecord messageRecord) {
 
 			// Get current time.
 			LocalTime timeNow = LocalTime.now();
+			
+			messageRecord.consoleWriteTime = timeNow;
 
 			// Set maximum and minimum timestamp.
 			if (minimumTimestamp == null) {
@@ -159,7 +205,6 @@ public class Consoles extends JFrame {
 			}
 
 			// Create new message record and put it into the message map.
-			MessageRecord messageRecord = new MessageRecord(timeNow, messageString);
 			synchronized (consoleRecords) {
 				consoleRecords.add(messageRecord);
 			}
@@ -175,33 +220,143 @@ public class Consoles extends JFrame {
 			minimumTimestamp = null;
 			textPane.setText("");
 		}
+		
+		/**
+		 * Read log messages from the input buffer.
+		 * @param logMessageLambda
+		 * @throws Exception 
+		 */
+		public boolean readLogMessages(Consumer<MessageRecord> logMessageLambda)
+				throws Exception {
+			
+			// Prepare input buffer for reading.
+			inputBuffer.flip();
+			
+			// If there are no remaining bytes in the input buffer, return false value.
+			if (!inputBuffer.hasRemaining()) {
+				return false;
+			}
+			
+			boolean messageAccepted = false;
+			
+			// Read until end of input buffer.
+			boolean endOfReading = false;
+			while (!endOfReading) {
+				
+				Obj<Boolean> terminated = new Obj<Boolean>(false);
+				
+				// Determine protocol state from input byte value and invoke related action.
+				switch (inputReaderState) {
+				
+				case READ_TIMESTAMP:
+					endOfReading = Utility.readUntil(inputBuffer, timestampBuffer, TIMESTAMP_BUFFER_SIZE, DIVIDER_SYMBOL, terminated);
+					if (terminated.ref) {
+						inputReaderState = READ_LOG_MESSAGE;
+						readTimestamp = getTimestamp(timestampBuffer.ref);
+					}
+					break;
+					
+				case READ_LOG_MESSAGE:
+					endOfReading = Utility.readUntil(inputBuffer, logMessageBuffer, LOG_MESSAGE_BUFFER_SIZE, TERMINAL_SYMBOL, terminated);
+					if (terminated.ref) {
+						
+						inputReaderState = READ_TIMESTAMP;
+						String logMessageText = getLogMessage(logMessageBuffer.ref);
+						
+						MessageRecord messageRecord = new MessageRecord(readTimestamp, logMessageText);
+						logMessageLambda.accept(messageRecord);
+						
+						messageAccepted = true;
+					}
+					break;
+				}
+			}
+			
+			return messageAccepted;
+		}
+	
+		/**
+		 * Get timestamp from the input buffer.
+		 * @param timestampBuffer
+		 * @return
+		 * @throws Exception 
+		 */
+		private LocalTime getTimestamp(ByteBuffer timestampBuffer)
+				throws Exception {
+			
+			// Prepare the timestamp buffer for reading the XML length.
+			timestampBuffer.flip();
+			
+			// Get length of the nuffer.
+			int arrayLength = timestampBuffer.limit();
+			byte [] bytes = new byte [arrayLength];
+			
+			// Read buffer contents.
+			timestampBuffer.get(bytes);
+			
+			// Convert bytes into UTF-8 encoded string.
+			String timstampText = new String(bytes, "UTF-8");
+			
+			// Convert text to timstamp object.
+			LocalTime timestamp = LocalTime.parse(timstampText, TIMESTAMP_FORMAT);
+			
+			// Reset the timestamp buffer.
+			timestampBuffer.clear();
+			
+			// Return result.
+			return timestamp;
+		}
+		
+		/**
+		 * Get log message from the input buffer.
+		 * @param logMessageBuffer
+		 * @return
+		 * @throws Exception 
+		 */
+		private String getLogMessage(ByteBuffer logMessageBuffer)
+				throws Exception {
+			
+			// Prepare the log message buffer for reading.
+			logMessageBuffer.flip();
+			
+			// Get length of the nuffer.
+			int arrayLength = logMessageBuffer.limit();
+			byte [] bytes = new byte [arrayLength];
+			
+			// Read buffer contents.
+			logMessageBuffer.get(bytes);
+			
+			// Convert bytes into UTF-8 encoded string.
+			String logMessageText = new String(bytes, "UTF-8");
+			
+			// Reset the log message buffer.
+			logMessageBuffer.clear();
+			
+			// Return result.
+			return logMessageText;
+		}
 	}
-
+	
 	/**
 	 * 
 	 */
-	private static Map<String, Console> consoleViews = new ConcurrentHashMap<>();
+	private static Map<String, Console> consoles = new ConcurrentHashMap<>();
 
 	/**
-	 * Socket tiemout in milliseconds.
+	 * Socket idle timeout in milliseconds.
 	 */
-	private static final int SOCKET_TIMEOUT_MS = 250;
+	private static final int IDLE_TIMEOUT_MS = 250;
 
 	/**
 	 * Log message divider and stop symbols.
 	 */
 	private static final byte[] DIVIDER_SYMBOL = { 0, 0 };
-	private static final byte[] STOP_SYMBOL = { 0, 0, 0, 0 } ;
-
-	/**
-	 * Input buffer size.
-	 */
-	private static final int BUFFER_SIZE = 1024;
-
+	private static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
+	
 	/**
 	 * Set this flag to true on application exit.
 	 */
-	private boolean exitApplication = false;
+	private static boolean exitApplication = false;
 
 	/**
 	 * Application state.
@@ -359,16 +514,16 @@ public class Consoles extends JFrame {
 		panel.add(scrollPane, BorderLayout.CENTER);
 
 		JTextPane textPane = new JTextPane();
-		textPane.setContentType("text/html");
+		textPane.setContentType(TEXT_PANE_MIME_TYPE);
 		scrollPane.setViewportView(textPane);
 
 		tabbedPane.addTab(consoleName, null, panel, null);
 
 		Console console = new Console(consoleName, textPane, port);
-		consoleViews.put(consoleName, console);
+		consoles.put(consoleName, console);
 
 		// Open console port.
-		openConsole(consoleName, port);
+		openConsole(consoleName);
 	}
 
 	/**
@@ -392,8 +547,7 @@ public class Consoles extends JFrame {
 	 */
 	private void createToolbar() {
 
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/gui/images/cancel_icon.png", "#Clear console",
-				() -> onClearConsole());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/gui/images/cancel_icon.png", "#Clear console", () -> onClearConsole());
 	}
 
 	/**
@@ -413,7 +567,7 @@ public class Consoles extends JFrame {
 		String consoleName = tabbedPane.getTitleAt(selectedIndex);
 
 		// Get console view and reset it.
-		Console console = consoleViews.get(consoleName);
+		Console console = consoles.get(consoleName);
 		if (console == null) {
 			return;
 		}
@@ -430,233 +584,159 @@ public class Consoles extends JFrame {
 
 	/**
 	 * Open port for console with given name.
-	 * 
 	 * @param consoleName
-	 * @param portNumber
 	 */
-	private void openConsole(String consoleName, int portNumber) {
-
-		Thread connectionThread = new Thread(() -> {
-
-			ServerSocket serverSocket = null;
-			try {
-				serverSocket = new ServerSocket(portNumber);
-				System.out.println("Console " + consoleName + " listening on port " + portNumber);
-
-				// Set socket timeout.
-				serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
-
-				while (!exitApplication) {
-
-					Obj<Socket> clientSocket = new Obj<Socket>(null);
-					try {
-						clientSocket.ref = serverSocket.accept();
-						System.out.println("New connection from " + clientSocket.ref.getInetAddress().getHostAddress());
-					}
-					// When timout ellapsed, continue to with the loop.
-					catch (SocketTimeoutException e) {
-						continue;
-					}
-
-					// Handle the client connection in a separate thread.
-					Thread serverThread = new Thread(() -> {
-
-						while (!exitApplication) {
-
-							try {
-								// Read log message until we reach the stop symbol.
-								MessageRecord logMesssage = readMessage(clientSocket.ref, STOP_SYMBOL);
-								if (logMesssage != null) {
-
-									// Add log message
-									addMessage(consoleName, logMesssage.messageText);
-
-									// Update the console.
-									updateConsole(consoleName);
-								}
-							} catch (SocketTimeoutException e) {
-								continue;
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					});
-					serverThread.start();
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					serverSocket.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+	private void openConsole(String consoleName) {
+		
+		try {
+			// Try to get console by its name.
+			Console console = consoles.get(consoleName);
+			if (console == null) {
+				// Show error message.
+				Utility.show2(this, consoleName + " not found.");
 			}
-		});
-		connectionThread.start();
+			
+			// Open asynchornous server socket.
+	        AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
+	        InetSocketAddress socketAddress = new InetSocketAddress("localhost", console.port);
+	        server.bind(socketAddress);
+	        server.accept(server, new CompletionHandler<AsynchronousSocketChannel, AsynchronousServerSocketChannel>() {
+	        
+	        	// When connection is completed...
+	        	@Override
+				public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
+	        		try {
+                		
+                		// TODO: <---DEBUG
+                		j.log("server.accept.completed");
+	        			
+	        			// Start a loop to read input data. 
+	        			RepeatedTask.loopBlocking(consoleName, -1, IDLE_TIMEOUT_MS, (exit, exception) -> {
+	        				
+	        				// TODO: <---DEBUG
+	                		j.log("client.read");
+                    		
+							// Read input data bytes.
+		                    client.read(console.inputBuffer, console, new CompletionHandler<Integer, Console>() {
+		                    	
+		                    	// After read completed...
+		                    	public void completed(Integer result, Console console) {
+		                    		
+		                    		try {
+			                    		// Read log messages from input buffer.
+			                    		console.readLogMessages(logMessage -> {
+			                    			
+			                    			try {
+			    								// Add log message
+			                    				console.addMessageRecord(logMessage);
+			                    				
+			                    				// TODO: <---DEBUG
+						                		j.log("LOG %s", logMessage);
+			                    			}
+			                    			catch (Exception e) {
+			                    				// Show error message.
+			                    				Utility.show2(Consoles.this, e.getLocalizedMessage());
+			                    			}
+			                    		});
+			                    		
+			                    		// TODO: <---DEBUG
+				                		j.log("updateConsole");
+			                    		
+	    								// Update the console.
+	    								updateConsole(console);
+			                    		
+		                        		// Prepare input buffer for the next write operation.
+		                        		Utility.reuseInputBuffer(console.inputBuffer);
+		                    		}
+		                    		catch (Exception e)	{
+		                    			// Show error message.
+			                    		Utility.show2(Consoles.this, e.getLocalizedMessage());
+		                    		}
+		                    	}
+		                    	
+		                    	// On read error...
+								public void failed(Throwable e, Console console) {
+				        			// Show error message.
+				        			Utility.show2(Consoles.this, e.getLocalizedMessage());
+		                        }
+		                    });
+	        				
+	        				// Exit the blocking loop on application exit.
+	        				boolean running = !exitApplication;
+	        				return running;
+	        			});
+	        		}
+	        		catch (Exception e) {
+	        			// Show error message.
+	        			Utility.show2(Consoles.this, e.getLocalizedMessage());
+	        		}
+	        	}
+	        	
+				// If the connection failed...
+	            public void failed(Throwable exception, AsynchronousServerSocketChannel server) {
+	    			// Show error message.
+	    			Utility.show2(Consoles.this, exception.getLocalizedMessage());
+	            }
+	        });	
+		}
+		catch (Exception e) {
+			// Show error message.
+			Utility.show2(this, e.getLocalizedMessage());
+		}
 	}
-
-	/**
-	 * Read a message from the client socket until the stop symbol is reached.
-	 * 
-	 * @param clientSocket
-	 * @param terminalSymbol
-	 * @return
-	 * @throws SocketTimeoutException
-	 */
-	private MessageRecord readMessage(Socket clientSocket, byte[] terminalSymbol) throws Exception {
-
-		int timoutMs = 10 * SOCKET_TIMEOUT_MS;
-
-		InputStream stream = clientSocket.getInputStream();
-
-		byte[] inputBytes = new byte[BUFFER_SIZE];
-		Obj<ByteBuffer> outputBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(BUFFER_SIZE));
-		Obj<Boolean> terminated = new Obj<Boolean>(false);
-
-		while (!exitApplication) {
-
-			// Read socket input bytes.
-			try {
-				int bytesRead = stream.read(inputBytes);
-				if (bytesRead > 0) {
-
-					Utility.readUntil(inputBytes, outputBuffer, BUFFER_SIZE, terminalSymbol, terminated);
-
-					if (terminated.ref) {
-
-						// Return the messahe.
-						outputBuffer.ref.flip();
-						
-						int length = outputBuffer.ref.limit();
-						byte[] output = new byte[length];
-						outputBuffer.ref.get(output);
-						
-						List<String> byteStrings = Utility.splitBytesToStrings(output, BUFFER_SIZE, DIVIDER_SYMBOL, terminalSymbol);
-						int stringCount = byteStrings.size();
-						
-						// Get message timestamp.
-						LocalTime timestamp = null;
-						if (stringCount > 0) { 
-							String timeStampText = byteStrings.get(0);
-							timestamp = LocalTime.parse(timeStampText, TIMESTAMP_FORMAT);
-						}	
-						
-						// Get message text.
-						String messageString = null;
-						if (stringCount > 1) {
-							messageString = byteStrings.get(1);
-						}
-						
-						MessageRecord messageRecord = new MessageRecord(timestamp, messageString);
-						return messageRecord;
-					}
-				}
-			}
-			catch (DateTimeParseException  e) {
-				throw e;
-			}
-			catch (IOException e) {
-				// EOF reached. Below wait for the next socket read operation.
-			}
-			catch (Exception e) {
-				throw new IllegalStateException("Error reading form socket.");
-			}
-
-			// Idle timeout.
-			Thread.sleep(SOCKET_TIMEOUT_MS);
-			timoutMs -= SOCKET_TIMEOUT_MS;
-
-			if (timoutMs >= 0) {
-				continue;
-			} else {
-				throw new SocketTimeoutException("Read message timeout.");
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Add the log message into the console with given name.
-	 * 
-	 * @param consoleName
-	 * @param logMessage
-	 */
-	private void addMessage(String consoleName, String logMessage) throws Exception {
-
-		// Check input message.
-		if (logMessage == null) {
-			return;
-		}
-
-		// Try to get console by its name.
-		Console console = consoleViews.get(consoleName);
-		if (console == null) {
-			new IllegalStateException("Console " + consoleName + " not found");
-		}
-
-		logMessage = logMessage.trim();
-		if (logMessage.isEmpty()) {
-			return;
-		}
-
-		console.addMessageRecord(logMessage.trim());
-	}
-
+	
 	/**
 	 * Update the console.
 	 * 
-	 * @param consoleName
+	 * @param console
 	 */
-	private void updateConsole(String consoleName) {
-
-		// Try to get console by its name.
-		Console console = consoleViews.get(consoleName);
-		if (console == null) {
-			new IllegalStateException("Console " + consoleName + " not found");
-		}
+	private void updateConsole(Console console) {
 		
-		// Check timestamps for null values.
-		if (console.maximumTimestamp == null || console.minimumTimestamp == null) {
-			return;
-		}
-
-		// Get text view.
-		JTextPane textPane = console.textPane;
-
-		// Get time axis slider value and compute slider timespan.
-		int sliderValue = sliderTimeSpan.getValue();
-		long maxNanos = console.maximumTimestamp.toNanoOfDay();
-		long minNanos = console.minimumTimestamp.toNanoOfDay();
-		long nanosSpan = maxNanos - minNanos;
-		long sliderNanos = nanosSpan * sliderValue / 100;
-		LocalTime sliderTimestamp = console.minimumTimestamp.plusNanos(sliderNanos);
-
-		// Compile text contents.
-		Obj<String> contents = new Obj<String>("<html>");
-		Obj<Boolean> highlighted = new Obj<Boolean>(false);
-
-		synchronized (console.consoleRecords) {
+		SwingUtilities.invokeLater(() -> {
+					
+			// Check timestamps for null values.
+			if (console.maximumTimestamp == null || console.minimumTimestamp == null) {
+				return;
+			}
+	
+			// Get text view.
+			JTextPane textPane = console.textPane;
+	
+			// Get time axis slider value and compute slider timespan.
+			int sliderValue = sliderTimeSpan.getValue();
+			long maxNanos = console.maximumTimestamp.toNanoOfDay();
+			long minNanos = console.minimumTimestamp.toNanoOfDay();
+			long nanosSpan = maxNanos - minNanos;
+			long sliderNanos = nanosSpan * sliderValue / 100;
+			LocalTime sliderTimestamp = console.minimumTimestamp.plusNanos(sliderNanos);
+	
+			// Compile text contents.
+			Obj<String> contents = new Obj<String>("<html>");
+			Obj<Boolean> highlighted = new Obj<Boolean>(false);
+			
 			console.consoleRecords.forEach(messageRecord -> {
 
 				String color = null;
 				if (!highlighted.ref && messageRecord.timestamp.compareTo(sliderTimestamp) > 0) {
 					color = "red";
 					highlighted.ref = true;
-				} else {
+				}
+				else {
 					color = "black";
 				}
-				contents.ref += String.format("<span style='color:%s;'>%s</span><br>", color, messageRecord.messageText);
+				
+				String messageText = Utility.htmlSpecialChars(messageRecord.messageText);
+				String messageHtml = String.format("<span style='color:%s'>%s</span><br>", color, messageText);
+				contents.ref += messageHtml;
 			});
-		}
-
-		// Set text of the text view.
-		textPane.setText(contents.ref);
-
-		// Move caret to the end of the view.
-		int endPosition = textPane.getDocument().getLength();
-		textPane.setCaretPosition(endPosition);
+			
+			// Set text of the text view.
+			textPane.setText(contents.ref);
+			
+			// Move caret to the end of the view.
+			int endPosition = textPane.getDocument().getLength();
+			textPane.setCaretPosition(endPosition);
+		});
 	}
 
 	/**
@@ -672,8 +752,13 @@ public class Consoles extends JFrame {
 
 		// Get console name.
 		String consoleName = tabbedPane.getTitleAt(selectedIndex);
+		Console console = consoles.get(consoleName);
+		
+		if (console == null) {
+			return;
+		}
 
 		// Update console.
-		updateConsole(consoleName);
+		updateConsole(console);
 	}
 }

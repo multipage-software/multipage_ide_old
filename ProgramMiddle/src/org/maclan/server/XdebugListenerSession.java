@@ -55,9 +55,9 @@ public class XdebugListenerSession extends DebugListenerSession {
 	/**
 	 * Incomming buffer size.
 	 */
-	private int INPUT_BUFFER_SIZE = 1024;
-	private int LENGTH_BUFFER_SIZE = 16;
-	private int PACKET_BUFFER_SIZE = INPUT_BUFFER_SIZE;
+	private static final int INPUT_BUFFER_SIZE = 1024;
+	private static final int LENGTH_BUFFER_SIZE = 16;
+	private static final int PACKET_BUFFER_SIZE = INPUT_BUFFER_SIZE;
 	
 	/**
 	 * Input and packet buffers that can receive Xdebug packets comming from socket connection.
@@ -139,7 +139,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 		if (!inputBuffer.hasRemaining()) {
 			
 			// TODO: <---DEBUG
-			j.log("FULL BUFFER");
+			j.log("EMPTY BUFFER");
 			return false;
 		}
 		
@@ -158,7 +158,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 				endOfReading = Utility.readUntil(inputBuffer, lengthBuffer, LENGTH_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
 				if (terminated.ref) {
 					inputReaderState = READ_XML;
-					xmlLength = getXmlLength(lengthBuffer);
+					xmlLength = getXmlLength(lengthBuffer.ref);
 				}
 				break;
 				
@@ -166,7 +166,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 				endOfReading = Utility.readUntil(inputBuffer, xmlBuffer, PACKET_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
 				if (terminated.ref) {
 					inputReaderState = READ_LENGTH;
-					XdebugResponse xdebugResponse = getXmlContent(xmlBuffer);
+					XdebugResponse xdebugResponse = getXmlContent(xmlBuffer.ref);
 					xdebugResponseLambda.accept(xdebugResponse);
 					xmlAccepted = true;
 				}
@@ -183,18 +183,18 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * @return
 	 * @throws Exception 
 	 */
-	private int getXmlLength(Obj<ByteBuffer> lengthBuffer)
+	private int getXmlLength(ByteBuffer lengthBuffer)
 			throws Exception {
 		
 		// Prepare the length buffer for reading the XML length.
-		lengthBuffer.ref.flip();
+		lengthBuffer.flip();
 		
 		// Get the length of the buffer contents. Create byte array to hold the buffer contents.
-		int arrayLength = lengthBuffer.ref.limit();
+		int arrayLength = lengthBuffer.limit();
 		byte [] bytes = new byte [arrayLength];
 		
 		// Read buffer contents into the byte array.
-		lengthBuffer.ref.get(bytes);
+		lengthBuffer.get(bytes);
 		
 		// Convert bytes into UTF-8 encoded string.
 		String lengthText = new String(bytes, "UTF-8");
@@ -203,7 +203,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 		int xmlLength = Integer.parseInt(lengthText);
 		
 		// Reset the length buffer.
-		lengthBuffer.ref.clear();
+		lengthBuffer.clear();
 		
 		// Return result.
 		return xmlLength;
@@ -215,18 +215,18 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * @return
 	 * @throws Exception 
 	 */
-	private XdebugResponse getXmlContent(Obj<ByteBuffer> xmlBuffer)
+	private XdebugResponse getXmlContent(ByteBuffer xmlBuffer)
 				throws Exception {
 		
 		// Prepare the XML buffer for reading the XML content.
-		xmlBuffer.ref.flip();
+		xmlBuffer.flip();
 		
 		// Get the length of the XML buffer. Create byte array to hold the buffer contents.
-		int arrayLength = xmlBuffer.ref.limit();
+		int arrayLength = xmlBuffer.limit();
 		byte [] bytes = new byte [arrayLength];
 		
 		// Read buffer contents into the byte array.
-		xmlBuffer.ref.get(bytes);
+		xmlBuffer.get(bytes);
 		
 		// Convert bytes into UTF-8 encoded string, the XML.
 		String xmlText = new String(bytes, "UTF-8");
@@ -241,7 +241,7 @@ public class XdebugListenerSession extends DebugListenerSession {
     	XdebugResponse xmlResponse = new XdebugResponse(xml);
     	
     	// Reset the XML buffer.
-    	xmlBuffer.ref.clear();
+    	xmlBuffer.clear();
     	
     	// Return XML response.
     	return xmlResponse;

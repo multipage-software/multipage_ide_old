@@ -55,7 +55,7 @@ public class RepeatedTask {
 	 * @param taskName
 	 * @param startDelayMs
 	 * @param idleTimeMs
-	 * @param taskLambda
+	 * @param taskLambda (exit, exception) -> running
 	 * @throws InterruptedException 
 	 */
 	public static void loopBlocking(String taskName, long startDelayMs, long idleTimeMs, BiFunction<Boolean, Obj<Exception>, Boolean> taskLambda)

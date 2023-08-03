@@ -53,7 +53,7 @@ public class j {
 	 * Log message divider and stop symbols.
 	 */
 	private static final byte[] DIVIDER_SYMBOL = { 0, 0 };
-	private static final byte[] STOP_SYMBOL = { 0, 0, 0, 0 } ;
+	private static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
 	
 	/**
 	 * Open consoles for mutlitask logging.
@@ -171,7 +171,7 @@ public class j {
 				stream.write(timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT).getBytes("UTF-8"));	
 				stream.write(DIVIDER_SYMBOL);
 				stream.write(bytes);
-				stream.write(STOP_SYMBOL);
+				stream.write(TERMINAL_SYMBOL);
 				stream.flush();
 			}
 			catch (Exception e) {
