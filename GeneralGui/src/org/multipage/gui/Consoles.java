@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2023 (C) vakol
  * 
- * Created on : 28-11-2018
+ * Created on : 24-06-2023
  *
  */
 package org.multipage.gui;
@@ -9,40 +9,41 @@ package org.multipage.gui;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Rectangle;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
+import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSlider;
-import javax.swing.JTabbedPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.RepeatedTask;
 import org.multipage.util.j;
 
 /**
- * 
+ * Multitask log consoles that can be also run as a standalone application with LocConsole and ConsolePropeties classes
+ * included,
  * @author vakol
  *
  */
@@ -52,11 +53,6 @@ public class Consoles extends JFrame {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
-	
-	/**
-	 * Text panel MIME content type.
-	 */
-	private String TEXT_PANE_MIME_TYPE = "text/html";
 
 	/**
 	 * Application start up timeout in milliseconds.
@@ -96,7 +92,7 @@ public class Consoles extends JFrame {
 		/**
 		 * Time when the message was written into the console
 		 */
-		private LocalTime consoleWriteTime = null;
+		LocalTime consoleWriteTime = null;
 		
 		/**
 		 * Constructor.
@@ -121,226 +117,9 @@ public class Consoles extends JFrame {
 	}
 
 	/**
-	 * Console class.
-	 */
-	private static final class Console {
-		
-		/**
-		 * Console text pane.
-		 */
-		protected JTextPane textPane = null;
-
-		/**
-		 * Minimum and maximum timestamps.
-		 */
-		protected LocalTime minimumTimestamp = null;
-		protected LocalTime maximumTimestamp = null;
-		
-		/**
-		 * Console port number.
-		 */
-		protected int port = -1;
-		
-		/**
-		 * Incomming buffer size.
-		 */
-		private static final int INPUT_BUFFER_SIZE = 1024;
-		private static final int TIMESTAMP_BUFFER_SIZE = 16;
-		private static final int LOG_MESSAGE_BUFFER_SIZE = INPUT_BUFFER_SIZE;
-		
-		/**
-		 * Console input buffers.
-		 */
-		protected ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
-		public Obj<ByteBuffer> timestampBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
-		public Obj<ByteBuffer> logMessageBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LOG_MESSAGE_BUFFER_SIZE));
-		/**
-		 * Input reader states and constants.
-		 */
-		private static final int READ_TIMESTAMP = 0;
-		private static final int READ_LOG_MESSAGE = 1;
-		
-		private int inputReaderState = READ_TIMESTAMP;
-		
-		/**
-		 * Last read timestamp.
-		 */
-		private LocalTime readTimestamp = null;
-		
-		/**
-		 * Message record list that maps time axis to the records.
-		 */
-		protected LinkedList<MessageRecord> consoleRecords = new LinkedList<>();
-		
-		/**
-		 * 
-		 * @param consoleName
-		 * @param textPane
-		 * @param port
-		 */
-		public Console(String consoleName, JTextPane textPane, int port) {
-			
-			this.textPane = textPane;
-			this.port = port;
-		}
-
-		/**
-		 * Add new message record.
-		 * 
-		 * @param messageRecord
-		 */
-		public void addMessageRecord(MessageRecord messageRecord) {
-
-			// Get current time.
-			LocalTime timeNow = LocalTime.now();
-			
-			messageRecord.consoleWriteTime = timeNow;
-
-			// Set maximum and minimum timestamp.
-			if (minimumTimestamp == null) {
-				minimumTimestamp = timeNow;
-			}
-			if (maximumTimestamp == null || maximumTimestamp.compareTo(timeNow) < 0) {
-				maximumTimestamp = timeNow;
-			}
-
-			// Create new message record and put it into the message map.
-			synchronized (consoleRecords) {
-				consoleRecords.add(messageRecord);
-			}
-		}
-
-		/**
-		 * Clear console content.
-		 */
-		public void clear() {
-
-			consoleRecords.clear();
-			maximumTimestamp = null;
-			minimumTimestamp = null;
-			textPane.setText("");
-		}
-		
-		/**
-		 * Read log messages from the input buffer.
-		 * @param logMessageLambda
-		 * @throws Exception 
-		 */
-		public boolean readLogMessages(Consumer<MessageRecord> logMessageLambda)
-				throws Exception {
-			
-			// Prepare input buffer for reading.
-			inputBuffer.flip();
-			
-			// If there are no remaining bytes in the input buffer, return false value.
-			if (!inputBuffer.hasRemaining()) {
-				return false;
-			}
-			
-			boolean messageAccepted = false;
-			
-			// Read until end of input buffer.
-			boolean endOfReading = false;
-			while (!endOfReading) {
-				
-				Obj<Boolean> terminated = new Obj<Boolean>(false);
-				
-				// Determine protocol state from input byte value and invoke related action.
-				switch (inputReaderState) {
-				
-				case READ_TIMESTAMP:
-					endOfReading = Utility.readUntil(inputBuffer, timestampBuffer, TIMESTAMP_BUFFER_SIZE, DIVIDER_SYMBOL, terminated);
-					if (terminated.ref) {
-						inputReaderState = READ_LOG_MESSAGE;
-						readTimestamp = getTimestamp(timestampBuffer.ref);
-					}
-					break;
-					
-				case READ_LOG_MESSAGE:
-					endOfReading = Utility.readUntil(inputBuffer, logMessageBuffer, LOG_MESSAGE_BUFFER_SIZE, TERMINAL_SYMBOL, terminated);
-					if (terminated.ref) {
-						
-						inputReaderState = READ_TIMESTAMP;
-						String logMessageText = getLogMessage(logMessageBuffer.ref);
-						
-						MessageRecord messageRecord = new MessageRecord(readTimestamp, logMessageText);
-						logMessageLambda.accept(messageRecord);
-						
-						messageAccepted = true;
-					}
-					break;
-				}
-			}
-			
-			return messageAccepted;
-		}
-	
-		/**
-		 * Get timestamp from the input buffer.
-		 * @param timestampBuffer
-		 * @return
-		 * @throws Exception 
-		 */
-		private LocalTime getTimestamp(ByteBuffer timestampBuffer)
-				throws Exception {
-			
-			// Prepare the timestamp buffer for reading the XML length.
-			timestampBuffer.flip();
-			
-			// Get length of the nuffer.
-			int arrayLength = timestampBuffer.limit();
-			byte [] bytes = new byte [arrayLength];
-			
-			// Read buffer contents.
-			timestampBuffer.get(bytes);
-			
-			// Convert bytes into UTF-8 encoded string.
-			String timstampText = new String(bytes, "UTF-8");
-			
-			// Convert text to timstamp object.
-			LocalTime timestamp = LocalTime.parse(timstampText, TIMESTAMP_FORMAT);
-			
-			// Reset the timestamp buffer.
-			timestampBuffer.clear();
-			
-			// Return result.
-			return timestamp;
-		}
-		
-		/**
-		 * Get log message from the input buffer.
-		 * @param logMessageBuffer
-		 * @return
-		 * @throws Exception 
-		 */
-		private String getLogMessage(ByteBuffer logMessageBuffer)
-				throws Exception {
-			
-			// Prepare the log message buffer for reading.
-			logMessageBuffer.flip();
-			
-			// Get length of the nuffer.
-			int arrayLength = logMessageBuffer.limit();
-			byte [] bytes = new byte [arrayLength];
-			
-			// Read buffer contents.
-			logMessageBuffer.get(bytes);
-			
-			// Convert bytes into UTF-8 encoded string.
-			String logMessageText = new String(bytes, "UTF-8");
-			
-			// Reset the log message buffer.
-			logMessageBuffer.clear();
-			
-			// Return result.
-			return logMessageText;
-		}
-	}
-	
-	/**
 	 * 
 	 */
-	private static Map<String, Console> consoles = new ConcurrentHashMap<>();
+	private static Map<String, LogConsole> consoles = new ConcurrentHashMap<>();
 
 	/**
 	 * Socket idle timeout in milliseconds.
@@ -350,8 +129,8 @@ public class Consoles extends JFrame {
 	/**
 	 * Log message divider and stop symbols.
 	 */
-	private static final byte[] DIVIDER_SYMBOL = { 0, 0 };
-	private static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
+	static final byte[] DIVIDER_SYMBOL = { 0, 0 };
+	static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
 	
 	/**
 	 * Set this flag to true on application exit.
@@ -367,6 +146,22 @@ public class Consoles extends JFrame {
 	public static final int SHUTDOWN = 3;
 
 	public static int applicationState = UNINITIALIZED;
+	
+	/**
+	 * Scroll panel dimensions.
+	 */
+	private static final int SCROLL_WIDTH = 500;
+	private static final int SCROLL_HEIGHT = 300;
+	
+	/**
+	 * Proportion of console propeties panel.
+	 */
+	private static final double PROPERTIES_PROPORTION = 0.25;
+	
+	/**
+	 * Reference to main frame window of the application.
+	 */
+	protected static Consoles mainFrame = null;
 
 	/**
 	 * Initialize application state. Must be called prior to any log message.
@@ -381,9 +176,23 @@ public class Consoles extends JFrame {
 	 * Components.
 	 */
 	private JPanel contentPane;
-	private JTabbedPane tabbedPane;
 	private JToolBar toolBar;
-	private JSlider sliderTimeSpan;
+	private JPanel panelConsolesContainer;
+
+	/**
+	 * Referene to last created split panel.
+	 */
+	private JSplitPane lastCreatedSplitPanel = null;
+	
+	/**
+	 * Reference to last component focused by user.
+	 */
+	protected JTextPane lastFocusedTextPane = null;
+
+	/**
+	 * Properties panel.
+	 */
+	private ConsoleProperties propertiesPanel = null;
 
 	/**
 	 * Launch the application.
@@ -394,17 +203,20 @@ public class Consoles extends JFrame {
 
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		EventQueue.invokeLater(new Runnable() {
+			
 			public void run() {
 				try {
-					Consoles frame = new Consoles();
-					frame.setAlwaysOnTop(true);
-					frame.setVisible(true);
-				} catch (Exception e) {
+					mainFrame  = new Consoles();
+					mainFrame.setAlwaysOnTop(true);
+					mainFrame.setVisible(true);
+				} 
+				catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -416,10 +228,12 @@ public class Consoles extends JFrame {
 	 */
 	public static boolean ensureApplicationRunning() {
 
-		// Start application.
-		main(new String[] {});
-
-		// Wait for application listening to ports.
+		if (applicationState == UNINITIALIZED || applicationState == SHUTDOWN) {
+			// Start application.
+			main(new String[] {});
+		}
+		
+		// Wait for application to listen to ports.
 		while (applicationState != LISTENING) {
 
 			if (applicationState == SHUTDOWN) {
@@ -428,7 +242,8 @@ public class Consoles extends JFrame {
 
 			try {
 				Thread.sleep(STARTUP_TIMEOUT_MS);
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				return false;
 			}
 		}
@@ -475,62 +290,25 @@ public class Consoles extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout(0, 0));
 
-		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-		contentPane.add(tabbedPane);
-
 		toolBar = new JToolBar();
 		toolBar.setFloatable(false);
 		contentPane.add(toolBar, BorderLayout.NORTH);
-
-		sliderTimeSpan = new JSlider();
-		sliderTimeSpan.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				onSliderChange();
-			}
-		});
-		sliderTimeSpan.setValue(100);
-		sliderTimeSpan.setMinorTickSpacing(1);
-		sliderTimeSpan.setMajorTickSpacing(10);
-		sliderTimeSpan.setPreferredSize(new Dimension(200, 44));
-		sliderTimeSpan.setPaintTicks(true);
-		sliderTimeSpan.setPaintLabels(true);
-		contentPane.add(sliderTimeSpan, BorderLayout.SOUTH);
-	}
-
-	/**
-	 * Add new console view.
-	 * 
-	 * @param consoleName
-	 * @param port
-	 * @return
-	 */
-	private void addConsoleView(String consoleName, int port) {
-
-		// Create new console and add it to the map.
-		JPanel panel = new JPanel();
-		panel.setLayout(new BorderLayout(0, 0));
-
+		
 		JScrollPane scrollPane = new JScrollPane();
-		panel.add(scrollPane, BorderLayout.CENTER);
-
-		JTextPane textPane = new JTextPane();
-		textPane.setContentType(TEXT_PANE_MIME_TYPE);
-		scrollPane.setViewportView(textPane);
-
-		tabbedPane.addTab(consoleName, null, panel, null);
-
-		Console console = new Console(consoleName, textPane, port);
-		consoles.put(consoleName, console);
-
-		// Open console port.
-		openConsole(consoleName);
+		contentPane.add(scrollPane, BorderLayout.CENTER);
+		
+		panelConsolesContainer = new JPanel();
+		panelConsolesContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
+		panelConsolesContainer.setPreferredSize(new Dimension(600, 10));
+		scrollPane.setViewportView(panelConsolesContainer);
+		panelConsolesContainer.setLayout(new BoxLayout(panelConsolesContainer, BoxLayout.X_AXIS));
 	}
-
+	
 	/**
 	 * Post creation.
 	 */
 	private void postCreation() {
-
+		
 		// Create toolbar.
 		createToolbar();
 
@@ -538,7 +316,13 @@ public class Consoles extends JFrame {
 		addConsoleView("Console1", 48000);
 		addConsoleView("Console2", 48001);
 		addConsoleView("Console3", 48002);
-
+		
+		// Add properties panel.
+		addConsolePropertiesPanel();
+		
+		// Reset consoles' dimesnions. 
+		restoreConsolesDimensions();
+		
 		applicationState = LISTENING;
 	}
 
@@ -551,35 +335,279 @@ public class Consoles extends JFrame {
 	}
 
 	/**
+	 * Add new console view.
+	 * 
+	 * @param consoleName
+	 * @param port
+	 * @return
+	 */
+	private void addConsoleView(String consoleName, int port) {
+		
+		JSplitPane splitPane = null;
+		
+		if (lastCreatedSplitPanel == null) {
+			
+			// Main scroll panel for all consoles.
+			JScrollPane scrollPaneConsole = new JScrollPane();
+			panelConsolesContainer.add(scrollPaneConsole);
+			
+			// Create first split pane for consoles.
+			splitPane = new JSplitPane();
+			splitPane.setResizeWeight(0.5);
+			scrollPaneConsole.setViewportView(splitPane);
+		}
+		else {
+			// Create new split panel in the right component of the last split panel.
+			splitPane = new JSplitPane();
+			splitPane.setResizeWeight(0.5);
+			lastCreatedSplitPanel.setRightComponent(splitPane);
+		}
+		
+		// Create scroll bars in the left component of the split panel.
+		JScrollPane scrollPane = new JScrollPane();
+		splitPane.setLeftComponent(scrollPane);
+		
+		// Create text panel for the console.
+		JTextPane textPane = new JTextPane();
+		textPane.setContentType("text/html");
+		textPane.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				super.focusGained(e);
+				
+				// Remeber last focused console.
+				lastFocusedTextPane = textPane;
+				
+				// Select console by its name.
+				selectConsole(consoleName);
+				
+				// Display console properties.
+				displayConsoleProperties(consoleName);
+			}
+		});
+		scrollPane.setViewportView(textPane);
+		
+		// Remember last split panel.
+		lastCreatedSplitPanel = splitPane;
+		
+		try {
+			// Create new console object and put it into the consoles collection.
+			LogConsole console = new LogConsole(consoleName, splitPane, port);
+			consoles.put(consoleName, console);
+	
+			// Open console port.
+			openConsole(consoleName);
+		}
+		catch (Exception e) {
+			
+			// Display error message.
+			Utility.show2(this, e.getLocalizedMessage());
+		}
+	}
+
+	/**
+	 * Add console properties panel to last created split panel.
+	 */
+	private void addConsolePropertiesPanel() {
+		
+		// Create the properties panel.
+		propertiesPanel = new ConsoleProperties();
+		
+		// Put the properties panel to right pane.
+		lastCreatedSplitPanel.setRightComponent(propertiesPanel);
+	}
+	
+	/**
+	 * Display console properties.
+	 * @param consoleName
+	 */
+	protected void displayConsoleProperties(String consoleName) {
+		
+		// Try to get console object.
+		LogConsole console = consoles.get(consoleName);
+		if (console == null) {
+			
+			propertiesPanel.resetComponents();
+			return;
+		}
+		
+		// Set console properties.
+		propertiesPanel.displayProperties(console);
+	}
+	
+	/**
+	 * Restore consoles dimensions.
+	 */
+	private void restoreConsolesDimensions() {
+		
+		// Get number of consoles.
+		int consolesCount = consoles.size();
+		
+		// Scroll panel dimensions.
+		final Dimension scrollDimension = new Dimension(SCROLL_WIDTH, SCROLL_HEIGHT);
+		
+		// Set consoles' dimensions and states.
+		int index = 0;
+		for (Entry<String, LogConsole> entry : consoles.entrySet()) {
+			
+			LogConsole console = entry.getValue();
+			
+			// Set splitter ratio.
+			double proportion;
+			if (index < consolesCount - 1) {
+				proportion = 1.0 / (1 + consolesCount - index);
+			}
+			else {
+				proportion = 1.0 - PROPERTIES_PROPORTION;
+			}
+			console.splitPane.setDividerLocation(proportion);
+			
+			// Set scroll panel width.
+			console.scrollPane.setPreferredSize(scrollDimension);
+			//console.scrollPane.setMinimumSize(scrollDimension);
+			
+			index++;
+		}
+	}
+	
+	/**
+	 * Returns main frame window boundaries.
+	 * @return
+	 */
+	public static Rectangle getFrameBounds() {
+		
+		if (mainFrame == null) {
+			return new Rectangle();
+		}
+		
+		Rectangle bounds = mainFrame.getBounds();
+		return bounds;
+	}
+	
+	/**
+	 * Set main frame window boundaries.
+	 * @param bounds
+	 */
+	public static void setFrameBounds(Rectangle bounds) {
+		
+		if (mainFrame == null) {
+			return;
+		}
+		
+		mainFrame.setBounds(bounds);
+	}
+	
+	/**
+	 * Get splitter positions.
+	 * @return
+	 */
+	public static Integer [] getSplitterPositions() {
+		
+		// Initialize output array.
+		int count = consoles.size();
+		Integer [] splitterPositions = new Integer [count];
+		
+		// Set array items.
+		Obj<Integer> index = new Obj<Integer>(0);
+		consoles.forEach((name, console) -> {
+			
+			splitterPositions[index.ref++] = console.splitPane.getDividerLocation();
+		});
+		
+		// Returns ooutput array.
+		return splitterPositions;
+	}
+	
+	/**
+	 * Set splitter positions.
+	 * @param splitterPositions
+	 * @return
+	 */
+	public static boolean setSplitterPositions(Integer [] splitterPositions) {
+		
+		// Get consoles count.
+		int count = consoles.size();
+		
+		// Set array items.
+		Obj<Integer> index = new Obj<Integer>(0);
+		for (Entry<String, LogConsole> entry : consoles.entrySet()) {
+			
+			if (index.ref >= count) {
+				return false;
+			}
+			
+			LogConsole console = entry.getValue();
+			console.splitPane.setDividerLocation(splitterPositions[index.ref++]);
+		};
+		
+		return true;
+	}
+	
+	/**
+	 * Select console with given name.
+	 * @param consoleName
+	 */
+	protected void selectConsole(String consoleName) {
+		
+		// Try to set consoles selection states.
+		consoles.forEach((name, console) -> {
+			
+			boolean isSelected = (name == consoleName);
+			console.setSelected(isSelected);
+		});
+	}
+
+	/**
 	 * On clear cosnole.
 	 * 
 	 * @return
 	 */
 	private void onClearConsole() {
-
-		// Get selected console.
-		int selectedIndex = tabbedPane.getSelectedIndex();
-		if (selectedIndex == -1) {
-			return;
-		}
-
-		// Get console name.
-		String consoleName = tabbedPane.getTitleAt(selectedIndex);
-
-		// Get console view and reset it.
-		Console console = consoles.get(consoleName);
+		
+		// Find console by its text panel component.
+		LogConsole console = findConsoleObject(lastFocusedTextPane);
 		if (console == null) {
 			return;
 		}
-
-		// Ask user if to delete console contents.
-		boolean confirmed = Utility.ask2(this, "Clear console contents?");
-		if (!confirmed) {
-			return;
+		
+		SwingUtilities.invokeLater(() -> {
+			
+			// Ask user if to delete console contents.
+			boolean confirmed = Utility.ask2(this, "Clear \"%s\" contents?", console.name);
+			if (!confirmed) {
+				return;
+			}
+	
+			// Clear console contents and display new console properties.
+			console.clear();
+			propertiesPanel.displayProperties(console);
+		});
+	}
+	
+	/**
+	 * Find console by its text panel component.
+	 * @param textPanel
+	 * @return - console object that owns the text panel component or null if not found
+	 */
+	private LogConsole findConsoleObject(JTextPane textPanel) {
+		
+		// Check input value.
+		if (textPanel == null) {
+			return null;
 		}
-
-		// Clear console contents.
-		console.clear();
+		
+		// Try to find the console with input text panel.
+		for (Entry<String, LogConsole> entry : consoles.entrySet()) {
+			
+			LogConsole console = entry.getValue();
+			JTextPane listedTextPane = console.textPane;
+			
+			if (listedTextPane.equals(textPanel)) {
+				return console;
+			}
+		}
+		
+		return null;
 	}
 
 	/**
@@ -590,7 +618,7 @@ public class Consoles extends JFrame {
 		
 		try {
 			// Try to get console by its name.
-			Console console = consoles.get(consoleName);
+			LogConsole console = consoles.get(consoleName);
 			if (console == null) {
 				// Show error message.
 				Utility.show2(this, consoleName + " not found.");
@@ -598,29 +626,30 @@ public class Consoles extends JFrame {
 			
 			// Open asynchornous server socket.
 	        AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
-	        InetSocketAddress socketAddress = new InetSocketAddress("localhost", console.port);
-	        server.bind(socketAddress);
+	        console.socketAddress = new InetSocketAddress("localhost", console.port);
+	        server.bind(console.socketAddress);
+	        
 	        server.accept(server, new CompletionHandler<AsynchronousSocketChannel, AsynchronousServerSocketChannel>() {
 	        
 	        	// When connection is completed...
 	        	@Override
 				public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
 	        		try {
-                		
-                		// TODO: <---DEBUG
-                		j.log("server.accept.completed");
+	        			
+                		// Create lock that can synchronize read operations.
+                		Lock readLock = new Lock();
 	        			
 	        			// Start a loop to read input data. 
 	        			RepeatedTask.loopBlocking(consoleName, -1, IDLE_TIMEOUT_MS, (exit, exception) -> {
 	        				
-	        				// TODO: <---DEBUG
-	                		j.log("client.read");
+	                		// Reset lock.
+	                		Lock.reset(readLock);
                     		
 							// Read input data bytes.
-		                    client.read(console.inputBuffer, console, new CompletionHandler<Integer, Console>() {
+		                    client.read(console.inputBuffer, console, new CompletionHandler<Integer, LogConsole>() {
 		                    	
 		                    	// After read completed...
-		                    	public void completed(Integer result, Console console) {
+		                    	public void completed(Integer result, LogConsole console) {
 		                    		
 		                    		try {
 			                    		// Read log messages from input buffer.
@@ -629,18 +658,12 @@ public class Consoles extends JFrame {
 			                    			try {
 			    								// Add log message
 			                    				console.addMessageRecord(logMessage);
-			                    				
-			                    				// TODO: <---DEBUG
-						                		j.log("LOG %s", logMessage);
 			                    			}
 			                    			catch (Exception e) {
 			                    				// Show error message.
 			                    				Utility.show2(Consoles.this, e.getLocalizedMessage());
 			                    			}
 			                    		});
-			                    		
-			                    		// TODO: <---DEBUG
-				                		j.log("updateConsole");
 			                    		
 	    								// Update the console.
 	    								updateConsole(console);
@@ -652,14 +675,20 @@ public class Consoles extends JFrame {
 		                    			// Show error message.
 			                    		Utility.show2(Consoles.this, e.getLocalizedMessage());
 		                    		}
+		                    		
+		                    		// Notify lock.
+		                    		Lock.notify(readLock);
 		                    	}
 		                    	
 		                    	// On read error...
-								public void failed(Throwable e, Console console) {
+								public void failed(Throwable e, LogConsole console) {
 				        			// Show error message.
 				        			Utility.show2(Consoles.this, e.getLocalizedMessage());
 		                        }
 		                    });
+		                    
+		                    // Wait for completion of the read operation.
+		                    Lock.waitFor(readLock);
 	        				
 	        				// Exit the blocking loop on application exit.
 	        				boolean running = !exitApplication;
@@ -687,10 +716,9 @@ public class Consoles extends JFrame {
 	
 	/**
 	 * Update the console.
-	 * 
 	 * @param console
 	 */
-	private void updateConsole(Console console) {
+	private void updateConsole(LogConsole console) {
 		
 		SwingUtilities.invokeLater(() -> {
 					
@@ -702,31 +730,13 @@ public class Consoles extends JFrame {
 			// Get text view.
 			JTextPane textPane = console.textPane;
 	
-			// Get time axis slider value and compute slider timespan.
-			int sliderValue = sliderTimeSpan.getValue();
-			long maxNanos = console.maximumTimestamp.toNanoOfDay();
-			long minNanos = console.minimumTimestamp.toNanoOfDay();
-			long nanosSpan = maxNanos - minNanos;
-			long sliderNanos = nanosSpan * sliderValue / 100;
-			LocalTime sliderTimestamp = console.minimumTimestamp.plusNanos(sliderNanos);
-	
 			// Compile text contents.
 			Obj<String> contents = new Obj<String>("<html>");
-			Obj<Boolean> highlighted = new Obj<Boolean>(false);
 			
 			console.consoleRecords.forEach(messageRecord -> {
-
-				String color = null;
-				if (!highlighted.ref && messageRecord.timestamp.compareTo(sliderTimestamp) > 0) {
-					color = "red";
-					highlighted.ref = true;
-				}
-				else {
-					color = "black";
-				}
 				
 				String messageText = Utility.htmlSpecialChars(messageRecord.messageText);
-				String messageHtml = String.format("<span style='color:%s'>%s</span><br>", color, messageText);
+				String messageHtml = String.format("<div style='font-family: Consolas; font-size: 14pt; white-space:nowrap;'>%s</div>", messageText);
 				contents.ref += messageHtml;
 			});
 			
@@ -737,28 +747,5 @@ public class Consoles extends JFrame {
 			int endPosition = textPane.getDocument().getLength();
 			textPane.setCaretPosition(endPosition);
 		});
-	}
-
-	/**
-	 * On slider change.
-	 */
-	protected void onSliderChange() {
-
-		// Get selected console.
-		int selectedIndex = tabbedPane.getSelectedIndex();
-		if (selectedIndex == -1) {
-			return;
-		}
-
-		// Get console name.
-		String consoleName = tabbedPane.getTitleAt(selectedIndex);
-		Console console = consoles.get(consoleName);
-		
-		if (console == null) {
-			return;
-		}
-
-		// Update console.
-		updateConsole(console);
 	}
 }

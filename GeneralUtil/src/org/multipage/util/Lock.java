@@ -39,6 +39,15 @@ public class Lock {
 	}
 	
 	/**
+	 * Reset the lock state.
+	 * @param lock
+	 */
+	public static void reset(Lock lock) {
+		
+		lock.notified = false;
+	}
+	
+	/**
 	 * Wait for lock
 	 * @param lock
 	 * @return true if the waiting state has been interrupted
@@ -154,6 +163,15 @@ public class Lock {
 	public static void notifyAll(Lock lock) {
 		
 		notifyAll(lock, null);
+	}
+	
+	/**
+	 * Returns the lock state.
+	 * @return
+	 */
+	public boolean notified() {
+		
+		return notified;
 	}
 	
 	/**

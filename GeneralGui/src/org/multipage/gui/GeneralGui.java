@@ -7,6 +7,7 @@
 
 package org.multipage.gui;
 
+import java.awt.Rectangle;
 import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -14,6 +15,7 @@ import java.util.function.Supplier;
 import javax.swing.UIManager;
 
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * @author
@@ -127,10 +129,12 @@ public class GeneralGui {
 	 * Set default data.
 	 */
 	protected static void setDefaultData() {
-
+		
 		// Utility default data.
 		Utility.setDefaultData();
-		// Text editor default data.
+		// Default log consoles data.
+		setConsolesDefaultData();
+		// GUI default data.
 		TextEditorPane.setDefaultData();
 		DateTimeDialog.setDefaultData();
 		CssFontPanel.setDefaultData();
@@ -164,8 +168,9 @@ public class GeneralGui {
 		AnchorDialog.setDefaultData();
 		HelpDialog.setDefaultData();
 		CssResourcesUrlsPanel.setDefaultData();
+		
 	}
-	
+
 	/**
 	 * Serialize module data.
 	 * @param inputStream
@@ -177,7 +182,9 @@ public class GeneralGui {
 
 		// Load utility data.
 		Utility.serializeData(inputStream);
-		// Load text editor data.
+		// Load log consoles data.
+		serializeLogConsolesData(inputStream);
+		// Load GUI data.
 		TextEditorPane.serializeData(inputStream);
 		DateTimeDialog.serializeData(inputStream);
 		CssFontPanel.serializeData(inputStream);
@@ -223,7 +230,9 @@ public class GeneralGui {
 
 		// Save utility data.
 		Utility.serializeData(outputStream);
-		// Save text editor data.
+		// Save log consoles data.
+		serializeLogConsolesData(outputStream);
+		// Save GUI data.
 		TextEditorPane.serializeData(outputStream);
 		DateTimeDialog.serializeData(outputStream);
 		CssFontPanel.serializeData(outputStream);
@@ -259,6 +268,42 @@ public class GeneralGui {
 		CssResourcesUrlsPanel.serializeData(outputStream);
 	}
 	
+	/**
+	 * Initialize log consoles.
+	 */
+	private static void setConsolesDefaultData() {
+		
+
+	}
+	
+	/**
+	 * Read log consoles serialized data.
+	 * @param inputStream
+	 */
+	private static void serializeLogConsolesData(StateInputStream inputStream)
+			throws IOException, ClassNotFoundException {
+		
+		Rectangle bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		Integer [] splitterPositions = Utility.readInputStreamObject(inputStream, Integer [].class);
+		
+		Consoles.setFrameBounds(bounds);
+		Consoles.setSplitterPositions(splitterPositions);
+	}
+
+	/**
+	 * Write log consoles serialized data.
+	 * @param outputStream
+	 */
+	private static void serializeLogConsolesData(StateOutputStream outputStream)
+			throws IOException {
+		
+		Rectangle bounds = Consoles.getFrameBounds();
+		Integer [] splitterPositions = Consoles.getSplitterPositions();
+		
+		outputStream.writeObject(bounds);
+		outputStream.writeObject(splitterPositions);
+	}
+
 	/**
 	 * Set "can log" lambda function.
 	 * @param canLogLambda

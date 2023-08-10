@@ -52,11 +52,6 @@ public class XdebugListener extends DebugListener {
 	 */
 	public Component debugViewerComponent = null;
 	
-	/**
-	 * Socket reader lock.
-	 */
-	protected Lock socketReaderLock = new Lock();
-	
     /**
      * Get singleton object.
      * @return
@@ -138,7 +133,7 @@ public class XdebugListener extends DebugListener {
 					XdebugListener.this.sessions.add(session);
 					
 					// TODO: <---DEBUG Create session object.
-					j.log(1, "CREATE SESSION %x", session.hashCode());
+					j.log(2, "CREATE SESSION %x", session.hashCode());
 					
 					// Call the "accept session" lambda.
 					onAcceptSession(session);
@@ -147,11 +142,14 @@ public class XdebugListener extends DebugListener {
 					
 					Obj<Integer> readingIndex = new Obj<Integer>(0);
 					
+					// Create read lock.
+					Lock readLock = new Lock();
+					
 					// Enter non blocking loop.
-					RepeatedTask.loopNonBlocking(taskName, -1, 0, (exit, exception) -> {
+					RepeatedTask.loopBlocking(taskName, -1, 0, (exit, exception) -> {
 						
-						// Clear the socket reader lock.
-						socketReaderLock = new Lock();
+						// Reset the socket read lock.
+						Lock.reset(readLock);
 
 						// TODO: <---DEBUG Count number of reads.
 						j.log(1, "- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
@@ -195,7 +193,7 @@ public class XdebugListener extends DebugListener {
 								j.log(1, "<<<LOCK %d NOTIFIED>>>", readOpCounter);
 								
 	                        	// Notify the listener lock.
-	                        	Lock.notify(socketReaderLock);
+	                        	Lock.notify(readLock);
 	                        }
 							public void failed(Throwable e, XdebugListenerSession session) {
 	                            // Handle the failure.
@@ -204,7 +202,7 @@ public class XdebugListener extends DebugListener {
 	                    });
 	                    
 	                    // Wait for the input bytes to be read from the socket channel.
-	                    boolean timeoutEllapsed = Lock.waitFor(socketReaderLock, XDEBUG_RESULT_IDLE_MS);
+	                    boolean timeoutEllapsed = Lock.waitFor(readLock, XDEBUG_RESULT_IDLE_MS);
 	                    
 	                    // TODO: <---DEBUG Timeout ellapsed.
 	                    if (timeoutEllapsed) {

@@ -63,6 +63,7 @@ public class j {
 			new InetSocketAddress("localhost", 48001),
 			new InetSocketAddress("localhost", 48002),
 		};
+	
 	public static Socket [] openConsoleSockets = new Socket [openConsoles.length];
 	
 	/**

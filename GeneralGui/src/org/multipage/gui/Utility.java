@@ -792,6 +792,17 @@ public class Utility {
 		message = String.format(message, parameters);
 		return JOptionPane.showConfirmDialog(null, message) == JOptionPane.YES_OPTION;
 	}
+	
+	/**
+	 * Show message and ask user.
+	 * @param parent
+	 * @param message
+	 */
+	public static boolean ask2(Component parent, String message, Object ... parameters) {
+
+		message = String.format(message, parameters);
+		return JOptionPane.showConfirmDialog(parent, message) == JOptionPane.YES_OPTION;
+	}
 
 	/**
 	 * Ask user.
