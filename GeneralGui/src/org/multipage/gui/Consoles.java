@@ -7,6 +7,7 @@
 package org.multipage.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Rectangle;
@@ -53,6 +54,19 @@ public class Consoles extends JFrame {
 	 * Version.
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * Main frame boundaries.
+	 */
+	private static Rectangle bounds;
+	
+	/**
+	 * Set default data.
+	 */
+	public static void setDefaultData() {
+		
+		bounds = null;
+	}
 
 	/**
 	 * Application start up timeout in milliseconds.
@@ -82,12 +96,22 @@ public class Consoles extends JFrame {
 		/**
 		 * Timestamp.
 		 */
-		private LocalTime timestamp = null;
+		public LocalTime timestamp = null;
 		
 		/**
 		 * Record text.
 		 */
-		private String messageText = null;
+		public String messageText = null;
+		
+		/**
+		 * Displayed message color.
+		 */
+		public Color color = Color.BLACK;
+		
+		/**
+		 * Console statement.
+		 */
+		public String statment = null;
 		
 		/**
 		 * Time when the message was written into the console
@@ -98,12 +122,16 @@ public class Consoles extends JFrame {
 		 * Constructor.
 		 * 
 		 * @param timestamp
+		 * @param color 
 		 * @param messageString
+		 * @param statement 
 		 */
-		public MessageRecord(LocalTime timestamp, String messageString) {
+		public MessageRecord(LocalTime timestamp, Color color, String messageString, String statement) {
 			
 			this.timestamp = timestamp;
 			this.messageText = messageString;
+			this.color = color;
+			this.statment = statement;
 		}
 		
 		/**
@@ -280,7 +308,7 @@ public class Consoles extends JFrame {
 	private void initComponents() {
 		setTitle("Consoles for multitasking event logs");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 768, 618);
+		setBounds(100, 100, 859, 621);
 
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
@@ -322,6 +350,9 @@ public class Consoles extends JFrame {
 		
 		// Reset consoles' dimesnions. 
 		restoreConsolesDimensions();
+		
+		// Load dialog.
+		loadDialog();
 		
 		applicationState = LISTENING;
 	}
@@ -369,6 +400,7 @@ public class Consoles extends JFrame {
 		
 		// Create text panel for the console.
 		JTextPane textPane = new JTextPane();
+		textPane.setBackground(Color.BLACK);
 		textPane.setContentType("text/html");
 		textPane.addFocusListener(new FocusAdapter() {
 			@Override
@@ -464,9 +496,22 @@ public class Consoles extends JFrame {
 			
 			// Set scroll panel width.
 			console.scrollPane.setPreferredSize(scrollDimension);
-			//console.scrollPane.setMinimumSize(scrollDimension);
 			
 			index++;
+		}
+	}
+	
+	/**
+	 * Load dialog.
+	 */
+	private void loadDialog() {
+		
+		if (bounds == null) {
+			bounds = new Rectangle(1000, 700);
+			Utility.centerOnScreen(this);
+		}
+		else {
+			setBounds(bounds);
 		}
 	}
 	
@@ -656,8 +701,12 @@ public class Consoles extends JFrame {
 			                    		console.readLogMessages(logMessage -> {
 			                    			
 			                    			try {
-			    								// Add log message
-			                    				console.addMessageRecord(logMessage);
+			                    				// Try to run console statement.
+			                    				boolean success = console.runStatement(logMessage);
+			                    				if (!success) {
+				    								// Add log message
+				                    				console.addMessageRecord(logMessage);
+			                    				}
 			                    			}
 			                    			catch (Exception e) {
 			                    				// Show error message.
@@ -736,7 +785,8 @@ public class Consoles extends JFrame {
 			console.consoleRecords.forEach(messageRecord -> {
 				
 				String messageText = Utility.htmlSpecialChars(messageRecord.messageText);
-				String messageHtml = String.format("<div style='font-family: Consolas; font-size: 14pt; white-space:nowrap;'>%s</div>", messageText);
+				String colorString = Utility.getCssColor(messageRecord.color);
+				String messageHtml = String.format("<div style='color: %s; font-family: Consolas; font-size: 14pt; white-space:nowrap;'>%s</div>", colorString, messageText);
 				contents.ref += messageHtml;
 			});
 			

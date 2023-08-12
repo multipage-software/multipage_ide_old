@@ -6,6 +6,7 @@
  */
 package org.maclan.server;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -126,14 +127,14 @@ public class XdebugListener extends DebugListener {
 			public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
         		
         		// TODO: <---REMOVE IT
-        		j.log(1, "----------------------------------------------------------------");
+        		j.log(1, Color.LIGHT_GRAY, j.DIVIDER_LINE);
 				try {
 					// Create and remember new session object.
 					XdebugListenerSession session = new XdebugListenerSession(server, client);
 					XdebugListener.this.sessions.add(session);
 					
 					// TODO: <---DEBUG Create session object.
-					j.log(2, "CREATE SESSION %x", session.hashCode());
+					j.log(1, Color.LIGHT_GRAY, "CREATE SESSION %x", session.hashCode());
 					
 					// Call the "accept session" lambda.
 					onAcceptSession(session);
@@ -152,7 +153,7 @@ public class XdebugListener extends DebugListener {
 						Lock.reset(readLock);
 
 						// TODO: <---DEBUG Count number of reads.
-						j.log(1, "- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
+						j.log(1, Color.BLUE, "- %d.%d thread %d - INPUT BUFFER: %d bytes of free space remains", serverConnectionIndex, ++readingIndex.ref, Thread.currentThread().getId(), session.inputBuffer.remaining());
 						
 						// TODO: <---FIX Missing synchronization of input packets.
 						
@@ -166,7 +167,14 @@ public class XdebugListener extends DebugListener {
 	                        	}
 	                        	
 	                        	// TODO: <---DEBUG
-	                        	j.log(1, "<<<READ COUNTER %d>>>", readOpCounter);
+	                        	j.logClear(2);
+	                        	j.log(1, Color.BLUE, "<<<READ COUNTER %d>>>", readOpCounter);
+	                        	j.log(2, Color.LIGHT_GRAY, j.DIVIDER_LINE);
+	                        	j.log(2, Color.RED, "has remaining = %b", session.inputBuffer.hasRemaining());
+	                        	j.log(2, Color.RED, "position = %d", session.inputBuffer.position());
+	                        	j.log(2, Color.RED, "limit = %d", session.inputBuffer.limit());
+	                        	j.log(2, Color.RED, "remaining = %d", session.inputBuffer.remaining());
+	                        	j.log(2, Color.RED, "capacity = %d", session.inputBuffer.capacity());
 	                        	
 								try {
 	                        		// Pull received bytes from the input buffer and put them into the packet buffer.
@@ -190,7 +198,7 @@ public class XdebugListener extends DebugListener {
 	                        		exception.ref = e;
 	                        	}
 								
-								j.log(1, "<<<LOCK %d NOTIFIED>>>", readOpCounter);
+								j.log(1, Color.RED, "<<<LOCK %d NOTIFIED>>>", readOpCounter);
 								
 	                        	// Notify the listener lock.
 	                        	Lock.notify(readLock);
@@ -206,10 +214,10 @@ public class XdebugListener extends DebugListener {
 	                    
 	                    // TODO: <---DEBUG Timeout ellapsed.
 	                    if (timeoutEllapsed) {
-	                    	j.log(1, "TIMEOUT %dms ELLAPSED", XDEBUG_RESULT_IDLE_MS);
+	                    	j.log(1, Color.RED, "TIMEOUT %dms ELLAPSED", XDEBUG_RESULT_IDLE_MS);
 	                    }
 	                    else {
-	                    	j.log(1, "<<<LOCK %d RELEASED>>>", readOpCounter);
+	                    	j.log(1, Color.RED, "<<<LOCK %d RELEASED>>>", readOpCounter);
 	                    	readOpCounter++;
 	                    }
 	                    

@@ -6164,11 +6164,17 @@ public class Utility {
 		int terminalLength = terminalSymbol.length;
 		int terminalIndex = 0;
 		
+		// TODO: <---DEBUG
+		j.logClear(3);
+		
 		// Do loop.
 		while (inputBuffer.hasRemaining()) {
 			
 			// Read current byte from the buffer.
 			byte theByte = inputBuffer.get();
+			
+			// TODO: <---DEBUG
+			j.log(3, Color.WHITE, "BUFFER BYTE [%02X]", theByte);
 			
 			// Disply input byte.
 			/*String className = Thread.currentThread().getStackTrace()[2].getClassName();

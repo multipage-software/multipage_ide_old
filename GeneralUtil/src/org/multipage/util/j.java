@@ -6,6 +6,7 @@
  */
 package org.multipage.util;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -23,6 +24,11 @@ import java.util.function.Supplier;
  *
  */
 public class j {
+	
+	/**
+	 * Constant divider line.
+	 */
+	public static final String DIVIDER_LINE = "-----------------------------------------------------------------------";
 	
 	/**
 	 * Format of time stamps.
@@ -80,18 +86,19 @@ public class j {
 	synchronized public static void log(String parameter, Object ... strings) {
 		
 		// Delegate the call.
-		log(-1, parameter, strings);
+		log(-1, Color.BLACK, parameter, strings);
 	}
 	
 	/**
 	 * Log formatted message on stdout or stderr or on "test"
 	 * displayDelta - if is true, the delta time between time stamps is displayed.
 	 * @param consoleIndex - index of Eclipse output console; if the index is -1, then use STDOUT 
+	 * @param color - if console index is greater then 0 the value sets the color of the console message
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
 	 */
 	@SuppressWarnings("resource")
-	public synchronized static void log(int consoleIndex, Object parameter, Object ... strings) {
+	public synchronized static void log(int consoleIndex, Color color, Object parameter, Object ... strings) {
 		
 		synchronized (synclog) {
 			
@@ -106,7 +113,7 @@ public class j {
 			lastTimeStampMs = currentTimeMs;
 			
 			if (logTimeDelta) {
-				formatToConsole(consoleIndex, timeStamp, "delta %dms ", timeDeltaMs);
+				formatToConsole(consoleIndex, timeStamp, "delta %dms ", color, timeDeltaMs);
 			}
 			
 			if (parameter instanceof LogParameter) {
@@ -127,7 +134,7 @@ public class j {
 						os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
 					}
 					else {
-						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', strings);
+						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color, strings);
 					}
 					
 				}
@@ -136,12 +143,12 @@ public class j {
 						os.format(indentation + timeStampText + type);
 					}
 					else {
-						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n');
+						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color);
 					}
 				}
 			}
 			else {
-				formatToConsole(consoleIndex, timeStamp, indentation + parameter.toString() + '\n', strings);
+				formatToConsole(consoleIndex, timeStamp, indentation + parameter.toString() + '\n', color, strings);
 			}
 		}
 	}
@@ -151,10 +158,11 @@ public class j {
 	 * @param consoleIndex
 	 * @param timeStamp
 	 * @param format
+	 * @param color
 	 * @param strings
 	 * @throws Exception 
 	 */
-	private static void formatToConsole(int consoleIndex, Timestamp timeStamp, String format, Object... strings) {
+	private static void formatToConsole(int consoleIndex, Timestamp timeStamp, String format, Color color, Object... strings) {
 		
 		int count = openConsoles.length;
 		
@@ -162,15 +170,24 @@ public class j {
 			
 			String message = String.format(format, strings);
 			try {
-				byte [] bytes = message.getBytes("UTF-8");
+				// Get timestamp and color.
+				String timeStampText = timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT);
+				String colorText = String.format("rgb(%02X,%02X,%02X)", color.getRed(), color.getGreen(), color.getBlue());
+				String timestampAndColor = timeStampText + '#' + colorText;
 				
 				// Try to get socket connected to a given console.
 				Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
 				
 				// Write the log message to the console.
 				OutputStream stream = consoleSocket.getOutputStream();
-				stream.write(timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT).getBytes("UTF-8"));	
+				
+				// Get timestamp and color bytes.
+				byte [] bytes = timestampAndColor.getBytes("UTF-8");
+				stream.write(bytes);	
 				stream.write(DIVIDER_SYMBOL);
+				
+				// Get message bytes.
+				bytes = message.getBytes("UTF-8");
 				stream.write(bytes);
 				stream.write(TERMINAL_SYMBOL);
 				stream.flush();
@@ -182,6 +199,34 @@ public class j {
 		else {
 			System.err.format(format, strings);
 		} 
+	}
+	
+	/**
+	 * Clear console contents.
+	 * @param consoleIndex
+	 */
+	public static void logClear(int consoleIndex) {
+		
+		try {
+			// Try to get socket connected to a given console.
+			Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
+			
+			// Write the log message to the console.
+			OutputStream stream = consoleSocket.getOutputStream();
+			
+			byte [] bytes = "CLEAR".getBytes("UTF-8");
+			stream.write(bytes);
+			stream.write(DIVIDER_SYMBOL);
+			stream.write('_');
+			stream.write(TERMINAL_SYMBOL);
+			stream.flush();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		// Send info.
+		j.log(consoleIndex, Color.LIGHT_GRAY, "CLR");
 	}
 	
 	/**
@@ -243,7 +288,7 @@ public class j {
 		
 		// Try to load string resource.
 		String message = Resources.getString(stringResource);
-		log(-1, message, strings);
+		log(-1, Color.BLACK, message, strings);
 	}
 	
 	/**

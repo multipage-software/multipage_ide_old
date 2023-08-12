@@ -13,6 +13,8 @@ import java.nio.ByteBuffer;
 import java.time.LocalTime;
 import java.util.LinkedList;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
 import javax.swing.JScrollPane;
@@ -23,6 +25,7 @@ import javax.swing.border.Border;
 
 import org.multipage.gui.Consoles.MessageRecord;
 import org.multipage.util.Obj;
+import org.multipage.util.j;
 
 /**
  * Console class.
@@ -40,7 +43,7 @@ class LogConsole {
 	/**
 	 * Input reader states.
 	 */
-	private static final int READ_TIMESTAMP = 0;
+	private static final int READ_HEADER = 0;
 	private static final int READ_LOG_MESSAGE = 1;
 	
 	/**
@@ -49,6 +52,9 @@ class LogConsole {
 	private static Border selectionBorder = null;
 	private static Border simpleBorder = null;
 	
+	// Parse timestamp and color.
+	private static Pattern regexTimsestampAndColor = null;
+	
 	/**
 	 * Constructor.
 	 */
@@ -56,6 +62,9 @@ class LogConsole {
 		
 		// Create panel borders.
 		selectionBorder = BorderFactory.createLineBorder(Color.RED);
+		
+		// Compile regular expression matcher.
+		regexTimsestampAndColor = Pattern.compile("(?<stamp>^[^#]*)#rgb\\((?<red>\\w+),(?<green>\\w+),(?<blue>\\w+)\\)");
 	}
 	
 	/**
@@ -83,16 +92,18 @@ class LogConsole {
 	 * Console input buffers.
 	 */
 	protected ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
-	public Obj<ByteBuffer> timestampBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
+	public Obj<ByteBuffer> headerBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
 	public Obj<ByteBuffer> logMessageBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LOG_MESSAGE_BUFFER_SIZE));
 
 	
-	private int inputReaderState = READ_TIMESTAMP;
+	private int inputReaderState = READ_HEADER;
 	
 	/**
-	 * Last read timestamp.
+	 * Last read timestamp and color.
 	 */
-	private LocalTime readTimestamp = null;
+	private Obj<LocalTime> readTimestamp = new Obj<LocalTime>(null);
+	private Obj<Color> readColor = new Obj<Color>(null);
+	private Obj<String> readStatement = new Obj<String>(null);
 	
 	/**
 	 * Message record list that maps time axis to the records.
@@ -146,6 +157,23 @@ class LogConsole {
 		
 		// Reset selection.
 		setSelected(false); //$hide$
+	}
+	
+	/**
+	 * Try to run console statment.
+	 * @param logMessage
+	 * @return
+	 */
+	public boolean runStatement(MessageRecord logMessage) {
+		
+		// On clear console.
+		if ("CLEAR".equalsIgnoreCase(logMessage.statment)) {
+			
+			// Clear console contents.
+			clear();
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -212,11 +240,11 @@ class LogConsole {
 			// Determine protocol state from input byte value and invoke related action.
 			switch (inputReaderState) {
 			
-			case READ_TIMESTAMP:
-				endOfReading = Utility.readUntil(inputBuffer, timestampBuffer, TIMESTAMP_BUFFER_SIZE, Consoles.DIVIDER_SYMBOL, terminated);
+			case READ_HEADER:
+				endOfReading = Utility.readUntil(inputBuffer, headerBuffer, TIMESTAMP_BUFFER_SIZE, Consoles.DIVIDER_SYMBOL, terminated);
 				if (terminated.ref) {
 					inputReaderState = READ_LOG_MESSAGE;
-					readTimestamp = getTimestamp(timestampBuffer.ref);
+					parseHeaderBytes(headerBuffer.ref, readTimestamp, readColor, readStatement);
 				}
 				break;
 				
@@ -224,10 +252,10 @@ class LogConsole {
 				endOfReading = Utility.readUntil(inputBuffer, logMessageBuffer, LOG_MESSAGE_BUFFER_SIZE, Consoles.TERMINAL_SYMBOL, terminated);
 				if (terminated.ref) {
 					
-					inputReaderState = READ_TIMESTAMP;
+					inputReaderState = READ_HEADER;
 					String logMessageText = getLogMessage(logMessageBuffer.ref);
 					
-					MessageRecord messageRecord = new MessageRecord(readTimestamp, logMessageText);
+					MessageRecord messageRecord = new MessageRecord(readTimestamp.ref, readColor.ref, logMessageText, readStatement.ref);
 					logMessageLambda.accept(messageRecord);
 					
 					messageAccepted = true;
@@ -240,35 +268,75 @@ class LogConsole {
 	}
 
 	/**
-	 * Get timestamp from the input buffer.
-	 * @param timestampBuffer
+	 * Parse bytes from the header buffer.
+	 * @param headerBuffer
+	 * @param outputTimestamp
+	 * @param outputColor
+	 * @param outputStatement
 	 * @return
 	 * @throws Exception 
 	 */
-	private LocalTime getTimestamp(ByteBuffer timestampBuffer)
+	private boolean parseHeaderBytes(ByteBuffer headerBuffer, Obj<LocalTime> outputTimestamp, Obj<Color> outputColor, Obj<String> outputStatement)
 			throws Exception {
 		
-		// Prepare the timestamp buffer for reading the XML length.
-		timestampBuffer.flip();
+		// Prepare the header buffer for reading the XML length.
+		headerBuffer.flip();
 		
 		// Get length of the nuffer.
-		int arrayLength = timestampBuffer.limit();
+		int arrayLength = headerBuffer.limit();
 		byte [] bytes = new byte [arrayLength];
 		
 		// Read buffer contents.
-		timestampBuffer.get(bytes);
+		headerBuffer.get(bytes);
 		
 		// Convert bytes into UTF-8 encoded string.
-		String timstampText = new String(bytes, "UTF-8");
+		String headerString = new String(bytes, "UTF-8");
 		
-		// Convert text to timstamp object.
-		LocalTime timestamp = LocalTime.parse(timstampText, Consoles.TIMESTAMP_FORMAT);
+		// Inicialization.
+		outputTimestamp.ref = LocalTime.now();
+		outputColor.ref = Color.BLACK;
+		outputStatement.ref = "";
+		boolean success;
 		
-		// Reset the timestamp buffer.
-		timestampBuffer.clear();
+		// Parse the received string.
+		Matcher matcher = regexTimsestampAndColor.matcher(headerString);
+		boolean found = matcher.find();
+		int groupCount = matcher.groupCount();
+		
+		if (found && groupCount == 4) {
+			
+			// Get the message timestamp and color.
+			String timestampString = matcher.group(1);
+			
+			// Convert text to timstamp object.
+			outputTimestamp.ref = LocalTime.parse(timestampString, Consoles.TIMESTAMP_FORMAT);
+			
+			// Get color components.
+			String redString = matcher.group(2);
+			String greenString = matcher.group(3);
+			String blueString = matcher.group(4);
+			int red = Integer.parseInt(redString, 16);
+			int green = Integer.parseInt(greenString, 16);
+			int blue = Integer.parseInt(blueString, 16);
+			
+			// Compile color value.
+			outputColor.ref = new Color(red, green, blue);
+			
+			// Set output flag to success.
+			success = true;
+		}
+		else {
+			// Set output statement.
+			outputStatement.ref = headerString;
+			// Reset output flag.
+			success = false;
+		}
+		
+		// Reset the header buffer.
+		headerBuffer.clear();
 		
 		// Return result.
-		return timestamp;
+		return success;
 	}
 	
 	/**

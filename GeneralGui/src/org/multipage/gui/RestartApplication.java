@@ -106,6 +106,10 @@ public class RestartApplication {
 	 */
 	public static void runRestartWathdog() {
 		
+		// TODO: <---REFACTOR Turn on GUI watchdog.
+		return;
+		
+		/*
 		watchDog = new Timer("IDE-Restart-WatchDog", true);
 		
 		watchDog.schedule(new TimerTask() {
@@ -123,5 +127,6 @@ public class RestartApplication {
 				}
 			}
 		}, watchDogPeriod, watchDogPeriod);
+		*/
 	}
 }

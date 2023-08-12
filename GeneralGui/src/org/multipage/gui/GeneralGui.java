@@ -15,7 +15,6 @@ import java.util.function.Supplier;
 import javax.swing.UIManager;
 
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * @author
@@ -273,7 +272,8 @@ public class GeneralGui {
 	 */
 	private static void setConsolesDefaultData() {
 		
-
+		// Delegate the call.
+		Consoles.setDefaultData();
 	}
 	
 	/**
