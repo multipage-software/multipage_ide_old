@@ -305,10 +305,6 @@ public class DebugViewer extends JFrame {
 		private static boolean filter(String messageText) {
 
 			boolean matches = Utility.matches(messageText, filterString, caseSensitive, wholeWords, exactMatch);
-			
-			// TODO: <---DEBUGGER Check filter match.
-			j.log("FILTER MATCH %b", matches);
-			
 			return matches;
 		}
 
@@ -1376,8 +1372,6 @@ public class DebugViewer extends JFrame {
 		if (command.isEmpty()) {
 			return;
 		}
-		
-		// TODO: <---DEBUGGER FINISH
 	}
 	
 	/**

@@ -182,11 +182,6 @@ import com.ibm.icu.text.CharsetMatch;
 public class Utility {
 	
 	/**
-	 * Buffer size.
-	 */
-	private static final int BUFFER_SIZE = 1024;
-	
-	/**
 	 * Standard headers.
 	 */
 	public static final String xmlHeaderTemplate = "<?xml version=\"1.0\" encoding=\"%s\"?>";
@@ -6150,60 +6145,131 @@ public class Utility {
     }
     
     /**
+     * Go through input buffer until the input symbol is fully read.
+     * @param inputBuffer
+     * @param startSymbol
+     * @param terminated
+     * @return end of buffer
+     */
+	public static boolean readSymbol(ByteBuffer inputBuffer, byte [] startSymbol, Obj<Integer> index, Obj<Boolean> terminated) {
+		
+		// Initialization.
+		int startLength = startSymbol.length;
+		terminated.ref = false;
+		
+		// Loop for input bytes.
+		while (inputBuffer.hasRemaining()) {
+			
+			// Read current byte from the buffer.
+			byte theByte = inputBuffer.get();
+			
+			// Try to match bytes with the start symbol.
+			if (theByte == startSymbol[index.ref]) {
+				index.ref++;
+				if (index.ref >= startLength) {
+					
+					terminated.ref = true;
+					index.ref = 0;
+					return false;
+				}
+				continue;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Read integer from the input buffer.
+	 * @param inputBuffer
+	 * @param intValue
+	 * @param index
+	 * @param terminated
+	 * @return end of buffer
+	 */
+	public static boolean readInt(ByteBuffer inputBuffer, Obj<Integer> intValue, Obj<Integer> index, Obj<Boolean> terminated) {
+		
+		// Initialization.
+		terminated.ref = false;
+		
+		// Integer vaules occupy 4 bytes.
+		// Read input bytes.
+		for (; index.ref <= 3; index.ref++) {
+			
+			// If no remaining bytes...
+			if (!inputBuffer.hasRemaining()) {
+				return true;
+			}
+			
+			// Read current byte from the buffer.
+			byte theByte = inputBuffer.get();
+			
+			// Compile integer value.
+			intValue.ref |= theByte << ((3 - index.ref) * 8);
+		}
+		
+		terminated.ref = true;
+
+		index.ref = 0;
+		
+		// Return end of buffer flag.
+		boolean endOfBuffer = !inputBuffer.hasRemaining();
+		return endOfBuffer;
+	}
+	
+    /**
      * Read bytes from input buffer until the terminal symbol is found. If the terminal is not found set
      * the "terimnated" flag to false. 
      * @param inputBuffer
      * @param outputBuffer 
      * @param terminalSymbol
+     * @param index
+     * @param count
+     * @param terminalIndex
      * @param successfullyTerminated
      * @return true value if the end of obuffer has been reached
      */
-	public static boolean readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol, Obj<Boolean> successfullyTerminated) {
+	public static boolean readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol,
+								    Obj<Integer> index, int count, Obj<Integer> terminalIndex, Obj<Boolean> successfullyTerminated) {
 		
 		// Initialization.
 		int terminalLength = terminalSymbol.length;
-		int terminalIndex = 0;
 		
-		// TODO: <---DEBUG
-		j.logClear(3);
-		
-		// Do loop.
+		// Loop for input bytes.
 		while (inputBuffer.hasRemaining()) {
 			
 			// Read current byte from the buffer.
 			byte theByte = inputBuffer.get();
 			
 			// TODO: <---DEBUG
-			j.log(3, Color.WHITE, "BUFFER BYTE [%02X]", theByte);
-			
-			// Disply input byte.
-			/*String className = Thread.currentThread().getStackTrace()[2].getClassName();
-			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
-				if (theByte != 0) {
-					System.out.format("|%c", (char) theByte);
-				}
-				else {
-					System.out.format("|%c\n", (char) 0x2588);
-				}
-			}*/
-			
+			System.err.format("{%02X}", theByte);
+
 			// Try to match bytes with the terminal symbol.
-			if (theByte == terminalSymbol[terminalIndex]) {
-				terminalIndex++;
-				if (terminalIndex >= terminalLength) {
+			if (theByte == terminalSymbol[terminalIndex.ref]) {
+				terminalIndex.ref++;
+				if (terminalIndex.ref >= terminalLength) {
+					
+					// TODO: <---DEBUG
+					if (index.ref < count) {
+						System.out.format("[index=%d,count=%d,remains=%b,terminal_len=%d]", index, count, inputBuffer.hasRemaining(), terminalLength);
+					}
 					break;
 				}
 				continue;
 			}
 			
+			index.ref++;
+			
 			// Check buffer capacity.
-			int limit = outputBuffer.ref.limit();
+			int position = outputBuffer.ref.position();
 			int capacity = outputBuffer.ref.capacity();
-			if (!outputBuffer.ref.hasRemaining() && limit >= capacity) {
+			if (!outputBuffer.ref.hasRemaining() && position >= capacity) {
 				
 				// Increase buffer capacity.
-				int increasedCapacity = outputBuffer.ref.capacity() + bufferIncrease;
+				int increasedCapacity = capacity + bufferIncrease;
 				ByteBuffer increasedOutputBuffer = ByteBuffer.allocate(increasedCapacity);
+				
+				// TODO: <---DEBUG
+				System.out.format("[Increasing capacity: %d B]", increasedCapacity);
 				
 				outputBuffer.ref.flip();
 				
@@ -6216,13 +6282,12 @@ public class Utility {
 				outputBuffer.ref.put(theByte);
 			}
 			catch (Exception e) {
-				j.log("LIMIT = %d\tCAPACITY = %d", limit, capacity);
 				e.printStackTrace();
 			}
 		}
 		
 		// If the termnal symbol was not found, set the output flag to false value.
-		successfullyTerminated.ref = terminalIndex >= terminalLength;
+		successfullyTerminated.ref = terminalIndex.ref >= terminalLength;
 		
 		// Return a value indicating wheter the input buffer has remaining bytes.
 		boolean endOfBuffer = !inputBuffer.hasRemaining();
@@ -6304,20 +6369,6 @@ public class Utility {
 		
 		// Return the output buffer.
 		return outputBuffer.ref;
-	}
-	
-	/**
-	 * Prepare input buffer for reuse.
-	 */
-	public static void reuseInputBuffer(ByteBuffer inputBuffer) {
-		
-		// Herein prepare input buffer for next write operation.
-		if (inputBuffer.hasRemaining()) {
-			inputBuffer.compact();
-		}
-		else {
-			inputBuffer.clear();
-		}
 	}
 	
 	/**

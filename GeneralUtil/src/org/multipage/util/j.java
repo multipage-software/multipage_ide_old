@@ -17,7 +17,6 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.function.Supplier;
 
 /**
  * @author user
@@ -51,15 +50,11 @@ public class j {
 	private static boolean logTimeDelta = false;
 	
 	/**
-	 * Lock object for log
+	 * Log message protocol control symbols.
 	 */
-	private static final Object synclog = new Object();
-	
-	/**
-	 * Log message divider and stop symbols.
-	 */
-	private static final byte[] DIVIDER_SYMBOL = { 0, 0 };
-	private static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
+	private static final byte[] START_OF_HEADING = { (byte) 0x00, (byte) 0x01 };
+	private static final byte[] START_OF_TEXT = { (byte) 0x00, (byte) 0x02 };
+	private static final byte[] END_OF_TRANSMISSION = { (byte) 0x00, (byte) 0x04 };
 	
 	/**
 	 * Open consoles for mutlitask logging.
@@ -70,12 +65,24 @@ public class j {
 			new InetSocketAddress("localhost", 48002),
 		};
 	
-	public static Socket [] openConsoleSockets = new Socket [openConsoles.length];
-	
 	/**
-	 * Lambda function to ensure that the consoles application is running.
+	 * Open sockets and its synchronization objects.
 	 */
-	public static Supplier<Boolean> ensureConsolesRunningLambda = null;
+	public static Socket [] openConsoleSockets = new Socket [openConsoles.length];
+	private static Object [] consoleSynchronization = new Object [openConsoles.length];
+
+	/**
+	 * Static constructor. 
+	 */
+	static {
+		
+		// Fill in array of locks.
+		int count = consoleSynchronization.length;
+		
+		for (int index = 0; index < count; index++) {
+			consoleSynchronization[index] = new Object();
+		}
+	}
 
 	/**
 	 * Log formatted message on stdout or stderr or on "test"
@@ -92,7 +99,7 @@ public class j {
 	/**
 	 * Log formatted message on stdout or stderr or on "test"
 	 * displayDelta - if is true, the delta time between time stamps is displayed.
-	 * @param consoleIndex - index of Eclipse output console; if the index is -1, then use STDOUT 
+	 * @param consoleIndex - index of Eclipse output console; if the index is 0 or negative, then use STDOUT 
 	 * @param color - if console index is greater then 0 the value sets the color of the console message
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
@@ -100,56 +107,58 @@ public class j {
 	@SuppressWarnings("resource")
 	public synchronized static void log(int consoleIndex, Color color, Object parameter, Object ... strings) {
 		
-		synchronized (synclog) {
+		// Check console index.
+		if (consoleIndex <= 0 || consoleIndex > openConsoleSockets.length) {
+			return;
+		}
+
+		String type = "";
+		String indentation = "";
+		
+		long currentTimeMs = System.currentTimeMillis();
+		long timeDeltaMs = currentTimeMs - lastTimeStampMs;
+		
+		Timestamp timeStamp = new Timestamp(lastTimeStampMs);
+		String timeStampText = logTimeSpan ? new SimpleDateFormat("kk:mm:ss.SSS").format(timeStamp) + ": " : "";
+		lastTimeStampMs = currentTimeMs;
+		
+		if (logTimeDelta) {
+			formatToConsole(consoleIndex, timeStamp, "delta %dms ", color, timeDeltaMs);
+		}
+		
+		if (parameter instanceof LogParameter) {
+			LogParameter logparam = (LogParameter) parameter;
+			indentation = logparam.getIndentation();
+			type = logparam.getType();
+		}
+		else if (parameter instanceof String) {
+			type = (String) parameter;
+		}
+		
+		if (!type.isEmpty()) {
 			
-			String type = "";
-			String indentation = "";
-			
-			long currentTimeMs = System.currentTimeMillis();
-			long timeDeltaMs = currentTimeMs - lastTimeStampMs;
-			
-			Timestamp timeStamp = new Timestamp(lastTimeStampMs);
-			String timeStampText = logTimeSpan ? new SimpleDateFormat("kk:mm:ss.SSS").format(timeStamp) + ": " : "";
-			lastTimeStampMs = currentTimeMs;
-			
-			if (logTimeDelta) {
-				formatToConsole(consoleIndex, timeStamp, "delta %dms ", color, timeDeltaMs);
-			}
-			
-			if (parameter instanceof LogParameter) {
-				LogParameter logparam = (LogParameter) parameter;
-				indentation = logparam.getIndentation();
-				type = logparam.getType();
-			}
-			else if (parameter instanceof String) {
-				type = (String) parameter;
-			}
-			
-			if (!type.isEmpty()) {
-				
-				PrintStream os = "out".equals(type) || "test".equals(type) ? System.out : ("err".equals(type) ? System.err : null);
-				if (strings.length > 0) {
-					if (os != null) {
-						Object [] parameters = Arrays.copyOfRange(strings, 1, strings.length);
-						os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
-					}
-					else {
-						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color, strings);
-					}
-					
+			PrintStream os = "out".equals(type) || "test".equals(type) ? System.out : ("err".equals(type) ? System.err : null);
+			if (strings.length > 0) {
+				if (os != null) {
+					Object [] parameters = Arrays.copyOfRange(strings, 1, strings.length);
+					os.format(indentation + timeStampText + strings[0].toString() + '\n', parameters);
 				}
 				else {
-					if (os != null) {
-						os.format(indentation + timeStampText + type);
-					}
-					else {
-						formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color);
-					}
+					formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color, strings);
 				}
+				
 			}
 			else {
-				formatToConsole(consoleIndex, timeStamp, indentation + parameter.toString() + '\n', color, strings);
+				if (os != null) {
+					os.format(indentation + timeStampText + type);
+				}
+				else {
+					formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color);
+				}
 			}
+		}
+		else {
+			formatToConsole(consoleIndex, timeStamp, indentation + parameter.toString() + '\n', color, strings);
 		}
 	}
 	
@@ -166,34 +175,44 @@ public class j {
 		
 		int count = openConsoles.length;
 		
-		if (consoleIndex > 0 && consoleIndex < count) {
+		if (consoleIndex > 0 && consoleIndex <= count) {
 			
-			String message = String.format(format, strings);
-			try {
-				// Get timestamp and color.
-				String timeStampText = timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT);
-				String colorText = String.format("rgb(%02X,%02X,%02X)", color.getRed(), color.getGreen(), color.getBlue());
-				String timestampAndColor = timeStampText + '#' + colorText;
-				
-				// Try to get socket connected to a given console.
-				Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
-				
-				// Write the log message to the console.
-				OutputStream stream = consoleSocket.getOutputStream();
-				
-				// Get timestamp and color bytes.
-				byte [] bytes = timestampAndColor.getBytes("UTF-8");
-				stream.write(bytes);	
-				stream.write(DIVIDER_SYMBOL);
-				
-				// Get message bytes.
-				bytes = message.getBytes("UTF-8");
-				stream.write(bytes);
-				stream.write(TERMINAL_SYMBOL);
-				stream.flush();
-			}
-			catch (Exception e) {
-				e.printStackTrace();
+			synchronized (consoleSynchronization[consoleIndex - 1]) {
+			
+				String body = String.format(format, strings);
+				try {
+					// Get timestamp and color.
+					String timeStampText = timeStamp.toLocalDateTime().format(TIMESTAMP_FORMAT);
+					String colorText = String.format("rgb(%02X,%02X,%02X)", color.getRed(), color.getGreen(), color.getBlue());
+					String header = timeStampText + '#' + colorText;
+					
+					// Try to get socket connected to a given console.
+					Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
+					
+					// Write the log message to the console.
+					OutputStream stream = consoleSocket.getOutputStream();
+					
+					// Get header and body bytes.
+					byte [] headerBytes = header.getBytes("UTF-8");
+					byte [] bodyBytes = body.getBytes("UTF-8");
+					
+					// Get lengths.
+					int headerLength = headerBytes.length;
+					int bodyLength = bodyBytes.length;
+					
+					// Send message to socket stream.
+					stream.write(START_OF_HEADING);
+					writeMsbInteger(stream, headerLength);
+					stream.write(headerBytes);	
+					stream.write(START_OF_TEXT);
+					writeMsbInteger(stream, bodyLength);
+					stream.write(bodyBytes);
+					stream.write(END_OF_TRANSMISSION);
+					stream.flush();
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		else {
@@ -202,31 +221,51 @@ public class j {
 	}
 	
 	/**
+	 * Write MSB integer value to stream.
+	 * @param stream
+	 */
+	private static void writeMsbInteger(OutputStream stream, int intValue) 
+			throws Exception {
+		
+		for (int index = 3; index >= 0; index--) {
+			
+			// Shift bytes to get the resulting byte.
+			byte theByte = (byte) (intValue >>> (index * 8));
+			stream.write(theByte);
+		}
+	}
+
+	/**
 	 * Clear console contents.
 	 * @param consoleIndex
 	 */
 	public static void logClear(int consoleIndex) {
 		
-		try {
-			// Try to get socket connected to a given console.
-			Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
-			
-			// Write the log message to the console.
-			OutputStream stream = consoleSocket.getOutputStream();
-			
-			byte [] bytes = "CLEAR".getBytes("UTF-8");
-			stream.write(bytes);
-			stream.write(DIVIDER_SYMBOL);
-			stream.write('_');
-			stream.write(TERMINAL_SYMBOL);
-			stream.flush();
-		}
-		catch (Exception e) {
-			e.printStackTrace();
+		// Check console index.
+		if (consoleIndex <= 0 || consoleIndex > openConsoleSockets.length) {
+			return;
 		}
 		
-		// Send info.
-		j.log(consoleIndex, Color.LIGHT_GRAY, "CLR");
+		synchronized (consoleSynchronization[consoleIndex - 1])	{
+			
+			try {
+				// Try to get socket connected to a given console.
+				Socket consoleSocket = getConnectedSocket(consoleIndex - 1);
+				
+				// Write the log message to the console.
+				OutputStream stream = consoleSocket.getOutputStream();
+				
+				byte [] bytes = "CLEAR".getBytes("UTF-8");
+				stream.write(bytes);
+				stream.write(START_OF_TEXT);
+				stream.write('_');
+				stream.write(END_OF_TRANSMISSION);
+				stream.flush();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/**
@@ -242,22 +281,15 @@ public class j {
 		Socket socket = openConsoleSockets[consoleIndex];
 		if (socket == null) {
 			
-			// Ensurte that the consoles are running.
-			if (ensureConsolesRunningLambda == null) {
-				throw new IllegalStateException();
-			}
-			Boolean running = ensureConsolesRunningLambda.get();
-			if (!running) {
-				throw new IllegalStateException();
-			}
-			
 			// Connect to given port.
 			InetSocketAddress socketAddress = openConsoles[consoleIndex];
 			
 			String server = socketAddress.getHostName();
 			int port = socketAddress.getPort();
 			
+			// Connect to socket.
 			socket = new Socket(server, port);
+			
 			openConsoleSockets[consoleIndex] = socket;
 		}
 		return socket;

@@ -71,7 +71,6 @@ public class RepeatedTask {
 		task.name = taskName;
 		
 		// Trim idle timeout.
-		
 		if (idleTimeMs < 0) {
 			idleTimeMs = DEFAULT_IDLE_TIMEOUT_MS;
 		}
@@ -82,40 +81,35 @@ public class RepeatedTask {
 		
 		// Run main loop of this task.
 		Obj<Exception> exception = new Obj<Exception>(null);
-		task.thread = new Thread(() -> {
 			
-			// Task loop.
-			try {
-				
-				// Delay start.
-				if (startDelayMs > 0) {
-					Thread.sleep(startDelayMs);
-				}
-				
-				task.running = true;
-				while (task.running && !task.stop) {
-					
-					// Invoke lambda function.
-					exception.ref = null;
-		        	task.running = taskLambda.apply(task.running, exception);
-		        	
-		        	// Idle timeout.
-		        	Thread.sleep(idleTime);
-		        	
-		        	// Exit n exception.
-		        	if (exception.ref != null) {
-		        		task.stop = true;
-		        		break;
-		        	}
-		        }
+		// Task loop.
+		try {
+			
+			// Delay start.
+			if (startDelayMs > 0) {
+				Thread.sleep(startDelayMs);
 			}
-			catch (Exception e) {
-				exception.ref = e;
-			}
-		}, task.name);
-		
-		task.thread.start();
-		task.thread.join();
+			
+			task.running = true;
+			while (task.running && !task.stop) {
+				
+				// Invoke lambda function.
+				exception.ref = null;
+	        	task.running = taskLambda.apply(task.running, exception);
+	        	
+	        	// Idle timeout.
+	        	Thread.sleep(idleTime);
+	        	
+	        	// Exit n exception.
+	        	if (exception.ref != null) {
+	        		task.stop = true;
+	        		break;
+	        	}
+	        }
+		}
+		catch (Exception e) {
+			exception.ref = e;
+		}
 		
 		task.running = false;
 		

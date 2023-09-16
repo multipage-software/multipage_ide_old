@@ -10,9 +10,9 @@ import java.awt.Color;
 import java.awt.Component;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.time.LocalTime;
 import java.util.LinkedList;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +25,6 @@ import javax.swing.border.Border;
 
 import org.multipage.gui.Consoles.MessageRecord;
 import org.multipage.util.Obj;
-import org.multipage.util.j;
 
 /**
  * Console class.
@@ -34,17 +33,31 @@ import org.multipage.util.j;
 class LogConsole {
 	
 	/**
+	 * Maximum number of records.
+	 */
+	private static final int MAXIMUM_RECORDS = 300;
+	
+	/**
 	 * Incomming buffers' sizes.
 	 */
 	private static final int INPUT_BUFFER_SIZE = 1024;
-	private static final int TIMESTAMP_BUFFER_SIZE = 16;
+	private static final int TIMESTAMP_BUFFER_SIZE = 128;
 	private static final int LOG_MESSAGE_BUFFER_SIZE = INPUT_BUFFER_SIZE;
 	
 	/**
 	 * Input reader states.
 	 */
-	private static final int READ_HEADER = 0;
-	private static final int READ_LOG_MESSAGE = 1;
+	private static final int START_READING = 0;
+	private static final int READ_HEADER_LENGTH = 1;
+	private static final int READ_HEADER = 2;
+	private static final int READ_BODY_LENGTH = 3;
+	private static final int READ_BODY = 4;
+	
+	/**
+	 * Maximum lengths of input data.
+	 */
+	private static final int MAXIMUM_HEADER_LENGHT = 200;
+	private static final int MAXIMUM_BODY_LENGHT = 2048;
 	
 	/**
 	 * Panel borders.
@@ -78,10 +91,9 @@ class LogConsole {
 	public InetSocketAddress socketAddress = null;
 	
 	/**
-	 * Minimum and maximum timestamps.
+	 * Input socket chanel.
 	 */
-	protected LocalTime minimumTimestamp = null;
-	protected LocalTime maximumTimestamp = null;
+	public AsynchronousServerSocketChannel inputSocket = null;
 	
 	/**
 	 * Console port number.
@@ -92,23 +104,38 @@ class LogConsole {
 	 * Console input buffers.
 	 */
 	protected ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
-	public Obj<ByteBuffer> headerBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
-	public Obj<ByteBuffer> logMessageBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LOG_MESSAGE_BUFFER_SIZE));
-
+	private Obj<Integer> startSymbolPosition = new Obj<Integer>(0);
+	private Obj<Integer> headerLength = new Obj<Integer>(-1);
+	private Obj<Integer> headerLenghtPosition = new Obj<Integer>(0);
+	private Obj<ByteBuffer> headerBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(TIMESTAMP_BUFFER_SIZE));
+	private Obj<Integer> headerPosition = new Obj<Integer>(0);
+	private Obj<Integer> headerTerminalIndex = new Obj<Integer>(0);
+	private Obj<Integer> bodyLength = new Obj<Integer>(-1);
+	private Obj<Integer> bodyLengthPosition = new Obj<Integer>(0);
+	private Obj<ByteBuffer> bodyBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(LOG_MESSAGE_BUFFER_SIZE));
+	private Obj<Integer> bodyPosition = new Obj<Integer>(0);
+	private Obj<Integer> bodyTerminalIndex = new Obj<Integer>(0);
 	
-	private int inputReaderState = READ_HEADER;
+	// Initial state of the input bytes reader.
+	private int inputReaderState = START_READING;
 	
 	/**
 	 * Last read timestamp and color.
 	 */
-	private Obj<LocalTime> readTimestamp = new Obj<LocalTime>(null);
-	private Obj<Color> readColor = new Obj<Color>(null);
-	private Obj<String> readStatement = new Obj<String>(null);
+	private Obj<LocalTime> timestamp = new Obj<LocalTime>(null);
+	private Obj<Color> color = new Obj<Color>(null);
+	private Obj<String> statement = new Obj<String>(null);
 	
 	/**
 	 * Message record list that maps time axis to the records.
 	 */
 	protected LinkedList<MessageRecord> consoleRecords = new LinkedList<>();
+	
+	/**
+	 * Minimum and maximum timestamps.
+	 */
+	protected LocalTime minimumTimestamp = null;
+	protected LocalTime maximumTimestamp = null;
 	
 	/**
 	 * Split panel.
@@ -161,27 +188,44 @@ class LogConsole {
 	
 	/**
 	 * Try to run console statment.
-	 * @param logMessage
+	 * @param messageRecord
 	 * @return
 	 */
-	public boolean runStatement(MessageRecord logMessage) {
+	public boolean runStatement(MessageRecord messageRecord) {
+		
+		boolean isStatement = false;
 		
 		// On clear console.
-		if ("CLEAR".equalsIgnoreCase(logMessage.statment)) {
+		if ("CLEAR".equalsIgnoreCase(messageRecord.statment)) {
 			
 			// Clear console contents.
 			clear();
-			return true;
+			
+			// Set output flag.
+			isStatement = true;
 		}
-		return false;
+		
+		// Display statement in the log view.
+		if (isStatement) {
+			
+			// Append new record to the end of the list.
+			consoleRecords.add(messageRecord);
+		}
+		
+		return isStatement;
 	}
 
 	/**
-	 * Add new message record.
-	 * 
+	 * Take new message record.
 	 * @param messageRecord
 	 */
-	public void addMessageRecord(MessageRecord messageRecord) {
+	public void cacheMessageRecord(MessageRecord messageRecord) {
+		
+		// Try to run console statement..
+		boolean success = runStatement(messageRecord);
+		if (success) {
+			return;
+		}
 
 		// Get current time.
 		LocalTime timeNow = LocalTime.now();
@@ -196,17 +240,24 @@ class LogConsole {
 			maximumTimestamp = timeNow;
 		}
 
-		// Create new message record and put it into the message map.
-		synchronized (consoleRecords) {
-			consoleRecords.add(messageRecord);
+		// If number of records exceeds the maximum, remove 10 records from the beginning of the list.
+		int recordCount = consoleRecords.size();
+		if (recordCount > MAXIMUM_RECORDS) {
+			
+			for (int index = 0; index < 10; index++) {
+				consoleRecords.removeFirst();
+			}
 		}
+		
+		// Append new record to the end of the list.
+		consoleRecords.add(messageRecord);
 	}
-
+	
 	/**
 	 * Clear console content.
 	 */
-	public void clear() {
-
+	public synchronized void clear() {
+		
 		consoleRecords.clear();
 		maximumTimestamp = null;
 		minimumTimestamp = null;
@@ -215,10 +266,9 @@ class LogConsole {
 	
 	/**
 	 * Read log messages from the input buffer.
-	 * @param logMessageLambda
 	 * @throws Exception 
 	 */
-	public boolean readLogMessages(Consumer<MessageRecord> logMessageLambda)
+	public int readLogMessages()
 			throws Exception {
 		
 		// Prepare input buffer for reading.
@@ -226,45 +276,120 @@ class LogConsole {
 		
 		// If there are no remaining bytes in the input buffer, return false value.
 		if (!inputBuffer.hasRemaining()) {
-			return false;
+			return 0;
 		}
 		
-		boolean messageAccepted = false;
+		int messagesCount = 0;
 		
 		// Read until end of input buffer.
-		boolean endOfReading = false;
-		while (!endOfReading) {
+		boolean endOfInputBuffer = false;
+		while (!endOfInputBuffer) {
 			
-			Obj<Boolean> terminated = new Obj<Boolean>(false);
+			Obj<Boolean> terminalSymbolInterrupt = new Obj<Boolean>(false);
 			
 			// Determine protocol state from input byte value and invoke related action.
 			switch (inputReaderState) {
 			
-			case READ_HEADER:
-				endOfReading = Utility.readUntil(inputBuffer, headerBuffer, TIMESTAMP_BUFFER_SIZE, Consoles.DIVIDER_SYMBOL, terminated);
-				if (terminated.ref) {
-					inputReaderState = READ_LOG_MESSAGE;
-					parseHeaderBytes(headerBuffer.ref, readTimestamp, readColor, readStatement);
+			case START_READING:
+				
+				// Reset values read from buffer.
+				headerLength.ref = 0;
+				headerLenghtPosition.ref = 0;
+				headerPosition.ref = 0;
+				headerTerminalIndex.ref = 0;
+				bodyLength.ref = 0;
+				bodyLengthPosition.ref = 0;
+				bodyPosition.ref = 0;
+				bodyTerminalIndex.ref = 0;
+				timestamp.ref = null;
+				color.ref = null;
+				statement.ref = null;
+				
+				endOfInputBuffer = Utility.readSymbol(inputBuffer, Consoles.START_OF_HEADING, startSymbolPosition, terminalSymbolInterrupt);
+				if (terminalSymbolInterrupt.ref) {
+					inputReaderState = READ_HEADER_LENGTH;
+				}
+				break;
+			
+			case READ_HEADER_LENGTH:
+				
+				endOfInputBuffer = Utility.readInt(inputBuffer, headerLength, headerLenghtPosition, terminalSymbolInterrupt);
+				if (terminalSymbolInterrupt.ref) {
+					
+					// Check header length.
+					if (headerLength.ref < 0 || headerLength.ref > MAXIMUM_HEADER_LENGHT) {
+						throw new IllegalStateException("Header length exceeded maximum of " + MAXIMUM_HEADER_LENGHT + " bytes.");
+					}
+					inputReaderState = READ_HEADER;
 				}
 				break;
 				
-			case READ_LOG_MESSAGE:
-				endOfReading = Utility.readUntil(inputBuffer, logMessageBuffer, LOG_MESSAGE_BUFFER_SIZE, Consoles.TERMINAL_SYMBOL, terminated);
-				if (terminated.ref) {
+			case READ_HEADER:
+				
+				// TODO: <---DEBUG
+				System.out.format("[H%d-%d]", headerLength.ref, headerPosition.ref);
+				
+				endOfInputBuffer = Utility.readUntil(inputBuffer, headerBuffer, TIMESTAMP_BUFFER_SIZE, Consoles.START_OF_TEXT, headerPosition, headerLength.ref, headerTerminalIndex, terminalSymbolInterrupt);
+				
+				// TODO: <---DEBUG
+				System.out.format("[H_EOB%d]", endOfInputBuffer ? 1 : 0);
+				
+				if (terminalSymbolInterrupt.ref) {
+					inputReaderState = READ_BODY_LENGTH;
+					parseHeader(headerBuffer.ref, timestamp, color, statement);
+				}
+				break;
+			
+			case READ_BODY_LENGTH:
+
+				endOfInputBuffer = Utility.readInt(inputBuffer, bodyLength, bodyLengthPosition, terminalSymbolInterrupt);				
+				if (terminalSymbolInterrupt.ref) {
 					
-					inputReaderState = READ_HEADER;
-					String logMessageText = getLogMessage(logMessageBuffer.ref);
+					// Check body length.
+					if (bodyLength.ref < 0 || bodyLength.ref > MAXIMUM_BODY_LENGHT) {
+						throw new IllegalStateException("Body length exceeded maximum of " + MAXIMUM_BODY_LENGHT + " bytes.");
+					}
+					inputReaderState = READ_BODY;
+				}
+				break;				
+				
+			case READ_BODY:
+				
+				// TODO: <---DEBUG
+				System.out.format("[B%d-%d]", bodyLength.ref, bodyPosition.ref);
+				
+				endOfInputBuffer = Utility.readUntil(inputBuffer, bodyBuffer, LOG_MESSAGE_BUFFER_SIZE, Consoles.END_OF_TRANSMISSION, bodyPosition, bodyLength.ref, bodyTerminalIndex, terminalSymbolInterrupt);
+				
+				// TODO: <---DEBUG
+				System.out.format("[B_EOB%d]", endOfInputBuffer ? 1 : 0);
+				
+				if (terminalSymbolInterrupt.ref) {
 					
-					MessageRecord messageRecord = new MessageRecord(readTimestamp.ref, readColor.ref, logMessageText, readStatement.ref);
-					logMessageLambda.accept(messageRecord);
+					inputReaderState = START_READING;
+					String messageBody = getMessageBody(bodyBuffer.ref);
 					
-					messageAccepted = true;
+					MessageRecord messageRecord = new MessageRecord(timestamp.ref, color.ref, messageBody, statement.ref);
+					
+					// TODO<--- DEBUG Check message text.
+					boolean success = messageRecord.messageText.matches("^[^\\|]+\\|Hello (computer )?world\\n");
+					if (!success) {
+						// Dump bytes.
+						for (char theCharacter : messageRecord.messageText.toCharArray()) {
+							System.out.format(" '%c' [%08X]  ", theCharacter, (int) theCharacter);
+						}
+						System.out.println();
+					}
+					
+					// Take new record.
+					cacheMessageRecord(messageRecord);
+    				
+					messagesCount++;
 				}
 				break;
 			}
 		}
 		
-		return messageAccepted;
+		return messagesCount;
 	}
 
 	/**
@@ -276,7 +401,7 @@ class LogConsole {
 	 * @return
 	 * @throws Exception 
 	 */
-	private boolean parseHeaderBytes(ByteBuffer headerBuffer, Obj<LocalTime> outputTimestamp, Obj<Color> outputColor, Obj<String> outputStatement)
+	private boolean parseHeader(ByteBuffer headerBuffer, Obj<LocalTime> outputTimestamp, Obj<Color> outputColor, Obj<String> outputStatement)
 			throws Exception {
 		
 		// Prepare the header buffer for reading the XML length.
@@ -345,7 +470,7 @@ class LogConsole {
 	 * @return
 	 * @throws Exception 
 	 */
-	private String getLogMessage(ByteBuffer logMessageBuffer)
+	private String getMessageBody(ByteBuffer logMessageBuffer)
 			throws Exception {
 		
 		// Prepare the log message buffer for reading.
@@ -383,9 +508,17 @@ class LogConsole {
 	 * Returns number of logged records.
 	 * @return
 	 */
-	public int getRecordsCount() {
+	public synchronized int getRecordsCount() {
 		
 		int recordsCount = consoleRecords.size();
 		return recordsCount;
+	}
+	
+	/**
+	 * Renew input buffer.
+	 */
+	public void renewInputBuffer() {
+		
+		inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
 	}
 }

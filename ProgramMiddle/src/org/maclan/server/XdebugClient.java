@@ -286,7 +286,7 @@ public class XdebugClient {
 			    while (inputBuffer.hasRemaining()) {
 			    
 				    // Read input buffer until the NULL symbol is encountered. The output buffer can extend its capacity.
-				    Utility.readUntil(inputBuffer, commandBuffer, BUFFER_SIZE, XdebugCommand.NULL_SYMBOL, terminated);
+				    Utility.readUntil(inputBuffer, commandBuffer, BUFFER_SIZE, XdebugCommand.NULL_SYMBOL, null, -1, null, terminated);
 
 					// If the input bytes are not terminated, continue reading.
 				    if (!terminated.ref) {
@@ -305,8 +305,6 @@ public class XdebugClient {
 			        sendResponsePacket(clientSocketChannel, responsePacket);
 			    }
 			    
-				// Herein prepare input buffer for next write operation.
-			    Utility.reuseInputBuffer(inputBuffer);
 				return exit;
 			}
 			catch (Exception e) {
@@ -315,9 +313,6 @@ public class XdebugClient {
 				return true;
 			}
 		});
-		
-		// TODO: <---DEBUG IT
-		j.log("Debug client loop terminated");
 	}
 	
 	/**

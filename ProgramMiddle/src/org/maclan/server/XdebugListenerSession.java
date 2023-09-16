@@ -138,8 +138,6 @@ public class XdebugListenerSession extends DebugListenerSession {
 		// If there are no remaining bytes in the input buffer, return false value.
 		if (!inputBuffer.hasRemaining()) {
 			
-			// TODO: <---DEBUG
-			j.log("EMPTY BUFFER");
 			return false;
 		}
 		
@@ -155,7 +153,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 			switch (inputReaderState) {
 			
 			case READ_LENGTH:
-				endOfReading = Utility.readUntil(inputBuffer, lengthBuffer, LENGTH_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
+				endOfReading = Utility.readUntil(inputBuffer, lengthBuffer, LENGTH_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, null, -1, null, terminated);
 				if (terminated.ref) {
 					inputReaderState = READ_XML;
 					xmlLength = getXmlLength(lengthBuffer.ref);
@@ -163,7 +161,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 				break;
 				
 			case READ_XML:
-				endOfReading = Utility.readUntil(inputBuffer, xmlBuffer, PACKET_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, terminated);
+				endOfReading = Utility.readUntil(inputBuffer, xmlBuffer, PACKET_BUFFER_SIZE, XdebugResponse.NULL_SYMBOL, null, -1, null, terminated);
 				if (terminated.ref) {
 					inputReaderState = READ_LENGTH;
 					XdebugResponse xdebugResponse = getXmlContent(xmlBuffer.ref);

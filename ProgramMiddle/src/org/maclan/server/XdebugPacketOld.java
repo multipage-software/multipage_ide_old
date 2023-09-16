@@ -103,9 +103,6 @@ public class XdebugPacketOld {
 		// Parse packet text
 		InputSource source = new InputSource(new StringReader(packetText));
 		xml = builder.parse(source);
-		
-		// TODO: <---DEBUGGER PARSED XML PACKET
-		j.log("PARSED XML PACKET: %s", packetText);
 	}
 	
 	/**

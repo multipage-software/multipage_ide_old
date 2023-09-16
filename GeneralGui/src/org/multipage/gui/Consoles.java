@@ -9,7 +9,6 @@ package org.multipage.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.EventQueue;
 import java.awt.Rectangle;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -19,11 +18,15 @@ import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
@@ -37,10 +40,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
-import org.multipage.util.Lock;
 import org.multipage.util.Obj;
-import org.multipage.util.RepeatedTask;
-import org.multipage.util.j;
 
 /**
  * Multitask log consoles that can be also run as a standalone application with LocConsole and ConsolePropeties classes
@@ -56,9 +56,19 @@ public class Consoles extends JFrame {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * Format of time stamps.
+	 */
+	public static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+	
+	/**
 	 * Main frame boundaries.
 	 */
 	private static Rectangle bounds;
+
+	/**
+	 * Open ports that enable consoles input.
+	 */
+	public static int[] openPorts = new int[] { 48000, 48001, 48002, 48003 };
 	
 	/**
 	 * Set default data.
@@ -67,21 +77,6 @@ public class Consoles extends JFrame {
 		
 		bounds = null;
 	}
-
-	/**
-	 * Application start up timeout in milliseconds.
-	 */
-	private static final long STARTUP_TIMEOUT_MS = 3000;
-	
-	/**
-	 * Format of time stamps.
-	 */
-	public static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-	
-	/**
-	 * Open ports that enable consoles input.
-	 */
-	public static int[] openPorts = new int[] { 48000, 48001, 48002 };
 
 	/**
 	 * Message record class.
@@ -135,6 +130,30 @@ public class Consoles extends JFrame {
 		}
 		
 		/**
+		 * Get message text with maximum allowed characters.
+		 * @param maximumCharacters
+		 * @return
+		 */
+		public String getMessageText(int maximumCharacters) {
+			
+			if (messageText == null || messageText.isEmpty()) {
+				return "";
+			}
+			
+			String resultMessageString = messageText.trim();
+			int length = resultMessageString.length();
+			
+			// Trim maximum haracters.
+			if (maximumCharacters > length) {
+				maximumCharacters = length;
+			}
+			
+			// Get specified number of characters from the message beginning.
+			resultMessageString = resultMessageString.substring(0, maximumCharacters);
+			return resultMessageString;
+		}
+		
+		/**
 		 * Get string representation of the log record.
 		 */
 		@Override
@@ -150,21 +169,12 @@ public class Consoles extends JFrame {
 	private static Map<String, LogConsole> consoles = new ConcurrentHashMap<>();
 
 	/**
-	 * Socket idle timeout in milliseconds.
-	 */
-	private static final int IDLE_TIMEOUT_MS = 250;
-
-	/**
 	 * Log message divider and stop symbols.
 	 */
-	static final byte[] DIVIDER_SYMBOL = { 0, 0 };
-	static final byte[] TERMINAL_SYMBOL = { 0, 0, 0, 0 } ;
+	static final byte[] START_OF_HEADING = { (byte) 0x00, (byte) 0x01 };
+	static final byte[] START_OF_TEXT = { (byte) 0x00, (byte) 0x02 };
+	static final byte[] END_OF_TRANSMISSION = { (byte) 0x00, (byte) 0x04 };
 	
-	/**
-	 * Set this flag to true on application exit.
-	 */
-	private static boolean exitApplication = false;
-
 	/**
 	 * Application state.
 	 */
@@ -187,19 +197,15 @@ public class Consoles extends JFrame {
 	private static final double PROPERTIES_PROPORTION = 0.25;
 	
 	/**
+	 * Splitter size.
+	 */
+	private static final int SPLITTER_SIZE = 10;
+	
+	/**
 	 * Reference to main frame window of the application.
 	 */
 	protected static Consoles mainFrame = null;
-
-	/**
-	 * Initialize application state. Must be called prior to any log message.
-	 */
-	public static void initialize() {
-
-		// Bind logging callback lambda.
-		j.ensureConsolesRunningLambda = () -> ensureApplicationRunning();
-	}
-
+	
 	/**
 	 * Components.
 	 */
@@ -236,7 +242,7 @@ public class Consoles extends JFrame {
 			e.printStackTrace();
 		}
 
-		EventQueue.invokeLater(new Runnable() {
+		SwingUtilities.invokeLater(new Runnable() {
 			
 			public void run() {
 				try {
@@ -250,35 +256,7 @@ public class Consoles extends JFrame {
 			}
 		});
 	}
-
-	/**
-	 * Ensure that the application is running.
-	 */
-	public static boolean ensureApplicationRunning() {
-
-		if (applicationState == UNINITIALIZED || applicationState == SHUTDOWN) {
-			// Start application.
-			main(new String[] {});
-		}
-		
-		// Wait for application to listen to ports.
-		while (applicationState != LISTENING) {
-
-			if (applicationState == SHUTDOWN) {
-				return false;
-			}
-
-			try {
-				Thread.sleep(STARTUP_TIMEOUT_MS);
-			}
-			catch (Exception e) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
+	
 	/**
 	 * Create the frame.
 	 */
@@ -299,7 +277,6 @@ public class Consoles extends JFrame {
 	protected void onClosing() {
 
 		applicationState = SHUTDOWN;
-		exitApplication = true;
 	}
 
 	/**
@@ -341,9 +318,12 @@ public class Consoles extends JFrame {
 		createToolbar();
 
 		// Open ports for consoles.
-		addConsoleView("Console1", 48000);
-		addConsoleView("Console2", 48001);
-		addConsoleView("Console3", 48002);
+		int count = openPorts.length;
+		for (int index = 0; index < count; index++) {
+			
+			int port = openPorts[index];
+			addConsoleView("Console" + (index + 1), port);
+		}
 		
 		// Add properties panel.
 		addConsolePropertiesPanel();
@@ -397,6 +377,7 @@ public class Consoles extends JFrame {
 		// Create scroll bars in the left component of the split panel.
 		JScrollPane scrollPane = new JScrollPane();
 		splitPane.setLeftComponent(scrollPane);
+		splitPane.setDividerSize(SPLITTER_SIZE);
 		
 		// Create text panel for the console.
 		JTextPane textPane = new JTextPane();
@@ -654,6 +635,44 @@ public class Consoles extends JFrame {
 		
 		return null;
 	}
+	
+	/**
+	 * Create new read completion handler.
+	 * @param completedLambda
+	 * @param failedLambda
+	 * @param nextReadLambda
+	 * @return
+	 */
+	private CompletionHandler<Integer, String> newReadHandler(
+				BiFunction<Integer, String, Boolean> completedLambda,
+				BiConsumer<Throwable, String> failedLambda,
+				BiConsumer<CompletionHandler<Integer, String>, String> nextReadLambda) {
+		
+		// Create completion handler.
+        CompletionHandler<Integer, String> completionHandler = new CompletionHandler<Integer, String>() {
+			@Override
+			public void completed(Integer result, String consoleName) {
+				
+				SwingUtilities.invokeLater(() -> {
+					
+					// Call lambda for completion.
+					boolean success = completedLambda.apply(result, consoleName);
+					if (!success) {
+						return;
+					}
+					
+					CompletionHandler<Integer, String> nextHandler = newReadHandler(completedLambda, failedLambda, nextReadLambda);
+					nextReadLambda.accept(nextHandler, consoleName);					
+				});
+			}
+			@Override
+			public void failed(Throwable exception, String consoleName) {
+				// Call lambda for failed operation.
+				failedLambda.accept(exception, consoleName);
+			}
+        };
+        return completionHandler;
+	}
 
 	/**
 	 * Open port for console with given name.
@@ -663,97 +682,108 @@ public class Consoles extends JFrame {
 		
 		try {
 			// Try to get console by its name.
-			LogConsole console = consoles.get(consoleName);
-			if (console == null) {
+			LogConsole openedConsole = consoles.get(consoleName);
+			if (openedConsole == null) {
 				// Show error message.
 				Utility.show2(this, consoleName + " not found.");
 			}
 			
 			// Open asynchornous server socket.
-	        AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
-	        console.socketAddress = new InetSocketAddress("localhost", console.port);
-	        server.bind(console.socketAddress);
+	        openedConsole.inputSocket = AsynchronousServerSocketChannel.open();
+	        openedConsole.socketAddress = new InetSocketAddress("localhost", openedConsole.port);
+	        openedConsole.inputSocket.bind(openedConsole.socketAddress);
 	        
-	        server.accept(server, new CompletionHandler<AsynchronousSocketChannel, AsynchronousServerSocketChannel>() {
+	        // Set event that accept connections to input socket.
+	        openedConsole.inputSocket.accept(consoleName, new CompletionHandler<AsynchronousSocketChannel, String>() {
 	        
-	        	// When connection is completed...
+	        	// Event that is run when the socket connection is completed.
 	        	@Override
-				public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
-	        		try {
-	        			
-                		// Create lock that can synchronize read operations.
-                		Lock readLock = new Lock();
-	        			
-	        			// Start a loop to read input data. 
-	        			RepeatedTask.loopBlocking(consoleName, -1, IDLE_TIMEOUT_MS, (exit, exception) -> {
-	        				
-	                		// Reset lock.
-	                		Lock.reset(readLock);
-                    		
-							// Read input data bytes.
-		                    client.read(console.inputBuffer, console, new CompletionHandler<Integer, LogConsole>() {
-		                    	
-		                    	// After read completed...
-		                    	public void completed(Integer result, LogConsole console) {
-		                    		
-		                    		try {
-			                    		// Read log messages from input buffer.
-			                    		console.readLogMessages(logMessage -> {
-			                    			
-			                    			try {
-			                    				// Try to run console statement.
-			                    				boolean success = console.runStatement(logMessage);
-			                    				if (!success) {
-				    								// Add log message
-				                    				console.addMessageRecord(logMessage);
-			                    				}
-			                    			}
-			                    			catch (Exception e) {
-			                    				// Show error message.
-			                    				Utility.show2(Consoles.this, e.getLocalizedMessage());
-			                    			}
-			                    		});
-			                    		
-	    								// Update the console.
-	    								updateConsole(console);
-			                    		
-		                        		// Prepare input buffer for the next write operation.
-		                        		Utility.reuseInputBuffer(console.inputBuffer);
-		                    		}
-		                    		catch (Exception e)	{
-		                    			// Show error message.
-			                    		Utility.show2(Consoles.this, e.getLocalizedMessage());
+				public void completed(AsynchronousSocketChannel client, String consoleName) {
+	        		
+    				try {
+                		// Empty wrapper for the read failed exception.
+                		Obj<Exception> readFailedException = new Obj<Exception>(null);
+                		
+        				// Accept successful read operation.
+                		BiFunction<Integer, String, Boolean> completedLambda = (readResult, outputConsoleName) -> {
+                			
+                			synchronized (consoles) {
+	                			// TODO: <---DEBUG
+	                			System.out.format("[Enter completed]");
+	                    		try {
+                    			
+	                    			// Try to get output cosole.
+	                    			LogConsole outputConsole = consoles.get(outputConsoleName);
+	                    			if (outputConsole == null) {
+	                    				return false;
+	                    			}
+	                    			
+		                    		// Read log messages from input buffer.
+	                    			int messageCount = outputConsole.readLogMessages();
+		                    		if (messageCount > 0) {
+		                    			// Update the console after all messages from input buffer are read.
+										updateConsole(outputConsole);
 		                    		}
 		                    		
-		                    		// Notify lock.
-		                    		Lock.notify(readLock);
-		                    	}
-		                    	
-		                    	// On read error...
-								public void failed(Throwable e, LogConsole console) {
-				        			// Show error message.
-				        			Utility.show2(Consoles.this, e.getLocalizedMessage());
-		                        }
-		                    });
-		                    
-		                    // Wait for completion of the read operation.
-		                    Lock.waitFor(readLock);
-	        				
-	        				// Exit the blocking loop on application exit.
-	        				boolean running = !exitApplication;
-	        				return running;
-	        			});
-	        		}
+									// Renew input buffer.
+									if (outputConsole.inputBuffer.hasRemaining()) {
+										outputConsole.inputBuffer.compact();
+									}
+									else {
+										outputConsole.renewInputBuffer();
+									}
+									
+									// TODO: <---DEBUG
+									System.out.format("[Reading DONE]");
+	                    		}
+	                    		catch (Exception e)	{
+	                    			readFailedException.ref = e;
+	                    			// TODO: <---DEBUG
+	                    			e.printStackTrace();
+		                    		return false;
+	                    		}									
+                			}
+                    		return true;
+        				};
+        				// Read exception.
+        				BiConsumer<Throwable, String> failedLambda = (readException, outputConsoleName) -> {
+        					
+        					if (readException instanceof InterruptedByTimeoutException) {
+        						return;
+        					}
+        					readFailedException.ref = new Exception(readException);
+        					
+        					// TODO: <---DEBUG
+        					System.err.format("READING EXCEPTION\n");
+        					readFailedException.ref.printStackTrace();
+        					
+        				};
+        				// Read operation.
+        				BiConsumer<CompletionHandler<Integer, String>, String> readLambda = (handler, outputConsoleName) -> {
+        					synchronized (consoles) {
+                    			// Try to get output cosole.
+                    			LogConsole outputConsole = consoles.get(outputConsoleName);
+                    			if (outputConsole == null) {
+                    				return;
+                    			}
+        						client.read(outputConsole.inputBuffer, 10, TimeUnit.SECONDS, outputConsoleName, handler);
+        					}
+        				};
+        				// Create completion handler.
+                		CompletionHandler<Integer, String> handler = newReadHandler(completedLambda, failedLambda, readLambda);
+                		// Run first read operation with firt completion handler. 
+                		readLambda.accept(handler, consoleName);
+    				}
 	        		catch (Exception e) {
 	        			// Show error message.
-	        			Utility.show2(Consoles.this, e.getLocalizedMessage());
+	        			e.printStackTrace();
 	        		}
 	        	}
 	        	
 				// If the connection failed...
-	            public void failed(Throwable exception, AsynchronousServerSocketChannel server) {
+	            public void failed(Throwable exception, String consoleNname) {
 	    			// Show error message.
-	    			Utility.show2(Consoles.this, exception.getLocalizedMessage());
+	    			exception.printStackTrace();
 	            }
 	        });	
 		}
@@ -764,38 +794,98 @@ public class Consoles extends JFrame {
 	}
 	
 	/**
+	 * Get exception cause.
+	 * @param ref
+	 * @return
+	 */
+	protected Throwable getCause(Exception exception) {
+
+		if (exception == null) {
+			return new NullPointerException("Unknown exception object.");
+		}
+		Throwable cause = exception.getCause();
+		if (cause == null) {
+			return new NullPointerException("Unknown cause of exception.");
+		}
+		return cause;
+	}
+
+	/**
 	 * Update the console.
 	 * @param console
 	 */
-	private void updateConsole(LogConsole console) {
-		
+	private static void updateConsole(LogConsole console) {
+	
 		SwingUtilities.invokeLater(() -> {
-					
-			// Check timestamps for null values.
-			if (console.maximumTimestamp == null || console.minimumTimestamp == null) {
-				return;
-			}
-	
-			// Get text view.
-			JTextPane textPane = console.textPane;
-	
-			// Compile text contents.
-			Obj<String> contents = new Obj<String>("<html>");
 			
-			console.consoleRecords.forEach(messageRecord -> {
+			synchronized (console) {
 				
-				String messageText = Utility.htmlSpecialChars(messageRecord.messageText);
-				String colorString = Utility.getCssColor(messageRecord.color);
-				String messageHtml = String.format("<div style='color: %s; font-family: Consolas; font-size: 14pt; white-space:nowrap;'>%s</div>", colorString, messageText);
-				contents.ref += messageHtml;
-			});
-			
-			// Set text of the text view.
-			textPane.setText(contents.ref);
-			
-			// Move caret to the end of the view.
-			int endPosition = textPane.getDocument().getLength();
-			textPane.setCaretPosition(endPosition);
+				// Check timestamps for null values.
+				if (console.maximumTimestamp == null || console.minimumTimestamp == null) {
+					return;
+				}
+		
+				// Get text view.
+				JTextPane textPane = console.textPane;
+		
+				// Compile text contents.
+				Obj<String> contents = new Obj<String>("<html>");
+				
+				// TODO: <---FIX Concurrent modification error.
+				console.consoleRecords.forEach(messageRecord -> {
+					
+					String messageText = Utility.htmlSpecialChars(messageRecord.messageText);
+					String colorString = Utility.getCssColor(messageRecord.color);
+					String messageHtml = String.format("<div style='color: %s; font-family: Consolas; font-size: 14pt; white-space:nowrap;'>%s</div>", colorString, messageText);
+					contents.ref += messageHtml;
+				});
+				
+				// Set text of the text view.
+				textPane.setText(contents.ref);
+				
+				// Move caret to the end of the view.
+				int endPosition = textPane.getDocument().getLength();
+				textPane.setCaretPosition(endPosition);
+			}
 		});
+	}
+	
+	/**
+	 * JUnit testing probe.
+	 */
+	public static int getJUnitProbe1() {
+		
+		LogConsole console1 = consoles.get("Console1");
+		if (console1 == null) {
+			return 0;
+		}
+		int count = console1.consoleRecords.size();
+		return count;
+	}
+	
+	
+	/**
+	 * JUnit testing probe.
+	 */
+	public static void runJUnitProbe2() {
+		
+		LogConsole console1 = consoles.get("Console1");
+		if (console1 == null) {
+			return;
+		}		
+		console1.clear();
+		LogConsole console2 = consoles.get("Console2");
+		if (console2 == null) {
+			return;
+		}			
+		console2.clear();
+		LogConsole console3 = consoles.get("Console3");
+		if (console3 == null) {
+			return;
+		}			
+		console3.clear();
+		updateConsole(console1);
+		updateConsole(console2);
+		updateConsole(console3);
 	}
 }

@@ -54,6 +54,7 @@ public class GeneratorMain {
 	/**
 	 * GUI watchdog delay and idle timeout in milliseconds.
 	 */
+	private static final boolean GUI_WATCHDOG_ENABLED = false;
 	private static final long GUI_WATCHDOG_DELAY_MS = 3000;
 	private static final long GUI_WATCHDOG_MS = 1000;
 	
@@ -61,6 +62,7 @@ public class GeneratorMain {
 	 * Serialized data location.
 	 */
 	private static final String serilizedDataLocation = "org.multipage.generator.settings";
+	
 	
 	
 	/**
@@ -87,7 +89,7 @@ public class GeneratorMain {
 	public static void main(String applicationNaming, String[] args, String pathToMiddleObjects, final boolean useLogin) {
 		
 		// Initialize logging consoles enabled for multitasks.
-		Consoles.initialize();
+		Consoles.main(new String[] {});
 		
 		// Set default application naming. It is used for example for application user directory
 		MiddleUtility.setApplicationNaming(applicationNaming);
@@ -300,6 +302,11 @@ public class GeneratorMain {
 	 * @throws Exception 
 	 */
 	private static void startGuiWatchdog() {
+		
+		// Check development flag.
+		if (!GUI_WATCHDOG_ENABLED) {
+			return;
+		}
 		
 		try {			
 			RepeatedTask.loopNonBlocking("GUI-WathdogThread", GUI_WATCHDOG_MS, GUI_WATCHDOG_DELAY_MS, (exit, exception) -> {
