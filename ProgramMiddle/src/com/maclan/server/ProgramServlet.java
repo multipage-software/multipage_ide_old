@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -277,7 +277,7 @@ public class ProgramServlet extends FastCGIServlet {
 	protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 		handleArea(req, res);
 	}
-	
+
 	/**
 	 * Handle area
 	 * @param _request
@@ -452,9 +452,10 @@ public class ProgramServlet extends FastCGIServlet {
 					public void warn(String msg) {
 						
 						synchronized (error) {
-							if (msg != null && !msg.isEmpty()) {
-								error.append(msg);
-							}
+							error.append("WARN: ");
+							error.append("\n");
+							error.append(msg);
+							error.append("\n");
 						}
 					}
 					
@@ -462,10 +463,10 @@ public class ProgramServlet extends FastCGIServlet {
 					public void printStackTrace(Throwable t) {
 						
 						synchronized (error) {
-							String msg = t.toString();
-							if (msg != null && !msg.isEmpty()) {
-								error.append(msg);
-							}
+							error.append("STACK TRACE: ");
+							error.append("\n");
+							error.append(t.toString());
+							error.append("\n");
 						}
 					}
 					
@@ -473,9 +474,10 @@ public class ProgramServlet extends FastCGIServlet {
 					public void log(int level, String msg) {
 						
 						synchronized (error) {
-							if (msg != null && !msg.isEmpty()) {
-								error.append(msg);
-							}
+							error.append("LOG: ");
+							error.append("\n");
+							error.append(msg);
+							error.append("\n");
 						}
 					}
 				});
@@ -864,7 +866,7 @@ public class ProgramServlet extends FastCGIServlet {
 	protected void handlePhp(HttpServletRequest _request,
 			HttpServletResponse _response) throws ServletException, IOException {
 		
-		// Rewind input stream.
+		// Reset input stream.
 		InputStream inputStream = _request.getInputStream();
 		if (inputStream instanceof CachedInputStream) {
 			((CachedInputStream) inputStream).rewind();

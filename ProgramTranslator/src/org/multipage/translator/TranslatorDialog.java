@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -941,7 +941,7 @@ public class TranslatorDialog extends JDialog {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save selected language.
@@ -959,7 +959,7 @@ public class TranslatorDialog extends JDialog {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load selected language.
@@ -1068,7 +1068,7 @@ public class TranslatorDialog extends JDialog {
 		// Get file name.
 		String [][] filters = {{"org.multipage.translator.textXmlFilesDictionary", "xml"}};
 		
-		File file = Utility.chooseFileNameToOpen(this, filters);
+		File file = Utility.chooseFileToOpen(this, filters);
 		if (file == null) {
 			return;
 		}

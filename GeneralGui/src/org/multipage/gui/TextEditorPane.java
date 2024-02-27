@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -98,13 +98,13 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		wordWrapState = inputStream.readBoolean();
 	}
 
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeBoolean(wordWrapState);
@@ -2186,5 +2186,15 @@ public class TextEditorPane extends JPanel implements StringValueEditor {
 	public boolean setControlsGrayed(boolean isDefault) {
 		
 		return false;
+	}
+	
+	/**
+	 * Set editor background color.
+	 * @param color
+	 */
+	public void setEditorBackground(Color color) {
+		
+		plainTextPane.setBackground(color);
+		htmlTextPane.setBackground(color);
 	}
 }

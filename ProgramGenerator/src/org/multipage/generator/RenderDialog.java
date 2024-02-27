@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -7,23 +7,52 @@
 
 package org.multipage.generator;
 
-import java.awt.*;
-import java.util.*;
-
-import javax.swing.*;
-
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
-
-import com.maclan.*;
-import com.maclan.server.BrowserParameters;
-
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.util.LinkedList;
+import java.util.Properties;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.ListCellRenderer;
+import javax.swing.SpringLayout;
+
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.TextFieldEx;
+import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.Utility;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
+
+import com.maclan.Language;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
+import com.maclan.VersionObj;
+import com.maclan.server.BrowserParameters;
 
 /**
  * 
@@ -32,7 +61,6 @@ import java.io.ObjectOutputStream;
  */
 public class RenderDialog extends JDialog {
 	
-	// $hide>>$
 	/**
 	 * Version.
 	 */
@@ -72,7 +100,7 @@ public class RenderDialog extends JDialog {
 	 * Read serialized data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		serializedCreateList = inputStream.readBoolean();
@@ -87,7 +115,7 @@ public class RenderDialog extends JDialog {
 	 * Write serialized data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeBoolean(serializedCreateList);
@@ -178,7 +206,6 @@ public class RenderDialog extends JDialog {
 	 */
 	private Obj<Boolean> relatedAreas;
 
-	// $hide<<$
 	/**
 	 * Components.
 	 */
@@ -264,10 +291,8 @@ public class RenderDialog extends JDialog {
 		super(window, ModalityType.APPLICATION_MODAL);
 		
 		initComponents();
-		// $hide>>$
 		postCreation(languages, selectAllLanguages, target, coding, showTextIds,
 				browserParameters, generateList, generateIndex, runBrowser, removeOldFiles, versions, relatedAreas);
-		// $hide<<$
 	}
 
 	/**
@@ -318,7 +343,7 @@ public class RenderDialog extends JDialog {
 		textTarget.setColumns(10);
 		
 		buttonTarget = new JButton("");
-		springLayout.putConstraint(SpringLayout.WEST, buttonTarget, 431, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, buttonTarget, 420, SpringLayout.WEST, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, textTarget, -6, SpringLayout.WEST, buttonTarget);
 		springLayout.putConstraint(SpringLayout.NORTH, buttonTarget, 0, SpringLayout.NORTH, textTarget);
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonTarget, 0, SpringLayout.SOUTH, textTarget);

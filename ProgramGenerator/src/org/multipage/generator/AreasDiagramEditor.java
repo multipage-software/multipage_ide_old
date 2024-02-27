@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -44,9 +44,14 @@ import javax.swing.SpringLayout;
 import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
+import org.multipage.gui.TabPanelComponent;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
+import org.multipage.util.Closable;
 import org.multipage.util.Resources;
 
 import com.maclan.Area;
@@ -58,7 +63,7 @@ import com.maclan.VersionObj;
  * @author
  *
  */
-public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
+public class AreasDiagramEditor extends JPanel implements TabPanelComponent, Closable {
 	
 	// $hide>>$
 	/**
@@ -126,10 +131,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	private JList listFavorites;
 	private JPopupMenu popupMenuFavorites;
 	private JMenuItem menuDeleteFavorites;
-	/**
-	 * @wbp.nonvisual location=570,149
-	 */
-	private final JPanel panelFavorites = new JPanel();
+	private JPanel panelFavorites = new JPanel();
 	private JPanel panel;
 	private JButton buttonUp;
 	private JButton buttonDown;
@@ -360,7 +362,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	}
 	
 	/**
-	 * On click on favorite.
+	 * On click on favorites.
 	 */
 	protected void onClickFavorite() {
 		
@@ -374,12 +376,13 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(areaId);
 			
-			Event.propagate(AreasDiagramEditor.this, Event.selectDiagramAreas, selectedAreaIds);
+			// Transmit area selection signal.
+			ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, selectedAreaIds);
 		}
 	}
 	
 	/**
-	 * On double click on favorite.
+	 * On double click on favorites.
 	 */
 	protected void onDoubleClickFavorite() {
 		
@@ -413,7 +416,8 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 			selectedAreaIds.clear();
 			selectedAreaIds.add(area.getId());
 			
-			Event.propagate(AreasDiagramEditor.this, Event.selectDiagramAreas, selectedAreaIds);
+			// TODO: <---REFACTOR EVENTS
+			//Event.propagate(AreasDiagramEditor.this, Event.selectDiagramAreas, selectedAreaIds);
 			
 			// On sub/super areas.
 			if (buttonSubAreas.isSelected() || buttonSuperAreas.isSelected()) {
@@ -427,21 +431,23 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	 */
 	protected void onDoubleClickArea() {
 		
-		if (buttonSiblings.isSelected()) {
-			
-			// Get selected areas.
-			List<Area> selectedAreas = listAreas.getSelectedValuesList();
-			if (selectedAreas.size() != 1) {
-				Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
-				return;
-			}
-			
-			areaSelection = selectedAreas.get(0);
-			long areaId = areaSelection.getId();
-			
-			// Focus area.
-			focusAreaNear(areaId);
+		// Get selected areas.
+		List<Area> selectedAreas = listAreas.getSelectedValuesList();
+		if (selectedAreas.size() != 1) {
+			Utility.show(this, "org.multipage.generator.messageSelectSingleArea");
+			return;
 		}
+		
+		areaSelection = selectedAreas.get(0);
+		long areaId = areaSelection.getId();
+		
+		// Focus area.
+		focusAreaNear(areaId);
+		
+		// Transmit area selection signal.
+		selectedAreaIds.clear();
+		selectedAreaIds.add(areaId);
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, selectedAreaIds);
 	}
 
 	/**
@@ -562,7 +568,8 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	private void setListeners() {
 		
 		// Listen for area view state change.
-		Event.receiver(this, ActionGroup.areaViewStateChange, data -> {
+		// TODO: <---REFACTOR EVENTS
+		/*Event.receiver(this, ActionGroup.areaViewStateChange, data -> {
 				
 			if ((Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this.areasDiagram)
 					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagramEditor.this))
@@ -604,20 +611,52 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 				// Diaplay related areas.
 				displayRelatedAreasForSet(selectedAreaIds);
 			}
+		});*/
+		
+		// Focus diagram on home area.
+		ApplicationEvents.receiver(this, GuiSignal.focusHomeArea, message -> {
+			
+			focusHomeArea();
 		});
 		
-		// Listen for GUI changes.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		// Focus diagram on top area.
+		ApplicationEvents.receiver(this, GuiSignal.focusTopArea, message -> {
 			
-			if (Event.is(data, Event.focusTabArea) && AreasDiagramEditor.this.isShowing()) {
-				
-				Long tabAreaId = data.relatedInfo instanceof Long ? (Long) data.relatedInfo : 0L;
-				focusAreaNear(tabAreaId);
+			Long topAreaId = message.getRelatedInfo();
+			if (topAreaId != null) {
+				focusAreaNear(topAreaId);
 			}
-			else if (Event.is(data, Event.focusHomeArea) && AreasDiagramEditor.this.isShowing()) {
-				
-				focusHomeArea();
+		});
+		
+		// Select all areas.
+		ApplicationEvents.receiver(this, GuiSignal.selectAll, message -> {
+			
+			setAllSelected(true);
+		});
+		
+		// Unselect all areas.
+		ApplicationEvents.receiver(this, GuiSignal.unselectAll, message -> {
+			
+			setAllSelected(false);
+		});	
+		
+		// Update dialog contents.
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasDiagram, message -> {
+			
+			selectedAreaIds = message.getRelatedInfo();
+			displayRelatedAreasForSet(selectedAreaIds);
+		});
+		
+		// Update dialog contents after area selection.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramAreas, message -> {
+			
+			// Get selected area IDs.
+			selectedAreaIds = message.getRelatedInfo();
+			if (selectedAreaIds == null) {
+				return;
 			}
+			
+			displayRelatedAreasForSet(selectedAreaIds);
 		});
 	}
 	
@@ -627,17 +666,19 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		// Remove old receivers.
+		ApplicationEvents.removeReceivers(areasDiagram);
+		ApplicationEvents.removeReceivers(this);
 	}
 
 	/**
 	 * Dispose.
 	 */
-	public void dispose() {
+	public void close() {
 		
 		saveDialog();
 		removeListeners();
-		areasDiagram.dispose();
+		areasDiagram.close();
 		areasDiagram.removeDiagram();
 	}
 
@@ -693,7 +734,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	 * Set all selection.
 	 * @param select
 	 */
-	public void setAllSelection(boolean select) {
+	public void setAllSelected(boolean select) {
 		
 		areasDiagram.setAllSelection(select);
 	}
@@ -756,7 +797,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	}
 	
 	/**
-	 * Add favorite area.
+	 * Add favourite area.
 	 * @param area
 	 */
 	public void addFavorite(Area area) {
@@ -1060,7 +1101,7 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	 */
 	private void displayRelatedAreasForSet(HashSet<Long> areaIds) {
 		
-		if (areaIds.size() != 1) {
+		if (areaIds == null || areaIds.size() != 1) {
 			hideRelatedAreas();
 			return;
 		}
@@ -1168,6 +1209,10 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 			
 			for (Area subArea : siblings) {
 				
+				// TODO: <---COPY to new version
+				if (superArea.isSubareasHidden(subArea)) {
+					continue;
+				}
 				listAreasModel.addElement(subArea);
 				
 				if (subArea.equals(areaSelection)) {
@@ -1217,6 +1262,10 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		
 		for (Area area : areaSelection.getSubareas()) {
 			
+			// TODO: <---COPY to new version
+			if (areaSelection.isSubareasHidden(area)) {
+				continue;
+			}
 			listAreasModel.addElement(area);
 		}
 		
@@ -1240,6 +1289,10 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		
 		for (Area area : areaSelection.getSuperareas()) {
 			
+			// TODO: <---COPY to new version
+			if (area.isSubareasHidden(areaSelection)) {
+				continue;
+			}
 			listAreasModel.addElement(area);
 		}
 		
@@ -1394,7 +1447,8 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 		areasDiagram.onTabPanelChange(e, selectedIndex);
 		
 		// Propagate event.
-		Event.propagate(AreasDiagramEditor.this, Event.mainTabChange);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreasDiagramEditor.this, Event.mainTabChange);
 	}
 	
 	/**
@@ -1417,6 +1471,14 @@ public class AreasDiagramEditor extends JPanel implements TabPanelComponent {
 	public HashSet<Long> getSelectedAreaIds() {
 		
 		return this.selectedAreaIds;
+	}
+	
+	/**
+	 * Called when the diagram needs to recreate its contents.
+	 */
+	@Override
+	public void recreateContent() {
+		
 	}
 }
 

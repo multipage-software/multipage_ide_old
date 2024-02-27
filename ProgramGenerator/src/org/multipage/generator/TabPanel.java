@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -95,7 +95,7 @@ public class TabPanel extends DnDTabbedPane {
 				// If it is areas diagram editor, close it.
 				if (child instanceof AreasDiagramEditor) {
 					AreasDiagramEditor editor = (AreasDiagramEditor) child;
-					editor.dispose();
+					editor.close();
 					return;	
 				}
 				
@@ -350,7 +350,7 @@ public class TabPanel extends DnDTabbedPane {
 		Component component = getTabComponentAt(index);
 		if (!(component instanceof ContentOfTab)) {
 			
-			return null;
+			return 0L;
 		}
 		
 		ContentOfTab contentOfTab = (ContentOfTab) component;

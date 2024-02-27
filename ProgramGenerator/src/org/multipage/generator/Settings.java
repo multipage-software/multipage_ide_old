@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -136,7 +136,7 @@ public class Settings extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 					throws IOException, ClassNotFoundException {
 		
 		// Read maximum text resource size.
@@ -157,7 +157,7 @@ public class Settings extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 					throws IOException {
 
 		// Write maximum text resource size.
@@ -341,7 +341,8 @@ public class Settings extends JDialog {
 					
 				if (updateRequired) {
 					ProgramBasic.updateDatabaseAccess(newDirectory);
-					Event.propagate(Settings.this, Event.switchDatabase, newDirectory);
+					// TODO: <---REFACTOR EVENTS
+					//Event.propagate(Settings.this, Event.switchDatabase, newDirectory);
 				}
 				
 				isOk = true;

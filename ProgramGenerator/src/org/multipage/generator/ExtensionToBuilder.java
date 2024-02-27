@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -144,4 +144,10 @@ public interface ExtensionToBuilder {
 	 * @return
 	 */
 	AreaResourceRendererBase newAreaResourceRenderer();
+	
+	/**
+	 * New selected areas frame.
+	 * @return
+	 */
+	SelectedAreasFrameBase newSelectedAreasFrame();
 }

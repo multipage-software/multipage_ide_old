@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -120,32 +120,32 @@ public class MiddleLightImpl implements MiddleLight {
 
 	private static final String selectStartLanguageId = "SELECT language_id " +
 	                                                    "FROM start_language";
-
+	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	protected static final String selectAreaSlotValue = "SELECT alias, revision, get_localized_text(localized_text_value_id, ?) AS localized_text_value, text_value, integer_value, real_value, boolean_value, enumeration_value_id, color, area_value, is_default, value_meaning " +
 	                                                    "FROM area_slot " +
-	                                                    "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-		                                                "ON alias = slot_alias AND revision = last_revision " +
 	                                                    "WHERE alias = ? " +
-	                                                    "AND area_id = ?";
-
+	                                                    "AND area_id = ? " +
+	                                                    "AND revision = 0";
+	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectAreaSlotsRef = "SELECT alias, revision, access, is_default, special_value, external_provider, external_change, reads_input, writes_output, id " +
 	                                                 "FROM area_slot " +
-	                                                 "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-	                                                 "ON alias = slot_alias AND revision = last_revision " +
-	                                                 "WHERE area_id = ?";
+	                                                 "WHERE area_id = ? " +
+	                                                 "AND revision = 0";
 	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectAreaSlotsRefEx = "SELECT alias, revision, access, special_value, external_provider, external_change, reads_input, writes_output, id " +
 													   "FROM area_slot " +
-													   "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-		                                               "ON alias = slot_alias AND revision = last_revision " +
 													   "WHERE area_id = ? " +
-													   "AND is_default = ?";
+													   "AND is_default = ? " +
+													   "AND revision = 0";
 	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectSlotTextDirectly = "SELECT alias, revision, text_value " +
             											 "FROM area_slot " +
-            											 "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
-            											 "ON alias = slot_alias AND revision = last_revision " +
-            											 "WHERE id = ? ";
+            											 "WHERE id = ? " +
+            											 "AND revision = 0";
 	
 	protected static final String selectStartArea = "SELECT area_id " +
 	                                                "FROM start_area";
@@ -1926,12 +1926,13 @@ public class MiddleLightImpl implements MiddleLight {
 
 	/**
 	 * Load area ID for given alias.
+	 * @param anchorAreas
 	 * @param alias
 	 * @param outputAreaId
 	 * @return
 	 */
 	@Override
-	public MiddleResult loadAreaWithAlias(String alias, Obj<Area> outputArea) {
+	public MiddleResult loadAreaWithAlias(LinkedList<Area> anchorAreas, String alias, Obj<Area> outputArea) {
 		
 		// Check alias.
 		if (alias.isEmpty()) {
@@ -1944,18 +1945,24 @@ public class MiddleLightImpl implements MiddleLight {
 			return result;
 		}
 		
-		Obj<Area> homeArea = new Obj<Area>();
-		
-		// Load home area data.
-		result = loadHomeAreaData(homeArea);
-		if (result.isNotOK()) {
-			return result;
+		// If anchor area is null use home area as an anchor area.
+		if (anchorAreas == null) {
+			Obj<Area> homeArea = new Obj<Area>();
+			
+			// Load home area data.
+			result = loadHomeAreaData(homeArea);
+			if (result.isNotOK()) {
+				return result;
+			}
+			
+			anchorAreas = new LinkedList<Area>();
+			anchorAreas.add(homeArea.ref);
 		}
 
 		LinkedList<Area> projectRootAreas = new LinkedList<Area>();
 		
 		// Find project root areas.
-		result = loadProjectRootAreas(homeArea.ref, projectRootAreas);
+		result = loadProjectRootAreas(anchorAreas, projectRootAreas);
 		if (result.isNotOK()) {
 			return result;
 		}
@@ -2037,12 +2044,13 @@ public class MiddleLightImpl implements MiddleLight {
 	
 	/**
 	 * Load area ID for given project and alias.
+	 * @param anchorAreas
 	 * @param projectAlias
 	 * @param alias
 	 * @param outputArea
 	 * @return
 	 */
-	public MiddleResult loadProjectAreaWithAlias(String projectAlias, String alias, Obj<Area> outputArea) {
+	public MiddleResult loadProjectAreaWithAlias(LinkedList<Area> anchorAreas, String projectAlias, String alias, Obj<Area> outputArea) {
 		
 		// Check alias.
 		if (alias.isEmpty()) {
@@ -2051,8 +2059,7 @@ public class MiddleLightImpl implements MiddleLight {
 		
 		// If project alias is null or empty, delegate call to appropriate method.
 		if (projectAlias == null || projectAlias.isEmpty()) {
-			
-			return loadAreaWithAlias(alias, outputArea);
+			return loadAreaWithAlias(anchorAreas, alias, outputArea);
 		}
 		
 		// Check connection.
@@ -2101,12 +2108,12 @@ public class MiddleLightImpl implements MiddleLight {
 	
 	/**
 	 * Load project root areas.
-	 * @param currentArea
+	 * @param anchorAreas
 	 * @param projectRootAreas
 	 * @return
 	 */
 	@Override
-	public MiddleResult loadProjectRootAreas(Area currentArea,
+	public MiddleResult loadProjectRootAreas(LinkedList<Area> anchorAreas,
 			LinkedList<Area> projectRootAreas) {
 		
 		projectRootAreas.clear();
@@ -2120,7 +2127,7 @@ public class MiddleLightImpl implements MiddleLight {
 		LinkedList<Area> tracedAreas = new LinkedList<Area>();
 		LinkedList<Area> queue = new LinkedList<Area>();
 		
-		queue.add(currentArea);
+		queue.addAll(anchorAreas);
 		while (!queue.isEmpty()) {
 			
 			Area area = queue.removeFirst();
@@ -4620,7 +4627,8 @@ public class MiddleLightImpl implements MiddleLight {
 				
 				slot.setId(slotId);
 				slot.setAlias(set.getString("alias"));
-				slot.setRevision(set.getLong("revision"));
+				// TODO: <---CHANGE Revisions disabled in alpha version.
+				slot.setRevision(0); //set.getLong("revision"));
 				slot.setTextValue(set.getString("text_value"));
 			}
 			else {

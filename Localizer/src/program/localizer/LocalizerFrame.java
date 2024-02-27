@@ -95,7 +95,7 @@ public class LocalizerFrame extends JFrame {
 	 * @throws ClassNotFoundException
 	 */
 	@SuppressWarnings("unchecked")
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -119,7 +119,7 @@ public class LocalizerFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -429,7 +429,7 @@ public class LocalizerFrame extends JFrame {
 		// Try to open file.
 		String[][] filters = {{"localizer.textPropertiesFiles", "properties"}};
 		
-		File file = Utility.chooseFileNameToOpen(this, filters);
+		File file = Utility.chooseFileToOpen(this, filters);
 		if (file == null) {
 			return;
 		}

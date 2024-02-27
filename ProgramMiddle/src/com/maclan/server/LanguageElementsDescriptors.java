@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -518,12 +518,6 @@ public class LanguageElementsDescriptors {
 		
 		
 		
-		descriptors.add(new Descriptor(null, new Method("slot", new Delegate() {
-			@Override
-			Object run(AreaServer server, Object thisObject, Object [] parameters) throws Exception {
-				return server.slot((String) parameters[0], false, false, null, false);
-			}
-			}, String.class)));
 		descriptors.add(new Descriptor(null, new Method("slot", new Delegate() {
 			@Override
 			Object run(AreaServer server, Object thisObject, Object [] parameters) throws Exception {
@@ -1264,13 +1258,6 @@ public class LanguageElementsDescriptors {
 				return ((Request)thisObject).existsParameter((String) parameters[0]);
 			}
 			}, String.class)));
-		descriptors.add(new Descriptor(Request.class, new Method("post", new Delegate() {
-			@Override
-			Object run(AreaServer server, Object thisObject, Object [] parameters) throws Exception {
-				return ((Request)thisObject).post();
-			}
-			})));
-		
 		/**
 		 * Response.
 		 */

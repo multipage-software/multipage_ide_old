@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -51,7 +51,7 @@ public class SelectEnumerationDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -63,7 +63,7 @@ public class SelectEnumerationDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);

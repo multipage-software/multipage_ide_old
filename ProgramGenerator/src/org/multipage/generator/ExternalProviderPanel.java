@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2019 (C) Vaclav Kolarcik
  * 
  * Created on : 10-12-2019
  *

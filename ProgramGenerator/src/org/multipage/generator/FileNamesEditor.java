@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -207,7 +207,8 @@ public class FileNamesEditor extends JDialog {
 		
 		dispose();
 		
-		Event.propagate(FileNamesEditor.this, Event.updateAreaFileNames);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(FileNamesEditor.this, Event.updateAreaFileNames);
 	}
 
 	/**

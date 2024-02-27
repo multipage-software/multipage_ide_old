@@ -72,7 +72,7 @@ public class PropertyEditor extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -88,7 +88,7 @@ public class PropertyEditor extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

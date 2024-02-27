@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -22,7 +22,7 @@ import org.multipage.util.*;
  * @author
  *
  */
-public class SplitProperties extends JPanel {
+public class SplitProperties extends JPanel implements Closable {
 
 	/**
 	 * Version.
@@ -55,7 +55,7 @@ public class SplitProperties extends JPanel {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Read splitter position.
@@ -67,7 +67,7 @@ public class SplitProperties extends JPanel {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Write down splitter position.
@@ -420,7 +420,7 @@ public class SplitProperties extends JPanel {
 	/**
 	 * Dispose splitter.
 	 */
-	public void dispose() {
+	public void close() {
 
 		// Save dialog.
 		saveDialog();

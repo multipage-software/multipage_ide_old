@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 21-04-2020
  *
@@ -185,6 +185,11 @@ public class SyncMain {
 	 */
 	private static void reloadMenu(PopupMenu popup) {
 		
+		// Check input.
+		if (popup == null) {
+			return;
+		}
+		
 		// Remove old menu items.
 		popup.removeAll();
 		// Load menu from area server.
@@ -262,7 +267,7 @@ public class SyncMain {
 		};
 		
 		// Start watcher loop.
-		watcherThread = new Thread(runnable, "WatcherThread");
+		watcherThread = new Thread(runnable, "Sync-Watcher");
 		watcherThread.start();
 	}
 	
@@ -270,6 +275,10 @@ public class SyncMain {
 	 * Stop watch service.
 	 */
 	private static void stopWatchService() {
+		
+		if (watcherThread == null) {
+			return;
+		}
 		
 		try {
 			stopWatcher = true;

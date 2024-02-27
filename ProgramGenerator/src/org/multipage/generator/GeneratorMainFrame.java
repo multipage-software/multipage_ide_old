@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -23,14 +23,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -50,18 +48,30 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.AreaSignal;
 import org.multipage.gui.BareBonesBrowserLaunch;
+import org.multipage.gui.EventSource;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.sync.SyncMain;
+import org.multipage.util.Closable;
 import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaRelation;
@@ -86,7 +96,7 @@ import build_number.BuildNumber;
  * @author
  *
  */
-public class GeneratorMainFrame extends JFrame {
+public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver, Closable {
 
 	/**
 	 * Version.
@@ -200,7 +210,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load dialog bounds.
@@ -240,7 +250,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save dialog boundaries.
@@ -292,7 +302,7 @@ public class GeneratorMainFrame extends JFrame {
 	 * @throws ClassNotFoundException
 	 */
 	private static LinkedList<DiagramCloneItem> readClonedDiagrams(
-			ObjectInputStream inputStream)
+			StateInputStream inputStream)
 					throws IOException, ClassNotFoundException {
 		
 		LinkedList<DiagramCloneItem> list = new LinkedList<DiagramCloneItem>();
@@ -392,7 +402,7 @@ public class GeneratorMainFrame extends JFrame {
 		updateWindowSelectionMenu();
 		
 		// Propagate event.
-		Event.propagate(GeneratorMainFrame.this, Event.loadDiagrams);
+		ApplicationEvents.transmit(this, GuiSignal.loadDiagrams);
 	}
 
 	/**
@@ -562,6 +572,11 @@ public class GeneratorMainFrame extends JFrame {
 	private JToggleButton toggleDebug;
 
 	/**
+	 * List of previous update messages.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
+
+	/**
 	 * Area tree data to copy.
 	 */
 	private static AreaTreeData areaTreeDataToCopy;
@@ -601,13 +616,12 @@ public class GeneratorMainFrame extends JFrame {
 		setTimers();
 		// Load dialog.
 		loadDialog();
-		
-		// Reload areas model.
-		MiddleResult result = ProgramGenerator.reloadModel();
-		result.showError(this);
-		
+
 		// Set timer for information update.
 		initUpdateInformationTimer();
+
+		// Transmit update signals.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.machine(this), SignalGroup.UPDATE_AREAS, SignalGroup.UPDATE_DIAGRAM);
 	}
 
 	/**
@@ -678,7 +692,8 @@ public class GeneratorMainFrame extends JFrame {
 			
 			if (!slotIds.isEmpty()) {
 				SwingUtilities.invokeLater(() -> {
-					Event.propagate(ProgramServlet.class, Event.updatedSlotsWithServlet, slotIds);
+					// TODO: <---REFACTOR EVENTS
+					//Event.propagate(ProgramServlet.class, Event.updatedSlotsWithServlet, slotIds);
 				});
 			}
 		});
@@ -707,8 +722,67 @@ public class GeneratorMainFrame extends JFrame {
 			});
 		}
 		
+		final int UPDATE_AREAS_LATENCY_MS = 2500;
+		
+		// TODO: <---COPY to new version
+		// Receive the "update updateAreasModel" signal.
+		ApplicationEvents.receiver(this, UPDATE_AREAS_LATENCY_MS, UpdateSignal.updateAreasModel, ApplicationEvents.HIGH_PRIORITY, message -> {
+			
+			// Check for infinite message cycles.
+			if (message.isCyclic()) {
+				return;
+			}
+			
+			// Reload areas model.
+			ProgramGenerator.reloadModel();
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive area selection messages.
+		ApplicationEvents.receiver(this, SignalGroup.create(GuiSignal.selectDiagramAreas, GuiSignal.selectTreeAreas), message -> {
+			
+			HashSet<Long> selectedAreaIds = message.getRelatedInfo();
+			if (selectedAreaIds == null) {
+				return;
+			}
+			
+			showPropetiesView(selectedAreaIds);
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive the "set home area" message.
+		ApplicationEvents.receiver(this, AreaSignal.setHomeArea, message -> {
+			
+			Long homeAreaId = message.getRelatedInfo();
+			if (homeAreaId == null) {
+				homeAreaId = 0L;
+			}
+			Area homeArea = ProgramGenerator.getArea(homeAreaId);
+			if (homeArea == null) {
+				return;
+			}
+			
+			Component parent = message.getAdditionalInfo(0);
+			Runnable completionLambda = message.getAdditionalInfo(1);
+			
+			// Set home area.
+			setHomeArea(parent, homeArea);
+			
+			if (completionLambda != null) {
+				completionLambda.run();
+			}
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive the "set home area" message.
+		ApplicationEvents.receiver(this, GuiSignal.monitorHomePage, message -> {
+		
+			monitorHomePage();
+		});
+		
 		// Listen for area model changes.
-		Event.receiver(this, ActionGroup.areaModelChange, (data) -> {
+		// TODO: <---REFACTOR EVENTS
+		/*Event.receiver(this, ActionGroup.areaModelChange, (data) -> {
 			
 			// Reload areas model.
 			if (data.source instanceof GeneratorMainFrame
@@ -717,10 +791,11 @@ public class GeneratorMainFrame extends JFrame {
 				
 				ProgramGenerator.reloadModel();
 			}
-		});
+		});*/
 		
 		// Listen for slot view changes.
-		Event.receiver(this, ActionGroup.slotViewChange, (data) -> {
+		// TODO: <---REFACTOR EVENTS
+		/*Event.receiver(this, ActionGroup.slotViewChange, (data) -> {
 			
 			// Show slot list the right side of the main frame
 			Obj<HashSet<Long>> selectedAreaIds = new Obj<HashSet<Long>>();
@@ -776,9 +851,9 @@ public class GeneratorMainFrame extends JFrame {
 				
 				 monitorHomePage();
 			}
-		});
+		});*/
  	}
-	
+
 	/**
 	 * Create connection watch dog.
 	 */
@@ -900,6 +975,16 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	private void onWindowClosing() {
 		
+		// Delegate call.
+		close();
+	}
+	
+	/**
+	 * Close dialog.
+	 */
+	@Override
+	public void close() {
+		
 		// Call on close method.
 		onClose();
 		
@@ -919,25 +1004,36 @@ public class GeneratorMainFrame extends JFrame {
 				// Save dialog.
 				saveDialog();
 				// Dispose dialog.
-				mainAreaDiagramEditor.dispose();
+				mainAreaDiagramEditor.close();
 				// Dispose splitter.
-				splitDiagramProperties.dispose();
+				splitDiagramProperties.close();
 				// Dispose dialog.
-				cutomizeControls.disposeDialog();
+				cutomizeControls.close();
 				// Dispose dialog.
-				customizeColors.disposeDialog();
+				customizeColors.close();
 				// Dispose properties.
-				properties.dispose();
+				properties.close();
 				// Run callback.
 				if (closeCallback != null) {
 					closeCallback.run();
 				}
+				// Remove listeners. 
+				removeListeners();
 				// Dispose window.
 				dispose();
 				// Exit application.
 				System.exit(0);
 			}
 		});
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event listeners.
+		ApplicationEvents.removeReceivers(GeneratorMainFrame.this);
 	}
 
 	/**
@@ -1158,7 +1254,7 @@ public class GeneratorMainFrame extends JFrame {
 		updateData.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Event.propagate(GeneratorMainFrame.this, Event.updateAreasModel);
+				onUpdate();
 			}});
 		closeAllWindows.addActionListener(new ActionListener() {
 			@Override
@@ -1350,41 +1446,44 @@ public class GeneratorMainFrame extends JFrame {
 		// Add buttons. 24 x 24 icons
 		toolBar.addSeparator();
 		if (ProgramBasic.isUseLogin()) {
-			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", this, "onLoginProperties", "org.multipage.generator.tooltipLoginWindow");
+			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", "org.multipage.generator.tooltipLoginWindow", () -> onLoginProperties());
 			toolBar.addSeparator();
 		}
-		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", this, "onShowHideIds", "org.multipage.generator.tooltipShowHideIds");
+		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", "org.multipage.generator.tooltipShowHideIds", () -> onShowHideIds());
 		addHideSlotsButton(toolBar);
 		toolBar.addSeparator();
-		lightReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", this, "onLightReadOnly", "org.multipage.generator.tooltipLightReadOnly");
+		lightReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", "org.multipage.generator.tooltipLightReadOnly", () -> onEnableAreasRemoval());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdate");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdate", () -> onUpdate());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", this, "onFocusWhole", "org.multipage.generator.tooltipFocusWhole");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", "org.multipage.generator.tooltipFocusWhole", () -> onFocusBasicArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", this, "onFocus", "org.multipage.generator.tooltipFocus");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", "org.multipage.generator.tooltipFocus", () -> onFocusTopArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", this, "onFocusHome", "org.multipage.generator.tooltipFocusHome");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", "org.multipage.generator.tooltipFocusHome", () -> onFocusHomeArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", this, "onSearch", "org.multipage.generator.tooltipSearch");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", "org.multipage.generator.tooltipSearch", () -> onSearch());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", this, "onSelectAll", "org.multipage.generator.tooltipSelectAll");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", "org.multipage.generator.tooltipSelectAll", () -> onSelectAll());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", this, "onUnselectAll", "org.multipage.generator.tooltipUnselectAll");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", "org.multipage.generator.tooltipUnselectAll", () -> onUnselectAll());
 		toolBar.addSeparator();
-		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", this, "onUndoFocus", "org.multipage.generator.tooltipUndoFocus");
+		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", "org.multipage.generator.tooltipUndoFocus", () -> onUndoFocus());
 		toolBar.addSeparator();
-		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", this, "onRedoFocus", "org.multipage.generator.tooltipRedoFocus");
+		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", "org.multipage.generator.tooltipRedoFocus", () -> onRedoFocus());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", this, "onRenderTool", "org.multipage.generator.tooltipRenderHtmlPages");
+		//toolBar.addSeparator();
+		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", () -> onToggleDebug());
+		toggleDebug.setVisible(false);
+		//toolBar.addSeparator();
+		JButton revert = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", "org.multipage.generator.tooltipRevertExternalSourceCodes", () -> onRevert());
+		revert.setVisible(false);
+		//toolBar.addSeparator();
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipMonitorHomePage", () -> onMonitorHomePage());
 		toolBar.addSeparator();
-		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", this, "onToggleDebug", "org.multipage.generator.tooltipEnableDisplaySourceCode");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", () -> onRenderTool());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", this, "onRevert", "org.multipage.generator.tooltipRevertExternalSourceCodes");
-		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", this, "onMonitorHomePage", "org.multipage.generator.tooltipMonitorHomePage");
-		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", this, "onHelpAboutMenu", "org.multipage.generator.tooltipAbout");
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", "org.multipage.generator.tooltipAbout", () -> onHelpAboutMenu());
 		
 		// Set undo and redo references.
 		getAreaDiagram().setUndoRedoComponents(undoButton, redoButton);
@@ -1440,9 +1539,10 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Focus on the Basic Area.
 	 */
-	public void onFocusWhole() {
+	public void onFocusBasicArea() {
 		
-		Event.propagate(this, AreasDiagram.class, Event.focusBasicArea);
+		// Focus diagrams on basic area.
+		ApplicationEvents.transmit(this, GuiSignal.focusBasicArea);
 	}
 
 	/**
@@ -1462,7 +1562,8 @@ public class GeneratorMainFrame extends JFrame {
 	protected void onClose() {
 		
 		// Stop dispatching events.
-		Event.stopDispatching();
+		// TODO: <---REFACTOR EVENTS
+		//Event.stopDispatching();
 		
 		// Cancel watch dog.
 		if (timerWatchDog != null) {
@@ -1503,7 +1604,8 @@ public class GeneratorMainFrame extends JFrame {
 		
 		ProgramBasic.showLoginDialog(this, title);
 		statusBar.setLoginProperties(ProgramBasic.getLoginProperties());
-		Event.propagate(GeneratorMainFrame.this, Event.newBasicArea);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(GeneratorMainFrame.this, Event.newBasicArea);
 		
 		loginProperties = ProgramBasic.getLoginProperties();
 		String newDatabaseName = loginProperties.getProperty("database");
@@ -1534,10 +1636,6 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void updateVievers() {
 		
-		long start = new Date().getTime();
-		// Update visible area viewers.
-		System.out.format("UPDATE EVENT: %dms in AreaViewer.updateVisible()", new Date().getTime() - start);
-		
 		// Update 
 		AreasPropertiesFrame.updateInformation();
 		
@@ -1562,37 +1660,8 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public static void updateSlotInformation(Object source, HashSet<Long> slotIds) {
 		
-		// Delegate call.
-		updateInformation(source, Update.ALL);
 	}
 	
-	/**
-	 * On update data.
-	 * @param source - source object of update event
-	 * @param updateObjects - objects to update MODEL | EDITORS | PROPERTIES
-	 */
-	public static void updateInformation(Object source, int updateObjects) {
-		
-		GeneratorMainFrame frame = getFrame();
-		
-		// Coalesce update requests.
-		if (frame.updateInformationTimer != null) {
-			
-			if (!frame.updateInformationTimer.isRunning()) {
-				
-				frame.isFirstUpdateRequest = true;
-				frame.updateVievers();
-			}
-			else {
-				frame.isFirstUpdateRequest = false;
-			}
-			frame.updateInformationTimer.restart();
-		}
-		else {
-			frame.updateVievers();
-		}
-	}
-
 	/**
 	 * @return the tabPanel
 	 */
@@ -1629,8 +1698,7 @@ public class GeneratorMainFrame extends JFrame {
 		Slot.setShowId(show);
 		
 		showIDsExtended(show);
-		
-		Event.propagate(GeneratorMainFrame.this, AreasDiagram.class, Event.showHideIds);
+		updateVievers();
 	}
 
 	/**
@@ -1687,7 +1755,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onSelectAll() {
 		
-		Event.propagate(this, Event.selectAll);
+		ApplicationEvents.transmit(this, GuiSignal.selectAll);
 	}
 	
 	/**
@@ -1695,7 +1763,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUnselectAll() {
 		
-		Event.propagate(this, Event.unselectAll);
+		ApplicationEvents.transmit(this, GuiSignal.unselectAll);
 	}
 
 	/**
@@ -1751,7 +1819,14 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onUpdate() {
 		
-		Event.propagate(GeneratorMainFrame.this, Event.update);
+		// Get selected area IDs.
+		HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+		if (selectedAreaIds.isEmpty()) {
+			selectedAreaIds = null;
+		}
+		
+		// Transmit the update modules signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL, selectedAreaIds);
 	}
 
 	/**
@@ -1761,10 +1836,40 @@ public class GeneratorMainFrame extends JFrame {
 	public static GeneratorMainFrame getFrame() {
 		return mainFrame;
 	}
+	
+
+	public static HashSet<Long> getSectedAreaIds() {
+
+		if (mainFrame == null) {
+			return null;
+		}
+		
+		// Delegate the call.
+		HashSet<Long> selectedAreaIds = mainFrame.getSelectedAreaIds();
+		return selectedAreaIds;
+	}
+	
+	/**
+	 * Get selected area IDS.
+	 * @return
+	 */
+	// TODO: <---COPY to new version
+	private HashSet<Long> getSelectedAreaIds() {
+		
+		LinkedList<Area> areaList = mainAreaDiagramEditor.getSelectedAreas();
+		
+		HashSet<Long> areaIdSet = new HashSet<Long>();
+		for (Area area : areaList) {
+			
+			long areaId = area.getId();
+			areaIdSet.add(areaId);
+		}
+		
+		return areaIdSet;
+	}
 
 	/**
 	 * Get selected areas.
-	 * @param areas
 	 */
 	public LinkedList<Area> getSelectedAreas() {
 
@@ -1774,10 +1879,10 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * Focus on home area.
 	 */
-	public void onFocusHome() {
+	public void onFocusHomeArea() {
 		
-		// Propagate event.
-		Event.propagate(this, Event.focusHomeArea);
+		// Focus diagrams on home area.
+		ApplicationEvents.transmit(this, GuiSignal.focusHomeArea);;
 	}
 
 	/**
@@ -1816,10 +1921,10 @@ public class GeneratorMainFrame extends JFrame {
 	/**
 	 * On light read only areas.
 	 */
-	public void onLightReadOnly() {
+	public void onEnableAreasRemoval() {
 		
 		AreaShapes.readOnlyLighter = !lightReadOnly.isSelected();
-		Event.propagate(GeneratorMainFrame.this, AreasDiagram.class, Event.showReadOnlyAreas);
+		updateVievers();
 	}
 
 	/**
@@ -2568,6 +2673,10 @@ public class GeneratorMainFrame extends JFrame {
 		
 		// On output error.
 		MiddleResult result = progressDialog.getOutput();
+		// TODO: <---COPY to new version
+		if (result == null) {
+			return;
+		}
 		if (result.isNotOK()) {
 			Utility.show2(null, result.getMessage());
 			return;
@@ -2599,12 +2708,12 @@ public class GeneratorMainFrame extends JFrame {
 					}
 					
 					String fileName = fileNames.getFirst();
-
-					String pathName = TextRenderer.serializedTarget + "/" + fileName;
-					pathName = pathName.replaceAll("\\\\", "/");
+					String fullFileName = TextRenderer.serializedTarget + "/" + fileName;
+					File file = new File(fullFileName);
+					URI uri = file.toURI();
 					
 					// Open URL.
-					BareBonesBrowserLaunch.openURL(pathName);
+					BareBonesBrowserLaunch.openURL(uri);
 				}
 				catch(Exception e) {
 					Utility.show2(getFrame(), e.getMessage());
@@ -2642,7 +2751,7 @@ public class GeneratorMainFrame extends JFrame {
 					}
 					
 					// Try to open URL.
-					String url = null;
+					String uriText = null;
 					URL urlObject = null;
 					try {
 						urlObject = Utility.tryUrl(parametersOrUrl.ref);
@@ -2680,29 +2789,30 @@ public class GeneratorMainFrame extends JFrame {
 						}
 						
 						if (areaId == homeAreaId && versionId == 0L && languageId == startLanguageId.ref) {
-							url = String.format("http://localhost:%d/?%s%s", Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, parametersOrUrl.ref);
+							uriText = String.format("http://localhost:%d/?%s%s", Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, parametersOrUrl.ref);
 						}
 						else {
-							url = String.format("http://localhost:%d/?%s&area_id=%d&lang_id=%d&ver_id=%d%s",
+							uriText = String.format("http://localhost:%d/?%s&area_id=%d&lang_id=%d&ver_id=%d%s",
 									Settings.getHttpPortNumber(), ProgramServlet.displayHomeArea, areaId, languageId, version.ref.getId(), parametersOrUrl.ref);
 						}
 						
 						// Display localized text.
 						if (showTextIds.ref) {
-							url += "&l";
+							uriText += "&l";
 						}
 					}
 					else {
-						url = urlObject.toString();
+						uriText = urlObject.toString();
 					}
 					
 					if (externalBrowser.ref) {
 						// Show external browser.
-						BareBonesBrowserLaunch.openURL(url);
+						URI uri = new URI(uriText);
+						BareBonesBrowserLaunch.openURL(uri);
 					}
 					else {
 						// Add monitor (internal browser).
-						addMonitor(url);
+						addMonitor(uriText);
 					}
 				}
 				catch(Exception e) {
@@ -2833,8 +2943,8 @@ public class GeneratorMainFrame extends JFrame {
 		Area area = areas.getFirst();
 		importArea(area, this, false, true, true);
 		
-		long areaId = area.getId();
-		Event.propagate(GeneratorMainFrame.this, Event.importToArea, areaId);
+		// Transmit the update modules signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL);
 	}
 	
 	/**
@@ -2992,7 +3102,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void onMonitorHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		monitorHomePage();
 	}
 
 	/**
@@ -3105,19 +3215,17 @@ public class GeneratorMainFrame extends JFrame {
 			result.show(parentComponent);
 		}
 		
-		Event.propagate(GeneratorMainFrame.this, Event.updateHomeArea, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(GeneratorMainFrame.this, Event.updateHomeArea, areaId);
 	}
 	
 	/**
 	 * Focus on the tab area.
 	 */
-	@SuppressWarnings("unused")
-	private void onFocus() {
+	private void onFocusTopArea() {
 		
-		Long tabAreaId = tabPanel.getTopAreaIdOfSelectedTab();
-		
-		Event.propagate(this, Event.focusTabArea, tabAreaId);
-
+		Long topAreaId = tabPanel.getTopAreaIdOfSelectedTab();
+		ApplicationEvents.transmit(this, GuiSignal.focusTopArea, topAreaId);
 	}
 	
 	/**
@@ -3126,26 +3234,23 @@ public class GeneratorMainFrame extends JFrame {
 	protected void onManualGui() {
 		
 		// Get directory.
-		String manualDirectory = MiddleUtility.getManualDirectory() + File.separatorChar + "GUI";
+		String manualDirectory = MiddleUtility.getManualDirectory() + File.separatorChar + "Manual";
 		if (manualDirectory.isEmpty()) {
-			
-			manualDirectory = System.getProperty("user.dir") + File.separatorChar + "Manual" + File.separatorChar + "GUI";
+			manualDirectory = System.getProperty("user.dir") + File.separatorChar + "Manual";
 		}
 		
 		// Check if index.htm exists.
-		String indexFilePath = manualDirectory + File.separatorChar + "index.htm";
-		
-		String url = String.format("file://%s", indexFilePath);
-		//Utility.show2(this, url);
-		
+		String indexFilePath = manualDirectory + File.separatorChar + "index.html";
 		File indexFile = new File(indexFilePath);
 		
 		if (!indexFile.exists()) {
 			Utility.show(this, "org.multipage.generator.messageManualIndexNotFound", indexFilePath);
 			return;
 		}
-
-		BareBonesBrowserLaunch.openURL(url);
+		
+		// Open browser.
+		URI uri = indexFile.toURI();
+		BareBonesBrowserLaunch.openURL(uri);
 	}
 	
 	/**
@@ -3154,26 +3259,43 @@ public class GeneratorMainFrame extends JFrame {
 	protected void onManualMaclan() {
 		
 		// Get directory.
-		String manualDirectory = MiddleUtility.getManualDirectory() + File.separatorChar + "Maclan";
+		String manualDirectory = MiddleUtility.getManualDirectory() + File.separatorChar + "MaclanManual" + File.separatorChar + "Pages";
 		if (manualDirectory.isEmpty()) {
 			
 			manualDirectory = System.getProperty("user.dir") + File.separatorChar + "Manual" + File.separatorChar + "Maclan";
 		}
 		
-		// Check if index.htm exists.
-		String indexFilePath = manualDirectory + File.separatorChar + "index.htm";
+		URI uri = null;
 		
-		String url = String.format("file://%s", indexFilePath);
-		//Utility.show2(this, url);
-		
-		File indexFile = new File(indexFilePath);
-		
-		if (!indexFile.exists()) {
-			Utility.show(this, "org.multipage.generator.messageManualIndexNotFound", indexFilePath);
-			return;
+		try {
+			// Check if area with alias "documentation" exists.
+			final String documentationAreaAlias = "documentation";
+			Area area = ProgramGenerator.getArea(documentationAreaAlias);
+			if (area != null) {
+				
+				int port = Settings.getHttpPortNumber();
+				String uriText = String.format("http://localhost:%d/?alias=%s", port, documentationAreaAlias);
+				uri = new URI(uriText);
+			}
+			else {
+				// Check if index.htm exists.
+				String indexFilePath = manualDirectory + File.separatorChar + "index.html";
+				File indexFile = new File(indexFilePath);
+				
+				if (indexFile.exists()) {
+					uri = indexFile.toURI();
+				}
+				Utility.throwException("middle.resultFileDoesntExist");
+			}
 		}
-
-		BareBonesBrowserLaunch.openURL(url);
+		catch (Exception e) {
+			Utility.show(e.getLocalizedMessage());
+		}
+		
+		// Open browser.
+		if (uri != null) {
+			BareBonesBrowserLaunch.openURL(uri);
+		}
 	}
 	
 	/**
@@ -3189,23 +3311,12 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		// Check if index.htm exists.
-		String indexFilePath = manualDirectory + File.separatorChar + "tutorial.htm";
-		
-		String url = String.format("file://%s", indexFilePath);
-		//Utility.show2(this, url);
-		
+		String indexFilePath = manualDirectory + File.separatorChar + "tutorial.html";
 		File indexFile = new File(indexFilePath);
+		URI uri = indexFile.toURI();
 		
-		if (!indexFile.exists()) {
-			//Utility.show(this, "org.multipage.generator.messageVideoNotFound", indexFilePath);
-			
-			url = MiddleUtility.getWebVideoUrl();
-			if (url.isEmpty()) {
-				url = "http://www.multipage-software.org/video_alpha";
-			}
-		}
-
-		BareBonesBrowserLaunch.openURL(url);
+		// Open browser.
+		BareBonesBrowserLaunch.openURL(uri);
 	}
 
 	/**
@@ -3215,6 +3326,7 @@ public class GeneratorMainFrame extends JFrame {
 	 */
 	public void copyAreaTree(Area area, Area parentAreaParam) {
 		
+		// Check input values.
 		if (area == null) {
 			Utility.show(this, "org.multipage.generator.messageSelectSingleAreaToCopy");
 			return;
@@ -3268,7 +3380,7 @@ public class GeneratorMainFrame extends JFrame {
 			}
 		});
 		
-		// Reset copied data after delay.
+		// Reset copied data after defined delay.
 		resetAreaTreeCopyTimer.restart();
 			
 		MiddleResult result = progressDlg.getOutput();
@@ -3277,7 +3389,7 @@ public class GeneratorMainFrame extends JFrame {
 			result.show(this);
 		}
 
-		// Set message information.
+		// Set message dialog.
 		String message = areaTreeDataToCopy.getExportMessage();
 		Utility.showHtml(this, message);
 	}
@@ -3337,7 +3449,11 @@ public class GeneratorMainFrame extends JFrame {
 		}
 		
 		long areaId = area.getId();
-		Event.propagate(GeneratorMainFrame.this, Event.importToArea, areaId);
+		HashSet<Long> areaIds = new HashSet<Long>();
+		areaIds.add(areaId);
+		
+		// Transmit "update area" signals.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(true), SignalGroup.UPDATE_AREAS, areaIds);
 	}
 
 	/**
@@ -3525,7 +3641,8 @@ public class GeneratorMainFrame extends JFrame {
 		}
 
 		// Update data.
-		Event.propagate(getFrame(), Event.transferToArea);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(getFrame(), Event.transferToArea);
 	}
 	
 	/**
@@ -3534,14 +3651,14 @@ public class GeneratorMainFrame extends JFrame {
 	public static void hideProperties() {
 		
 		// Delegate call.
-		showProperties(null);
+		showPropetiesView(null);
 	}
 	
 	/**
 	 * Display area properties.
 	 * @param areas
 	 */
-	public static void showProperties(Collection<Long> areaIds) {
+	public static void showPropetiesView(Collection<Long> areaIds) {
 		
 		// If there are no areas, do not display panel with properties.
 		if (areaIds == null || areaIds.isEmpty()) {
@@ -3565,7 +3682,19 @@ public class GeneratorMainFrame extends JFrame {
 	}
 
 	public void updateInformation() {
-		// TODO Auto-generated method stub
+		// TODO: <---REMOVE IT
 		
+	}
+	
+	/**
+	 * Ge previous update messages to disable infinite message loops.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		// TODO: <---TEST Previous messages.
+		j.log("GeneratorMainFrame %s;", previousMessages);
+		
+		return previousMessages;
 	}
 }

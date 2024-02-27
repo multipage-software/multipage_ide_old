@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -86,7 +86,7 @@ class TableId {
  * @author
  *
  */
-public class CustomizedColors extends JDialog {
+public class CustomizedColors extends JDialog implements Closable {
 
 	/**
 	 * Version.
@@ -169,7 +169,7 @@ public class CustomizedColors extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		templateState = inputStream.readUTF();
@@ -180,7 +180,7 @@ public class CustomizedColors extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeUTF(templateState);
@@ -821,7 +821,7 @@ public class CustomizedColors extends JDialog {
 	/**
 	 * Dispose dialog.
 	 */
-	public void disposeDialog() {
+	public void close() {
 
 		saveDialog();
 	}

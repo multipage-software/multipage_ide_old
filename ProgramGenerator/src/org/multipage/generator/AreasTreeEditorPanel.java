@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 06-04-2020
  *
@@ -41,6 +41,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
@@ -53,12 +54,19 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.TabPanelComponent;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -66,14 +74,13 @@ import org.multipage.util.Resources;
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
 import com.maclan.AreasModel;
-import javax.swing.event.ChangeListener;
 
 /**
  * 
  * @author
  *
  */
-public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, TabContainerComponent {
+public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, TabContainerComponent, NonCyclingReceiver {
 	
 	/**
 	 * Version.
@@ -234,6 +241,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 	 * Button show ID.
 	 */
 	private JToggleButton buttonShowIds;
+	
+	/**
+	 * List of previous update messages which is used to determine infinite message loops.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
 	
 	/**
 	 * Inheritance for super areas.
@@ -713,9 +725,17 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 				selectAndExpandNewArea(newAreaId, false);
 			}
 		});
-		// Add new trayMenu items.
-		areaMenuList.addTo(this, popupMenuList);
+		// Add new popup menu items.
 		areaMenuTree.addTo(this, popupMenuTree);
+		areaMenuTree.disableMenuItems(
+				// List of disabled menu items.
+				areaMenuTree.menuAddToFavoritesArea,
+				areaMenuTree.menuFocusSuperArea,
+				areaMenuTree.menuFocusNextArea,
+				areaMenuTree.menuFocusPreviousArea,
+				areaMenuTree.menuFocusTabTopArea
+			);
+		areaMenuList.addTo(this, popupMenuList);
 	}
 
 	/**
@@ -811,7 +831,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 		    	onSelectedTreeItem();
 		    	
 		    	// Propagate event.
-		    	Event.propagate(AreasTreeEditorPanel.this, Event.selectTreeArea, selectedTreeAreaIds);
+		    	// TODO: <---REFACTOR EVENTS
+		    	//Event.propagate(AreasTreeEditorPanel.this, Event.selectTreeArea, selectedTreeAreaIds);
 		    }
 		});
 		
@@ -827,12 +848,22 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 				onSelectedListItem();
 				
 		    	// Propagate event.
-		    	Event.propagate(AreasTreeEditorPanel.this, Event.selectListArea, selectedListAreaIds);
+				// TODO: <---REFACTOR EVENTS
+		    	//Event.propagate(AreasTreeEditorPanel.this, Event.selectListArea, selectedListAreaIds);
 			}
 		});
-
+		
+		// TODO: <---COPY to new version
+		// Receive "update areas" messages.
+		ApplicationEvents.receiver(this, SignalGroup.create(UpdateSignal.updateAreasModel, UpdateSignal.updateAreasTreeEditor), message -> {
+			
+			reload();
+			tree.updateUI();
+		});
+		
 		// Add area view state event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, (data) -> {
+		// TODO: <---REFACTOR EVENTS
+		/*Event.receiver(this, ActionGroup.areaViewStateChange, (data) -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
@@ -851,7 +882,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 		Event.receiver(this, ActionGroup.areaViewChange, (data) -> {
 			
 			reload();
-		});
+		});*/
 	}
 	
 	/**
@@ -860,7 +891,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 	private void removeListeners() {
 		
 		// Remove event listener.
-		Event.remove(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -876,7 +907,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
     	
     	if (paths != null) {
     	
-	    	// Do loop for all paths and avoid duplicite areas.
+	    	// Do loop for all paths and avoid duplicate areas.
 	    	for (TreePath path : paths) {
 	    		DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
 	    		
@@ -898,6 +929,9 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 	    		}
 	    	}
     	}
+    	
+    	// Transmit area selection signal.
+    	ApplicationEvents.transmit(this, GuiSignal.selectTreeAreas, selectedTreeAreaIds);
 	}
 
 	/**
@@ -914,6 +948,9 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 				selectedListAreaIds.add(area.getId());
 			}
 		}
+		
+    	// Transmit area selection signal.
+    	ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, selectedListAreaIds);
 	}
 	
 	/**
@@ -1425,10 +1462,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 	}
 
 	/**
-	 * Set all selection.
+	 * Set all selected.
 	 * @param select
 	 */
-	private void setAllSelection(boolean select) {
+	private void setAllSelected(boolean select) {
 		
 		int tabIndex = tabbedPane.getSelectedIndex();
 		
@@ -1486,7 +1523,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 					showMenu(e, popup);
 				}
 			}
-			
 		});
 	}
 
@@ -1519,7 +1555,9 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 		reload();
 		
 		int index = tabbedPane.getSelectedIndex();
-		Event.propagate(this, Event.subTabChange, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
+		
+		// Transmit tree/list tab change.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
 	}
 
 	/**
@@ -1532,7 +1570,13 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 			return;
 		}
 		
-		Event.propagate(this, Event.mainTabChange);
+		reload();
+		
+		int index = tabbedPane.getSelectedIndex();
+		
+		// TODO: <---COPY to new version
+		// Transmit main tab change.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
 	}
 	
 	/**
@@ -1552,5 +1596,22 @@ public class AreasTreeEditorPanel extends JPanel implements TabPanelComponent, T
 		
 		// Remove listeners.
 		removeListeners();
+	}
+	
+	/**
+	 * Get list of previous messages.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousMessages;
+	}
+	
+	/**
+	 * Called when the tree editor needs to recreate its contents.
+	 */
+	@Override
+	public void recreateContent() {
+		
 	}
 }

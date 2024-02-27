@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -9,6 +9,7 @@ package org.multipage.generator;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 import javax.swing.*;
@@ -23,7 +24,7 @@ import com.maclan.*;
  * @author
  *
  */
-public class ElementProperties extends JPanel {
+public class ElementProperties extends JPanel implements NonCyclingReceiver, Closable {
 
 	/**
 	 * Version.
@@ -53,6 +54,11 @@ public class ElementProperties extends JPanel {
 	private AreasPropertiesBase areaEditor;
 	
 	/**
+	 * List of previous update messages.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
+	
+	/**
 	 * Constructor.
 	 */
 	public ElementProperties() {
@@ -65,14 +71,9 @@ public class ElementProperties extends JPanel {
 		setNoArea();
 		
 		// Set listener.
-		addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				setCursor(Cursor.getDefaultCursor());
-			}
-		});
+		setListeners();
 	}
-	
+
 	/**
 	 * Create new area properties object.
 	 * @param isPropertiesPanel
@@ -81,6 +82,34 @@ public class ElementProperties extends JPanel {
 	protected AreasPropertiesBase newAreasProperties(boolean isPropertiesPanel) {
 		
 		return ProgramGenerator.newAreasProperties(isPropertiesPanel);
+	}
+	
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
+		
+		addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				setCursor(Cursor.getDefaultCursor());
+			}
+		});
+		
+		// Receive update signal.
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasDiagram, ApplicationEvents.HIGH_PRIORITY, message -> {
+			
+			// Set new areas to display.
+			HashSet<Long> selectedAreaIds = message.getRelatedInfo();
+			if (selectedAreaIds != null && !selectedAreaIds.isEmpty()) {
+				
+				LinkedList<Area> areas = ProgramGenerator.getAreas(selectedAreaIds);
+				setAreas(areas);
+			}
+			else {
+				setNoArea();
+			}
+		});
 	}
 
 	/**
@@ -136,12 +165,37 @@ public class ElementProperties extends JPanel {
 	public AreasPropertiesBase getAreaEditor() {
 		return areaEditor;
 	}
-
+	
 	/**
-	 * Dispose.
+	 * Get list of previous update messages.
 	 */
-	public void dispose() {
-
-		areaEditor.dispose();
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		// TODO: <---TEST Previous messages.
+		j.log("ElementProperties %s;", previousMessages);
+		
+		return previousMessages;
 	}
+	
+	/**
+	 * Close element properties panel.
+	 */
+	@Override
+	public void close() {
+		
+		// Close area properties.
+		areaEditor.close();
+		// Remove listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
+	}	
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -63,14 +63,5 @@ public class Request implements BoxedObject {
 		
 		String headerProperty = server.state.request.getOriginalRequest().getHeader(name);
 		return headerProperty;
-	}
-	
-	/**
-	 * Read all POSTed data using character encoding of the request.
-	 * @return
-	 */
-	public String post() throws Exception {
-		
-		return server.state.request.post();
 	}
 }

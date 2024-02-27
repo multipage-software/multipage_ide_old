@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -12,6 +12,7 @@ import java.awt.*;
 import javax.swing.*;
 
 import org.multipage.gui.*;
+import org.multipage.util.Closable;
 
 import com.maclan.Area;
 
@@ -23,7 +24,7 @@ import java.util.LinkedList;
  * @author
  *
  */
-public class AreasProperties extends AreasPropertiesBase {
+public class AreasProperties extends AreasPropertiesBase implements Closable {
 
 	/**
 	 * Version.
@@ -236,5 +237,27 @@ public class AreasProperties extends AreasPropertiesBase {
 		
 		Area area = areas.getFirst();
 		textAlias.setEnabled(!area.isProtected());
+	}
+	
+	/**
+	 * Closing the area properties panel.
+	 */
+	@Override
+	public void close() {
+		super.close();
+		
+		// Close slot list.
+		panelSlotList.close();
+		// Remove listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
 	}
 }

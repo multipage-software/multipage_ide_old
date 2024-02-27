@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -501,8 +501,8 @@ public class BlockDescriptorsStack {
 		parameters.remove("$useLast");
 		parameters.remove("$global");
 		parameters.remove("$returnText");
-		parameters.remove("$transparent");
 		parameters.remove("$inner");
+		parameters.remove("$transparent");
 		
 		// Create new procedure and add it to the list.
 		Procedure procedure = new Procedure(parameters, innerText, nameForced, fullCall, isTransparent);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -40,9 +40,9 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 	 */
 	static {
 		
+		// Load cursors.
 		Toolkit toolkit = Toolkit.getDefaultToolkit();
 		
-		// Load cursors.
 		Image image = Images.getImage("org/multipage/gui/images/copy_cursor.png");
 		if (image != null) {
 			
@@ -98,7 +98,7 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 	private JTreeDndCallback dndCallback;
 
 	/**
-	 * Enable Drag and Drop flag.
+	 * Flag to enable Drag and Drop.
 	 */
 	private boolean enableDragAdnDrop = true;
 
@@ -109,7 +109,6 @@ public class JTreeDnD extends JTree implements DragGestureListener, DragSourceLi
 		
 		// Create drag source, drop target and drag gesture recognizer.
 		dragSource = new DragSource();
-		
 		dropTarget = new DropTarget(this, this);
 		
 		dragSource.createDefaultDragGestureRecognizer(this,

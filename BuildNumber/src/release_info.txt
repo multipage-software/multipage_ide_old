@@ -1,12 +1,7 @@
-Minimum Operating System:
-	- Windows 8.1 v.6.3
-Integrated Development Environment:
-	- Eclipse IDE for Java EE Developers (Oxygen 1, Release 4.7.1)
-Area Templates:
-	- Basic Template 1.1.29.14.xml
-Embedded Web Sever:
-	- Eclipse Jetty 9.4.7.v20170914
-Embedded Database:
-	- Apache Derby 10.14.2.0 Release
+ECLIPSE: 
+Eclipse Java EE IDE for Web Developers.
+Version: Oxygen.1 Release (4.7.1)
+OS: Windows 8.1, v.6.3, x86_64 / win32
 
-
+TEMPLATES:
+Basic Template 1.1.29.14.xml

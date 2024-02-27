@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -447,7 +447,8 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.updateAreaResources, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaResourcesEditor.this, Event.updateAreaResources, areaId);
 	}
 	
 	/**
@@ -757,7 +758,8 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.editResource, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaResourcesEditor.this, Event.editResource, areaId);
 	}
 	
 	/**
@@ -806,7 +808,8 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.deleteResources, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaResourcesEditor.this, Event.deleteResources, areaId);
 	}
 	
 	/**
@@ -915,7 +918,8 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 	    
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaResourcesEditor.this, Event.createTextResource, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaResourcesEditor.this, Event.createTextResource, areaId);
 	}
 
 	/**

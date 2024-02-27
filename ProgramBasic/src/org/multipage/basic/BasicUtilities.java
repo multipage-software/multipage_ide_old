@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -11,6 +11,9 @@ package org.multipage.basic;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 
 
 /**
@@ -24,7 +27,7 @@ public class BasicUtilities {
 	 * @param inputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 	}
@@ -34,7 +37,7 @@ public class BasicUtilities {
 	 * @param outputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 	}

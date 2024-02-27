@@ -1,11 +1,13 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
  */
 
 package org.multipage.gui;
+
+import java.awt.event.ActionEvent;
 
 import javax.swing.*;
 
@@ -28,6 +30,45 @@ public class ToolBarKit {
 		JButton toolBarButton;
 		toolBarButton = toolBarObject.add(new ActionAdapter(notifyObject, methodToInvoke, (Class<?>[])null));
 		toolBarButton.setToolTipText(Resources.getString(toolTipResoure));
+		
+		ImageIcon icon = Images.getIcon(iconPictureName);
+		if (icon != null) {
+			toolBarButton.setIcon(icon);
+		}
+		else {
+			String format = Resources.getString("org.multipage.gui.errorCannotLoadToolbarIcon");
+			String message = String.format(format, iconPictureName);
+			JOptionPane.showMessageDialog(null, message);
+		}
+		
+		return toolBarButton;
+	}
+	
+	/**
+	 * Adds StatusBar button
+	 */
+	@SuppressWarnings("serial")
+	public static JButton addToolBarButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure, Runnable actionLambda) {
+	
+		// Add StatusBar Button and set action adapter.
+		JButton toolBarButton;
+		toolBarButton = toolBarObject.add(new AbstractAction() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				// Invoke lambda function.
+				actionLambda.run();
+			}
+		});
+		String tooltipText = null;
+		if (toolTipResoure.startsWith("#")) {
+			tooltipText = toolTipResoure.substring(1);
+		}
+		else {
+			tooltipText = Resources.getString(toolTipResoure);
+		}
+		toolBarButton.setToolTipText(tooltipText);
 		
 		ImageIcon icon = Images.getIcon(iconPictureName);
 		if (icon != null) {
@@ -66,5 +107,53 @@ public class ToolBarKit {
 		}
 		
 		return toggleButton;
+	}
+	
+
+	/**
+	 * Add toggle button.
+	 */
+	@SuppressWarnings("serial")
+	public static JToggleButton addToggleButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure, Runnable actionLambda) {
+		
+		// Add toggle button and set action adapter.
+		JToggleButton toggleButton = new JToggleButton();
+		
+		if (actionLambda != null) {
+			toggleButton.setAction(new AbstractAction() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					
+					// Invoke lambda function.
+					actionLambda.run();
+				}
+			});
+		}
+		
+		toolBarObject.add(toggleButton);
+		toggleButton.setToolTipText(Resources.getString(toolTipResoure));
+
+		ImageIcon icon = Images.getIcon(iconPictureName);
+		if (icon != null) {
+			toggleButton.setIcon(icon);
+		}
+		else {
+			String format = Resources.getString("org.multipage.gui.errorCannotLoadToolbarIcon");
+			String message = String.format(format, iconPictureName);
+			JOptionPane.showMessageDialog(null, message);
+		}
+		
+		return toggleButton;
+	}
+	
+	/**
+	 * Add toggle button.
+	 */
+	public static JToggleButton addToggleButton(JToolBar toolBarObject,
+			String iconPictureName, String toolTipResoure) {
+		
+		// Delegate the call.
+		return addToggleButton(toolBarObject, iconPictureName, toolTipResoure, null);
 	}
 }

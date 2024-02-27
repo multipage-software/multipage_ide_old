@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -404,7 +404,8 @@ public class MimeTypesEditor extends JDialog {
 		// Import data.
 		importMimeTypes(file);
 		
-		Event.propagate(MimeTypesEditor.this, Event.importMimeTypes);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(MimeTypesEditor.this, Event.importMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();
@@ -491,7 +492,8 @@ public class MimeTypesEditor extends JDialog {
 		MiddleUtility.importFactoryMimeTypes(ProgramBasic.getMiddle(),
 				ProgramBasic.getLoginProperties(), this);
 		
-		Event.propagate(MimeTypesEditor.this, Event.defaultMimeTypes);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(MimeTypesEditor.this, Event.defaultMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();

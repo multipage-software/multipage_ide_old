@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 10-03-2020
  *
@@ -173,7 +173,7 @@ public class AreaServerState {
 	/**
 	 * JavaScript engine.
 	 */
-	public ScriptingEngine scriptingEngine;
+	public JavaScriptEngine javaScriptEngine;
 	
 	/**
 	 * Tabulator used in indentation.
@@ -231,11 +231,6 @@ public class AreaServerState {
 	 * Tray trayMenu result.
 	 */
 	protected TrayMenuResult trayMenu = new TrayMenuResult();
-	
-	/**
-	 * New line characters
-	 */
-	public String newLine = "\n";
 	
 
 	/**

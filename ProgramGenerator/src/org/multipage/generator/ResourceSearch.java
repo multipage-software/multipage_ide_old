@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -24,7 +24,7 @@ import com.maclan.*;
 
 
 /**
- * 
+ * Dialog for searching items in resource list.
  * @author
  *
  */
@@ -179,8 +179,8 @@ public class ResourceSearch extends JDialog {
 		
 		labelSettings = new JLabel("org.multipage.generator.textSearchResourceNameParamaters");
 		springLayout.putConstraint(SpringLayout.NORTH, labelSettings, 30, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, labelSettings, 10, SpringLayout.EAST, separator);
 		labelSettings.setForeground(new Color(0, 128, 128));
-		springLayout.putConstraint(SpringLayout.WEST, labelSettings, 6, SpringLayout.EAST, separator);
 		springLayout.putConstraint(SpringLayout.EAST, labelSettings, 178, SpringLayout.EAST, separator);
 		getContentPane().add(labelSettings);
 		
@@ -211,6 +211,7 @@ public class ResourceSearch extends JDialog {
 		getContentPane().add(buttonBackward);
 		
 		buttonFindNext = new JButton("org.multipage.generator.textFindNext");
+		springLayout.putConstraint(SpringLayout.EAST, buttonFindNext, -10, SpringLayout.EAST, labelSettings);
 		buttonFindNext.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onFindNext();
@@ -219,7 +220,6 @@ public class ResourceSearch extends JDialog {
 		buttonFindNext.setMargin(new Insets(0, 0, 0, 0));
 		buttonFindNext.setPreferredSize(new Dimension(85, 25));
 		springLayout.putConstraint(SpringLayout.SOUTH, buttonFindNext, -10, SpringLayout.SOUTH, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, buttonFindNext, 0, SpringLayout.EAST, labelSettings);
 		getContentPane().add(buttonFindNext);
 		
 		separatorHorizontal = new JSeparator();

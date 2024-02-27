@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -18,6 +18,8 @@ import javax.swing.*;
 import org.multipage.basic.ProgramBasic;
 import org.multipage.generator.ProgramPaths.PathSupplier;
 import org.multipage.gui.RendererPathItem;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.*;
 
@@ -42,7 +44,7 @@ public class GeneratorUtilities {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		GeneratorUtilities.currentResourcePathName = inputStream.readUTF();
@@ -54,7 +56,7 @@ public class GeneratorUtilities {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Write current paths.

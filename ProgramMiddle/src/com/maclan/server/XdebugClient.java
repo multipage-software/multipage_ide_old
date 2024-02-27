@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2018 (C) sechance
  * 
  * Created on : 16-05-2018
  *
@@ -1045,7 +1045,6 @@ public class XdebugClient extends DebugClient {
 	@Override
 	public boolean startDebugging() {
 		
-		// TODO:
 		return true;
 	}
 	
@@ -1054,7 +1053,6 @@ public class XdebugClient extends DebugClient {
 	 */
 	public void stopDebugging() {
 		
-		// TODO:
 		command.set(stop);
 		Lock.notify(commandSet);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -7,9 +7,12 @@
 
 package com.maclan.server;
 
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.HashMap;
 
+import org.multipage.gui.Images;
+import org.multipage.gui.Utility;
 import org.multipage.util.*;
 
 import com.maclan.*;
@@ -75,6 +78,9 @@ public class LanguageServer {
 		MiddleResult result;
 		long languageId;
 		
+		Obj<byte []> iconBytes = new Obj<byte[]>();
+		OutputStream outputStream = response.getOutputStream();
+		
 		// Get parameter.
 		String languageIdText = request.getParameter("flag_id");
 		
@@ -85,27 +91,22 @@ public class LanguageServer {
 			return false;
 		}
 		
-		
 		// Load language flag.
-		Obj<byte []> iconBytes = new Obj<byte[]>();
-		
 		result = middle.loadLanguageFlag(languageId, iconBytes);
-		if (result.isNotOK()) {
-			return true;
-		}
-		
-		// Output icon data.
 		try {
-			// Get output stream.
-			OutputStream outputStream = response.getOutputStream();
-			
-			// Write data.
-			outputStream.write(iconBytes.ref);
+			if (result.isOK()) {
+				// Output flag to stream.
+				outputStream.write(iconBytes.ref);
+			}
+			else {
+				// Output default flag.
+				iconBytes.ref = Utility.getApplicationFileContent("org/multipage/gui/images/lorem_ipsum.png");
+				outputStream.write(iconBytes.ref);
+			}
 		}
-		catch (IOException e) {
+		catch (Exception e) {
+		}
 
-		}
-		
 		return true;
 	}
 

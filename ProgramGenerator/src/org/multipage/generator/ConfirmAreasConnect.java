@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -12,6 +12,8 @@ import java.awt.Window;
 import javax.swing.*;
 
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.*;
 
@@ -52,7 +54,7 @@ public class ConfirmAreasConnect extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		inheritState = inputStream.readBoolean();
@@ -64,7 +66,7 @@ public class ConfirmAreasConnect extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException{
 		
 		outputStream.writeBoolean(inheritState);

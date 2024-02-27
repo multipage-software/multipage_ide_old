@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -89,7 +89,7 @@ public class TextResourceEditor extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		Object data = inputStream.readObject();
@@ -109,7 +109,7 @@ public class TextResourceEditor extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);

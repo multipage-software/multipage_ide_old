@@ -9,6 +9,7 @@ package org.multipage.util;
 import java.io.PrintStream;
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 /**
  * @author user
@@ -72,17 +73,5 @@ public class j {
 				System.err.format(indentation + parameter.toString() + '\n', strings);
 			}
 		}
-	}
-	
-	/**
-	 * Log message.
-	 * @param stringResource - identifier of a message
-	 * @param strings
-	 */
-	public static void logMessage(String stringResource, Object ...strings) {
-		
-		// Try to load string resource.
-		String message = Resources.getString(stringResource);
-		log(message, strings);
 	}
 }

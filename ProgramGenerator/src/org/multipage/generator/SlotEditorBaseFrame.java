@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -8,19 +8,24 @@
 package org.multipage.generator;
 
 import java.awt.Rectangle;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
-import javax.swing.*;
+import java.util.LinkedList;
 
-import com.maclan.*;
+import javax.swing.JFrame;
+
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
+import org.multipage.util.Closable;
+
+import com.maclan.Slot;
 
 /**
  * @author
  *
  */
-public abstract class SlotEditorBaseFrame extends JFrame {
+public abstract class SlotEditorBaseFrame extends JFrame implements Closable {
 
 	/**
 	 * Version.
@@ -44,7 +49,7 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	protected static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object data = inputStream.readObject();
@@ -60,7 +65,7 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	protected static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);
@@ -157,5 +162,31 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 		
 		// Remove editors from list.
 		createdSlotEditors.removeAll(editorsToRemove);
+	}
+	
+	/**
+	 * Constructor.
+	 */
+	// TODO: <---COPY to new version
+	public SlotEditorBaseFrame() {
+		
+		setListeners();
+	}
+	
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
+		
+		// On window closing.
+		addWindowListener(new WindowAdapter() {
+
+			@Override
+			public void windowClosing(WindowEvent e) {
+				super.windowClosing(e);
+				// Close frame.
+				close();
+			}
+		});		
 	}
 }

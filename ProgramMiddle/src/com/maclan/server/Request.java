@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -7,14 +7,12 @@
 
 package com.maclan.server;
 
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
-import java.util.Map.*;
+import java.util.Map;
+import java.util.Map.Entry;
 
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.*;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * 
@@ -75,59 +73,6 @@ public class Request {
 	public boolean existsParameter(String name) {
 		
 		return parameters.get(name) != null;
-	}
-	
-	/**
-	 * Trim the encoding string and return it.
-	 * @param encoding
-	 * @return
-	 */
-	private String getEncoding() {
-		
-		String encoding = request.getCharacterEncoding();
-		
-		// Set default encoding
-		if (encoding == null) {
-			encoding = "UTF8";
-		}
-		
-		return encoding;
-	}
-	
-	/**
-	 * Read all POSTed data using character encoding of the request.
-	 * @return
-	 * @throws Exception 
-	 */
-	public String post() throws Exception {
-		
-		String text = "";
-		byte [] data;
-		
-		// Get input stream and its character encoding
-		String encoding = getEncoding();
-		InputStream inputStream = request.getInputStream();
-		
-		// Get cached POST data
-		if (inputStream instanceof CachedInputStream) {
-			
-			CachedInputStream cachedInputStream = (CachedInputStream) inputStream;
-			
-			// Get cached data
-			data = cachedInputStream.getCachedData();
-		}
-		else {
-			
-			ServletInputStream servletInputStream = request.getInputStream();
-			
-			// Read all data and convert it to a string with specified encoding
-			data = servletInputStream.readAllBytes();
-			
-		}
-		
-		// Convert the input data to string
-		text = new String(data, encoding);
-		return text;
 	}
 
 	/**

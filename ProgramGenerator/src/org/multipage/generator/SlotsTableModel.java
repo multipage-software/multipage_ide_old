@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -52,7 +52,7 @@ public class SlotsTableModel extends AbstractTableModel {
 	 * Set list.
 	 * @param holders
 	 * @param foundSlots 
-	 * @param showOnlyFound - TODO
+	 * @param showOnlyFound
 	 * @param showAllSlots 
 	 */
 	public void setList(LinkedList<? extends SlotHolder> holders,
@@ -75,7 +75,7 @@ public class SlotsTableModel extends AbstractTableModel {
 			// Do loop for all slots.
 			for (Slot slot : holder.getSlots()) {
 				
-				if (!showAllSlots && slot.isUserDefined()) {
+				if (!showAllSlots && !slot.isUserDefined()) {
 					continue;
 				}
 				
@@ -93,7 +93,7 @@ public class SlotsTableModel extends AbstractTableModel {
 				if (FoundSlot.isSlotFound(foundSlots, slot)) {
 					highlightedSlots.add(slot);
 				}
-				else {
+				else if (!showOnlyFound) {
 					otherSlots.add(slot);
 				}
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -503,7 +503,8 @@ public class GenerateAreasDialog extends JDialog {
 		
 		// Update data.
 		long areaId = containerArea.getId();
-		Event.propagate(GenerateAreasDialog.this, Event.createAreasTree, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(GenerateAreasDialog.this, Event.createAreasTree, areaId);
 		
 		// Close the window.
 		dispose();

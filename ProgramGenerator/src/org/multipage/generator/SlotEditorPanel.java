@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -14,6 +14,7 @@ import javax.swing.*;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
 import org.multipage.gui.*;
+import org.multipage.util.Closable;
 import org.multipage.util.Resources;
 
 import com.maclan.*;
@@ -23,7 +24,7 @@ import com.maclan.*;
  * @author
  *
  */
-public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
+public class SlotEditorPanel extends JPanel implements SlotEditorGenerator, Closable {
 
 	// $hide>>$
 	/**
@@ -554,12 +555,14 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		toggleDebug = new JToggleButton("");
 		toggleDebug.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				helper.onToggleDebugging(toggleDebug.isSelected());
+				// TODO: <---CHANGE Revisions disabled in alpha version.
+				//helper.onToggleDebugging(toggleDebug.isSelected());
 			}
 		});
 		toggleDebug.setBorder(UIManager.getBorder("CheckBox.border"));
 		toggleDebug.setMargin(new Insets(0, 0, 0, 0));
-		panelAux.add(toggleDebug);
+		// TODO: <---CHANGE Revisions disabled in alpha version.
+		//panelAux.add(toggleDebug);
 		
 		horizontalStrut_2 = Box.createHorizontalStrut(3);
 		horizontalStrut_2.setPreferredSize(new Dimension(3, 0));
@@ -607,6 +610,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		}
 		
 		buttonRevision = new JButton("org.multipage.generator.textRevisions");
+		buttonRevision.setVisible(false);
 		springLayout.putConstraint(SpringLayout.EAST, buttonRevision, -6, SpringLayout.WEST, buttonSave);
 		buttonRevision.setMargin(new Insets(0, 0, 0, 0));
 		springLayout.putConstraint(SpringLayout.NORTH, buttonRevision, 0, SpringLayout.NORTH, buttonCancel);
@@ -619,6 +623,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		add(buttonRevision);
 		
 		buttonCommit = new JButton("org.multipage.generator.textCommit");
+		buttonCommit.setVisible(false);
 		springLayout.putConstraint(SpringLayout.EAST, buttonCommit, -6, SpringLayout.WEST, buttonRevision);
 		buttonCommit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -631,6 +636,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		add(buttonCommit);
 		
 		buttonExpose = new JButton("org.multipage.generator.textExpose");
+		buttonExpose.setVisible(false);
 		buttonExpose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onExpose();
@@ -650,5 +656,14 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 		
 		// TODO: expose component
 		
+	}
+	
+	/**
+	 * Close slot editor/
+	 */
+	@Override
+	public void close() {
+		
+		helper.close();
 	}
 }

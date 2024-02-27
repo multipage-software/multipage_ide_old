@@ -45,7 +45,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -56,7 +56,7 @@ public class CreateAreasFromSourceCode extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -233,8 +233,9 @@ public class CreateAreasFromSourceCode extends JDialog {
 		finally {
 			ProgramBasic.logoutMiddle();
 		}
-			
-		Event.propagate(CreateAreasFromSourceCode.this, Event.importToArea);
+		
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(CreateAreasFromSourceCode.this, Event.importToArea);
 		
 		saveDialog();
 		dispose();

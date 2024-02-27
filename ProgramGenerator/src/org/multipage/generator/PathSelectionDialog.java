@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) Vaclav Koarcik
+ * Copyright 2010-2020 (C) Vaclav Koarcik
  * 
  * Created on : 24-02-2020
  *
@@ -49,7 +49,7 @@ public class PathSelectionDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -60,7 +60,7 @@ public class PathSelectionDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

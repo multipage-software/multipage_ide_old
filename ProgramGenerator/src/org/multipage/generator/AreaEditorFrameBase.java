@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -61,7 +61,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		Object data = inputStream.readObject();
@@ -79,7 +79,7 @@ public abstract class AreaEditorFrameBase extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);
@@ -474,7 +474,9 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.saveArea, areaId);
+
+		// Update area related information.
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL);
 	}
 
 	/**
@@ -510,7 +512,9 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		saveDialog();
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.saveArea, areaId);
+		
+		// Update area related information.
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL);
 		
 		// Close the window.
 		dispose();
@@ -1025,7 +1029,8 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		GeneratorMainFrame.getFrame().setAreaDescription(area.getDescription());
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorFrameBase.this, Event.updateAreaChanges, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorFrameBase.this, Event.updateAreaChanges, areaId);
 	}
 
 	/**
@@ -1084,7 +1089,8 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		getCheckBoxHomeArea().addActionListener(homeAreaListener);
 
 		// Update information.
-		Event.propagate(AreaEditorFrameBase.this, Event.updateHomeArea, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorFrameBase.this, Event.updateHomeArea, areaId);
 	}
 
 	/**
@@ -1110,7 +1116,8 @@ public abstract class AreaEditorFrameBase extends JFrame {
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
 
 		// Update information.
-		Event.propagate(AreaEditorFrameBase.this, Event.updateAreaIsDisabled);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorFrameBase.this, Event.updateAreaIsDisabled);
 	}
 
 	/**

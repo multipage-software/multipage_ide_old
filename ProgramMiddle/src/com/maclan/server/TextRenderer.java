@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -15,6 +15,8 @@ import java.util.concurrent.CancellationException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.*;
 
@@ -47,7 +49,7 @@ public class TextRenderer {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException {
 		
 		serializedTarget = inputStream.readUTF();
@@ -57,7 +59,7 @@ public class TextRenderer {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeUTF(serializedTarget);

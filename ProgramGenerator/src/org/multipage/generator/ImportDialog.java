@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -52,7 +52,7 @@ public class ImportDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeBoolean(useEdgeSubNameState);
@@ -64,7 +64,7 @@ public class ImportDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		useEdgeSubNameState = inputStream.readBoolean();
@@ -126,7 +126,7 @@ public class ImportDialog extends JDialog {
 		
 		// Find XML file.
 		String [][] filters = {{"org.multipage.generator.textXmlAreaTreeData", "xml"}};
-		File xmlFile = Utility.chooseFileNameToOpen(parent, filters);
+		File xmlFile = Utility.chooseFileToOpen(parent, filters);
 		if (xmlFile == null) {
 			return null;
 		}
@@ -468,7 +468,7 @@ public class ImportDialog extends JDialog {
 			
 			String [][] filters = {{"org.multipage.generator.textDatFiles", "dat"}};
 			
-			File selectedFile = Utility.chooseFileNameToOpen(this, filters);
+			File selectedFile = Utility.chooseFileToOpen(this, filters);
 			
 			if (selectedFile == null) {
 

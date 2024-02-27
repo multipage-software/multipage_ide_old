@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -14,8 +14,10 @@ import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
+import java.awt.Menu;
 import java.awt.MenuItem;
 import java.awt.Point;
 import java.awt.PopupMenu;
@@ -42,35 +44,57 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.CodeSource;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.Normalizer;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -81,6 +105,7 @@ import java.util.zip.ZipInputStream;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultCellEditor;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -96,6 +121,7 @@ import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -104,16 +130,27 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.JViewport;
 import javax.swing.ListCellRenderer;
+import javax.swing.RowSorter;
+import javax.swing.RowSorter.SortKey;
+import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.TextUI;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableModel;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -125,10 +162,12 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import javax.swing.text.StyledEditorKit;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.apache.commons.io.IOUtils;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -142,6 +181,11 @@ import com.ibm.icu.text.CharsetMatch;
  *
  */
 public class Utility {
+	
+	/**
+	 * Standard headers.
+	 */
+	public static final String xmlHeaderTemplate = "<?xml version=\"1.0\" encoding=\"%s\"?>";
 	
 	/**
 	 * Colors
@@ -161,6 +205,11 @@ public class Utility {
 	public static String currentPathName = "";
 	
 	/**
+	 * Application main window.
+	 */
+	private static Window applicationMainWindow = null;
+	
+	/**
 	 * Separators.
 	 */
 	public static final char pathSeparatorCharacter = '/';
@@ -172,6 +221,7 @@ public class Utility {
 	public static final String floatGroupRegex = "\\s*([0-9\\-\\+\\.eE]+)\\s*";
 	public static final String lengthUnitsRegex = "(px|em|%|cm|mm|in|ex|pt|pc|\\s*)";
 	public static final String angleUnitsRegex = "(deg|grad|rad|turn|\\s*)";
+	public static final Pattern x509CommonNameRegex = Pattern.compile("^\\s*CN\\s*=\\s*(?<commonName>[^,]+)");
 	
 	/**
 	 * Regular expression pattern for format specifier in String.fomat(...)
@@ -182,13 +232,35 @@ public class Utility {
 	 * Empty line REGEX pattern
 	 */
 	public static final Pattern emptyLineRegexPattern = Pattern.compile("(?m)^[ \t]*\r?\n", Pattern.MULTILINE);
-
+	
+	/**
+	 * Character distances. Characters on keyboard: position on keyboard and character topology.
+	 */
+	private final static char [][][] keyboard = 
+		{{{ 'Q' }, { 'W' }, { 'E' }, { 'R' }, { 'T' }, { 'Y' }, { 'U' }, { 'I' }, { 'O' }, { 'P' }},
+         {{ 'A' }, { 'S' }, { 'D' }, { 'F' }, { 'G' }, { 'H' }, { 'J' }, { 'K' }, { 'L' }, { '\0'}},
+         {{ '\0'}, { 'Z' }, { 'X' }, { 'C' }, { 'V' }, { 'B' }, { 'N' }, { 'M' }, { '\0'}, { '\0'}}};
+	
+	private static int keyboardHeight = -1;
+	private static int keyboardWidth = -1;
+	
+	private static Hashtable<Character, List<Character>> mapKeyNeighbours = null;
+	
+	/**
+	 * Initialization.
+	 */
+	static {
+		
+		// Initialize computation of text distances.
+		initTextDistanceComputation();
+	}
+	
 	/**
 	 * Load serialized data.
 	 * @param inputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load path name.
@@ -200,7 +272,7 @@ public class Utility {
 	 * @param outputStream
 	 * @throws IOException 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Save path name.
@@ -225,6 +297,17 @@ public class Utility {
 	}
 	
 	/**
+	 * Get current time stamp.
+	 * @return
+	 */
+	public static Timestamp getCurrentTimestamp() {
+
+		long currentTimeMs = System.currentTimeMillis();
+		Timestamp initialTimestamp = new Timestamp(currentTimeMs);
+		return initialTimestamp;
+	}
+	
+	/**
 	 * Set current path name
 	 * @param currentPathName
 	 */
@@ -232,7 +315,34 @@ public class Utility {
 		
 		Utility.currentPathName = currentPathName;
 	}
-
+	
+	/**
+	 * Set application main window.
+	 * @param window
+	 */
+	public static void setApplicationMainWindow(Window window) {
+		
+		Utility.applicationMainWindow = window;
+	}
+	
+	/**
+	 * Set application main window.
+	 * @param component
+	 */
+	public static void setApplicationMainWindow(Component component) {
+		
+		Utility.applicationMainWindow = findWindowRecursively(component);
+	}
+	
+	/**
+	 * Get application main window.
+	 * @param component
+	 */
+	public static Window getApplicationMainWindow() {
+		
+		return Utility.applicationMainWindow;
+	}
+	
 	/**
 	 * Compute union of given rectangles.
 	 */
@@ -302,6 +412,17 @@ public class Utility {
 	}
 
 	/**
+	 * Center window on the screen.
+	 * @param component
+	 */
+	public static void centerOnScreen(Component component) {
+		
+		// Delegate the call.
+		Window window = findWindow(component);
+		centerOnScreen(window);
+	}
+	
+	/**
 	 * Returns true if the text matches the search text.
 	 * @param meansText
 	 * @param searchText 
@@ -312,6 +433,39 @@ public class Utility {
 			boolean exactMatch) {
 		
 		String text = exactMatch ? title : titleWithIdAndAlias;
+		
+		return matches(text, searchText, caseSensitive, wholeWords, exactMatch);
+	}
+	
+	/**
+	 * Returns true if the texts matches the search text.
+	 * @param meansText
+	 * @param searchText 
+	 * @return
+	 */
+	public static boolean matches(String [] texts, String searchText, boolean caseSensitive,
+			boolean wholeWords, boolean exactMatch) {
+		
+		// Check input texts.
+		if (texts.length <= 0) {
+			return searchText.isEmpty();
+		}
+		
+		String text = null;
+		
+		if (exactMatch) {
+			text = texts[0];
+		}
+		else {
+			text = "";
+			for (String textItem : texts) {
+				
+				if (!text.isEmpty()) {
+					text += ' ';
+				}
+				text += textItem;
+			}
+		}
 		
 		return matches(text, searchText, caseSensitive, wholeWords, exactMatch);
 	}
@@ -403,9 +557,19 @@ public class Utility {
 	 */
 	public static void localize(JButton button) {
 		
-		button.setText(Resources.getString(button.getText()));
+		// Localize caption.
+		String caption = button.getText();
+		if (caption != null && !caption.isEmpty()) {
+			button.setText(Resources.getString(caption));
+		}
+		
+		// Localize tool tip.
+		String tooltip = button.getToolTipText();
+		if (tooltip != null && !tooltip.isEmpty()) {
+			button.setToolTipText(Resources.getString(tooltip));
+		}
 	}
-
+	
 	/**
 	 * Performs label localization.
 	 * @param label
@@ -414,7 +578,7 @@ public class Utility {
 		
 		label.setText(Resources.getString(label.getText()));
 	}
-
+	
 	/**
 	 * Performs check box localization.
 	 * @param checkBox
@@ -440,6 +604,19 @@ public class Utility {
 	public static void localize(JToggleButton toggleButton) {
 		
 		toggleButton.setText(Resources.getString(toggleButton.getText()));
+	}
+	
+	/**
+	 * Performs localization of panel title.
+	 * @param panel
+	 */
+	public static void localize(JPanel panel) {
+		
+		Border border = panel.getBorder();
+		if (border instanceof TitledBorder) {
+			TitledBorder titleBorder = (TitledBorder) border;
+			titleBorder.setTitle(Resources.getString(titleBorder.getTitle()));
+		}
 	}
 
 	/**
@@ -475,7 +652,7 @@ public class Utility {
 	 * @param menuAreaEdit
 	 */
 	public static void localize(JMenuItem menuItem) {
-
+		
 		menuItem.setText(Resources.getString(menuItem.getText()));
 	}
 
@@ -489,6 +666,29 @@ public class Utility {
 		for (int index = 0; index < tabbedPane.getTabCount(); index++) {
 			
 			tabbedPane.setTitleAt(index, Resources.getString(tabbedPane.getTitleAt(index)));
+		}
+	}
+	
+	/**
+	 * Localize tool bar.
+	 * @param toolBar
+	 */
+	public static void localize(JToolBar toolBar) {
+		
+		// Get number of tool bar components.
+		int componentCount = toolBar.getComponentCount();
+		
+		// Traverse all tool bar components.
+		for (int index = 0; index < componentCount; index++) {
+			
+			Component component = toolBar.getComponentAtIndex(index);
+			
+			// Localize each button on the tool bar.
+			if (component instanceof JButton) {
+				
+				JButton button = (JButton) component;
+				localize(button);
+			}
 		}
 	}
 	
@@ -583,10 +783,21 @@ public class Utility {
 	 * Show message and ask user.
 	 * @param message
 	 */
-	public static boolean ask(String message, Object ... parameters) {
+	public static boolean ask2(String message, Object ... parameters) {
 
 		message = String.format(message, parameters);
 		return JOptionPane.showConfirmDialog(null, message) == JOptionPane.YES_OPTION;
+	}
+	
+	/**
+	 * Show message and ask user.
+	 * @param parent
+	 * @param message
+	 */
+	public static boolean ask2(Component parent, String message, Object ... parameters) {
+
+		message = String.format(message, parameters);
+		return JOptionPane.showConfirmDialog(parent, message) == JOptionPane.YES_OPTION;
 	}
 
 	/**
@@ -670,7 +881,20 @@ public class Utility {
 		return JOptionPane.showConfirmDialog(parent, message)
 				== JOptionPane.YES_OPTION;
 	}
-
+	
+	/**
+	 * Show localized message and ask user.
+	 * @param parent
+	 * @param textName
+	 */
+	public static boolean ask(String textName, Object ... parameters) {
+		
+		String message = String.format(Resources.getString(textName), parameters);
+		
+		return JOptionPane.showConfirmDialog(applicationMainWindow, message)
+				== JOptionPane.YES_OPTION;
+	}
+	
 	/**
 	 * Ask user to insert text.
 	 * @param parent
@@ -682,6 +906,30 @@ public class Utility {
 		return JOptionPane.showInputDialog(parent, Resources.getString(textName),
 				defaulString);
 	}
+
+	/**
+	 * Ask user to insert text.
+	 * @param textName
+	 * @param defaulString
+	 * @return
+	 */
+	public static String input(String textName, String defaulString) {
+		
+		return JOptionPane.showInputDialog(applicationMainWindow, Resources.getString(textName),
+				defaulString);
+	}
+
+	/**
+	 * Ask user to insert text.
+	 * @param textName
+	 * @return
+	 */
+	public static String input(String textName) {
+		
+		return JOptionPane.showInputDialog(applicationMainWindow, Resources.getString(textName),
+				"");
+	}
+	
 	/**
 	 * Ask user to insert text.
 	 * @param parent
@@ -712,6 +960,15 @@ public class Utility {
 
 		JOptionPane.showMessageDialog(component, text);
 	}
+
+	/**
+	 * Show message.t
+	 * @param text
+	 */
+	public static void show2(String text) {
+
+		JOptionPane.showMessageDialog(null, text);
+	}
 	
 	/**
 	 * Show message and ask user.
@@ -721,6 +978,39 @@ public class Utility {
 	public static boolean ask2(Component component, String text) {
 
 		return JOptionPane.showConfirmDialog(component, text) == JOptionPane.YES_OPTION;
+	}
+	
+	/**
+	 * Show message and ask user. The dialog window is always on top.
+	 * @param text
+	 * @return
+	 */
+	public static boolean ask2Top(String text) {
+		
+		// Create and initialize panel.
+		JOptionPane optionPane = new JOptionPane();
+		
+		optionPane.setMessage(text);
+		optionPane.setMessageType(JOptionPane.QUESTION_MESSAGE);
+		optionPane.setOptionType(JOptionPane.YES_NO_CANCEL_OPTION);
+		
+		// Create and show dialog. The dialog displayed is on top of the desktop windows.
+		JDialog dialog = optionPane.createDialog(Resources.getString("org.multipage.gui.titlePleaseConfirm"));
+		dialog.setIconImage(Images.getImage("org/multipage/gui/images/main.png"));
+		dialog.setAlwaysOnTop(true);
+		dialog.setVisible(true);
+		
+		// Try to get selected value.
+		Object value = optionPane.getValue();
+		if (value instanceof Integer) {
+			
+			Integer answer = (Integer) value;
+			boolean returnedValue = answer == JOptionPane.YES_OPTION;
+			
+			return returnedValue;
+		}
+		
+		return false;
 	}
 
 	/**
@@ -1031,6 +1321,34 @@ public class Utility {
 	    // Convert array of nodes to TreePath
 	    return new TreePath(list.toArray());
 	}
+	
+	/**
+	 * Get selected values.
+	 * @param tableSlots
+	 * @return
+	 */
+	public static Object [][] getTableSelection(JTable table) {
+		
+		// Get selected rows.
+		int [] selectedRowIndices = table.getSelectedRows();
+		
+		// Get the number of table columns.
+		int columnCount = table.getColumnCount();
+		
+		// Create array of cell values.
+		Object [][] selectedCellValues = new Object [selectedRowIndices.length][columnCount];
+//		
+//		// Get all selected table items.
+//		int index = 0;
+//		for (int selectedRow : selectedRowIndices) {
+//			for (int column = 0; column < columnCount; column++) {
+//				
+//				selectedCellValues[index][column] = table.getValueAt(selectedRow, column);
+//				index++;
+//			}
+//		}
+		return selectedCellValues;
+	}
 
 	/**
 	 * Choose file name to save.
@@ -1062,25 +1380,25 @@ public class Utility {
 	}
 	
 	/**
-	 * Choose file name to load.
+	 * Choose file name to opem.
 	 * @param translatorDialog
 	 * @param filters: {{"org.multipage.translator.textXmlFilesDictionary", "xml"}, {...}, ...}
 	 * @return
 	 */
-	public static File chooseFileNameToOpen(Component parentComponent, String[][] filters) {
+	public static File chooseFileToOpen(Component parentComponent, String[][] filters) {
 		
 		// Delegate the call
-		return chooseFileNameToOpen(parentComponent, filters, true);
+		return chooseFileToOpen(parentComponent, filters, true);
 	}
 	
 	/**
-	 * Choose file name to load.
+	 * Choose file name to open.
 	 * @param translatorDialog
 	 * @param filters: {{"org.multipage.translator.textXmlFilesDictionary", "xml"}, {...}, ...} or {{"XML files", "xml"}, {...}, ...}
 	 * @param useStringResources - if true the method uses IDs of strings in filter definition otherwise ordinary texts
 	 * @return
 	 */
-	public static File chooseFileNameToOpen(Component parentComponent,
+	public static File chooseFileToOpen(Component parentComponent,
 			String[][] filters, boolean useStringResources) {
 		
 		// Select resource file.
@@ -1419,6 +1737,33 @@ public class Utility {
 	}
 	
 	/**
+	 * Return input color with given intensity.
+	 * @param rgbColor
+	 * @param intensity
+	 * @return
+	 */
+	public static int adjustColorIntesity(int rgbColor, double intensity) {
+		
+		// Check input intesity.
+		if (intensity >= 1.0) {
+			return rgbColor;
+		}
+		if (intensity <= 0.0) {
+			return 0;
+		}
+		
+		// Compute components of the input color.
+		int newRed = (int) (((rgbColor >>> 16) & 0x0000FF) * intensity);
+		int newGreen = (int) (((rgbColor >>> 8) & 0x0000FF) * intensity);
+		int newBlue = (int) ((rgbColor & 0x0000FF) * intensity);
+		
+		
+		// Compute output color value and return it.
+		int outputColor = (newRed << 16) | (newGreen << 8) | newBlue;
+		return outputColor;
+	}
+	
+	/**
 	 * Expand / collapse all.
 	 * @param tree
 	 * @param model
@@ -1675,8 +2020,26 @@ public class Utility {
 	 * Find component window.
 	 * @param component
 	 * @return
+	 * @throws Exception 
 	 */
-	  public static Window findWindow(Component component) {
+	public static Window findWindow(Component component) {
+		
+		// Check the component.
+		if (component == null) {
+			return getApplicationMainWindow();
+		}
+		
+		// Find window recursively.
+		Window window = findWindowRecursively(component);
+		return window;
+	}
+	  
+	/**
+	 * Find component window recursively.
+	 * @param component
+	 * @return
+	 */
+	 private static Window findWindowRecursively(Component component) {
 		  
 		if (component == null) {
 		    return JOptionPane.getRootFrame();
@@ -1685,7 +2048,7 @@ public class Utility {
 		    return (Window) component;
 		}
 		else {
-		    return findWindow(component.getParent());
+		    return findWindowRecursively(component.getParent());
 		}
 	}
 
@@ -2242,6 +2605,64 @@ public class Utility {
 		
 		return outputExpandedPaths.toArray(new TreePath[0]);
 	}
+	
+	/**
+	 * Traverse expanded elements info
+	 * @param tree
+	 * @return
+	 */
+	public static <T> void traverseExpandedElements(JTree tree, Consumer<Object> consumer) {
+		
+		// Get list of expanded elements
+		int displayedRowCount = tree.getRowCount();
+		for (int displayedRow = 0; displayedRow < displayedRowCount; displayedRow++) {
+			
+			// Retrieve leaf component of the path
+			TreePath displayedPath = tree.getPathForRow(displayedRow);
+			Object leafComponent = displayedPath.getLastPathComponent();
+			
+			// Get corresponding element
+			if (leafComponent instanceof DefaultMutableTreeNode) {
+				DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) leafComponent;
+				
+				Object nodeUserObject = treeNode.getUserObject();
+				if (nodeUserObject != null) {
+					
+					// Use callback for user object of the node
+					consumer.accept(nodeUserObject);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Traverse expanded elements info
+	 * @param tree
+	 * @return
+	 */
+	public static <T> void traverseExpandedElements(JTree tree, BiConsumer<DefaultMutableTreeNode, Object> consumer) {
+		
+		// Get list of expanded elements
+		int displayedRowCount = tree.getRowCount();
+		for (int displayedRow = 0; displayedRow < displayedRowCount; displayedRow++) {
+			
+			// Retrieve leaf component of the path
+			TreePath displayedPath = tree.getPathForRow(displayedRow);
+			Object leafComponent = displayedPath.getLastPathComponent();
+			
+			// Get corresponding element
+			if (leafComponent instanceof DefaultMutableTreeNode) {
+				DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) leafComponent;
+				
+				Object nodeUserObject = treeNode.getUserObject();
+				if (nodeUserObject != null) {
+					
+					// Use callback for user object of the node
+					consumer.accept(treeNode, nodeUserObject);
+				}
+			}
+		}
+	}
 
 	/**
 	 * Set expanded paths.
@@ -2372,14 +2793,25 @@ public class Utility {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static <T> T readInputStreamObject(ObjectInputStream inputStream, Class type)
+	@SuppressWarnings("unchecked")
+	public static <T> T readInputStreamObject(StateInputStream inputStream, Class<?> type)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
+		
 		if (object == null) {
-			throw new ClassNotFoundException();
+			return null;
 		}
+		
 		if (!object.getClass().equals(type)) {
+			
+			// Try to use type conversion.
+			try {
+				T typedObject = (T) object;
+				return typedObject;
+			}
+			catch (Exception e) {
+			}
 			
 			throw new ClassNotFoundException();
 		}
@@ -3108,12 +3540,26 @@ public class Utility {
 	/**
 	 * Show HTML message.
 	 * @param parentComponent
+	 * @param htmlText
+	 */
+	public static void showHtml(Component parentComponent,
+			String htmlText) {
+		
+		ShowHtmlMessageDialog.showDialog(parentComponent, htmlText);
+	}
+	
+	/**
+	 * Show HTML message.
+	 * @param parentComponent
 	 * @param htmlMessage
 	 */
 	public static void showHtml(Component parentComponent,
-			String htmlMessage) {
+			String htmlTextName, Object ... parameters) {
 		
-		ShowHtmlMessageDialog.showDialog(parentComponent, htmlMessage);
+		String htmlTextTemplate = Resources.getString(htmlTextName);
+		String htmlText = String.format(htmlTextTemplate, parameters);
+		
+		ShowHtmlMessageDialog.showDialog(parentComponent, htmlText);
 	}
 
 	/**
@@ -3460,12 +3906,54 @@ public class Utility {
 		
 		return resourceIds;
 	}
+	
+	/**
+	 * Read all text lines from the input stream.
+	 * @param inputStream
+	 * @return
+	 */
+	public static StringBuilder readAllLines(InputStream inputStream)
+			throws Exception {
+		
+		StringBuilder text = new StringBuilder("");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+		
+		while (true) {
+			
+			String line = reader.readLine();
+			if (line == null) {
+				break;
+			}
+			
+			text.append(line);
+			text.append("\n");
+		}
+		return text;
+	}
+	
+	/**
+	 * Run executable file using given command that is placed in directory
+	 * designated by "path" argument.
+	 * @param workingDirectory
+	 * @param command
+	 * @return
+	 * @throws Exception 
+	 */
+	public static String runExecutable(String workingDirectory, String command)
+			throws Exception {
+		
+		// Delegate the call.
+		String outputString = runExecutable(workingDirectory, command, null, null);
+		return outputString;
+	}
 
 	/**
 	 * Run executable file using given command that is placed in directory
 	 * designated by "path" argument.
 	 * @param workingDirectoryPath
 	 * @param command
+	 * @param timeout
+	 * @param unit
 	 * @return
 	 * @throws Exception 
 	 */
@@ -3484,7 +3972,7 @@ public class Utility {
 					command));
 		}
 		
-		InputStream standardOutput = null;
+		InputStream processOutput = null;
 		BufferedReader reader = null;
 		try {
 			
@@ -3492,24 +3980,18 @@ public class Utility {
 			Process process = Runtime.getRuntime().exec(command, null, workingDirectory);
 			
 			// Wait given time span for process termination.
-			if (timeout != null) {
+			if (timeout != null && unit != null) {
 				process.waitFor(timeout, unit);
 			}
-	        
-	        // Get its stdout and read the output text.
-	        standardOutput = process.getInputStream();
-			reader = new BufferedReader(new InputStreamReader(standardOutput));
-			
-			while (true) {
-				
-				String line = reader.readLine();
-				if (line == null) {
-					break;
-				}
-				
-				text.append(line);
-				text.append("\n");
+			else {
+				process.waitFor();
 			}
+			
+			// Get its stdout and read the output text.
+			processOutput = process.getInputStream();
+			text = readAllLines(processOutput);
+			processOutput = process.getErrorStream();
+			text.append(readAllLines(processOutput));
 		}
 		catch (Exception e) {
 			exception = e;
@@ -3517,9 +3999,9 @@ public class Utility {
 		finally {
 			
 			// Close stdout.
-			if (standardOutput != null) {
+			if (processOutput != null) {
 				try {
-					standardOutput.close();
+					processOutput.close();
 				}
 				catch (Exception e) {
 				}
@@ -3539,8 +4021,137 @@ public class Utility {
 		if (exception != null) {
 			throw exception;
 		}
-        
+		
 		return text.toString();
+	}
+	
+	/**
+	 * Get JRE directory.
+	 * @return
+	 */
+	public static String getJavaRuntimeFolder() {
+		
+		String javaRuntimePath = System.getProperty("java.home") + File.separatorChar + "bin";
+		return javaRuntimePath;
+	}
+	
+	/**
+	 * Run executable JAR using java.exe.
+	 * @param workingDirectory
+	 * @param executableJarPath
+	 * @param parameters
+	 */
+	public static String runExecutableJar(String workingDirectory, String executableJarPath, String [] parameters)
+			throws Exception {
+		
+		// Get Java home directory.
+		String javaRuntimePath = getJavaRuntimeFolder();
+		String javaExePath = javaRuntimePath + File.separatorChar + "java.exe";
+		
+		// Compile java execution command.
+		StringBuilder javaCommand = new StringBuilder();
+		javaCommand.append('\"').append(javaExePath).append("\" -jar \"").append(executableJarPath).append('\"');
+		
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				javaCommand.append(" \"").append(parameter).append('\"');
+			}
+		}
+		
+		// Run java command.
+		String result = runExecutable(workingDirectory, javaCommand.toString());
+		return result;
+	}
+	
+	/**
+	 * Run Java class.
+	 * @param runnableClass
+	 * @param classDirectory
+	 * @param workingDirectory
+	 * @param parameters
+	 * @throws Exception 
+	 */
+	public static String runJavaClass(Class<?> runnableClass, String classDirectory, String workingDirectory, String[] parameters)
+			throws Exception {
+		
+		// Get Java home directory.
+		String javaRuntimePath = getJavaRuntimeFolder();
+		String javaExePath = javaRuntimePath + File.separatorChar + "java.exe";
+		
+		// Compile java execution command.
+		String classFullName = runnableClass.getCanonicalName();
+		StringBuilder javaCommand = new StringBuilder();
+		javaCommand.append('\"').append(javaExePath).append("\" -cp \"").append(classDirectory).append("\" ").append(classFullName);
+		
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				javaCommand.append(" \"").append(parameter).append('\"');
+			}
+		}
+		
+		String javaCommandString = javaCommand.toString();
+		
+		// TODO: <---DEBUG Run Java class.
+		log(javaCommandString);
+		show2(javaCommandString);
+		
+		// Run java command.
+		try {
+			show2("RUN EXECUTABLE");
+			String result = "JAVA RESULT " + runExecutable(workingDirectory, javaCommandString);
+			log(result);
+			show2(result);
+			return result;
+		}
+		catch (Exception e) {
+			String result = "JAVA EXCEPTION " + e.getLocalizedMessage();
+			log(result);
+			show2(result);
+			return result;
+		}
+	}
+	
+	/**
+	 * Run selected Java tool.
+	 * @param workingDirectory
+	 * @param javaToolName
+	 * @param parameters
+	 */
+	public static String runJavaTool(String workingDirectory, String javaToolName, String[] parameters, int timeout, TimeUnit unit)
+			throws Exception {
+		
+		final Pattern whitespaceRegex = Pattern.compile("\\s+");
+			
+		// Get Java home directory.
+		String javaToolExecutable = getJavaRuntimeFolder() + File.separator + javaToolName;
+		
+		// Build Java tool statement.
+		StringBuilder javaStatement = new StringBuilder();
+		javaStatement.append('\"').append(javaToolExecutable).append('\"');
+		
+		// Add parameters.
+		if (parameters != null) {
+			for (String parameter : parameters) {
+				
+				// If the parameter contains white space, wrap it with quotes.
+				Matcher matcher = whitespaceRegex.matcher(parameter);
+				boolean found = matcher.find();
+				javaStatement.append(' ');
+				if (found) {
+					javaStatement.append('\"');
+				}
+				javaStatement.append(parameter);
+				if (found) {
+					javaStatement.append('\"');
+				}
+			}
+		}
+		
+		// Run executable statement.
+		String resultText = runExecutable(workingDirectory, javaStatement.toString(), timeout, unit);
+		return resultText;
 	}
 	
 	/**
@@ -3666,6 +4277,18 @@ public class Utility {
 		
 		System.err.println(input.toString());
 	}
+	
+	/**
+	 * Format time.
+	 * @param time
+	 * @return
+	 */
+	public static String formatTime(long time) {
+		
+		Timestamp timeStamp = new Timestamp(time);
+		String timeString = timeStamp.toString();
+		return timeString;
+	}
 
 	/**
 	 * Converts byte array to primitive type
@@ -3681,15 +4304,66 @@ public class Utility {
 		
 		return returned;
 	}
-
+	
+	/**
+	 * Throw no operation exception.
+	 * @throws IOException
+	 */
+	public static void throwIoOperationException() throws IOException {
+			
+		throw new IOException("I/O operation not supported!");
+	}
+	
+	/**
+	 * Creates new exception with given message
+	 * @param messageResourceId
+	 * @param parameters
+	 * @return
+	 */
+	public static Exception newException(String messageResourceId, Object ... parameters) {
+		
+		String message = Resources.getString(messageResourceId);
+		message = String.format(message, parameters);
+		return new Exception(message);
+	}
+	
 	/**
 	 * Throws exception with given message
 	 * @param messageResourceId
+	 * @param error 
 	 */
-	public static void throwException(String messageResourceId) throws Exception {
+	public static void throwException(String messageResourceId)
+			throws Exception {
 		
 		String message = Resources.getString(messageResourceId);
 		throw new Exception(message);
+	}
+	
+	/**
+	 * Throws exception with given message
+	 * @param messageResourceId
+	 * @param parameters 
+	 */
+	public static void throwException(String messageResourceId, Object ... parameters)
+			throws Exception {
+		
+		throw newException(messageResourceId, parameters);
+	}
+	
+	/**
+	 * Throw HTTP exception with exception body and parameters
+	 * @param messageResourceId
+	 * @param exceptionBody
+	 * @param parameters
+	 * @throws Exception
+	 */
+	public static void throwHttpException(String messageResourceId, String exceptionBody, Object ... parameters)
+			throws Exception {
+		
+		String message = Resources.getString(messageResourceId);
+		message = String.format(message, parameters);
+		HttpException httpException = new HttpException(message, exceptionBody);
+		throw httpException;
 	}
 	
 	/**
@@ -3864,6 +4538,33 @@ public class Utility {
 		
 		// Attach item to menu.
 		menu.add(item);
+	}
+	
+	/**
+	 * Add sub menu item.
+	 * @param subMenu
+	 * @param textResource
+	 * @param listener
+	 */
+	public static void addSubMenu(Menu subMenu, String textResource, ActionListener listener) {
+		
+		// Load text.
+		String text = "";
+		if (textResource != null && !textResource.isEmpty()) {
+			text = Resources.getString(textResource);
+			if (text == null) {
+				text = "";
+			}
+		}
+		
+		// Create menu item.
+		MenuItem item = new MenuItem(text);
+		
+		// Add action.
+		item.addActionListener(listener);
+		
+		// Attach item to menu.
+		subMenu.add(item);
 	}
 	
 	/**
@@ -4114,27 +4815,6 @@ public class Utility {
 	}
 	
 	/**
-	 * Sort collection.
-	 * @param collection
-	 * @param comparator
-	 */
-	public static LinkedHashMap sort(LinkedHashMap collection, BiFunction<Object, Object, Integer> comparator) {
-		
-		List<Map.Entry> entries = new ArrayList(collection.entrySet());
-		
-		Collections.sort(entries, (entry1, entry2) -> {
-			return comparator.apply(entry1.getKey(),entry2.getKey());
-		});
-		
-		LinkedHashMap resultCollection = new LinkedHashMap();
-		for (Map.Entry entry : entries) {
-			resultCollection.put(entry.getKey(), entry.getValue());
-		}
-		
-		return resultCollection;
-	}
-	
-	/**
 	 * Replace empty lines in the text with a replacement text.
 	 * @param text
 	 * @param replacement
@@ -4146,5 +4826,1496 @@ public class Utility {
 		text = matcher.replaceAll(replacement);
 		
 		return text;
+	}
+
+	/**
+	 * Connect via HTTP and get resulting text
+	 * @param uri
+	 * @param method
+	 * @param connectionTimeoutMs
+	 * @param headers
+	 * @return
+	 */
+	public static InputStream getHttpStream(String uriText, long connectionTimeoutMs, Obj<HttpResponse<InputStream>> response, String ... headers)
+				throws Exception {
+		
+		// Create URI object
+		URI uri = new URI(uriText);
+		
+		// Create new HTTP client
+		HttpClient httpClient = HttpClient.newBuilder()
+				.build();
+		
+		// Build the client request
+		HttpRequest request = HttpRequest.newBuilder(uri)
+				.GET()
+				.headers(headers)
+				.timeout(Duration.ofMillis(connectionTimeoutMs))
+				.build();
+		
+		// Send request and get HTTP response
+		response.ref = httpClient.send(request, BodyHandlers.ofInputStream());
+		
+		// Get response text
+		InputStream responseInputStream = response.ref.body();
+		if (responseInputStream == null) {
+			Utility.throwException("org.multipage.gui.messageHttpCannotGetStream");
+		}
+		
+		// Return the input stream
+		return responseInputStream;
+	}
+	
+	/**
+	 * Read string from the input stream
+	 * @param inputStream
+	 * @return
+	 * @throws IOException 
+	 */
+	public static String readString(InputStream inputStream, Charset charset)
+			throws Exception {
+		
+		// Read all bytes
+		byte [] allBytes = inputStream.readAllBytes();
+		
+		// Convert the bytes to an output string and return it
+		String wholeText = new String(allBytes, charset);
+		return wholeText;
+	}
+	
+	/**
+	 * Close input stream
+	 * @param inputStream
+	 */
+	public static void close(InputStream inputStream) {
+		
+		// Check the parameter
+		if (inputStream == null) {
+			return;
+		}
+		try {
+			inputStream.close();
+		}
+		catch (Exception e) {
+		}
+	}
+	
+	/**
+	 * Remove last punctuation from the input line
+	 * @param line
+	 * @return
+	 */
+	public static String removeLastPunctuation(String line) {
+		
+		line = line.replaceAll("[\\.\\!\\?]$", "");
+		return line;
+	}
+	
+	/**
+	 * Color all HTML texts that matches regular exception
+	 * @param text
+	 * @param textRegex
+	 * @param color
+	 * @return
+	 */
+	public static String colorHtmlTexts(String text, Pattern textRegex, String groupName, Color color) {
+		
+		// Get HTML color
+		final String cssColor = Utility.getCssColor(color);
+		
+		// Do loop for all matches and create output string with replacements
+		Matcher matcher = textRegex.matcher(text);
+		StringBuffer output = new StringBuffer();
+		
+		while (matcher.find()) {
+			
+			try {
+				// Get text part
+				String textPart = matcher.group(groupName);
+				if (textPart != null) {
+					
+					// Replace the text part with colored one
+					String coloredTextPart = String.format("<font color=\"%s\">%s</font>", cssColor, textPart);
+					matcher.appendReplacement(output, coloredTextPart);
+				}
+			}
+			catch (Exception e) {
+			}
+		}
+		
+		// Finalize the output
+		matcher.appendTail(output);
+		
+		return output.toString();
+	}
+	
+	/**
+	 * Traverse tree elements
+	 * @param tree
+	 * @param object
+	 */
+	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Consumer<DefaultMutableTreeNode>>> callbackFunctions) {
+		
+		// Recursive function
+		class Helper {
+			
+			void consume(TreeNode node, TreeNode parent) {
+				
+				// Check the node type
+				if (node instanceof DefaultMutableTreeNode) {
+					
+					// Call input consumer for the userObject and its parent node
+					DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) node;
+					DefaultMutableTreeNode parentNode = null;
+					
+					if (parent instanceof DefaultMutableTreeNode) {
+						parentNode = (DefaultMutableTreeNode) parent;
+					}
+					
+					Object userObject = treeNode.getUserObject();
+					callbackFunctions.apply(userObject).apply(treeNode).accept(parentNode);
+				}
+			}
+			
+			void traverseRecursively(TreeNode parentNode) {
+				
+				// Enumerate children
+				Enumeration<? extends TreeNode> childrenEnumerator = parentNode.children();
+				while (childrenEnumerator.hasMoreElements()) {
+					
+					// Consume the child node
+					TreeNode child = childrenEnumerator.nextElement();
+					consume(child, parentNode);
+					
+					// Do recursion for the child node
+					traverseRecursively(child);
+				}
+			};
+		};
+		
+		// Get the root node
+		Object rootObject = tree.getModel().getRoot();
+		if (rootObject instanceof TreeNode) {
+			Helper helper = new Helper();
+			
+			// Consume the root node and traverse the tree recursively from the root node
+			TreeNode rootNode = (TreeNode) rootObject;
+			helper.consume(rootNode, null);
+			helper.traverseRecursively(rootNode);
+		}
+	}
+	
+	/**
+	 * Decode Base 64 text.
+	 * @param base64String
+	 * @return
+	 */
+	public static byte[] decodeBase64(String base64String) {
+		
+		byte[] decodedBytes = Base64.getDecoder().decode(base64String);
+		return decodedBytes;
+	}
+	
+	/**
+	 * Encode Base 64 text.
+	 * @param string
+	 * @return
+	 */
+	public static String encodeBase64(String string) {
+		
+		String base64String = Base64.getEncoder().encodeToString(string.getBytes());
+		return base64String;
+	}
+	
+	/**
+	 * Helper function that creates a hash set from variable arguments.
+	 * @param setItems
+	 * @return
+	 */
+	public static<T> HashSet<T> makeSet(T ... setItems) {
+		
+		HashSet<T> theSet = new HashSet<T>();
+		
+		// Fill the set with input items.
+		for (T item : setItems) {
+			theSet.add(item);
+		}
+		
+		return theSet;
+	}
+	
+	/**
+	 * Get formated date/time string for current date and time.
+	 * @param format
+	 * @return
+	 */
+	public static String getNowText(String format) {
+		
+		DateFormat dateFormat = new SimpleDateFormat(format);
+		Calendar calendar = Calendar.getInstance();
+		
+		String nowText = dateFormat.format(calendar.getTimeInMillis());
+		return nowText;
+	}
+
+	/**
+	 * Get current time.
+	 * @param format
+	 * @return
+	 */
+	public static long getNow() {
+		
+		Calendar calendar = Calendar.getInstance();
+		
+		long now = calendar.getTimeInMillis();
+		return now;
+	}
+	
+	/**
+	 * Check if two input values are equal.
+	 * @param value1
+	 * @param value2
+	 * @return
+	 */
+	public static boolean equalsShallow(Object value1, Object value2) {
+		
+		if (value1 == null && value2 == null) {
+			return true;
+		}
+		boolean success = false;
+		if (value1 != null) {
+			success = value1.equals(value2);
+		}
+		else if (value2 != null) {
+			success = value2.equals(value1);
+		}
+		return success;
+	}
+
+	/**
+	 * Make deep check of equivalence of two input objects.
+	 * @param object1
+	 * @param object2
+	 * @return
+	 */
+	public static boolean equalsDeep(Object object1, Object object2) {
+		
+		// Initialize.
+		boolean equals = false;
+		
+		try {
+			
+			// Try to invoke method with same name on the first object.
+			Method method = object1.getClass().getMethod("equalsDeep", Object.class);
+			Object result = method.invoke(object2);
+			
+			// Check invoke result.
+			if (result instanceof Boolean) {
+				equals = (Boolean) result;
+			}
+		}
+		catch (Exception e) {
+			// Leave the "equals" flag unchanged.
+		}
+
+		return equals;
+	}
+	
+	/**
+	 * Clear table.
+	 * @param table
+	 */
+	public static void clearTable(JTable table) {
+		
+		DefaultTableModel model = (DefaultTableModel) table.getModel();
+		model.setRowCount(0);
+	}
+	
+	/**
+	 * Sort table by column contents.
+	 * @param table
+	 * @param columnIndex
+	 */
+	public static void sortTable(JTable table, int columnIndex) {
+		
+		// Get column count.
+		javax.swing.table.TableModel tableModel = table.getModel();
+		int columnCount = tableModel.getColumnCount();
+		
+		// Get table sorter.
+		RowSorter<? extends TableModel> sorter = table.getRowSorter();
+		
+		// Check column index.
+		if (columnIndex < 0 && columnIndex >= columnCount) {
+			sorter.setSortKeys(null);
+			return;
+		}
+		
+		// Switch sorter.
+		try {
+			
+			// Get current sort order for the column
+			List<? extends SortKey> sortKeys = sorter.getSortKeys();
+			SortKey sortKey = sortKeys.get(columnIndex);
+			SortOrder sortOrder = sortKey.getSortOrder();
+			
+			// Switch the sort order.
+			SortOrder newSortOrder = sortOrder == SortOrder.ASCENDING ? SortOrder.DESCENDING : SortOrder.ASCENDING;
+			
+			// Create sort keys and set new sort order for the column.
+			LinkedList<SortKey> newSortKeys = new LinkedList<SortKey>();
+			newSortKeys.add(new RowSorter.SortKey(columnIndex, newSortOrder));
+			sorter.setSortKeys(sortKeys);
+		}
+		catch (Exception e) {
+		}
+	}
+	
+	/**
+	 * Set table cell rendeder.
+	 * @param table
+	 * @param columnIndex
+	 * @param parametersLambda
+	 */
+	public static void setTableCellRenderer(JTable table, int columnIndex, Function<Object, Function<Boolean, Function<Boolean, Function<Integer, Object>>>> parametersLambda) {
+		
+		// Get table column.
+		TableColumnModel columnModel = table.getColumnModel();
+		TableColumn column = columnModel.getColumn(columnIndex);
+		
+		// Set cell renderer.
+		TableCellRenderer cellRenderer = new TableCellRenderer() {
+			
+			private RendererJTextPane renderer = new RendererJTextPane();
+			
+			{
+				renderer.setContentType("text/html");
+				renderer.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+			}
+			
+			@Override
+			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+					boolean hasFocus, int row, int column) {
+				
+				value = parametersLambda.apply(value)
+						.apply(isSelected)
+						.apply(hasFocus)
+						.apply(row);
+				
+				renderer.set(isSelected, hasFocus, row);
+				renderer.setText(value.toString());
+				
+				return renderer;
+			}
+			
+		};
+		
+		column.setCellRenderer(cellRenderer);
+	}
+	
+	/**
+	 * Get minimum integer value from input numbers.
+	 * @param numbers
+	 * @return
+	 */
+    public static int min(int... numbers) {
+    	
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
+    }
+    
+    /**
+     * Initialize computation of text and pattern distances.
+     */
+    public static void initTextDistanceComputation() {
+    	
+		// Create map of neighbours of a keyboard key.
+		mapKeyNeighbours = new Hashtable<Character, List<Character>>();
+		
+		// Set keyboard width and height.
+		keyboardHeight = keyboard.length;
+		keyboardWidth = keyboard[0].length;
+		
+		// Go throug the keyboard.
+		for (int i = 0; i < keyboardHeight; i++) {
+			for (int j = 0; j < keyboardWidth; j++) {
+				
+				// Get text key.
+				char textKey = keyboard[i][j][0];
+				
+				if (textKey == 0) {
+					continue;
+				}
+				
+				// Create empty neighbour list.
+				LinkedList<Character> neighbours = new LinkedList<Character>();
+				
+				// Compute distances for neigbhour keys.
+				for (int deltaI = -1; deltaI <= 1; deltaI++) {
+					for (int deltaJ = -1; deltaJ <= 1; deltaJ++) {
+						
+						// Compute neighbour indices.
+						Integer iNeigbourhood = i + deltaI;
+						Integer jNeighbourhood = j + deltaJ;
+						
+						// Apply keyboard constraints.
+						if (iNeigbourhood < 0 || iNeigbourhood >= keyboardHeight) {
+							continue;
+						}
+						
+						if (jNeighbourhood < 0 || jNeighbourhood >= keyboardWidth) {
+							continue;
+						}
+						
+						// Get pattern key.
+						char patternKey = (char) keyboard[iNeigbourhood][jNeighbourhood][0];
+						
+						if (patternKey == 0) {
+							continue;
+						}
+						
+						// Add new neighbour key.
+						neighbours.add(patternKey);
+					}
+				}
+				
+				// Map key to its neighbours.
+				mapKeyNeighbours.put(textKey, neighbours);
+			}
+		}
+    }
+	
+	/**
+	 * Get Levenshtein distance between input text and its pattern.
+	 * Reference: https://web.stanford.edu/~jurafsky/slp3/slides/2_EditDistance.pdf.
+	 * @param text
+	 * @param pattern
+	 * @return 
+	 */
+	public static int getLevenshteinDistance(String text, String pattern) {
+		
+		// Cost of substitution of character when typing an error on keyboard.
+		BiFunction<Character, Character, Integer> costOfSubstitutionLambda = (textCharacter, patternCharacter) -> {
+			
+			// Check equality.
+			if (textCharacter == patternCharacter) {
+				return 0;
+			}
+			
+			// Get neighbour characters.
+			List<Character> neighbourCharacters = mapKeyNeighbours.get(textCharacter);
+			if (neighbourCharacters == null) {
+				return 2;
+			}
+			
+			// Neighbour character distance.
+			Integer neigbourDistance = neighbourCharacters.contains(patternCharacter) ? 1 : 2;
+			return neigbourDistance;
+		};
+		
+		// Main algorithm.
+		int M = text.length();
+		int N = pattern.length();
+		int D[][] = new int[M + 1][N + 1];
+		
+		// Initialiation.
+        for(int i = 1;i <= M; i++)
+        {
+            D[i][0] = i;        
+        }
+        for(int j = 1; j <= N; j++)
+        {
+            D[0][j] = j;
+        }
+        
+		// Recurrence relations.
+		for (int j = 1; j <= N; j++) {
+			for (int i = 1; i <= M; i++) {
+				
+				char Xi = text.charAt(i - 1);
+				char Yj =  pattern.charAt(j - 1);
+				
+				// Base conditions.
+				if (Xi == Yj) {
+					D[i][j] = D[i - 1][j - 1];
+				} 
+				
+				else {
+					// Compute cost of substitution.
+					int costOfSubstitution = costOfSubstitutionLambda.apply(Xi, Yj);
+					
+					// Compute subsequence distance.
+					D[i][j] = min(
+								D[i - 1][j] + 1,							// Deletion.
+								D[i][j - 1] + 1,							// Insertion.
+								D[i - 1][j - 1] + costOfSubstitution);		// Substitution.
+				}
+			}
+		}
+
+		return D[M][N];
+	}
+	
+	/**
+	 * Repeat character.
+	 * @param c
+	 * @param length
+	 * @return
+	 */
+	public static String repeat(char c, int length) {
+
+		StringBuilder string = new StringBuilder();
+		
+		while (length-- >= 0) {
+			string.append(c);
+		}
+		
+		return string.toString();
+	}
+	
+	/**
+	 * Compute output value using sigmoid function (logistic function).
+	 * @param L - maximum value
+	 * @param x0 - midpoint value
+	 * @param k - grow rate
+	 * @param x - input value
+	 * @return
+	 */
+	public static double sigmoid(double L, double x0, double k, double x) {
+		
+		double y = L / ( 1 + Math.exp( -k * ( x - x0 ) ) );
+		return y;
+	}
+	
+	/**
+	 * Compute output value using invrerse sigmoid function.
+	 * @param L - maximum value
+	 * @param x0 - midpoint value
+	 * @param k - grow rate
+	 * @param x - input value
+	 * @return
+	 */
+	public static double invereseSigmoid(double L, double x0, double k, double x) {
+		
+		if ( x < 0.0 ) {
+			return Double.NaN;
+		}
+		
+		double y = - Math.log( L / x - 1 ) / k + x0;
+		return y;
+	}
+	
+	/**
+	 * Normalize input value.
+	 * @param value
+	 * @param minimumValue
+	 * @param maximumValue
+	 * @return
+	 */
+	public static double normalize(double value, double minimumValue, double maximumValue) {
+		
+		double deltaValue = maximumValue - minimumValue;
+		double normalValue = value - minimumValue / deltaValue;
+		
+		return normalValue;
+	}
+	
+	/**
+	 * Write text with given encoding into the output stream.
+	 * @param outputStream
+	 * @param text
+	 * @param charset
+	 */
+	public static void writeString(OutputStream outputStream, String text, Charset charset) 
+			throws Exception {
+		
+		byte [] bytes = text.getBytes(charset);
+		outputStream.write(bytes);
+	}
+	
+	/**
+	 * Write XML header to the output stream.
+	 * @param outputStream
+	 * @param charset
+	 * @param newLine 
+	 */
+	public static void writeXmlHeader(OutputStream outputStream, Charset charset, boolean newLine)
+			throws Exception {
+		
+		String xmlHeader = String.format(xmlHeaderTemplate, charset.toString());
+		writeString(outputStream, xmlHeader, charset);
+		
+		if (newLine) {
+			outputStream.write('\n');
+		}
+	}
+	
+	/**
+	 * Check occurrence of input string in the input stream.
+	 * @param inputStream
+	 * @param text
+	 * @param charset
+	 * @param caseSensitive
+	 */
+	public static void checkString(InputStream inputStream, String text, Charset charset, boolean caseSensitive)
+			throws Exception {
+		
+		// Convert input text to a byte array.
+		byte [] bytesToFind = text.getBytes(charset);
+		
+		
+		// Read bytes from the input stream. If there is any mismatch, throw an
+		// exception.
+		for (byte checkByte : bytesToFind) {
+			byte readByte = (byte) inputStream.read();
+			
+			boolean mismatch = caseSensitive ? readByte != checkByte : Character.toUpperCase(readByte) != Character.toUpperCase(checkByte);
+			if (mismatch) {
+				Utility.throwException("org.multipage.gui.messageStringNotFoundInInputStream", text);
+			}
+		}
+	}
+	
+	/**
+	 * Dump byte buffer.
+	 * @param buffer
+	 * @return
+	 */
+    public static String dump(ByteBuffer buffer) {
+    	
+    	if (buffer == null) {
+    		return "null";
+    	}
+    	
+        ByteBuffer protectedBuffer = buffer.asReadOnlyBuffer();
+        byte[] bytes = new byte[protectedBuffer.capacity()];
+        protectedBuffer.rewind();
+        protectedBuffer.get(bytes);
+        
+        String text = Arrays.toString(bytes);
+        return text;
+    }
+	
+	/**
+	 * Copy source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationFoldersPath
+	 * @param destinationFileSystem 
+	 * @throws Exception
+	 */
+	public static void copyDirToJar(Path sourcePath, String [] destinationFoldersPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Get destination file system path separator.
+		String destinationSeparator = destinationFileSystem.getSeparator();
+		
+		// Compile destination path.
+		Path destinationPath = destinationFileSystem.getPath(destinationSeparator, destinationFoldersPath);
+		
+		// Delegate the call.
+		copyFromDirToJar(sourcePath, destinationPath, destinationFileSystem);
+	}
+	
+	/**
+	 * Copy source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationPath
+	 * @param destinationFileSystemo
+	 */
+	private static void copyFromDirToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Create destination directory if it doesn't exist.
+	    if (!Files.exists(destinationPath)) {
+	    	Files.createDirectories(destinationPath);
+	    }
+	    
+	    // If the source and destination paths designate files, copy the source
+	    // file directly to the destination file.
+	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+	    }
+	    
+	    // List child source paths.
+	    Obj<Exception> exception = new Obj<Exception>();
+	    Files.list(sourcePath).forEachOrdered(sourceSubPath -> {
+	    	try {
+	    		Path fileOrFolder = sourceSubPath.getFileName();
+	    		Path destinationSubPath = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
+	    		
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourceSubPath)) {
+	    	        copyFromDirToJar(sourceSubPath, destinationSubPath, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourceSubPath, destinationSubPath, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
+	    	}
+	    	catch (Exception e) {
+	    		exception.ref = e;
+	    	}
+	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
+	    }
+	}
+	
+	/**
+	 * Copy JAR source directory to a target JAR file system.
+	 * @param sourcePath
+	 * @param destinationPath
+	 * @param fileSystemLoader
+	 * @throws IOException 
+	 */
+	public static void copyFromJarToJar(Path sourcePath, Path destinationPath, FileSystem destinationFileSystem)
+			throws Exception {
+		
+		// Create destination directory if it doesn't exist.
+	    if (!Files.exists(destinationPath)) {
+	    	Files.createDirectories(destinationPath);
+	    }
+	    
+	    // If the source and destination paths designate files, copy the source
+	    // file directly to the destination file.
+	    Obj<Exception> exception = new Obj<Exception>();
+	    if (Files.isRegularFile(sourcePath) && Files.isRegularFile(destinationPath)) {
+	    	Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+	    	return;
+	    }
+	    
+	    // List child source paths.
+	    Files.list(sourcePath).forEachOrdered(sourcePathEntry -> {
+	    	
+	    	try {
+	    		Path fileOrFolder = sourcePathEntry.getFileName();
+	    		Path newDestination = destinationFileSystem.getPath(destinationPath.toString(), fileOrFolder.toString());
+	    		
+	    		// Copy the directory or the file.
+	    	    if (Files.isDirectory(sourcePathEntry)) {
+	    	        copyFromDirToJar(sourcePathEntry, newDestination, destinationFileSystem);
+	    	    }
+	    	    else {
+	    			Files.copy(sourcePathEntry, newDestination, StandardCopyOption.REPLACE_EXISTING);
+	    	    }
+	    	}
+	    	catch (Exception e) {
+	    		exception.ref = e;
+	    	}
+	    });
+	    
+	    // Throw exception.
+	    if (exception.ref != null) {
+	    	throw exception.ref;
+	    }
+	}
+
+	/**
+	 * Import directory classes from an application package to a JAR file.
+	 * @param applicationPath
+	 * @param thePackage
+	 * @param jarFile
+	 * @throws Exception 
+	 */
+	public static void importDirectoryClassesToJarFile(String applicationPath, Package thePackage, File jarFile)
+			throws Exception {
+		
+		// Create uninitialized local variables.
+		FileSystem destinationJarFileSystem = null;
+		Exception exception = null;
+		
+		try {
+		
+			// Get destination JAR file system and a separator.
+			final URI uri = URI.create("jar:file:/" + jarFile.toString().replace(File.separatorChar, '/'));
+			final Map<String, String> environment = Map.of("create", "true");
+			destinationJarFileSystem = FileSystems.newFileSystem(uri, environment);
+			final String destinationSeparator = destinationJarFileSystem.getSeparator();
+			
+			// Get the package folders separated with file system separators.
+			final String sourcePackageFolders = File.separator + thePackage.getName().replace(".", File.separator);
+			final String [] destinationPackageFolders = thePackage.getName().split("\\.");
+			
+			// Get paths to the classes.
+			final Path sourcePathInDirectory = Paths.get(applicationPath, sourcePackageFolders);
+			
+			// Copy source classes into the target JAR file.
+			Utility.copyDirToJar(sourcePathInDirectory, destinationPackageFolders, destinationJarFileSystem);
+			
+			// Meta information folder name.
+			final String metaInfFolderName = "META-INF";
+			
+			// Copy source META-INF folder to the target JAR archive.
+			final String sourceMetaInfRoot = thePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
+			final Path sourceMetaInfPath = Paths.get(applicationPath, sourceMetaInfRoot);
+			final String [] destinationMetaInfPath = new String [] {destinationSeparator, metaInfFolderName};
+			
+			Utility.copyDirToJar(sourceMetaInfPath, destinationMetaInfPath, destinationJarFileSystem);
+		}
+		catch (Exception e) {
+			exception = e;
+		}
+		finally {
+			// Close both file systems.
+			try {
+				if (destinationJarFileSystem != null) {
+					destinationJarFileSystem.close();
+				}
+			}
+			catch (Exception e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
+		}
+	}
+	
+	/**
+	 * Import JAR package to JAR file.
+	 * @param sourceJarPath
+	 * @param sourcePackage
+	 * @param destinationJarFile
+	 * @param destinationPackage
+	 */
+	public static void importJarPackageToJarFile(String sourceJarPath, Package sourcePackage, File destinationJarFile, Package destinationPackage)
+			throws Exception {
+		
+		// Create uninitialized local variables.
+		FileSystem sourceFileSystem = null;
+		FileSystem destinationFileSystem = null;
+		Exception exception = null;
+		
+		try {
+			// Obtain file system of the application JAR.
+			final String sourceUriString = "jar:file:/" + sourceJarPath.replace('\\', '/');
+			final URI sourceUri = URI.create(sourceUriString);
+			final Map<String, String> sourceEnvironment = Map.of("create", "true");
+			sourceFileSystem = FileSystems.newFileSystem(sourceUri, sourceEnvironment);
+			final String sourceSeparator = sourceFileSystem.getSeparator();
+			
+			// Obtain file system of the loader JAR.
+			String destinationUriString = "jar:file:/" + destinationJarFile.getPath().replace('\\', '/');
+			final URI destinationUri = URI.create(destinationUriString);
+			final Map<String, String> destinationEnvironment = Map.of("create", "true");
+			destinationFileSystem = FileSystems.newFileSystem(destinationUri, destinationEnvironment);
+			final String destinationSeparator = destinationFileSystem.getSeparator();
+			
+			// Get source and destination paths.
+			final Path sourcePath = sourceFileSystem.getPath(sourceSeparator, sourcePackage.getName().replace(".", sourceSeparator));
+			final Path destinationPath = destinationFileSystem.getPath(destinationSeparator, destinationPackage.getName().replace(".", destinationSeparator));
+			
+			// Copy source classes to the destination path.
+			Utility.copyFromJarToJar(sourcePath, destinationPath, destinationFileSystem);
+			
+			// Path to JAR meta information.
+			final String metaInfFolderName = "META-INF";
+			
+			// Copy META-INF folder to the runnable JAR archive.
+			final String sourceMetaInfRoot = sourcePackage.getName().replace('.', '_') + "_" + metaInfFolderName;
+			final Path sourceMetaInfPath = sourceFileSystem.getPath(destinationSeparator, sourceMetaInfRoot);
+			final Path destinationMetaInfPath = destinationFileSystem.getPath(destinationSeparator, metaInfFolderName);
+			Utility.copyFromJarToJar(sourceMetaInfPath, destinationMetaInfPath, destinationFileSystem);
+		}
+		catch (Exception e) {
+			exception = e;
+		}
+		finally {
+			// Close both file systems.
+			try {
+				if (sourceFileSystem != null) {
+					sourceFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+			try {
+				if (destinationFileSystem != null) {
+					destinationFileSystem.close();
+				}
+			}
+			catch (IOException e) {
+				if (exception == null) {
+					exception = e;
+				}
+			}
+		}
+		
+		// Throw exception.
+		if (exception != null) {
+			throw exception;
+		}
+	}
+	
+	/**
+	 * Returns true if this application is zipped in JAR file.
+	 * @return
+	 */
+	public static boolean isApplicationZipped() {
+		
+		// Get application path.
+		URL applicationUrl = Utility.class.getProtectionDomain().getCodeSource().getLocation();
+		String applicationPathName = applicationUrl.getPath();
+		File fileOrFolder = new File(applicationPathName);
+
+		// If the path is a file return true.
+		if (fileOrFolder.exists() && fileOrFolder.isFile()) {
+			return true;
+		}
+		
+		// Otherwise return false.
+		return false;
+	}
+	
+	/**
+	 * Returns true if this application is zipped in JAR file.
+	 * @return
+	 */
+	public static File getApplicationFile(Class<?> mainClass) {
+		
+		// Get application file.
+		URL applicationUrl = mainClass.getProtectionDomain().getCodeSource().getLocation();
+		String applicationPathName = applicationUrl.getPath();
+		
+		File applicationFile = new File(applicationPathName);
+		
+		// Otherwise return false.
+		return applicationFile;
+	}
+	
+	/**
+	 * Get application path.
+	 * @return
+	 * @throws Exception 
+	 */
+	public static String getApplicationPath(Class<?> mainClass)
+			throws Exception {
+	
+		try {
+			// Get application file.
+			URL applicationUrl = mainClass.getProtectionDomain().getCodeSource().getLocation();
+			String applicationPath = new File(applicationUrl.getPath()).getCanonicalPath();
+			return applicationPath;
+		}
+		catch (Exception e) {
+		}
+		return "";
+	}
+
+	/**
+	 * Check occurrence of XML header in the input stream.
+	 * @param inputStream
+	 * @param charset
+	 * @throws Exception
+	 */
+	public static void checkXmlHeader(InputStream inputStream, Charset charset)
+			throws Exception {
+		
+		String xmlHeader = String.format(xmlHeaderTemplate, charset.toString());
+		checkString(inputStream, xmlHeader, charset, false);
+	}
+	
+	/**
+	 * Get content of an application file.
+	 * @param filePath
+	 * @return
+	 */
+	public static byte [] getApplicationFileContent(String filePath) {
+		
+		byte [] content = null;
+		
+		URL fileUrl = ClassLoader.getSystemResource(filePath);
+		if (fileUrl != null) {
+			
+			InputStream inputStream = null;
+			try {
+				inputStream = fileUrl.openStream();
+				content = inputStream.readAllBytes();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
+			}
+		}
+		
+		return content;
+	}
+	
+	/**
+	 * Get content of a disk file.
+	 * @param filePath
+	 * @return
+	 */
+	public static byte[] getFileContent(String filePath) {
+		
+		byte [] content = null;
+		
+		InputStream inputStream = null;
+		try {
+			filePath = filePath.replace('\\', '/');
+			
+			URL fileUrl = new URL("file://" + filePath);
+			if (fileUrl != null) {
+				inputStream = fileUrl.openStream();
+				content = inputStream.readAllBytes();
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if (inputStream != null	) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return content;
+	}
+	
+	/**
+	 * Expose application file.
+	 * @param fileFolder
+	 * @param fileName
+	 * @param outputDirectory	 
+	 */
+	public static File exposeApplicationFile(String fileFolder, String fileName, String outputDirectory)
+			throws Exception {
+		
+		// Initialize field value.
+		File exposedFile = null;
+		
+		BufferedInputStream inputStream = null;
+		BufferedOutputStream outputStream = null;
+		
+		try {
+			// Trim input strings.
+			fileFolder = fileFolder.replace(File.separatorChar, '/');
+			fileName = fileName.replace(File.separatorChar, '/');
+			// Get keystore input stream. 
+			URL fileUrl = ClassLoader.getSystemResource(fileFolder + '/' + fileName);
+			inputStream = new BufferedInputStream(fileUrl.openStream());
+			
+			// Get file.
+			exposedFile = new File(outputDirectory + File.separatorChar + fileFolder.replace('/', File.separatorChar) +
+								   File.separatorChar + fileName);
+			exposedFile.getParentFile().mkdirs();
+			
+			// Create output stream.
+			outputStream = new BufferedOutputStream(new FileOutputStream(exposedFile));
+			
+			// Write data to the temporary file.
+			IOUtils.copy(inputStream, outputStream);
+		}
+		catch (Exception e) {
+			throwException("org.multipage.gui.messageCannotExposeApplicationFile", e.getLocalizedMessage());
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return exposedFile;
+	}
+
+	/**
+	 * Expose application PKCS12 keystore.
+	 * @param parent
+	 * @param keystoreFile
+	 */
+	public static File exposeApplicationKeystore(Component parent, String keystoreFile) {
+		
+		// Initialize field value.
+		File tempKeystoreFile = null;
+		
+		BufferedInputStream inputStream = null;
+		BufferedOutputStream outputStream = null;
+		
+		try {
+			// Trim input string.
+			keystoreFile = keystoreFile.replace(File.separatorChar, '/');
+			// Get keystore input stream.
+			URL certificateUrl = ClassLoader.getSystemResource(keystoreFile);
+			inputStream = new BufferedInputStream(certificateUrl.openStream());
+			
+			// Get temporary file.
+			String tempKeystorePath = Files.createTempFile("Multipage", "").toString();
+			tempKeystoreFile = new File(tempKeystorePath);
+			
+			// Create output stream.
+			outputStream = new BufferedOutputStream(new FileOutputStream(tempKeystorePath));
+			
+			// Write data to the temporary file.
+			IOUtils.copy(inputStream, outputStream);
+		}
+		catch (Exception e) {
+			show(parent, "org.multipage.gui.messageCannotExposeApplicationKeystore", e.getLocalizedMessage());
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return tempKeystoreFile;
+	}
+	
+	/**
+	 * Get content of an application certificate.
+	 * @param certificatePath
+	 * @return
+	 */
+	public static X509Certificate getApplicationCertificate(String certificatePath) {
+		
+		X509Certificate certificate = null;
+		
+		URL certificateUrl = ClassLoader.getSystemResource(certificatePath);
+		if (certificateUrl != null) {
+			
+			InputStream inputStream = null;
+			try {
+				inputStream = certificateUrl.openStream();
+				
+				CertificateFactory factory = CertificateFactory.getInstance("X.509");
+				certificate = (X509Certificate)factory.generateCertificate(inputStream);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			finally {
+				if (inputStream != null	) {
+					try {
+						inputStream.close();
+					}
+					catch (Exception e) {
+					}
+				}
+			}
+		}
+		
+		return certificate;
+	}
+	
+	/**
+	 * Get content of certificate in disk file.
+	 * @param certificatePath
+	 * @return
+	 */
+	public static X509Certificate getFileCertificate(String certificatePath) {
+		
+		X509Certificate certificate = null;
+		
+		InputStream inputStream = null;
+		try {
+			certificatePath = certificatePath.replace('\\', '/');
+			
+			URL certificateUrl = new URL("file://" + certificatePath);
+			if (certificateUrl != null) {
+				inputStream = certificateUrl.openStream();
+				
+				CertificateFactory factory = CertificateFactory.getInstance("X.509");
+				certificate = (X509Certificate)factory.generateCertificate(inputStream);
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				}
+				catch (Exception e) {
+				}
+			}
+		}
+		
+		return certificate;
+	}
+	
+	/**
+	 * Get common name (the CN field) of X.509 certificate.
+	 * @param certificate
+	 * @return
+	 */
+	public static String getCommonName(X509Certificate certificate) {
+		
+		String textLine = certificate.getSubjectX500Principal().getName();
+		Matcher matcher = x509CommonNameRegex.matcher(textLine);
+		
+		boolean found = matcher.find();
+		int count = matcher.groupCount();
+		
+		// Use group count count.
+		if (!found || count != 1) {
+			return "";
+		}
+		String commonName = "CN=" + matcher.group("commonName");
+		return commonName;
+	}
+	
+	/**
+	 *  When content of text field is changed, the method calls input lambda function.
+	 * @param textField
+	 * @param callbackLambda
+	 */
+	public static void onChangeText(JTextField textField, Consumer<String> callbackLambda) {
+		
+		final String alreadySet = "set";
+		
+		// If the component is already set, exit the method.
+		String componentFlag = textField.getName();
+		if (alreadySet.equals(componentFlag)) {
+			return;
+		}
+		
+		// Get text field document and create new document listener.
+		Document document = textField.getDocument();
+		DocumentListener listener = new DocumentListener() {
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				callbackLambda.accept(textField.getText());
+			}
+		};
+		
+		// Add listener and set component flag.
+		document.addDocumentListener(listener);
+		textField.setName(alreadySet);
+	}
+	
+	/**
+	 * Set table cell editor font. 
+	 * @param table
+	 * @param font
+	 */
+    public static void setCellEditorFont(JTable table, Font font) {
+    	
+    	DefaultCellEditor editor = (DefaultCellEditor) table.getDefaultEditor(Object.class);
+    	Component component = editor.getComponent();
+    	component.setFont(font);
+    }
+	
+	/**
+	 * Read bytes from input array until the terminal symbol is found. If the terminal is not found set
+     * the "terimnated" flag to false.
+	 * @param inputBytes
+	 * @param outputBuffer
+	 * @param bufferIncrease
+	 * @param terminalSymbol
+	 * @param successfullyTerminated
+	 */
+	public static ByteBuffer readUntil(byte [] inputBytes, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte[] terminalSymbol,
+			Obj<Boolean> successfullyTerminated) {
+		
+		// Initialization.
+		int terminalLength = terminalSymbol.length;
+		int terminalIndex = 0;
+		int inputLength = inputBytes.length;
+
+		// Do loop.
+		boolean terminateIt = false;
+		for (int index = 0; index < inputLength; index++) {
+			
+			// Read current byte from the buffer.
+			byte theByte = inputBytes[index];
+			
+			// TODO: <---TEST Display input byte.
+			String className = Thread.currentThread().getStackTrace()[2].getClassName();
+			if ("org.maclan.server.XdebugListenerSession".equals(className)) {
+				if (theByte != 0) {
+					System.out.format("|%c", (char) theByte);
+				}
+				else {
+					System.out.format("|%c\n", (char) 0x2588);
+				}
+			}
+			
+			// Try to match bytes with the terminal symbol.
+			if (theByte == terminalSymbol[terminalIndex]) {
+				terminalIndex++;
+				if (terminalIndex >= terminalLength) {
+					terminateIt = true;
+				}
+			}
+			else {
+				terminalIndex = 0;
+			}
+			
+			// Check buffer capacity.
+			int limit = outputBuffer.ref.limit();
+			int capacity = outputBuffer.ref.capacity();
+			if (!outputBuffer.ref.hasRemaining() && limit >= capacity) {
+				
+				// Increase buffer capacity.
+				int increasedCapacity = outputBuffer.ref.capacity() + bufferIncrease;
+				ByteBuffer increasedOutputBuffer = ByteBuffer.allocate(increasedCapacity);
+				
+				outputBuffer.ref.flip();
+				
+				increasedOutputBuffer.put(outputBuffer.ref);
+				outputBuffer.ref = increasedOutputBuffer;
+			}
+			
+			// Output current byte.
+			outputBuffer.ref.put(theByte);
+			
+			// Terminate the loop.
+			if (terminateIt) {
+				break;
+			}
+		}
+		
+		// If the termnal symbol was not found, set the output flag to false value.
+		successfullyTerminated.ref = terminalIndex >= terminalLength;
+		
+		// Return the output buffer.
+		return outputBuffer.ref;
+	}
+	
+	/**
+	 * Write MSB integer value to stream.
+	 * @param stream
+	 */
+	public static void writeMsbInteger(OutputStream stream, int intValue) 
+			throws Exception {
+		
+		for (int index = 3; index >= 0; index--) {
+			
+			// Shift bytes to get the resulting byte.
+			byte theByte = (byte) (intValue >>> (index * 8));
+			stream.write(theByte);
+		}
+	}
+	
+	/**
+	 * Split input bytes to the array of strings.
+	 * @param inputBytes
+	 * @param dividerSymbol
+	 * @param terminalSymbol
+	 * @return
+	 * @throws Exception 
+	 */
+	public static List<String> splitBytesToStrings(byte[] inputBytes, int bufferIncrease, byte [] dividerSymbol, byte [] terminalSymbol)
+			throws Exception {
+		
+		LinkedList<String> stringList = new LinkedList<String>();
+		
+		int dividerIndex = 0;
+		int dividerLastIndex = dividerSymbol.length - 1;
+		
+		int terminalIndex = 0;
+		int terminalLastIndex = terminalSymbol.length - 1;
+		
+		// Create byte array.
+		ArrayList<Byte> byteArray = new ArrayList<Byte>();
+		
+		for (byte inputByte : inputBytes) {
+			
+			// Exit the loop.
+			if (inputByte == terminalSymbol[terminalIndex]) {
+				if (terminalIndex >= terminalLastIndex) {
+					break;
+				}
+				terminalIndex++;
+			}
+			else {
+				terminalIndex = 0;
+			}
+			
+			// Check divider index.
+			if (inputByte == dividerSymbol[dividerIndex]) {
+				if (dividerIndex >= dividerLastIndex) {
+					
+					int length = byteArray.size();
+					byte [] bytes = new byte[length];
+					
+					for (int index = 0; index < length; index++) {
+						bytes[index] = byteArray.get(index);
+					}
+					
+					String listItem = new String(bytes, "UTF-8");
+					stringList.add(listItem);
+
+					byteArray.clear();
+
+					dividerIndex = 0;
+					continue;
+				}
+				
+				dividerIndex++;
+				continue;
+			}
+
+			// Add byte to output buffer.
+			byteArray.add(inputByte);
+		}
+				
+		return stringList;
+	}
+	
+	/**
+	 * Pretty print of byte array.
+	 * @param bytes
+	 * @return
+	 */
+	public static String prettyPrint(byte[] bytes) {
+		
+		String bytesString = "[";
+		String divider = "";
+		for (int index = 0; index < bytes.length; index++) {
+			bytesString += String.format("%s%02X", divider, bytes[index]);
+			divider = ",";
+		}
+		bytesString += ']';
+		return bytesString;
 	}
 }

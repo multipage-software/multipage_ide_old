@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 21-04-2020
  *
@@ -24,7 +24,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
-import org.multipage.gui.Utility;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -106,16 +105,7 @@ public class AreaServerClient {
 				popup.add(menu);
 				menu.addActionListener((e) -> {
 					
-					// Send request
-					String answer = sendRequest(request);
-					
-					// Diplay answer
-					answer = answer.trim();
-					
-					if (!answer.isEmpty()) {
-						Utility.show2(answer);
-					}
-					
+					sendRequest(request);
 				});
 			}
 		}
@@ -128,12 +118,9 @@ public class AreaServerClient {
 	 * Send area server request.
 	 * @param request
 	 */
-	private String sendRequest(String request) {
+	private void sendRequest(String request) {
 		
 		final int bufferLength = 2096;
-		
-		String resultString = "";
-		
 		try {
 			URL theUrl = new URL(url + "/" + request);
 			URLConnection connection = theUrl.openConnection();
@@ -146,15 +133,11 @@ public class AreaServerClient {
 			int count = 0;
 			do {
 				count = reader.read(target);
-				
-				resultString += target;
 			}
 			while (count == bufferLength);
 		}
 		catch (Exception e) {
 		}
-		
-		return resultString;
 	}
 
 	/**

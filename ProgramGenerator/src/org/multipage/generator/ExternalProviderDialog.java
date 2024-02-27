@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2019 (C) Vaclav Kolarcik
  * 
  * Created on : 10-12-2019
  *
@@ -12,6 +12,8 @@ import com.maclan.Slot;
 import javax.swing.SpringLayout;
 
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 import javax.swing.JButton;
@@ -65,7 +67,7 @@ public class ExternalProviderDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream) 
+	public static void serializeData(StateInputStream inputStream) 
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -80,7 +82,7 @@ public class ExternalProviderDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

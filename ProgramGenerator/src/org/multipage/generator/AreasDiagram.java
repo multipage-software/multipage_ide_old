@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -26,8 +26,6 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -41,14 +39,26 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.EventSource;
+import org.multipage.gui.GuiSignal;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
 import org.multipage.gui.Progress2Dialog;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.TabPanelComponent;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.gui.ZoomListener;
 import org.multipage.gui.ZoomShape;
+import org.multipage.util.Closable;
 import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaResource;
@@ -63,7 +73,7 @@ import com.maclan.ResourceConstructor;
  * @author
  *
  */
-public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
+public class AreasDiagram extends GeneralDiagram implements TabPanelComponent, NonCyclingReceiver, Closable {
 
 	/**
 	 * Version.
@@ -134,7 +144,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Read states.
@@ -151,7 +161,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Write states.
@@ -258,6 +268,11 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	private AreasDiagramEditor parentEditor;
 	
 	/**
+	 * List of previous update messages which is used to determine infinite message loops.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
+	
+	/**
 	 * Constructor.
 	 * @param parent 
 	 */
@@ -316,6 +331,8 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		
 		// Set listeners.
 		setListeners();
+		
+		init();
 	}
 	
 	/**
@@ -324,67 +341,66 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 */
 	private void setListeners() {
 		
-		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.areaViewStateChange, data -> {
+		// Receive update signal.
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasDiagram, ApplicationEvents.HIGH_PRIORITY, message -> {
 			
-			// Reload diagram.
-			if (Event.is(data, Event.loadDiagrams)
-					|| Event.is(data, Event.update)) {
-				
-				reload(false, false);
-				setOverview();
-			}
-		});	
-		
-		// Add area view event listener.
-		Event.receiver(this, ActionGroup.areaViewChange, data -> {
-			
-			if (Event.sourceObject(data, Event.mainTabChange, AreasDiagram.this.parentEditor)
-					|| Event.sourceObject(data, Event.selectDiagramAreas, AreasDiagram.this.parentEditor)
-					|| Event.is(data, Event.update)
-					|| Event.is(data, Event.selectAll)) {
-				
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
-				
-				HashSet<Long> selectedAreaIds = AreasDiagram.this.parentEditor.getSelectedAreaIds();
-				removeSelection();
-				selectAreas(selectedAreaIds);
-				setOverview();
-			}
-			if (Event.is(data, Event.unselectAll)) {
-				
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
-				
-				removeSelection();
-				setOverview();
-			}
+			reload(false, false);			
+			setOverview();
+			repaint();
 		});
 		
 		// Add GUI event listener.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
 			
-			// Repaint GUI.
-			if (Event.is(data, Event.loadDiagrams, Event.selectDiagramAreas, Event.mainTabChange)
-					|| Event.targetClass(data, AreasDiagram.class)
-					|| Event.is(data, Event.update, Event.selectAll, Event.unselectAll)) {
-								
-				if (!AreasDiagram.this.isShowing()) {
-					return;
-				}
-				
-				repaint();
+			// Center the areas diagram.
+			center();
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive the "select area" signal.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramArea, message -> {
+			
+			Long areaId = message.getRelatedInfo();
+			Boolean reset = message.getAdditionalInfo(0);
+			
+			if (areaId == null) {
+				areaId = 0L;
+			}
+			if (reset == null) {
+				reset = false;
 			}
 			
-			// Focus currently visible areas diagram on the Basic Area.
-			if (Event.sourceClass(data, Event.focusBasicArea, GeneratorMainFrame.class)
-					&& AreasDiagram.this.isShowing()) {
-				
-				center();
+			GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(areaId, reset);
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive the "select area with sub areas" signal.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramAreaWithSubareas, message -> {
+			
+			Long areaId = message.getRelatedInfo();
+			Boolean addToSelection = message.getAdditionalInfo(0);
+			
+			if (areaId == null) {
+				areaId = 0L;
 			}
+			if (addToSelection == null) {
+				addToSelection = false;
+			}
+			
+			selectAreaWithSubareas(areaId, addToSelection);
+		});
+		
+		// Receive area selection messages.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramAreas, message -> {
+			
+			HashSet<Long> selectedAreaIds = message.getRelatedInfo();
+			if (selectedAreaIds == null) {
+				return;
+			}
+			
+			removeSelection();
+			selectAreas(selectedAreaIds);
+			setOverview();
 		});
 	}
 	
@@ -393,7 +409,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -845,8 +861,9 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 					// Select area and sub areas.
 					select(graphPoint, !e.isControlDown());
 					
-					// Propagate event.
-					Event.propagate(AreasDiagram.this, Event.selectDiagramAreas, AreasDiagram.this.getSelectedAreaIds());
+					// Transmit the "select diagram areas" signal.
+					HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+					ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreas, selectedAreaIds);
 				}
 			}
 		}
@@ -1154,7 +1171,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		}
 		
 		// Reload diagram.
-		updateInformation();
+		updateInformation(true);
 	}
 
 	/**
@@ -1223,18 +1240,12 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 
 	/**
 	 * Update information.
-	 * @param source 
+	 * @param isUserInitiated 
 	 */
-	public void updateInformation() {
+	public void updateInformation(boolean isUserInitiated) {
 		
-		// Get selected areas.
-		LinkedList<Area> selectedAreas = getSelectedAreas();
-		// Reload diagram.
-		reload(false, false);
-		// Select areas.
-		selectAreas(selectedAreas);
-		// Sets overview.
-		setOverview();
+		// Update all modules.
+		ApplicationEvents.transmit(isUserInitiated ? EventSource.AREAS_DIAGRAM.user(this) : EventSource.AREAS_DIAGRAM.machine(this), SignalGroup.UPDATE_ALL);
 	}
 	
 	/**
@@ -1825,14 +1836,14 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 				
 				// Remove selection.
 				if (reset) {
-					select(ProgramGenerator.getAreasModel().getArea(0), false, true);
+					selectInternal(ProgramGenerator.getAreasModel().getArea(0), false, true);
 				}
 			}
-			select(affectedArea, select, captionHit);
+			selectInternal(affectedArea, select, captionHit);
 		}
 		else {
 			// Unselect all.
-			select(ProgramGenerator.getAreasModel().getRootArea(), false, true);
+			selectInternal(ProgramGenerator.getAreasModel().getRootArea(), false, true);
 		}
 	}
 
@@ -1842,7 +1853,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 * @param selected
 	 * @param affectSubareas 
 	 */
-	public void select(Area area, boolean selected, boolean affectSubareas) {
+	private void selectInternal(Area area, boolean selected, boolean affectSubareas) {
 		
 		this.affectSubareas = affectSubareas;
 		
@@ -1879,7 +1890,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 						continue;
 					}
 					
-					select(child, selected, true);
+					selectInternal(child, selected, true);
 				}
 			}
 		}
@@ -1895,7 +1906,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 
 		// Get area.
 		Area area = ProgramGenerator.getAreasModel().getArea(id);
-		select(area, selected, affectSubareas);
+		selectInternal(area, selected, affectSubareas);
 	}
 
 	/**
@@ -1911,7 +1922,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 			if (user instanceof AreaShapes) {
 				AreaShapes shape = (AreaShapes) user;
 				if (shape.isInside(rectangle)) {
-					select(area, true, true);
+					selectInternal(area, true, true);
 				}
 				// If this area not contained, check sub areas.
 				else {
@@ -1928,7 +1939,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 */
 	public void removeSelection() {
 
-		select(ProgramGenerator.getAreasModel().getRootArea(), false, true);
+		selectInternal(ProgramGenerator.getAreasModel().getRootArea(), false, true);
 	}
 
 	/**
@@ -1949,7 +1960,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		Area area = ProgramGenerator.getAreasModel().getArea(areaId);
 		
 		selectAreaInvoked = true;
-		select(area, true, false);
+		selectInternal(area, true, false);
 		
 		// Sets overview.
 		setOverview();
@@ -1962,15 +1973,19 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 * Select area with subareas.
 	 * @param areaId
 	 */
-	public void selectAreaWithSubareas(long areaId, boolean reset) {
+	public void selectAreaWithSubareas(Long areaId, boolean reset) {
+		
+		// TODO: <---COPY to new version
+		if (areaId == null) {
+			return;
+		}
 		
 		if (reset) {
 			removeSelection();
 		}
 		
 		Area area = ProgramGenerator.getAreasModel().getArea(areaId);
-		select(area, true, true);
-		updateInformation();
+		selectInternal(area, true, true);
 	}
 	
 	/**
@@ -2529,9 +2544,8 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 					}
 				}
 
-				
 				// Reload diagram.
-				updateInformation();
+				updateInformation(true);
 				
 				if (selectAndFocus) {
 					// Select the new area.
@@ -2599,7 +2613,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		dialog.setVisible(true);
 		
 		// Reload area diagram.
-		updateInformation();
+		updateInformation(true);
 	}
 
 	/**
@@ -2768,7 +2782,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	public void setAllSelection(boolean select) {
 
 		Area globalArea = ProgramGenerator.getAreasModel().getRootArea();
-		select(globalArea, select, true);
+		selectInternal(globalArea, select, true);
 		repaint();
 	}
 
@@ -2850,7 +2864,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		for (Area area : areas) {
 			// Get loaded area.
 			Area loadedArea = ProgramGenerator.getArea(area.getId());
-			select(loadedArea, true, false);
+			selectInternal(loadedArea, true, false);
 		}
 	}
 	
@@ -2863,7 +2877,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		selectedAreaIds.forEach(areaId -> {
 			
 			Area area = ProgramGenerator.getArea(areaId);
-			select(area, true, false);
+			selectInternal(area, true, false);
 		});
 	}
 
@@ -2874,14 +2888,6 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	protected void setZoom() {
 		
 		zoomShape.setZoom(zoom * zoomMultiplier);
-	}
-
-	/**
-	 * Dispose dialog.
-	 */
-	public void dispose() {
-
-		saveDialog();
 	}
 
 	/**
@@ -2927,8 +2933,15 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		// Do loop for all areas' shapes.
 		for (Area area : ProgramGenerator.getAreasModel().getAreas()) {
 			
+			// Check if shape object exists.
+			Object userObject = area.getUser();
+			if (!(userObject instanceof AreaShapes)) {
+				continue;
+			}
+			
+			// TODO: <---COPY to new version
 			// Get shapes.
-			AreaShapes shapes = (AreaShapes) area.getUser();
+			AreaShapes shapes = (AreaShapes) userObject;
 			if (shapes != null) {
 				
 				double surface = shapes.getBiggestInsideSurface(windowRectangle);
@@ -3006,8 +3019,7 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 
 	@Override
 	protected void resetToolTipHistory() {
-		
-		
+
 	}
 	
 	/**
@@ -3015,7 +3027,6 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 	 */
 	@Override
 	public void onTabPanelChange(ChangeEvent e, int selectedIndex) {
-		
 		
 	}
 	
@@ -3030,5 +3041,35 @@ public class AreasDiagram extends GeneralDiagram implements TabPanelComponent {
 		
 		// Remove listeners.
 		removeListeners();
+	}
+	
+	/**
+	 * Get list of previous messages to determine infinite message loops.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		// TODO: <---TEST Previous messages.
+		j.log("AreasDiagram %s;", previousMessages);
+		
+		return previousMessages;
+	}
+	
+	/**
+	 * Close diagram
+	 */
+	@Override
+	public void close() { 
+		
+		// Save dialog state.
+		saveDialog();
+	}
+	
+	/**
+	 * Called when the diagram needs to recreate its contents.
+	 */
+	@Override
+	public void recreateContent() {
+		
 	}
 }

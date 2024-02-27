@@ -1,0 +1,563 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <xsd:element name="AreaTreeData">
+	    <xsd:complexType>
+	    	<xsd:sequence>
+	    		<xsd:element name="RootAreaId" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:attribute name="id" type="xsd:long"
+	    					use="required">
+	    				</xsd:attribute>
+	    			</xsd:complexType>
+	    		</xsd:element>
+
+	    		<xsd:element name="HomeAreaId" maxOccurs="1"
+	    			minOccurs="0">
+	    			<xsd:complexType>
+	    				<xsd:attribute name="id" type="xsd:long">
+	    				</xsd:attribute>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="StartLanguageId" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:attribute name="id" type="xsd:long"
+	    					use="required">
+	    				</xsd:attribute>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="RootSuperEdge" minOccurs="0"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:attribute name="inheritance"
+	    					type="xsd:boolean">
+	    				</xsd:attribute>
+	    				<xsd:attribute name="nameSub"
+	    					type="xsd:string">
+	    				</xsd:attribute>
+	    				<xsd:attribute name="nameSuper"
+	    					type="xsd:string">
+	    				</xsd:attribute>
+	    				<xsd:attribute name="hideSub"
+	    					type="xsd:boolean">
+	    				</xsd:attribute>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="LanguageRef" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+
+	    						<xsd:complexType>
+	    							<xsd:attribute name="id"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="alias"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="description"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="priority"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="dataStart"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="dataEnd"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+
+	    		<xsd:element name="AreaData" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="id"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="guid"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="alias"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="visible"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="startResourceId" type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="readOnly"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="localized"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="help"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="descriptionId"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="filename"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="versionId"
+	    								type="xsd:long" use="optional">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="folder"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="constructorsGroupId" type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="constructorHolderId" type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="startResourceNotLocalized" type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="relatedAreaId"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="fileExtension"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="constructorAlias" type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="canImport"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="projectRoot"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="enabled"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="IsSubArea" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="id"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="subAreaId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="prioritySuper"
+	    								type="xsd:int" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="prioritySub"
+	    								type="xsd:int" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="nameSuper"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="nameSub"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="inheritance"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="hideSub"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="recursion"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="positionId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="SlotData" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="alias"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="revision"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="created"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="textValue"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="realValue"
+	    								type="xsd:double">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="localizedTextValueId" type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="integerValue"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="areaId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="access"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="hidden"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="id"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="booleanValue"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="enumerationValueId" type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="colorValue"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="descriptionId"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="isDefault"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="name"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="valueMeaning"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="preferred"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="userDefined"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="specialValue"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="areaValue"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="externalProvider" type="xsd:string" use="optional">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="readsInput"
+	    								type="xsd:boolean" use="optional">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="writesOutput"
+	    								type="xsd:boolean" use="optional">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="exposed"
+	    								type="xsd:boolean" use="optional">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="LocText" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="textId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="text"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="languageId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="Description" minOccurs="1"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record" minOccurs="0"
+	    						maxOccurs="unbounded">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="id"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="description"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="AreaResourceRef" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="areaId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="resourceId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="localDescription" type="xsd:string">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="ResourceRef" maxOccurs="1"
+	    			minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="text"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="resourceId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="mimeTypeId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="protected"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="visible"
+	    								type="xsd:boolean">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="description"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="dataStart"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="dataEnd"
+	    								type="xsd:long">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="Mime" maxOccurs="1" minOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						maxOccurs="unbounded" minOccurs="0">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="type"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="preference"
+	    								type="xsd:boolean" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="mimeId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="extension"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="Version" minOccurs="1"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record" minOccurs="0"
+	    						maxOccurs="unbounded">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="versionId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="alias"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="descriptionId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="AreaSource" minOccurs="0"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record"
+	    						minOccurs="0" maxOccurs="unbounded">
+                                <xsd:complexType>
+                                	<xsd:attribute name="versionId"
+                                		type="xsd:long" use="required">
+                                	</xsd:attribute>
+                                	<xsd:attribute name="areaId"
+                                		type="xsd:long" use="required">
+                                	</xsd:attribute>
+                                	<xsd:attribute name="resourceId"
+                                		type="xsd:long" use="required">
+                                	</xsd:attribute>
+                                	<xsd:attribute name="notLocalized"
+                                		type="xsd:boolean" use="required">
+                                	</xsd:attribute>
+                                </xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="Enumeration" minOccurs="1"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record" minOccurs="0"
+	    						maxOccurs="unbounded">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="enumerationId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="description"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="EnumerationValue" minOccurs="1"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Record" minOccurs="0"
+	    						maxOccurs="unbounded">
+	    						<xsd:complexType>
+	    							<xsd:attribute name="enumerationId"
+	    								type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute
+	    								name="enumerationValueId" type="xsd:long" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="value"
+	    								type="xsd:string" use="required">
+	    							</xsd:attribute>
+	    							<xsd:attribute name="description"
+	    								type="xsd:string">
+	    							</xsd:attribute>
+	    						</xsd:complexType>
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    		<xsd:element name="ConstructorTree" minOccurs="1"
+	    			maxOccurs="1">
+	    			<xsd:complexType>
+	    				<xsd:sequence>
+	    					<xsd:element name="Group"
+	    						type="ConstructorGroupType" minOccurs="0"
+	    						maxOccurs="unbounded">
+	    					</xsd:element>
+	    				</xsd:sequence>
+	    			</xsd:complexType>
+	    		</xsd:element>
+	    	</xsd:sequence>
+	    </xsd:complexType>
+	</xsd:element>
+
+
+
+    <xsd:complexType name="ConstructorGroupType">
+    	<xsd:sequence>
+    		<xsd:element name="Constructor" minOccurs="0"
+    			maxOccurs="unbounded">
+    			<xsd:complexType>
+    				<xsd:sequence>
+    					<xsd:element name="Group"
+    						type="ConstructorGroupType" minOccurs="0" maxOccurs="1">
+    					</xsd:element>
+    				</xsd:sequence>
+    				<xsd:attribute name="id" type="xsd:long"
+    					use="required">
+    				</xsd:attribute>
+    				<xsd:attribute name="name" type="xsd:string">
+    				</xsd:attribute>
+    				<xsd:attribute name="areaId" type="xsd:long">
+    				</xsd:attribute>
+    				<xsd:attribute name="inheritance"
+    					type="xsd:boolean">
+    				</xsd:attribute>
+    				<xsd:attribute name="subRelationName"
+    					type="xsd:string">
+    				</xsd:attribute>
+    				<xsd:attribute name="superRelationName"
+    					type="xsd:string">
+    				</xsd:attribute>
+    				<xsd:attribute name="askRelatedArea"
+    					type="xsd:boolean">
+    				</xsd:attribute>
+    				<xsd:attribute name="groupReferenceId"
+    					type="xsd:long">
+    				</xsd:attribute>
+    				<xsd:attribute name="subGroupAliases"
+    					type="xsd:string">
+    				</xsd:attribute>
+    				<xsd:attribute name="invisible"
+    					type="xsd:boolean">
+    				</xsd:attribute>
+    				<xsd:attribute name="alias" type="xsd:string">
+    				</xsd:attribute>
+    				<xsd:attribute name="setHome" type="xsd:boolean">
+    				</xsd:attribute>
+    				<xsd:attribute name="constructorLink"
+    					type="xsd:long">
+    				</xsd:attribute>
+    			</xsd:complexType>
+    		</xsd:element>
+    	</xsd:sequence>
+    	<xsd:attribute name="id" type="xsd:long" use="required"></xsd:attribute>
+    	<xsd:attribute name="extensionAreaId" type="xsd:long"></xsd:attribute>
+    	<xsd:attribute name="alias" type="xsd:string"></xsd:attribute>
+    </xsd:complexType>
+
+
+</xsd:schema>

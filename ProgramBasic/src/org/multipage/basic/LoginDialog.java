@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -123,7 +123,7 @@ public class LoginDialog extends JDialog {
 	 * Save dialog data.
 	 * @param outputStream 
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Save user name.
@@ -145,7 +145,7 @@ public class LoginDialog extends JDialog {
 	 * Load dialog data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Load user name.

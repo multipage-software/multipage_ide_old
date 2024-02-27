@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -7,33 +7,54 @@
 
 package org.multipage.generator;
 
-import javax.swing.*;
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Properties;
 
-import java.awt.*;
-import java.util.*;
-
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.Timer;
-import javax.swing.event.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
 
-import org.multipage.basic.*;
-import org.multipage.gui.*;
-import org.multipage.util.*;
+import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.EventSource;
+import org.multipage.gui.Images;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.Utility;
+import org.multipage.util.Closable;
+import org.multipage.util.Obj;
+import org.multipage.util.Resources;
 
-import com.maclan.*;
-
-import java.awt.event.*;
-import java.io.*;
+import com.maclan.Area;
+import com.maclan.AreasModel;
+import com.maclan.Middle;
+import com.maclan.MiddleResult;
 
 /**
  * @author
  *
  */
-public class AreasPropertiesBase extends JPanel {
-	public AreasPropertiesBase() {
-	}
+public class AreasPropertiesBase extends JPanel implements NonCyclingReceiver, Closable {
 
-
-	// $hide>>$
 	/**
 	 * Version.
 	 */
@@ -77,7 +98,7 @@ public class AreasPropertiesBase extends JPanel {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load splitter position.
@@ -88,17 +109,12 @@ public class AreasPropertiesBase extends JPanel {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save splitter position.
 		outputStream.writeInt(splitterPositionState);
 	}
-
-	/**
-	 * Decline text change events.
-	 */
-	public static boolean declineTextChangeEvents = false;
 	
 	/**
 	 * Is properties panel flag.
@@ -121,8 +137,18 @@ public class AreasPropertiesBase extends JPanel {
 	 */
 	private boolean isDescriptionFocus = false;
 	private boolean isAliasFocus = false;
+	
+	/**
+	 * Edit boxes' listeners.
+	 */
+	private DocumentListener descriptionListener;
+	private DocumentListener aliasListener;
+	
+	/**
+	 * List of previous application messages.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
 
-	// $hide<<$
 	/**
 	 * Components.
 	 */
@@ -177,6 +203,12 @@ public class AreasPropertiesBase extends JPanel {
 		this.menuEditDependencies = menuEditDependencies;
 		this.menuAreaEdit = menuAreaEdit;
 	}
+	
+	/**
+	 * Constructor.
+	 */
+	public AreasPropertiesBase() {
+	}
 
 	/**
 	 * Post creation.
@@ -190,7 +222,7 @@ public class AreasPropertiesBase extends JPanel {
 		}
 		
 		// Set text editor listeners.
-		setTextEditorListeners();
+		setFocusListeners();
 		// Localize components.
 		localize();
 		// Set icons.
@@ -202,7 +234,7 @@ public class AreasPropertiesBase extends JPanel {
 		// Load dialog.
 		loadDialog();
 	}
-	
+
 	/**
 	 * Set slot selected event
 	 */
@@ -225,9 +257,9 @@ public class AreasPropertiesBase extends JPanel {
 	}
 	
 	/**
-	 * Set text editor listeners.
+	 * Set text editor focus listeners.
 	 */
-	private void setTextEditorListeners() {
+	private void setFocusListeners() {
 		
 		textDescription.addFocusListener(new FocusAdapter() {
 			@Override
@@ -276,39 +308,67 @@ public class AreasPropertiesBase extends JPanel {
 
 		// Set tool tips.
 		setToolTips();
-
-        // Listen for changes in the text field.
-        textDescription.getDocument().addDocumentListener(new DocumentListener() {
-			@Override
-			public void insertUpdate(DocumentEvent e) {
-				onChangeDescription();
-			}
-			@Override
-			public void removeUpdate(DocumentEvent e) {
-				onChangeDescription();
-			}
-			@Override
-			public void changedUpdate(DocumentEvent e) {
-				onChangeDescription();
-			}
-        });
-
-        // Listen for changes in the text field.
-        textAlias.getDocument().addDocumentListener(new DocumentListener() {
-			@Override
-			public void insertUpdate(DocumentEvent e) {
-				onChangeAlias();
-			}
-			@Override
-			public void removeUpdate(DocumentEvent e) {
-				onChangeAlias();
-			}
-			@Override
-			public void changedUpdate(DocumentEvent e) {
-				onChangeAlias();
-			}
-        });
+		
+		// Wrap description and alias change events.
+		// TODO: <---COPY to new version
+		descriptionListener = createTextListener(() -> onChangeDescription());
+		aliasListener = createTextListener(() -> onChangeAlias());
+		
+		// Enable the input events on appropriate text boxes.
+		enableTextInputEvents(textDescription, descriptionListener);
+		enableTextInputEvents(textAlias, aliasListener);
     }
+	
+	/**
+	 * Wrap text input event.
+	 * @return
+	 */
+	// TODO: <---COPY to new version
+	private DocumentListener createTextListener(Runnable textInputEvent) {
+		
+		DocumentListener listener = new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				textInputEvent.run();
+			}
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				textInputEvent.run();
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				textInputEvent.run();
+			}
+        };
+        return listener;
+	}
+	
+	/**
+	 * Enable text box input events.
+	 * @param textField
+	 * @param listener
+	 */
+	// TODO: <---COPY to new version
+	private void enableTextInputEvents(JTextField textField, DocumentListener listener) {
+		
+		// Listen for changes in the text field.
+		Document document = textField.getDocument();
+		document.removeDocumentListener(listener);
+		document.addDocumentListener(listener);
+	}
+
+	/**
+	 * Disable text box input events.
+	 * @param textField
+	 * @param listener
+	 */
+	// TODO: <---COPY to new version
+	private void disableTextInputEvents(JTextField textField, DocumentListener listener) {
+		
+		// Disable listener of changes in the text field.
+		Document document = textField.getDocument();
+		document.removeDocumentListener(listener);
+	}
 
 	/**
 	 * Set tool tips.
@@ -367,10 +427,8 @@ public class AreasPropertiesBase extends JPanel {
 		}
 		
 		// Try to save existing changes.
-		if (!declineTextChangeEvents) {
-			saveDescription();
-			saveAlias();
-		}
+		saveDescription();
+		saveAlias();
 		
 		// If areas has not been changed, exit function.
 		if (Utility.contentEquals(this.areas, areas)) {
@@ -413,7 +471,6 @@ public class AreasPropertiesBase extends JPanel {
 		
 		// Invoke callback function.
 		onSetAreas(this.areas);
-		
 	}
 
 	/**
@@ -471,54 +528,57 @@ public class AreasPropertiesBase extends JPanel {
 	public void saveDescription() {
 		
 		// If the areas reference is not set exit the method.
-		if (areas == null) {
-			return;
-		}
-		
-		// Only one area must be selected.
-		if (areas.size() != 1) {
-			return;
-		}
-
-		// If the description changes...
-		if (isAreaDescriptionChanged()) {
+		if (areas != null && areas.size() == 1) {
+				
+			// Disable edit box change events.
+			disableTextInputEvents(textDescription, descriptionListener);
 			
-			// Try to save the area description.
-			Middle middle = ProgramBasic.getMiddle();
-			MiddleResult result;
-			Properties login = ProgramBasic.getLoginProperties();
-			Area area = areas.getFirst();
-			String description = textDescription.getText();
-			
-			// Check area reference.
-			if (area == null) {
-				return;
-			}
-			
-			result = middle.updateAreaDescription(login, area, description);
-			if (result != MiddleResult.OK) {
-				textDescription.setText("");
-				result.show(this);
-			}
-
-			textDescription.setForeground(Color.BLACK);
-			boolean oldFocus = isDescriptionFocus;
-			int oldCaret = textDescription.getCaretPosition();
-			
-			// Decline change text events.
-			AreasProperties.declineTextChangeEvents = true;
-			long areaId = area.getId();
-			Event.propagate(AreasPropertiesBase.this, Event.updateAreaDescription, areaId);
-			
-			// Set focus.
-			if (oldFocus) {
-				textDescription.requestFocus();
-				try {
-					textDescription.setCaretPosition(oldCaret);
+			// If the description changes...
+			if (isAreaDescriptionChanged()) {
+				
+				// Try to save the area description.
+				Middle middle = ProgramBasic.getMiddle();
+				MiddleResult result;
+				Properties login = ProgramBasic.getLoginProperties();
+				Area area = areas.getFirst();
+				String description = textDescription.getText();
+				
+				// Check area reference.
+				if (area == null) {
+					return;
 				}
-				catch (IllegalArgumentException e) {
+				
+				result = middle.updateAreaDescription(login, area, description);
+				if (result != MiddleResult.OK) {
+					textDescription.setText("");
+					result.show(this);
+				}
+
+				textDescription.setForeground(Color.BLACK);
+				boolean oldFocus = isDescriptionFocus;
+				int oldCaret = textDescription.getCaretPosition();
+				
+				long areaId = area.getId();
+				
+				// TODO: <---COPY to new version
+				// Transmit the update signal.
+				HashSet<Long> selectedAreas = new HashSet<Long>();
+				selectedAreas.add(areaId);
+				ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL, selectedAreas);
+				
+				// Set focus.
+				if (oldFocus) {
+					textDescription.requestFocus();
+					try {
+						textDescription.setCaretPosition(oldCaret);
+					}
+					catch (IllegalArgumentException e) {
+					}
 				}
 			}
+			
+			// Enable edit box change events.
+			enableTextInputEvents(textDescription, descriptionListener);
 		}
 	}
 
@@ -526,70 +586,71 @@ public class AreasPropertiesBase extends JPanel {
 	 * Save alias.
 	 */
 	public void saveAlias() {
-		
-		// If the areas reference is not set exit the method.
-		if (areas == null) {
-			return;
-		}
-		
-		// Only one area must be selected.
-		if (areas.size() != 1) {
-			return;
-		}
 
-		// If the description changes...
-		if (isAreaAliasChanged()) {
+		// Single area must be selected.
+		if (areas != null && areas.size() == 1) {
 			
-			// Get new area alias.
-			Area area;
-			try {
-				area = areas.getFirst();
-			}
-			catch (Exception e) {
-				return;
-			}
+			// Disable edit box change events.
+			disableTextInputEvents(textAlias, aliasListener);			
 			
-			long areaId = area.getId();
-			
-			String alias = textAlias.getText();
-
-			// Check alias uniqueness against project root.
-			AreasModel model = ProgramGenerator.getAreasModel();
-			if (!model.isAreaAliasUnique(alias, areaId)) {
+			// If the alias changes...
+			if (isAreaAliasChanged()) {
 				
-				Utility.show(this, "org.multipage.generator.messageAreaAliasAlreadyExists", alias);
-				return;
+				// Get new area alias.
+				Area area;
+				try {
+					area = areas.getFirst();
+				}
+				catch (Exception e) {
+					return;
+				}
+				
+				long areaId = area.getId();
+				
+				String alias = textAlias.getText();
+
+				// Check alias uniqueness against project root.
+				AreasModel model = ProgramGenerator.getAreasModel();
+				if (!model.isAreaAliasUnique(alias, areaId)) {
+					
+					Utility.show(this, "org.multipage.generator.messageAreaAliasAlreadyExists", alias);
+					return;
+				}
+				
+				// Try to save the area description.
+				Middle middle = ProgramBasic.getMiddle();
+				MiddleResult result;
+				Properties login = ProgramBasic.getLoginProperties();
+				
+				result = middle.updateAreaAlias(login, areaId, alias);
+				if (result != MiddleResult.OK) {
+					textAlias.setText("");
+					result.show(this);
+				}
+				else {
+					area.setAlias(alias);
+				}
+				
+				textAlias.setForeground(Color.BLACK);
+				
+				boolean oldFocus = isAliasFocus;
+				int oldCaret = textAlias.getCaretPosition();
+				
+				// TODO: <---COPY to new version
+				// Transmit the update signal.
+				HashSet<Long> selectedAreas = new HashSet<Long>();
+				selectedAreas.add(areaId);
+				ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL, selectedAreas);
+				
+				// Set focus.
+				if (oldFocus) {
+					textAlias.requestFocus();
+					textAlias.setCaretPosition(oldCaret);
+				}
 			}
 			
-			// Try to save the area description.
-			Middle middle = ProgramBasic.getMiddle();
-			MiddleResult result;
-			Properties login = ProgramBasic.getLoginProperties();
-			
-			
-			result = middle.updateAreaAlias(login, areaId, alias);
-			if (result != MiddleResult.OK) {
-				textAlias.setText("");
-				result.show(this);
-			}
-			else {
-				area.setAlias(alias);
-			}
-			
-			textAlias.setForeground(Color.BLACK);
-			
-			boolean oldFocus = isAliasFocus;
-			int oldCaret = textAlias.getCaretPosition();
-			
-			// Decline change text events.
-			AreasProperties.declineTextChangeEvents = true;
-			Event.propagate(AreasPropertiesBase.this, Event.saveAreaAlias, areaId);
-			
-			// Set focus.
-			if (oldFocus) {
-				textAlias.requestFocus();
-				textAlias.setCaretPosition(oldCaret);
-			}
+			// Enable edit box change events.
+			enableTextInputEvents(textAlias, aliasListener);				
 		}
 	}
 
@@ -657,10 +718,6 @@ public class AreasPropertiesBase extends JPanel {
 	 */
 	protected void onChangeDescription() {
 		
-		if (declineTextChangeEvents) {
-			return;
-		}
-
 		Color color;
 	
 		// If the current area description is not equal to loaded area
@@ -683,10 +740,6 @@ public class AreasPropertiesBase extends JPanel {
 	 */
 	protected void onChangeAlias() {
 		
-		if (declineTextChangeEvents) {
-			return;
-		}
-
 		Color color;
 	
 		// If the current area alias is not equal to loaded area
@@ -770,7 +823,8 @@ public class AreasPropertiesBase extends JPanel {
 		}
 		
 		// Update information.
-		Event.propagate(AreasPropertiesBase.this, Event.deleteAreaLocalizedText, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreasPropertiesBase.this, Event.deleteAreaLocalizedText, areaId);
 	}
 
 	/**
@@ -787,5 +841,37 @@ public class AreasPropertiesBase extends JPanel {
 	protected void onAliasEnter() {
 		
 		saveAlias();
+	}
+	
+	/**
+	 * Close the object.
+	 */
+	@Override
+	public void close() {
+		
+		// Save dialog.
+		saveDialog();
+		// Close slot list.
+		panelSlotList.close();
+		// Release listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
+	}
+	
+	/**
+	 * Get list of previous messages for this dialog.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousMessages;
 	}
 }

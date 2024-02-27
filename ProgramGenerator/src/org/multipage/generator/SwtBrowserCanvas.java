@@ -1,20 +1,14 @@
 /*
- * This class is made available under the Apache License, Version 2.0.
+ * Copyright 2010-2023 (C) vakol
+ * 
+ * Created on : 16-12-2023
  *
- * See http://www.apache.org/licenses/LICENSE-2.0.txt
- *
- * Author: Mark Lee
- *
- * (C)2013 Caprica Software (http://www.capricasoftware.co.uk)
  */
 
 package org.multipage.generator;
 
 import java.awt.Canvas;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.HashSet;
 import java.util.function.Function;
 
 import org.eclipse.swt.SWT;
@@ -23,229 +17,301 @@ import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.multipage.util.Lock;
+import org.multipage.util.Obj;
 
+// TODO: <---COPY to new version
 /**
- * Implementation of an AWT {@link Canvas} that embeds an SWT {@link Browser} component.
- * <p>
- * With contemporary versions of SWT, the Webkit browser is the default implementation.
- * <p>
- * To embed an SWT component inside of a Swing component there are a number of important
- * considerations (all of which comprise this implementation):
- * <ul>
- *   <li>A background thread must be created to process the SWT event dispatch loop.</li>
- *   <li>The browser component can not be created until after the hosting Swing component (e.g. the
- *       JFrame) has been made visible - usually right after <code>frame.setVisible(true).</code></li>
- *   <li>To cleanly dispose the native browser component, it is necessary to perform that clean
- *       shutdown from inside a {@link WindowListener#windowClosing(WindowEvent)} implementation in
- *       a listener registered on the hosting JFrame.</li>
- *   <li>On Linux, the <code>sun.awt.xembedserver</code> system property must be set.</li>
- * </ul>
+ * Implementation of an AWT that embeds a SWT component.
+ * @author vakol
  */
 public final class SwtBrowserCanvas extends Canvas {
 
     /**
 	 * Version.
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;	
+    
+	/**
+	 * Single SWT background thread.
+	 */
+	private static SwtThread swtThread = null;
 
 	/**
 	 * Indicates that SWT is available for the OS.
 	 */
-	private static Boolean swtAvailable = null;
+	private static Boolean swtAvailable = false;
 	
 	/**
-	 * Initial URL of browser content.
+	 * Set of created shells.
 	 */
-	public static String initialUrl = null;
+	private final static HashSet<Shell> swtShells = new HashSet<>();
 	
 	/**
-     * Required for Linux, harmless for other OS.
-     * <p>
-     * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=161911">SWT Component Not Displayed Bug</a>
-     */
-    static {
-        System.setProperty("sun.awt.xembedserver", "true");
-    }
-
-    /**
-     * SWT browser component reference.
-     */
-    private final AtomicReference<Browser> browserReference = new AtomicReference<>();
-
-    /**
-     * SWT event dispatch thread reference.
-     */
-    private final AtomicReference<SwtThread> swtThreadReference = new AtomicReference<>();
-    
-    /**
-     * 
-     * @return
-     */
-	public static SwtBrowserCanvas createInstance() {
-		
-		if (swtAvailable != null && swtAvailable == false) {
-			return null;
-		}
-		try {
-			
-			SwtBrowserCanvas browser = new SwtBrowserCanvas();
-			new Display();
-			
-			swtAvailable = true;
-			return browser;
-		}
-		catch (Throwable e) {
-		}
-		
-		swtAvailable = false;
-		return null;
-	}
-	
-	/**
-	 * Create new instance of SWT browser.
-	 * @param callback
-	 * @return
+	 * Associated browser.
 	 */
-	public static boolean createInstance(Function<SwtBrowserCanvas, String> callback) {
-		
-		SwtBrowserCanvas browser = new SwtBrowserCanvas();
-		return browser.initialise(callback);
-	}
+	public Browser browser = null;
+	
+	/**
+	 * Initial URL for the browser.
+	 */
+	private String initialUrl = "";
 	
     /**
-     * Get the native browser instance.
-     *
-     * @return browser, may be <code>null</code>
+     * Implementation of a SWT thread.
      */
-    public Browser getBrowser() {
-        return browserReference.get();
-    }
-
-    /**
-     * Navigate to a URL.
-     *
-     * @param url URL
-     */
-    public void setUrl(final String url) {
+    private static class SwtThread extends Thread {
     	
-        // This action must be executed on the SWT thread
-        getBrowser().getDisplay().asyncExec(() -> {
-        	getBrowser().setUrl(url != null ? url : initialUrl);
-        });
-    }
-
-    /**
-     * Create the browser canvas component.
-     * <p>
-     * This must be called <strong>after</strong> the parent application Frame is made visible -
-     * usually directly after <code>frame.setVisible(true)</code>.
-     * <p>
-     * This method creates the background thread, which in turn creates the SWT components and
-     * handles the SWT event dispatch loop.
-     * <p>
-     * This method will block (for a very short time) until that thread has successfully created
-     * the native browser component (or an error occurs).
-     * @param callback 
-     *
-     * @return <code>true</code> if the browser component was successfully created; <code>false if it was not</code/
-     */
-    public boolean initialise(Function<SwtBrowserCanvas, String> callback) {
+    	/**
+    	 * SWT thread termination timeout in milliseconds.
+    	 */
+        private static final long SWT_THREAD_TERMINATION_TIMEOUT_MS = 3000;
     	
-        CountDownLatch browserCreatedLatch = new CountDownLatch(1);
-        SwtThread swtThread = new SwtThread(browserCreatedLatch, callback);
-        swtThreadReference.set(swtThread);
-        swtThread.start();
-        boolean result;
-        try {
-            browserCreatedLatch.await();
-            result = browserReference.get() != null;
-            if (result) {
-            	setUrl(initialUrl);
-            }
-        }
-        catch (InterruptedException e) {
-            e.printStackTrace();
-            result = false;
-        }
-        return result;
-    }
-
-    /**
-     * Dispose the browser canvas component.
-     * <p>
-     * This should be called from a {@link WindowListener#windowClosing(WindowEvent)} implementation.
-     */
-    public void dispose() {
-        browserReference.set(null);
-        SwtThread swtThread = swtThreadReference.getAndSet(null);
-        if (swtThread != null) {
-            swtThread.interrupt();
-        }
-    }
-
-    /**
-     * Implementation of a thread that creates the browser component and then implements an event
-     * dispatch loop for SWT.
-     */
-    private class SwtThread extends Thread {
-
-        /**
-         * Initialisation latch.
-         */
-        private final CountDownLatch browserCreatedLatch;
+		/**
+		 * Single SWT display that is needed when running SWT thread.
+		 */
+		protected static Display display = null;
+    	
+		/**
+		 * This flag terminates the SWT thread.
+		 */
+		private boolean exitThread = false;
         
+		/**
+		 * SWT thread termination lock.
+		 */
+		private Lock terminationLock = null;
+		
         /**
-         * Callback lambda.
+         * Run SWT thread.
          */
-		private Function<SwtBrowserCanvas, String> callback;
-
-        /**
-         * Create a thread.
-         *
-         * @param browserCreatedLatch initialisation latch.
-         * @param callback 
-         */
-        private SwtThread(CountDownLatch browserCreatedLatch, Function<SwtBrowserCanvas, String> callback) {
-            this.browserCreatedLatch = browserCreatedLatch;
-            this.callback = callback;
-        }
-
-        @Override
+		@Override
         public void run() {
+			
+        	// Create SWT display.
+        	display = new Display();
         	
-            // First prepare the SWT components...
-            Display display = null;
-            Shell shell;
+            // Execute the SWT event dispatch loop.
             try {
-            	display = new Display();
-            	SwtBrowserCanvas.initialUrl = callback.apply(SwtBrowserCanvas.this);
-                shell = SWT_AWT.new_Shell(display, SwtBrowserCanvas.this);
-                shell.setLayout(new FillLayout());
-                browserReference.set(new Browser(shell, SWT.NONE));
-            }
-            catch (Throwable e) {
-                return;
-            }
-            finally {
-                // Guarantee the count-down so as not to block the caller, even in case of error -
-                // there is a theoretical (rare) chance of failure to initialise the SWT components
-                browserCreatedLatch.countDown();
-            }
-            // Execute the SWT event dispatch loop...
-            try {
-                shell.open();
-                while (!isInterrupted() && !shell.isDisposed()) {
+                while (!isInterrupted() && !exitThread) {
+                	
+    				// Set SWT available.
+    				swtAvailable = true;
+                	
                     if (!display.readAndDispatch()) {
                         display.sleep();
                     }
                 }
-                browserReference.set(null);
-                shell.dispose();
-                display.dispose();
             }
             catch (Exception e) {
                 interrupt();
             }
-        }
+            
+            // Set SWT not available.
+			swtAvailable = false;
+            
+            // Notify about termination of the SWT thread.
+            if (terminationLock != null) {
+            	Lock.notify(terminationLock);
+            }
+		}
+		
+		/**
+		 * Disposal of thread resources. Must be run at the end of application.
+		 */
+		void terminate() {
+			
+			// Signal SWT thread termination.
+			terminationLock = new Lock();
+			exitThread = true;
+			Lock.waitFor(terminationLock, SWT_THREAD_TERMINATION_TIMEOUT_MS);
+			
+			// Release display.
+			display.dispose();
+		}
+    }
+	
+	/**
+     * Static constructor. Required for Linux, harmless for other OS.
+     */
+    static {
+        System.setProperty("sun.awt.xembedserver", "true");
+    }
+    
+    /**
+     * Starts the SWT thread.
+     */
+    public static boolean startSwtThread() {
+    	
+    	boolean runThread = (swtThread == null);
+    	
+    	// Create the background thread if it doesn't already exist.
+    	if (runThread) {
+			swtThread = new SwtThread();
+			swtThread.start();
+    	}
+        return runThread;
+    }
+    
+    /**
+     * Stops SWT thread. Disposes all SWT shells.
+     */
+    public static void stopSwtThread() {
+    	
+		SwtThread.display.syncExec(new Runnable() {
+			public void run() {
+
+				closeAllShells();
+		    	
+		        if (swtThread != null) {
+		            swtThread.terminate();
+		        }
+			}
+		});
+    }
+    
+    /**
+     * Close all SWT shells.
+     */
+    private static void closeAllShells() {
+    	
+    	for (Shell swtShell : swtShells) {
+    		swtShell.dispose();
+    	}
+    }
+    
+    /**
+     * Create browser canvas later on SWT thread.
+     * @return
+     */
+	public static SwtBrowserCanvas createLater(Function<SwtBrowserCanvas, String> callback) {
+		
+		// Check if the SWT thread is available (started).
+		if (swtAvailable != null && swtAvailable == false) {
+			return null;
+		}
+		
+		try {
+			// Create browser object and attach it to SWT shell.
+			SwtBrowserCanvas browserCanvas = new SwtBrowserCanvas();
+			boolean success = browserCanvas.attachBrowser(callback);
+			if (success) {
+				return browserCanvas;
+			}
+		}
+		catch (Throwable e) {
+			e.printStackTrace();
+		}
+		// On failure.
+		return null;
+	}
+	
+    /**
+     * Close the browser.
+     */
+	public void close() {
+			
+		SwtThread.display.syncExec(new Runnable() {
+			public void run() {
+				
+				// Close the SWT shell on dispatch thread.
+				try {
+					if (browser != null && !browser.isDisposed()) {
+						Shell swtShell = browser.getShell();
+						if (swtShell != null) {
+							
+							closeShell(swtShell);
+						}
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+				browser = null;
+			}
+		});
+	}
+    
+    /**
+     * Create new browser and attach it to a SWT shell.
+     */
+    private boolean attachBrowser(Function<SwtBrowserCanvas, String> callback)
+    		throws Exception {
+    	
+    	Obj<Boolean> success = new Obj<Boolean>(false);
+    	
+    	SwtThread.display.syncExec(new Runnable() {
+    	    public void run() {
+
+		        try {
+		            // Get initial URL.
+		            initialUrl = callback.apply(SwtBrowserCanvas.this);
+		        	
+		            // Create SWT shell attached to this Canvas.
+		    		Shell swtShell = SWT_AWT.new_Shell(SwtThread.display, SwtBrowserCanvas.this);
+		            swtShell.setLayout(new FillLayout());
+		            
+				    // Open the SWT shell and remember it.
+		            swtShell.open();
+		            swtShells.add(swtShell);
+		            
+		            // Create new browser in the SWT shell.
+		            browser = new Browser(swtShell, SWT.NONE);
+		
+		            // This action must be executed on the SWT thread
+		            browser.getDisplay().asyncExec(() -> {
+		            	browser.setUrl(initialUrl);
+		            });
+		            
+		            success.ref = true;
+		        }
+		        catch (Throwable e) {
+		        	e.printStackTrace();
+		        }    	    	
+    	    }
+    	});
+    	
+    	return success.ref;
+    }
+    
+    /**
+     * Reload current URL.
+     */
+	public void reload() {
+		
+    	SwtThread.display.syncExec(new Runnable() {
+    	    public void run() {
+    	    	
+				// Check browser object.
+				if (browser == null) {
+					return;
+				}
+				
+				// Reload browser contents.
+				browser.refresh();
+    	    }
+    	});
+	}
+    
+    /**
+     * Close the SWT shell.
+     * @param swtShell
+     */
+    private boolean closeShell(Shell swtShell) {
+    	
+    	// Check if the SWT shell exists.
+    	boolean exists = swtShells.contains(swtShell);
+    	if (!exists) {
+    		return false;
+    	}
+    	
+    	// Remove it from the set of SWT shells.
+    	swtShells.remove(swtShell);
+    	
+    	// Close the SWT shells.
+    	if (!swtShell.isDisposed()) {
+    		swtShell.close();
+    	}
+    	return true;
     }
 }

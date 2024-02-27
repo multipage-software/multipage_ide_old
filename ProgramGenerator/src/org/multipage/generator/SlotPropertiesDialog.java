@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 10-02-2020
  *
@@ -15,6 +15,8 @@ import javax.swing.*;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 import com.maclan.*;
@@ -54,7 +56,7 @@ public class SlotPropertiesDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -65,7 +67,7 @@ public class SlotPropertiesDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream) 
+	public static void serializeData(StateOutputStream outputStream) 
 			throws IOException {
 		
 		outputStream.writeObject(bounds);

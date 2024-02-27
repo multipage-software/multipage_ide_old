@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -278,11 +278,12 @@ public interface MiddleLight {
 	
 	/**
 	 * Load area ID for given alias.
+	 * @param anchorAreas
 	 * @param alias
 	 * @param outputAreaId
 	 * @return
 	 */
-	public MiddleResult loadAreaWithAlias(String alias, Obj<Area> outputArea);
+	public MiddleResult loadAreaWithAlias(LinkedList<Area> anchorAreas, String alias, Obj<Area> outputArea);
 	
 	/**
 	 * Load first projects' area with given alias.
@@ -297,20 +298,21 @@ public interface MiddleLight {
 	
 	/**
 	 * Load area ID for given project and alias.
+	 * @param anchorAreas
 	 * @param projectAlias
 	 * @param alias
 	 * @param outputArea
 	 * @return
 	 */
-	public MiddleResult loadProjectAreaWithAlias(String projectAlias, String alias, Obj<Area> outputArea);
+	public MiddleResult loadProjectAreaWithAlias(LinkedList<Area> anchorAreas, String projectAlias, String alias, Obj<Area> outputArea);
 	
 	/**
 	 * Load project root areas.
-	 * @param currentArea
+	 * @param anchorAreas
 	 * @param projectRootAreas
 	 * @return
 	 */
-	public MiddleResult loadProjectRootAreas(Area currentArea,
+	public MiddleResult loadProjectRootAreas(LinkedList<Area> anchorAreas,
 			LinkedList<Area> projectRootAreas);
 	
 	/**

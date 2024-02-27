@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 09-06-2017
  *
@@ -9,9 +9,8 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Font;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.function.Consumer;
 
@@ -24,8 +23,14 @@ import javax.swing.SwingUtilities;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.CallbackNoArg;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.FoundAttr;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
+import org.multipage.util.Closable;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
@@ -42,7 +47,7 @@ import com.maclan.server.ProgramServlet;
  * @author 
  *
  */
-public class SlotEditorHelper {
+public class SlotEditorHelper implements Closable {
 	
 	/**
 	 * Font.
@@ -61,7 +66,7 @@ public class SlotEditorHelper {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		Object data = inputStream.readObject();
@@ -77,7 +82,7 @@ public class SlotEditorHelper {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(fontState);
@@ -151,7 +156,7 @@ public class SlotEditorHelper {
 	 * Reference to parent component
 	 */
 	protected SlotEditorGenerator editor;
-	
+
 	/**
 	 * Constructor
 	 * @param editor
@@ -190,7 +195,8 @@ public class SlotEditorHelper {
 
 		// Update information.
 		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.saveSlot, slotId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(SlotEditorHelper.this, Event.saveSlot, slotId);
 
 		saveDialog();
 	}
@@ -212,7 +218,8 @@ public class SlotEditorHelper {
 		
 		// Update information.
 		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.cancelSlotEditor, slotId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(SlotEditorHelper.this, Event.cancelSlotEditor, slotId);
 
 		saveDialog();
 	}
@@ -589,6 +596,8 @@ public class SlotEditorHelper {
 			return;
 		}
 		
+		// TODO: <---MAKE Fire change event.
+		
 		final boolean selected = checkBox.isSelected();
 		
 		// Notify other panels
@@ -711,24 +720,34 @@ public class SlotEditorHelper {
 		editedSlot = newSlot;
 		originalSlot = newSlot;
 		
-		System.out.format("SAVE EVENT: %dms main part\n", new Date().getTime() - start);
-		start = new Date().getTime();
+		// Get selected area IDs.
+		HashSet<Long> selectedAreaIds = GeneratorMainFrame.getSectedAreaIds();
 		
-		// Update information.
-		long slotId = editedSlot.getId();
-		Event.propagate(SlotEditorHelper.this, Event.saveSlot, slotId);
+		// Get selected slot IDs.
+		HashSet<Long> selectedSlotIds = getSelectedSlotIds();
 		
-		System.out.format("SAVE EVENT: %dms updateInformation\n", new Date().getTime() - start);
-		start = new Date().getTime();
-		
-		System.out.format("SAVE EVENT: %dms fireChangeEvent\n", new Date().getTime() - start);
+		// Transmit the update modules signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL, selectedAreaIds, selectedSlotIds, selectedSlotIds);
 		
 		Utility.stopWaitCursor(editor.getComponent(), cursorInfo);
-		
-		
 		return true;
 	}
 	
+	/**
+	 * Get selected slot IDs.
+	 * @return
+	 */
+	// TODO: <---COPY to new version
+	private HashSet<Long> getSelectedSlotIds() {
+		
+		Long slotId = originalSlot.getId();
+
+		HashSet<Long> slotIds = new HashSet<Long>();
+		slotIds.add(slotId);
+		
+		return slotIds;
+	}
+
 	/**
 	 * Get value.
 	 * @return
@@ -1129,7 +1148,8 @@ public class SlotEditorHelper {
 	 */
 	public void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(this, Event.monitorHomePage);
 	}
 
 	/**
@@ -1168,5 +1188,26 @@ public class SlotEditorHelper {
 		
 		// Open slot properties dialog.
 		SlotPropertiesDialog.showDialog(editor.getComponent(), editedSlot);
+		
+		// TODO: <---MAKE Fire change event.
+	}
+	
+	/**
+	 * Close slot dialog.
+	 */
+	@Override
+	public void close() {
+		
+		// Remove listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
 	}
 }

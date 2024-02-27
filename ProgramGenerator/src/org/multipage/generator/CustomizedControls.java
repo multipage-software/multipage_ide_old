@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -16,6 +16,7 @@ import javax.swing.border.*;
 import javax.swing.event.*;
 
 import org.multipage.gui.*;
+import org.multipage.util.Closable;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -25,7 +26,7 @@ import java.awt.event.MouseEvent;
  * @author
  *
  */
-public class CustomizedControls extends JDialog {
+public class CustomizedControls extends JDialog implements Closable {
 
 	// $hide>>$
 	/**
@@ -60,7 +61,7 @@ public class CustomizedControls extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Read tool size.
@@ -77,7 +78,7 @@ public class CustomizedControls extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		// Write tool size.
@@ -167,11 +168,14 @@ public class CustomizedControls extends JDialog {
 		getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		getContentPane().add(contentPanel, BorderLayout.CENTER);
-		contentPanel.setLayout(null);
+        SpringLayout sl_contentPanel = new SpringLayout();
+        contentPanel.setLayout(sl_contentPanel);
 
         toolsSlider = new javax.swing.JSlider();
+        sl_contentPanel.putConstraint(SpringLayout.NORTH, toolsSlider, 26, SpringLayout.NORTH, contentPanel);
+        sl_contentPanel.putConstraint(SpringLayout.WEST, toolsSlider, 6, SpringLayout.WEST, contentPanel);
+        sl_contentPanel.putConstraint(SpringLayout.EAST, toolsSlider, -6, SpringLayout.EAST, contentPanel);
         toolsSlider.setValue(48);
-        toolsSlider.setBounds(10, 37, 364, 45);
         contentPanel.add(toolsSlider);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
@@ -196,14 +200,22 @@ public class CustomizedControls extends JDialog {
 		});
 		
 		labelToolsSize = new JLabel("org.multipage.generator.textToolsSize");
-		labelToolsSize.setBounds(10, 11, 364, 14);
+		sl_contentPanel.putConstraint(SpringLayout.NORTH, labelToolsSize, 0, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.WEST, labelToolsSize, 6, SpringLayout.WEST, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.EAST, labelToolsSize, 0, SpringLayout.EAST, toolsSlider);
 		contentPanel.add(labelToolsSize);
 		
 		labelAreaArcSize = new JLabel("org.multipage.generator.textAreaArcSize");
-		labelAreaArcSize.setBounds(10, 93, 364, 14);
+		sl_contentPanel.putConstraint(SpringLayout.NORTH, labelAreaArcSize, 82, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.WEST, labelAreaArcSize, 6, SpringLayout.WEST, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.EAST, labelAreaArcSize, 364, SpringLayout.WEST, contentPanel);
 		contentPanel.add(labelAreaArcSize);
 		
 		arcSlider = new JSlider();
+		sl_contentPanel.putConstraint(SpringLayout.NORTH, arcSlider, 107, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.WEST, arcSlider, 6, SpringLayout.WEST, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.SOUTH, arcSlider, 154, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.EAST, arcSlider, -6, SpringLayout.EAST, contentPanel);
 		arcSlider.setValue(5);
 		arcSlider.setMaximum(27);
 		arcSlider.addChangeListener(new ChangeListener() {
@@ -215,14 +227,19 @@ public class CustomizedControls extends JDialog {
 		arcSlider.setMinorTickSpacing(1);
 		arcSlider.setPaintLabels(true);
 		arcSlider.setPaintTicks(true);
-		arcSlider.setBounds(10, 118, 364, 47);
 		contentPanel.add(arcSlider);
 		
 		labelFocusedAreaWidth = new JLabel("org.multipage.generator.textFocusedAreaWidth");
-		labelFocusedAreaWidth.setBounds(10, 173, 364, 14);
+		sl_contentPanel.putConstraint(SpringLayout.NORTH, labelFocusedAreaWidth, 162, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.WEST, labelFocusedAreaWidth, 6, SpringLayout.WEST, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.EAST, labelFocusedAreaWidth, 364, SpringLayout.WEST, contentPanel);
 		contentPanel.add(labelFocusedAreaWidth);
 		
 		sliderFocusedAreaWidth = new JSlider();
+		sl_contentPanel.putConstraint(SpringLayout.NORTH, sliderFocusedAreaWidth, 187, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.WEST, sliderFocusedAreaWidth, 0, SpringLayout.WEST, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.SOUTH, sliderFocusedAreaWidth, 234, SpringLayout.NORTH, contentPanel);
+		sl_contentPanel.putConstraint(SpringLayout.EAST, sliderFocusedAreaWidth, 0, SpringLayout.EAST, contentPanel);
 		sliderFocusedAreaWidth.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseReleased(MouseEvent arg0) {
@@ -236,7 +253,6 @@ public class CustomizedControls extends JDialog {
 		sliderFocusedAreaWidth.setMinorTickSpacing(100);
 		sliderFocusedAreaWidth.setMaximum(2000);
 		sliderFocusedAreaWidth.setMajorTickSpacing(200);
-		sliderFocusedAreaWidth.setBounds(10, 198, 364, 47);
 		contentPanel.add(sliderFocusedAreaWidth);
 
 		
@@ -300,7 +316,8 @@ public class CustomizedControls extends JDialog {
 	protected void onReloadButton() {
 
 		// Reload diagrams.
-		Event.propagate(CustomizedControls.this, Event.updateColors);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(CustomizedControls.this, Event.updateColors);
 	}
 
 	/**
@@ -345,7 +362,7 @@ public class CustomizedControls extends JDialog {
 		focusedAreaWidth = sliderFocusedAreaWidth.getValue();
 		AreasDiagram.focusAreaShapeWidth = focusedAreaWidth;
 		
-		GeneratorMainFrame.getVisibleAreasDiagram().updateInformation();
+		GeneratorMainFrame.getVisibleAreasDiagram().updateInformation(true);
 		GeneratorMainFrame.getVisibleAreasDiagram().setNotAnimateNextFocus();
 		GeneratorMainFrame.getVisibleAreasDiagram().focusBasicArea();
 	}
@@ -353,7 +370,7 @@ public class CustomizedControls extends JDialog {
 	/**
 	 * Dispose dialog.
 	 */
-	public void disposeDialog() {
+	public void close() {
 
 		saveDialog();
 	}

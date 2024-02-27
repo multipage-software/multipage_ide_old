@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -13,6 +13,8 @@ import javax.swing.*;
 
 import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 
 import com.maclan.*;
@@ -74,7 +76,7 @@ public class ResourcesEditorDialog extends JDialog {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		Object data = inputStream.readObject();
@@ -88,7 +90,7 @@ public class ResourcesEditorDialog extends JDialog {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		outputStream.writeObject(bounds);

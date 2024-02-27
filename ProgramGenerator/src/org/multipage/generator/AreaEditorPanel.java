@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 06-04-2020
  *
@@ -396,7 +396,8 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(this, Event.monitorHomePage);
 	}
 	
 	/**

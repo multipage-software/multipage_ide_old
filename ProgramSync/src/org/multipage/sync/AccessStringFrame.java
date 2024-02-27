@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 21-04-2020
  *
@@ -27,6 +27,8 @@ import javax.swing.SwingConstants;
 import javax.swing.text.JTextComponent;
 
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import javax.swing.JTextField;
 
@@ -60,7 +62,7 @@ public class AccessStringFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -72,7 +74,7 @@ public class AccessStringFrame extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);

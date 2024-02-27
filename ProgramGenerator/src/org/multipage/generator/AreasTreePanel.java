@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -720,7 +720,8 @@ public class AreasTreePanel extends JPanel {
 		updateData();
 		
 		long areaId = area.getId();
-		Event.propagate(AreasTreePanel.this, Event.addArea, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreasTreePanel.this, Event.addArea, areaId);
 	}
 	
 	/**

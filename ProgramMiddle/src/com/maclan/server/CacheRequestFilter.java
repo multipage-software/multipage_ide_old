@@ -1,19 +1,15 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2018 (C) sechance
  * 
  * Created on : 05-04-2018
  *
  */
 package com.maclan.server;
 
-import java.io.IOException;
+import java.io.*;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.*;
+import javax.servlet.http.*;
 
 /**
  * @author user
@@ -27,18 +23,12 @@ public class CacheRequestFilter implements Filter {
 	@Override
 	public void doFilter(final ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
-			
-		// Chain filters for Jetty and Apache
-		if (request instanceof org.eclipse.jetty.server.Request) {
-			
-			// Cache request when input stream needed.
-			CachedHttpServletRequest cachedRequest = new CachedHttpServletRequest((org.eclipse.jetty.server.Request) request);
-			chain.doFilter(cachedRequest, response);
-		}
-		else {
-			// Do not filter the request
-			chain.doFilter(request, response);
-		}
+		
+		// Cache request when input stream needed.
+		ServletRequest cachedRequest = new CachedHttpServletRequest((HttpServletRequest) request);
+		
+		// Chain filters.
+		chain.doFilter(cachedRequest, response);
 	}
 	
 	/**
@@ -58,4 +48,6 @@ public class CacheRequestFilter implements Filter {
 		
 		// Nothing to do.
 	}
+	
+	
 }

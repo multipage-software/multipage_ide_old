@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -20,7 +20,7 @@ public class SerializeStateAdapter {
 	/**
 	 * On read state.
 	 */
-	protected void onReadState(ObjectInputStream inputStream)
+	protected void onReadState(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		// Override this method.
@@ -38,7 +38,7 @@ public class SerializeStateAdapter {
 	 * On write state.
 	 * @param saveStateOutputStream 
 	 */
-	protected void onWriteState(ObjectOutputStream outputStream)
+	protected void onWriteState(StateOutputStream outputStream)
 		throws IOException {
 
 		// Override this method.

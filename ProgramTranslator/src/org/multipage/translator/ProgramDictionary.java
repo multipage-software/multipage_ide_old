@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -43,14 +43,14 @@ public class ProgramDictionary {
 			serializer.add(new SerializeStateAdapter() {
 				// On read state.
 				@Override
-				protected void onReadState(ObjectInputStream inputStream)
+				protected void onReadState(StateInputStream inputStream)
 						throws IOException, ClassNotFoundException {
 					// Serialize program dictionary.
 					seriliazeData(inputStream);
 				}
 				// On write state.
 				@Override
-				protected void onWriteState(ObjectOutputStream outputStream)
+				protected void onWriteState(StateOutputStream outputStream)
 						throws IOException {
 					// Serialize program dictionary.
 					serializeData(outputStream);
@@ -86,7 +86,7 @@ public class ProgramDictionary {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 
 		// Load dictionary data.
@@ -102,7 +102,7 @@ public class ProgramDictionary {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 
 		// Save dictionary data.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -19,6 +19,8 @@ import com.maclan.*;
 
 import java.awt.datatransfer.*;
 import java.awt.event.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 /**
  * 
@@ -26,7 +28,7 @@ import java.awt.event.*;
  *
  */
 public class AreaInheritedFoldersDialog extends JDialog {
-
+	
 	// $hide>>$
 	/**
 	 * Version.
@@ -44,12 +46,7 @@ public class AreaInheritedFoldersDialog extends JDialog {
 	private DefaultTableModel tableModel;
 
 	// $hide<<$
-	/**
-	 * Components.
-	 */
-	private JPanel panel;
 	private JButton buttonClose;
-	private JPanel panelTop;
 	private JLabel labelArea;
 	private JTextField textAreaDescription;
 	private JScrollPane scrollPane;
@@ -91,6 +88,7 @@ public class AreaInheritedFoldersDialog extends JDialog {
 	 * Initialize components.
 	 */
 	private void initComponents() {
+		setResizable(false);
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent arg0) {
@@ -99,49 +97,23 @@ public class AreaInheritedFoldersDialog extends JDialog {
 		});
 		setTitle("org.multipage.generator.textAreaInheritedFoldersDialog");
 		
-		setBounds(100, 100, 450, 300);
-		
-		panel = new JPanel();
-		panel.setPreferredSize(new Dimension(10, 50));
-		getContentPane().add(panel, BorderLayout.SOUTH);
-		SpringLayout sl_panel = new SpringLayout();
-		panel.setLayout(sl_panel);
-		
-		buttonClose = new JButton("textClose");
-		buttonClose.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onClose();
-			}
-		});
-		buttonClose.setMargin(new Insets(0, 0, 0, 0));
-		sl_panel.putConstraint(SpringLayout.SOUTH, buttonClose, -10, SpringLayout.SOUTH, panel);
-		sl_panel.putConstraint(SpringLayout.EAST, buttonClose, -10, SpringLayout.EAST, panel);
-		buttonClose.setPreferredSize(new Dimension(80, 25));
-		panel.add(buttonClose);
-		
-		panelTop = new JPanel();
-		panelTop.setPreferredSize(new Dimension(10, 30));
-		getContentPane().add(panelTop, BorderLayout.NORTH);
-		SpringLayout sl_panelTop = new SpringLayout();
-		panelTop.setLayout(sl_panelTop);
-		
-		labelArea = new JLabel("org.multipage.generator.textInheritedFoldersArea");
-		sl_panelTop.putConstraint(SpringLayout.NORTH, labelArea, 9, SpringLayout.NORTH, panelTop);
-		sl_panelTop.putConstraint(SpringLayout.WEST, labelArea, 6, SpringLayout.WEST, panelTop);
-		panelTop.add(labelArea);
-		
-		textAreaDescription = new TextFieldEx();
-		textAreaDescription.setEditable(false);
-		sl_panelTop.putConstraint(SpringLayout.NORTH, textAreaDescription, 6, SpringLayout.NORTH, panelTop);
-		sl_panelTop.putConstraint(SpringLayout.WEST, textAreaDescription, 6, SpringLayout.EAST, labelArea);
-		sl_panelTop.putConstraint(SpringLayout.EAST, textAreaDescription, -10, SpringLayout.EAST, panelTop);
-		panelTop.add(textAreaDescription);
-		textAreaDescription.setColumns(10);
+		setBounds(100, 100, 470, 409);
+		SpringLayout springLayout = new SpringLayout();
+		getContentPane().setLayout(springLayout);
 		
 		scrollPane = new JScrollPane();
-		getContentPane().add(scrollPane, BorderLayout.CENTER);
+		scrollPane.setBackground(UIManager.getColor("Panel.background"));
+		springLayout.putConstraint(SpringLayout.WEST, scrollPane, 10, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, scrollPane, -10, SpringLayout.EAST, getContentPane());
+		scrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
+		getContentPane().add(scrollPane);
 		
 		table = new JTable();
+		table.setBackground(UIManager.getColor("Panel.background"));
+		table.setFillsViewportHeight(true);
+		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+		table.setGridColor(Color.LIGHT_GRAY);
+		table.setBorder(new LineBorder(new Color(192, 192, 192)));
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		table.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		scrollPane.setViewportView(table);
@@ -156,6 +128,33 @@ public class AreaInheritedFoldersDialog extends JDialog {
 			}
 		});
 		popupMenu.add(menuCopyFolderName);
+		
+		buttonClose = new JButton("textClose");
+		springLayout.putConstraint(SpringLayout.SOUTH, scrollPane, -10, SpringLayout.NORTH, buttonClose);
+		springLayout.putConstraint(SpringLayout.SOUTH, buttonClose, -10, SpringLayout.SOUTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, buttonClose, -10, SpringLayout.EAST, getContentPane());
+		getContentPane().add(buttonClose);
+		buttonClose.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onClose();
+			}
+		});
+		buttonClose.setMargin(new Insets(0, 0, 0, 0));
+		buttonClose.setPreferredSize(new Dimension(80, 25));
+		
+		labelArea = new JLabel("org.multipage.generator.textInheritedFoldersArea");
+		springLayout.putConstraint(SpringLayout.NORTH, labelArea, 10, SpringLayout.NORTH, getContentPane());
+		springLayout.putConstraint(SpringLayout.WEST, labelArea, 10, SpringLayout.WEST, getContentPane());
+		getContentPane().add(labelArea);
+		
+		textAreaDescription = new TextFieldEx();
+		springLayout.putConstraint(SpringLayout.NORTH, scrollPane, 10, SpringLayout.SOUTH, textAreaDescription);
+		springLayout.putConstraint(SpringLayout.EAST, textAreaDescription, -10, SpringLayout.EAST, getContentPane());
+		springLayout.putConstraint(SpringLayout.NORTH, textAreaDescription, 0, SpringLayout.NORTH, labelArea);
+		springLayout.putConstraint(SpringLayout.WEST, textAreaDescription, 3, SpringLayout.EAST, labelArea);
+		getContentPane().add(textAreaDescription);
+		textAreaDescription.setEditable(false);
+		textAreaDescription.setColumns(10);
 	}
 
 	/**

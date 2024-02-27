@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2019 (C) Vaclav Kolarcik
  * 
  * Created on : 26-04-2017
  *
@@ -11,6 +11,11 @@ import java.awt.Panel;
 
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
+
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.TabPanelComponent;
+import org.multipage.gui.UpdateSignal;
+import org.multipage.util.j;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -74,25 +79,32 @@ public class MonitorPanel extends Panel implements TabPanelComponent {
 	 */
 	private void postCreation() {
 		
-		// Ensure the panel is visible.
+		// Ensure the panel is visible and open the browser.
 		setVisible(true);
+		openBroser(url);
 		
+		setListeners();
+	}
+
+	/**
+	 * Open browser.
+	 */
+	private void openBroser(String url) {
+		
+		// TODO: <---FIX When this panel is removed the application exits.
 		// Try to open SWT browser (with native code).
 		SwingUtilities.invokeLater(() -> {
 			
-			boolean success = SwtBrowserCanvas.createInstance((SwtBrowserCanvas browser) -> {
-				
-				swtBrowser = browser;
+			// TODO: <---COPY to new version
+			swtBrowser = SwtBrowserCanvas.createLater(browser -> {
 				
 				// Add SWT browser to the center of the panel.
-				MonitorPanel.this.add(swtBrowser, BorderLayout.CENTER);
+				MonitorPanel.this.add(browser, BorderLayout.CENTER);
+				// Load the URL provided.
 				return url;
 			});
 		
-			if (!success) {
-					
-				// Remove SWT browser.
-				swtBrowser = null;
+			if (swtBrowser == null) {
 				
 				// Otherwise use JavaFX panel for webViewBrowser.
 				JFXPanel javaFxPanel = new JFXPanel();
@@ -121,6 +133,19 @@ public class MonitorPanel extends Panel implements TabPanelComponent {
 	}
 	
 	/**
+	 * Set listeners.
+	 */
+	// TODO: <---COPY to new version
+	private void setListeners() {
+		
+		// Receive the "update" signal.
+		ApplicationEvents.receiver(this, UpdateSignal.updateMonitorPanel, message -> {
+
+			swtBrowser.reload();
+		});
+	}
+	
+	/**
 	 * Load URL.
 	 */
 	public boolean load(String url) {
@@ -143,18 +168,49 @@ public class MonitorPanel extends Panel implements TabPanelComponent {
 	}
 	
 	/**
+	 * Recreate browser.
+	 */
+	// TODO: <---COPY to new version
+	public void recreateBrowser() {
+		
+		swtBrowser.close();
+		
+		MonitorPanel.this.remove(swtBrowser);
+		
+		swtBrowser = SwtBrowserCanvas.createLater(browser -> {
+			
+			// Add SWT browser to the center of the panel.
+			MonitorPanel.this.add(browser, BorderLayout.CENTER);
+			// Load the URL provided.
+			return url;
+		});
+	}
+	
+	/**
 	 * On tab panel change event.
 	 */
 	@Override
 	public void onTabPanelChange(ChangeEvent e, int selectedIndex) {
 		
 	}
-
+	
+	/**
+	 * Called before the tab panel is removed. 
+	 */
 	@Override
 	public void beforeTabPanelRemoved() {
 		
 		if (swtBrowser != null) {
-			swtBrowser.dispose();
+			swtBrowser.close();
 		}
+	}
+	
+	/**
+	 * Called when the tab panel needs to recreate its content.
+	 */
+	@Override
+	public void recreateContent() {
+		
+		recreateBrowser();
 	}
 }

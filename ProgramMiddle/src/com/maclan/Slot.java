@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -1585,7 +1585,8 @@ public class Slot {
 	 */
 	public long getRevision() {
 		
-		return revision;
+		// TODO: <---CHANGE Revisions disabled in alpha version.
+		return 0; //revision;
 	}
 	
 	/**
@@ -1594,7 +1595,8 @@ public class Slot {
 	 */
 	public void setRevision(long revision) {
 		
-		this.revision = revision;
+		// TODO: <---CHANGE Revisions disabled in alpha version.
+		this.revision = 0; //revision;
 	}
 	
 	/**

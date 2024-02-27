@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -53,7 +53,7 @@ public class SlotDescriptionDialog extends JDialog {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -64,7 +64,7 @@ public class SlotDescriptionDialog extends JDialog {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -200,16 +200,16 @@ public class SlotDescriptionDialog extends JDialog {
 		panelMain.setLayout(sl_panelMain);
 		
 		textSlotInfo = new EditorPaneEx();
-		textSlotInfo.setBackground(new Color(240, 240, 240));
+		sl_panelMain.putConstraint(SpringLayout.NORTH, textSlotInfo, 3, SpringLayout.NORTH, panelMain);
+		sl_panelMain.putConstraint(SpringLayout.WEST, textSlotInfo, 6, SpringLayout.WEST, panelMain);
+		sl_panelMain.putConstraint(SpringLayout.EAST, textSlotInfo, -6, SpringLayout.EAST, panelMain);
+		textSlotInfo.setBackground(UIManager.getColor("window"));
 		textSlotInfo.setContentType("text/html");
-		sl_panelMain.putConstraint(SpringLayout.EAST, textSlotInfo, -10, SpringLayout.EAST, panelMain);
 		textSlotInfo.setEditable(false);
-		sl_panelMain.putConstraint(SpringLayout.NORTH, textSlotInfo, 10, SpringLayout.NORTH, panelMain);
-		sl_panelMain.putConstraint(SpringLayout.WEST, textSlotInfo, 10, SpringLayout.WEST, panelMain);
 		panelMain.add(textSlotInfo);
 		
 		panelContainer = new JPanel();
-		sl_panelMain.putConstraint(SpringLayout.NORTH, panelContainer, 6, SpringLayout.SOUTH, textSlotInfo);
+		sl_panelMain.putConstraint(SpringLayout.NORTH, panelContainer, 3, SpringLayout.SOUTH, textSlotInfo);
 		sl_panelMain.putConstraint(SpringLayout.WEST, panelContainer, 6, SpringLayout.WEST, panelMain);
 		sl_panelMain.putConstraint(SpringLayout.SOUTH, panelContainer, 0, SpringLayout.SOUTH, panelMain);
 		sl_panelMain.putConstraint(SpringLayout.EAST, panelContainer, -6, SpringLayout.EAST, panelMain);
@@ -262,6 +262,7 @@ public class SlotDescriptionDialog extends JDialog {
 		
 		editor = new TextEditorPane(this, true);
 		editor.selectHtmlEditor(true);
+		editor.setEditorBackground(UIManager.getColor("info"));
 		
 		panelContainer.add(editor);
 	}

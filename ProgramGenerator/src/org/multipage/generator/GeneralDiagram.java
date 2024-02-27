@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -32,8 +32,10 @@ import java.util.LinkedList;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.CursorArea;
 import org.multipage.gui.CursorAreaImpl;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.HorizontalScroll;
 import org.multipage.gui.Images;
 import org.multipage.gui.ScrollListener;
@@ -127,7 +129,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		tooltipWindow = new ToolTipWindow(GeneratorMainFrame.getFrame());
 		toolTipTimer = new javax.swing.Timer(period, e -> {
 			
-			Event.propagate(GeneralDiagram.class, Event.tooltipTimer);
+			// TODO: <---REFACTOR EVENTS
+			//Event.propagate(GeneralDiagram.class, Event.tooltipTimer);
 		});
 		toolTipTimer.start();
 	}
@@ -154,7 +157,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateVisibleDiagrams() {
 		
-		Event.propagate(GeneralDiagram.class, Event.update);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(GeneralDiagram.class, Event.update);
 	}
 	
 	/**
@@ -162,7 +166,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateDiagramsControls() {
 		
-		Event.propagate(GeneralDiagram.class, Event.updateControls);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(GeneralDiagram.class, Event.updateControls);
 	}
 
 	/**
@@ -310,7 +315,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 * Set listeners.
 	 */
 	private void setListeners() {
-		
 		
 		// Set tool list listener.
 		toolList.setListener(new ToolListListener() {
@@ -507,25 +511,16 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 		positionSaveTimer.setRepeats(false);
 		
 		// Add redraw event listener.
-		Event.receiver(this, ActionGroup.guiChange, data -> {
+		ApplicationEvents.receiver(this, GuiSignal.loadDiagrams, message -> {
 			
-			if (Event.passes(() -> {
-				
-				if (Event.sourceClass(data, Event.loadDiagrams, GeneratorMainFrame.class)) {
-					return true;
-				}
-				return false;
-			})) {
-				
-				// Initialize tool list.
-				toolList.initialize();
-				
-				// Reset diagram.
-				resetToolTip();
-				
-				GeneralDiagram.this.setScrollBarsLocation();
-				GeneralDiagram.this.repaint();
-			}
+			// Initialize tool list.
+			toolList.initialize();
+			
+			// Reset diagram.
+			resetToolTip();
+			
+			GeneralDiagram.this.setScrollBarsLocation();
+			GeneralDiagram.this.repaint();
 		});
 	}
 	
@@ -534,7 +529,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	private void removeListeners() {
 		
-		Event.remove(this);
+		// Remove listeners.
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -1184,7 +1180,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void removeDiagram() {
 		
-		Event.propagate(this, Event.removeDiagram);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(this, Event.removeDiagram);
 	}
 
 	/**
@@ -1732,8 +1729,8 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	/**
 	 * Close diagram
 	 */
-	public void close() {
-		
+	public void close() { 
+		// Override this method.
 	}
 
 	/**

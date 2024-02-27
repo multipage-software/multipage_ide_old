@@ -31,6 +31,8 @@ import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.Callback;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
 import org.multipage.util.DOM;
 import org.multipage.util.Obj;
@@ -98,7 +100,7 @@ public class DebugViewer extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
@@ -108,7 +110,7 @@ public class DebugViewer extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		outputStream.writeObject(bounds);

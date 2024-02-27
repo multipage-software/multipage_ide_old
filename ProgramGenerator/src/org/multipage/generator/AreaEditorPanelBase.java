@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2020 (C) Vaclav Kolarcik
  * 
  * Created on : 06-04-2020
  *
@@ -467,7 +467,9 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.saveArea, areaId);
+		
+		// Update area related information.
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL);
 	}
 
 	/**
@@ -503,7 +505,9 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		saveDialog();
 		// Update data.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.saveArea, areaId);
+
+		// Update area related information.
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL);
 	}
 	
 	/**
@@ -1010,7 +1014,8 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		GeneratorMainFrame.getFrame().setAreaDescription(area.getDescription());
 		// Update information.
 		long areaId = area.getId();
-		Event.propagate(AreaEditorPanelBase.this, Event.updateAreaChanges, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorPanelBase.this, Event.updateAreaChanges, areaId);
 	}
 
 	/**
@@ -1069,7 +1074,8 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		getCheckBoxIsStartArea().addActionListener(isStartListener);
 
 		// Update information.
-		Event.propagate(AreaEditorPanelBase.this, Event.updateHomeArea, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorPanelBase.this, Event.updateHomeArea, areaId);
 	}
 
 	/**
@@ -1095,7 +1101,8 @@ public abstract class AreaEditorPanelBase extends JPanel {
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
 
 		// Update information.
-		Event.propagate(AreaEditorPanelBase.this, Event.updateAreaIsDisabled, areaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(AreaEditorPanelBase.this, Event.updateAreaIsDisabled, areaId);
 	}
 
 	/**

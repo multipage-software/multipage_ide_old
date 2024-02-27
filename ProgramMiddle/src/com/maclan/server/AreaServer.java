@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -31,7 +31,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
+import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
+import javax.script.SimpleBindings;
+import javax.script.SimpleScriptContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.multipage.gui.Utility;
@@ -101,7 +106,6 @@ public class AreaServer {
 	public static final String leftHtmlBracketTag =  "@l;";
 	public static final String rightHtmlBracketTag =  "@r;";
 	public static final String atTag = "@at;";
-	public static final String newLineTag = "@nl;";
 	
 	/**
 	 * Unzipped resources list file name. (The file is stored in servlet temporary
@@ -205,7 +209,7 @@ public class AreaServer {
 	}
 	
 	/**
-	 * Initialize server state.
+	 * Initialise server state.
 	 */
 	public void initServerState() {
 		
@@ -256,7 +260,7 @@ public class AreaServer {
 		clonedState.foundIncludeIdentifiers = state.foundIncludeIdentifiers;
 		clonedState.relatedAreaVersions = state.relatedAreaVersions;
 		clonedState.enablePhp = state.enablePhp;
-		clonedState.scriptingEngine = state.scriptingEngine;
+		clonedState.javaScriptEngine = state.javaScriptEngine;
 		clonedState.tabulator = state.tabulator;
 		clonedState.cssRulesCache = state.cssRulesCache;
 		clonedState.cssLookupTable = state.cssLookupTable;
@@ -267,7 +271,6 @@ public class AreaServer {
 		clonedState.updatedSlots = state.updatedSlots;
 		clonedState.defaultVersionId = state.defaultVersionId;
 		clonedState.trayMenu = state.trayMenu;
-		clonedState.newLine = state.newLine;
 		
 		return clonedState;
 	}
@@ -375,8 +378,6 @@ public class AreaServer {
 		redirectProcessor();
 		// TRAY_MENU processor.
 		trayMenuProcessor();
-		// POST processor
-		postProcessor();
 	}
 	
 	/**
@@ -431,8 +432,11 @@ public class AreaServer {
 			
 			if (areaAliasParameter != null) {
 				
+				// Get this Area Server anchor areas.
+				LinkedList<Area> anchorAreas = getAnchorAreas();
+				
 				// Get area from alias.
-				result = state.middle.loadProjectAreaWithAlias(projectAliasParameter, areaAliasParameter, outputArea);
+				result = state.middle.loadProjectAreaWithAlias(anchorAreas, projectAliasParameter, areaAliasParameter, outputArea);
 				if (result.isNotOK()) {
 					throwErrorText(result.getMessage());
 				}
@@ -488,7 +492,7 @@ public class AreaServer {
 	 * @param request2
 	 * @return
 	 */
-	public static long getAreaId(MiddleLight middle, Request request2)
+	public long getAreaId(MiddleLight middle, Request request2)
 		throws Exception {
 		
 		MiddleResult result;
@@ -510,8 +514,9 @@ public class AreaServer {
 		String alias = request2.getParameter("area_alias");
 		if (alias != null) {
 			
-			// Load area ID for given area alias.
-			result = middle.loadAreaWithAlias(alias, outputArea);
+			// Load area ID for given area alias based on current request anchor areas.
+			LinkedList<Area> anchorAreas = getAnchorAreas();
+			result = middle.loadAreaWithAlias(anchorAreas, alias, outputArea);
 			if (result.isOK()) {
 				return outputArea.ref.getId();
 			}
@@ -765,7 +770,7 @@ public class AreaServer {
 	protected static Area getAreaFromProperties(AreaServer server,
 			Properties properties, Obj<Boolean> existsAreaSpecification) throws Exception {
 		
-		return getAreaFromProperties(server, properties, "", existsAreaSpecification);
+		return server.getAreaFromProperties(server, properties, "", existsAreaSpecification);
 	}
 	
 	/**
@@ -778,12 +783,12 @@ public class AreaServer {
 	 * Get area from properties.
 	 * @param server
 	 * @param properties
-	 * @param propertyStart - text that precedes property name
+	 * @param propertyPrefix - text that precedes property name
 	 * @param existsAreaSpecification 
 	 * @return
 	 */
-	protected static Area getAreaFromProperties(AreaServer server,
-			Properties properties, String propertyStart, Obj<Boolean> existsAreaSpecification)
+	protected Area getAreaFromProperties(AreaServer server,
+			Properties properties, String propertyPrefix, Obj<Boolean> existsAreaSpecification)
 					throws Exception {
 		
 		// Reset flag.
@@ -795,7 +800,7 @@ public class AreaServer {
 		MiddleResult result;
 		
 		// Get area ID.
-		String areaIdText = properties.getProperty(propertyStart + "areaId");
+		String areaIdText = properties.getProperty(propertyPrefix + "areaId");
 		if (areaIdText != null) {
 			
 			// Evaluate area ID.
@@ -803,16 +808,19 @@ public class AreaServer {
 		}
 		
 		if (areaId == null) {
-			String aliasText = properties.getProperty(propertyStart + "areaAlias");
+			String aliasText = properties.getProperty(propertyPrefix + "areaAlias");
 			if (aliasText != null) {
 				
 				// Evaluate alias text.
 				String alias = server.evaluateText(aliasText, String.class, true);
 				if (alias != null) {
 					
+					// Get anchor areas for current instance of Area Server.
+					LinkedList<Area> anchorAreas = server.getAnchorAreas();
+					
 					// Try to get area.
 					Obj<Area> outputArea = new Obj<Area>();
-					result = server.state.middle.loadAreaWithAlias(alias, outputArea);
+					result = server.state.middle.loadAreaWithAlias(anchorAreas, alias, outputArea);
 					if (result.isNotOK()) {
 						AreaServer.throwError("server.messageAreaAliasNotFound", alias);
 					}
@@ -824,7 +832,7 @@ public class AreaServer {
 		if (areaId == null) {
 			
 			// Get area expression.
-			String areaText = properties.getProperty(propertyStart + "area");
+			String areaText = properties.getProperty(propertyPrefix + "area");
 			if (areaText != null) {
 				
 				// Evaluate expression.
@@ -839,29 +847,29 @@ public class AreaServer {
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "startArea")) {
+			if (properties.containsKey(propertyPrefix + "startArea")) {
 				areaId = server.state.startArea.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "homeArea")) {
+			if (properties.containsKey(propertyPrefix + "homeArea")) {
 				Obj<Area> area = new Obj<Area>();
 				server.loadHomeAreaData(area);
 				areaId = area.ref.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "requestedArea")) {
+			if (properties.containsKey(propertyPrefix + "requestedArea")) {
 				areaId = server.state.requestedArea.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "thisArea")) {
+			if (properties.containsKey(propertyPrefix + "thisArea")) {
 				areaId = server.state.area.getId();
 			}
 		}
 		if (areaId == null) {
-			if (properties.containsKey(propertyStart + "areaSlot")) {
+			if (properties.containsKey(propertyPrefix + "areaSlot")) {
 				
 				// Retrieve slot value.
 				String slotName = properties.getProperty("areaSlot");
@@ -912,63 +920,55 @@ public class AreaServer {
 		Obj<Boolean> existsAreaSpecification = new Obj<Boolean>();
 		Area slotArea = getAreaFromProperties(server, properties, existsAreaSpecification);
 
-		// Get slot expression.
-		String slotExpression = properties.getProperty("use");
-		if (slotExpression == null) {
-			slotExpression = properties.getProperty("slot");
+		// Get slot name.
+		String slotAlias = properties.getProperty("use");
+		if (slotAlias == null) {
+			slotAlias = properties.getProperty("slot");
 		}
 
-		if (slotExpression == null && !existsAreaSpecification.ref) {
+		if (slotAlias == null && !existsAreaSpecification.ref) {
 			try {
 				// Get first property name.
-				slotExpression = (String) properties.keys().nextElement();
+				slotAlias = (String) properties.keys().nextElement();
 			}
 			catch (NoSuchElementException e) {
 			}
 		}
+		else {
 								
-		// Evaluate slot alias.
-		Object slotRef = server.evaluateText(slotExpression, Object.class, false);
-		
-		// If it references a slot object, return it.
-		if (slotRef instanceof Slot) {
-			
-			Slot resultSlot = (Slot) slotRef;
-			return resultSlot;
+			// Evaluate slot alias.
+			slotAlias = server.evaluateText(slotAlias, String.class, false);
 		}
-		// Load slot value.
-		else if (slotRef instanceof String) {
+
+		// Get slot value.
+		if (slotAlias != null && !slotAlias.isEmpty()) {
 			
-			String alias = (String) slotRef;
-			if (!alias.isEmpty()) {
-				
-				// Get "skip_default" modifier.
-				boolean skipDefault = properties.getProperty("skipDefault") != null;
-				// Parent flag.
-				boolean parent = properties.containsKey("parent");
-				
-				if (slotArea == null) {
-					slotArea = server.state.area;
-				}
-	
-				Obj<Slot> slot = new Obj<Slot>();
-				
-				MiddleResult result = server.state.middle.loadSlot(slotArea, alias,
-						true, parent, skipDefault, slot, true);
-				if (result.isNotOK()) {
-					throwError("server.messageDatabaseError", result.getMessage());
-				}
-	
-				// If slot not found.
-				if (slot.ref == null) {
-					throwError("server.messageSlotNotFoundOrNotInheritable", slotRef);
-				}
-				
-				return slot.ref;
+			// Get "skip_default" modifier.
+			boolean skipDefault = properties.getProperty("skipDefault") != null;
+			// Parent flag.
+			boolean parent = properties.containsKey("parent");
+			
+			if (slotArea == null) {
+				slotArea = server.state.area;
 			}
+
+			Obj<Slot> slot = new Obj<Slot>();
+			
+			MiddleResult result = server.state.middle.loadSlot(slotArea, slotAlias,
+					true, parent, skipDefault, slot, true);
+			if (result.isNotOK()) {
+				throwError("server.messageDatabaseError", result.getMessage());
+			}
+
+			// If slot not found.
+			if (slot.ref == null) {
+				throwError("server.messageSlotNotFoundOrNotInheritable", slotAlias);
+			}
+			
+			return slot.ref;
 		}
 		
-		throwError("server.messageMissingSlotNameInTag", slotRef);
+		throwError("server.messageMissingSlotNameInTag", slotAlias);
 		return null;
 	}
 
@@ -1085,20 +1085,6 @@ public class AreaServer {
 				// Get slot properties.
 				Slot slot = getSlotFromProperties(server, properties);
 				
-				// Try to get value
-				final String valueKeyName = "value";
-				if (properties.containsKey(valueKeyName)) {
-					
-					// Get expression.
-					String expression = properties.getProperty(valueKeyName);
-					
-					// Try to load value from the external provider
-					Object value = server.evaluateText(expression, null, true);
-					if (value != null) {
-						slot.setValue(value);
-					}
-				}
-
 				// Input slot.
 				server.input(slot);
 				
@@ -2655,6 +2641,30 @@ public class AreaServer {
 	}
 	
 	/**
+	 * Bind area server with script engine.
+	 * @param server 
+	 * @throws Exception 
+	 */
+	private void bindWithScriptEngine(ScriptEngine scriptEngine)
+		throws Exception {
+		
+		Bindings bindings = new SimpleBindings();
+		
+		// Put root object named server.
+		try {
+			bindings.put("server", new com.maclan.server.lang_elements.AreaServer(this));
+		}
+		catch (Exception e) {
+			
+			String message = String.format(
+					Resources.getString("server.messagePutVariablesIntoJavaScriptError"), e.getLocalizedMessage());
+			throw new Exception(message);
+		}
+		
+		scriptEngine.setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
+	}
+	
+	/**
 	 * JAVASCRIPT processor.
 	 */
 	private static void javaScriptProcessor() {
@@ -2679,19 +2689,17 @@ public class AreaServer {
 				// Evaluate inner text.
 				try {
 					
-					// Bind area server with scripting engine.
-					server.state.scriptingEngine.bindAreaServer(server);
+					// Bind area server with JavaScript engine.
+					server.bindWithScriptEngine(server.state.javaScriptEngine.instance);
 					// If this block is local (not global) wrap the code with function invocation.
 					if (!isGlobal) {
 						innerText = String.format("(function(){%s})();", innerText);
 					}
 					
-					// Run script code.
-					server.state.scriptingEngine.eval(innerText);
+					// Run JavaScript code.
+					server.state.javaScriptEngine.instance.eval(innerText);
 				}
 				catch (Exception e) {
-					
-					e.printStackTrace();
 					
 					server.state.blocks.popBlockDescriptor(false);
 					
@@ -2707,7 +2715,7 @@ public class AreaServer {
 			}
 		});
 	}
-
+	
 	/**
 	 * INDENT processor.
 	 */
@@ -3018,7 +3026,6 @@ public class AreaServer {
 				if (name == null) {
 					throwError("server.messageMissingTrayMenuName");
 				}
-				
 				// Get "action" property.
 				String action = properties.getProperty("url");
 				if (action == null) {
@@ -3029,24 +3036,6 @@ public class AreaServer {
 				server.state.trayMenu.add(name, action);
 				
 				return "";
-			}
-		});
-	}
-	
-	/**
-	 * POST processor
-	 */
-	private static void postProcessor() {
-		
-		simpleSingleTagProcessors.put("POST", new SimpleSingleTagProcessor() {
-			@Override
-			public String processTag(AreaServer server) throws Exception {
-				
-				String post = server.state.request.post();
-				
-				post = Utility.replaceEmptyLines(post, newLineTag);
-				
-				return post;
 			}
 		});
 	}
@@ -3125,10 +3114,7 @@ public class AreaServer {
 			// Prepare prerequisites and evaluate expression.
 			putFunctionsIntoJavaScriptEngine(this);
 			
-			// Wrap the script code into anonymous function, run it and get result value.
-			String scriptText = String.format("(function(){return %s;})()", text);
-			Object value = state.scriptingEngine.eval(scriptText);
-			
+			Object value = state.javaScriptEngine.instance.eval(String.format("(function(){return %s;})()", text));
 			return value;
 		}
 		catch (Exception e) {
@@ -3184,8 +3170,7 @@ public class AreaServer {
 				+ "function getCssRules() { return server.getCssRules(); }; "
 				+ "function trace(object) { var dbg = new com.maclan.server.JavaScriptDebugger(); dbg.display(typeof object, object); }; ";
 		
-		// Prepare the above code in the scripting engine so that all listed functions are defined in the script context.
-		server.state.scriptingEngine.preparePrerequisites(javaScriptFunctionsDefinition);
+		server.state.javaScriptEngine.instance.eval(javaScriptFunctionsDefinition);
 	}
 
 	/**
@@ -3764,7 +3749,7 @@ public class AreaServer {
 		}
 		
 		// Check value type.
-		if (!type.isAssignableFrom(value.getClass())) {
+		if (value.getClass() != type) {
 			throwError("server.messageBadExpressionValueType", value.getClass().getCanonicalName(),
 					type.getCanonicalName());
 		}
@@ -3895,7 +3880,7 @@ public class AreaServer {
 	/**
 	 * JavaScript engine pool.
 	 */
-	private static ArrayList<ScriptingEngine> javaScriptEnginePool;
+	private static ArrayList<JavaScriptEngine> javaScriptEnginePool;
 
 	/**
 	 * Create JavaScript engine.
@@ -3904,35 +3889,35 @@ public class AreaServer {
 		
 		// Create Nashorn engine pool.
 		if (javaScriptEnginePool == null) {
-			javaScriptEnginePool = new ArrayList<ScriptingEngine>();
+			javaScriptEnginePool = new ArrayList<JavaScriptEngine>();
 			
 			for (int index = 0; index < javaScriptEnginesCount; index++) {
 				
-				ScriptingEngine engine = new ScriptingEngine();
-				engine.create();
+				JavaScriptEngine nashorn = new JavaScriptEngine();
+				ScriptEngineManager jsEngineManager = new ScriptEngineManager();
+				nashorn.instance = jsEngineManager.getEngineByName("nashorn");
+				nashorn.used = false;
 				
-				engine.used = false;
-				
-				javaScriptEnginePool.add(engine);
+				javaScriptEnginePool.add(nashorn);
 			}
 		}
 		
-		ScriptingEngine engine = null;
+		JavaScriptEngine nashorn = null;
 		
 		// Get not used engine from pool.
 		while (true) {
 			
 			int index = 0;
 			for (; index < javaScriptEnginesCount; index++) {
-				ScriptingEngine aNashorn = javaScriptEnginePool.get(index);
+				JavaScriptEngine aNashorn = javaScriptEnginePool.get(index);
 				if (!aNashorn.used) {
-					engine = aNashorn;
+					nashorn = aNashorn;
 					//System.err.format("Used Nashorn #%d in thread #%d\n", index, Thread.currentThread().getId());
 					break;
 				}
 			}
 			
-			if (engine != null) {
+			if (nashorn != null) {
 				break;
 			}
 			
@@ -3941,7 +3926,7 @@ public class AreaServer {
 				synchronized (javaScriptEnginePool) {
 					
 					//System.err.format("Waiting in thread #%d\n", Thread.currentThread().getId());
-					while (!ScriptingEngine.signalReleased) {
+					while (!JavaScriptEngine.signalReleased) {
 						javaScriptEnginePool.wait(20);
 					}
 				}
@@ -3950,10 +3935,10 @@ public class AreaServer {
 			}
 		}
 		
-		// Use scripting engine and initialize it.
-		state.scriptingEngine = engine;
-		engine.used = true;
-		state.scriptingEngine.initialize();
+		// Use Nashorn and set its context.
+		state.javaScriptEngine = nashorn;
+		nashorn.used = true;
+		state.javaScriptEngine.instance.setContext(new SimpleScriptContext());
 	}
 
 	/**
@@ -4282,11 +4267,7 @@ public class AreaServer {
 								packTextEx();
 							}
 							
-							// Replace new line tags
-							String textString = replaceNewLineTags(state.text);
-							
-							// Do post processing
-							textString = response2.postProcessText(textString);
+							String textString = response2.postProcessText(state.text.toString());
 							
 							// Try to execute Area Server API operation.
 							Obj<Boolean> isResponse = new Obj<Boolean>();
@@ -4336,8 +4317,8 @@ public class AreaServer {
 		// Notify Nashorn pool that engine was signalReleased.
 		synchronized (javaScriptEnginePool) {
 			
-			state.scriptingEngine.used = false;
-			ScriptingEngine.signalReleased = true;
+			state.javaScriptEngine.used = false;
+			JavaScriptEngine.signalReleased = true;
 			try {
 				javaScriptEnginePool.notify();
 				//System.err.format("Notified in thread #%d\n", Thread.currentThread().getId());
@@ -4350,22 +4331,6 @@ public class AreaServer {
 		return true;
 	}
 	
-	/**
-	 * Replace new line tags
-	 * @param text
-	 * @return
-	 */
-	private String replaceNewLineTags(StringBuilder text) {
-		
-		String textString = text.toString();
-		
-		textString = textString.replaceAll(newLineTag + "\r?\n", this.state.newLine + this.state.newLine);
-		
-		textString = textString.replaceAll(newLineTag, this.state.newLine);
-		
-		return textString;
-	}
-
 	/**
 	 * Initialize top level objects.
 	 */
@@ -4504,8 +4469,6 @@ public class AreaServer {
 			for (TrayMenuResult.Item item : state.trayMenu.getItems()) {
 				
 				item.name = evaluateText(item.name, String.class, false);
-				item.action = evaluateText(item.action, String.class, false);
-				
 				xml += String.format("<MenuItem name='%s'>%s</MenuItem>\n", item.name, item.action);
 			}
 			
@@ -5202,8 +5165,12 @@ public class AreaServer {
 		throws Exception {
 
 		Obj<Area> outputArea = new Obj<Area>();
+		
+		// Get anchor areas.
+		LinkedList<Area> anchorAreas = getAnchorAreas();
+		
 		// Load area ID for given area alias.
-		MiddleResult result = state.middle.loadAreaWithAlias(alias, outputArea);
+		MiddleResult result = state.middle.loadAreaWithAlias(anchorAreas, alias, outputArea);
 		if (result.isNotOK()) {
 			throwError("server.messageCannotLoadAreaWithAlias", alias);
 		}
@@ -5211,6 +5178,24 @@ public class AreaServer {
 		return outputArea.ref;
 	}
 
+	/**
+	 * Get this area server anchor areas for searching for area aliases in project areas.
+	 * @return - anchor areas for this instance of Area Server.
+	 */
+	private LinkedList<Area> getAnchorAreas() {
+		
+		// Add anchor areas into output list.
+		LinkedList<Area> anchorAreas = new LinkedList<Area>();
+		
+		// Add current requested area.
+		Area requestedArea = getRequestedArea();
+		if (requestedArea != null) {
+			anchorAreas.add(requestedArea);
+		}
+		
+		// Return output list.
+		return anchorAreas;
+	}
 
 	/**
 	 * Process area server text.
@@ -6070,13 +6055,13 @@ public class AreaServer {
 		// Try to get area and slot.
 		//
 		// Get area from properties.
-		final String knownPropertyStart = "$";
+		final String knownPropertyPrefix = "$";
 		Obj<Boolean> existsAreaSpecification = new Obj<Boolean>(false);
 		
-		Area area = getAreaFromProperties(this, properties, knownPropertyStart, existsAreaSpecification);
+		Area area = getAreaFromProperties(this, properties, knownPropertyPrefix, existsAreaSpecification);
 
 		// Get slot alias from properties.
-		String slotAlias = properties.getProperty(knownPropertyStart + "slot");
+		String slotAlias = properties.getProperty(knownPropertyPrefix + "slot");
 		if (slotAlias != null) {
 			slotAlias = evaluateText(slotAlias, String.class, false);
 		}
@@ -6185,8 +6170,8 @@ public class AreaServer {
 			parser.parseFullCommand(innerText);
 			endPosition.ref = parser.getPosition();
 			
-			// Set the $inner variable
-			block.createBlockVariable("$inner", innerText.toString());
+			String inner = innerText.toString();
+			state.blocks.createVariable("$inner", inner);
 		}
 		
 		// Get inner text.
@@ -6525,7 +6510,7 @@ public class AreaServer {
 
 		Obj<Slot> slot = new Obj<Slot>();
 		MiddleResult result = state.middle.loadSlotInheritanceLevel(area, slotAlias, LoadSlotHint.superAreas, skipDefault, parent, inheritanceLevel, slot, loadValue);
-		if (result.isNotOK()) {
+		if (result.isNotOK() || slot.ref == null) {
 			
 			result = state.middle.loadSlotInheritanceLevel(area, slotAlias, LoadSlotHint.subAreas, skipDefault, parent, inheritanceLevel, slot, loadValue);
 			if (result.isNotOK()) {
@@ -7627,37 +7612,31 @@ public class AreaServer {
 	public void input(Slot slot)
 		throws Exception {
 		
-		MiddleResult result = MiddleResult.OK;
-		
 		// If the slot reads external provider, load value from it.
-		boolean readsInput = slot.getReadsInput();
 		boolean isExternalProvider = slot.isExternalProvider();
-
-		// Load slot value.
+		boolean readsInput = slot.getReadsInput();
 		if (isExternalProvider && readsInput) {
-			result = MiddleUtility.loadSlotValueFromExternal(slot);
-		}
-		
-		if (result.isOK()) {
 			
-			// Save the value
-			long slotId = slot.getId();
-			String textValue = slot.getTextValue();
-			
-			Obj<Boolean> slotUpdated = new Obj<Boolean>();
-			result = state.middle.updateSlotTextValue(slotId, textValue, slotUpdated);
-			
-			// Add slot to list of updated slots.
-			if (isExternalProvider) {
+			// Load slot value.
+			MiddleResult result = MiddleUtility.loadSlotValueFromExternal(slot);
+			if (result.isOK()) {
+				
+				// Save the value
+				long slotId = slot.getId();
+				String textValue = slot.getTextValue();
+				
+				Obj<Boolean> slotUpdated = new Obj<Boolean>();
+				result = state.middle.updateSlotTextValue(slotId, textValue, slotUpdated);
+				
+				// Add slot to list of updated slots.
 				slot.setUpdatedExternally(slotUpdated.ref);
+				if (slotUpdated.ref) {
+					state.updatedSlots.add(slot.getId());
+				}
 			}
 			
-			if (slotUpdated.ref) {
-				state.updatedSlots.add(slot.getId());
-			}
+			result.throwPossibleException();
 		}
-			
-		result.throwPossibleException();
 	}
 	
 	/**

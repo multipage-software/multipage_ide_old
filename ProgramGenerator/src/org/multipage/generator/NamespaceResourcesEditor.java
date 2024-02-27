@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -967,7 +967,8 @@ public abstract class NamespaceResourcesEditor extends JPanel implements Searcha
 	    addResourceToList(resource);
 		// Update information.
 	    long resourceId = resource.getId();
-		Event.propagate(NamespaceResourcesEditor.this, Event.newTextResource, resourceId);
+	    // TODO: <---REFACTOR EVENTS
+		//Event.propagate(NamespaceResourcesEditor.this, Event.newTextResource, resourceId);
 	}
 	
 	/**

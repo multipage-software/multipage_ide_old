@@ -3,11 +3,11 @@
  */
 package com.maclan.server;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.Enumeration;
 
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.*;
+import javax.servlet.http.*;
 
 /**
  * @author user
@@ -29,9 +29,9 @@ public class CachedHttpServletRequest extends HttpServletRequestWrapper {
 	 * Constructor.
 	 * @param request
 	 */
-	public CachedHttpServletRequest(org.eclipse.jetty.server.Request request) {
+	public CachedHttpServletRequest(HttpServletRequest request) {
 		
-		super(request);
+		super (request);
 		
 		Enumeration<String> headers = request.getHeaderNames();
 		String header = request.getHeader("Content-Length");
@@ -50,6 +50,7 @@ public class CachedHttpServletRequest extends HttpServletRequestWrapper {
 	/**
 	 * cached input stream.
 	 */
+	@Override
 	public ServletInputStream getInputStream() throws IOException {
 		
 		if (cachedInputStream == null) {

@@ -1,1 +1,1 @@
-Version aplha (build YYYY.MM.DD HH:MM)
+Version 1.1.1 (build YYYY.MM.DD HH:MM)

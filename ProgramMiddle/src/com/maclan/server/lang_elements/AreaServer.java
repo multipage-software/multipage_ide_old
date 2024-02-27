@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -17,7 +17,6 @@ import org.multipage.util.TextOutputCapturer;
 import com.maclan.Language;
 import com.maclan.server.BlockDescriptor;
 import com.maclan.server.JavaScriptBlockDescriptor;
-import com.maclan.server.ScriptingEngine;
 
 import jdk.nashorn.internal.runtime.Undefined;
 
@@ -303,21 +302,11 @@ public class AreaServer implements BoxedObject {
 	
 	/**
 	 * Returns this area.
-	 * @param undefined
+	 * @param areaId
 	 * @return
 	 * @throws Exception 
 	 */
 	public Area area(Undefined undefined) throws Exception {
-		
-		return area();
-	}
-	
-	/**
-	 * Returns this area.
-	 * @return
-	 * @throws Exception 
-	 */
-	public Area area() throws Exception {
 		
 		return thisArea;
 	}
@@ -543,10 +532,6 @@ public class AreaServer implements BoxedObject {
 			return ((Area) areaObject).area;
 		}
 		else if (areaObject == null) {
-			
-			if (ScriptingEngine.is(ScriptingEngine.AvailableEngine.graalPolyglot)) {
-				return server.state.area;
-			}
 			throw new Exception(Resources.getString("server.messageExpectedAreaParameterIsNull"));
 		}
 		// If an input area parameter is JavaScript undefined, use thisArea.

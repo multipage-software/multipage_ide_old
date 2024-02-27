@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 18-01-2018
  *
@@ -10,13 +10,15 @@ import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.Images;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
+import org.multipage.util.Closable;
 
 import com.maclan.Slot;
 import com.maclan.SlotType;
@@ -26,7 +28,7 @@ import com.maclan.SlotType;
  * @author
  *
  */
-public class SlotEditorFrame extends SlotEditorBaseFrame {
+public class SlotEditorFrame extends SlotEditorBaseFrame implements Closable {
 
 	// $hide>>$
 	/**
@@ -46,7 +48,7 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		SlotEditorBaseFrame.seriliazeData(inputStream);
@@ -56,7 +58,7 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void seriliazeData(ObjectOutputStream outputStream)
+	public static void seriliazeData(StateOutputStream outputStream)
 		throws IOException {
 
 		SlotEditorBaseFrame.seriliazeData(outputStream);
@@ -139,8 +141,8 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	 * @param modal
 	 * @param useHtmlEditor
 	 * @param foundAttr
+	 * @wbp.parser.constructor 
 	 */
-	@SuppressWarnings("serial")
 	public SlotEditorFrame(Window parentWindow, Slot slot, boolean isNew, boolean modal, boolean useHtmlEditor,
 			FoundAttr foundAttr) {
 		
@@ -313,5 +315,24 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 	protected void setIcons() {
 		
 		setIconImage(Images.getImage("org/multipage/basic/images/main_icon.png"));
+	}
+
+	/**
+	 * Close the frame.
+	 */
+	@Override
+	public void close() {
+		
+		// Remove listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
 	}
 }

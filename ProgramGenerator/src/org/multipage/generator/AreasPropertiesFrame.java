@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -54,7 +54,7 @@ public class AreasPropertiesFrame extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -69,7 +69,7 @@ public class AreasPropertiesFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -85,21 +85,11 @@ public class AreasPropertiesFrame extends JFrame {
 	 * Update frames.
 	 */
 	public static void updateInformation() {
-		
-		AreasProperties.declineTextChangeEvents = true;
-		
+
 		// Update area properties frames.
 		for (AreasPropertiesFrame frame : frames) {
 			frame.updateFrameInformation();
 		}
-
-		// Post enabling text change events.
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				AreasProperties.declineTextChangeEvents = false;
-			}
-		});
 	}
 
 	/**
@@ -119,10 +109,10 @@ public class AreasPropertiesFrame extends JFrame {
 	private JPanel panel;
 
 	/**
-	 * Create new frame.
+	 * Display new frame.
 	 * @param area
 	 */
-	public static void createNew(Area area) {
+	public static void displayNew(Area area) {
 		
 		AreasPropertiesFrame frame = new AreasPropertiesFrame(area);
 		frames.add(frame);

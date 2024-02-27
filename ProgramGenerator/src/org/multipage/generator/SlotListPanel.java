@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -29,7 +29,7 @@ import java.io.*;
  * @author
  *
  */
-public class SlotListPanel extends JPanel {
+public class SlotListPanel extends JPanel implements Closable {
 
 	// $hide>>$
 	/**
@@ -106,7 +106,7 @@ public class SlotListPanel extends JPanel {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		splitterPositionFromEnd = inputStream.readInt();
@@ -120,7 +120,7 @@ public class SlotListPanel extends JPanel {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeInt(splitterPositionFromEnd);
@@ -298,7 +298,7 @@ public class SlotListPanel extends JPanel {
 		textDescription.setBorder(null);
 		textDescription.setContentType("text/html");
 		textDescription.setFont(new Font("Arial", Font.PLAIN, 12));
-		textDescription.setBackground(SystemColor.control);
+		textDescription.setBackground(UIManager.getColor("info"));
 		textDescription.setEditable(false);
 		scrollPaneDescription.setViewportView(textDescription);
 		
@@ -489,7 +489,8 @@ public class SlotListPanel extends JPanel {
 		}
 		
 		// Update information.
-		Event.propagate(SlotListPanel.this, Event.setSlotsDefaultValues);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(SlotListPanel.this, Event.setSlotsDefaultValues);
 	}
 
 	/**
@@ -553,23 +554,11 @@ public class SlotListPanel extends JPanel {
 		initColumnListener();
 		// Enable web links in description.
 		Utility.enableWebLinks(this, textDescription);
-		// Init timer
-		initLoadDescriptionTimer();
-		// Set listener
-		setListener();
-	}
-	
-	/**
-	 * Set listener
-	 */
-	private void setListener() {
 		
-		// Create event receiver
-		Event.receiver(this, ActionGroup.slotViewChange, data -> {
-			
-			// Update slot list
-			update();
-		});
+		initLoadDescriptionTimer();
+		
+		// Set listeners.
+		setListeners();
 	}
 
 	/**
@@ -605,7 +594,33 @@ public class SlotListPanel extends JPanel {
 			}
 		});
 	}
-
+	
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
+		
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasDiagram, message -> {
+			
+			// Get selected area IDs.
+			HashSet<Long> areaIds = message.getRelatedInfo();
+			if (areaIds != null) {
+				
+				// Set edited areas.
+				LinkedList<Area> areas = ProgramGenerator.getAreas(areaIds);
+				setAreas(areas);
+			}
+			
+			// Get selected slot IDs.
+			HashSet<Long> selectedSlotIds = message.getAdditionalInfo(0);
+			if (selectedSlotIds != null) {
+				
+				// Select slot IDs.
+				selectSlotIds(selectedSlotIds);
+			}
+		});
+	}
+	
 	/**
 	 * Load dialog.
 	 */
@@ -1039,7 +1054,7 @@ public class SlotListPanel extends JPanel {
         ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/search_icon.png", this, "onSearch", "org.multipage.generator.tooltipSearchInSlots");
         toolBar.addSeparator();
         buttonShowUserSlots = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/preferred.png", this, "onShowUser", "org.multipage.generator.tooltipShowUserSlots");
-        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/selected.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
+        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/only_found.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
         toolBar.addSeparator();
         ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/help_small.png", this, "onEditSlotDescription", "org.multipage.generator.tooltipEditUserSlotDescription");
 	}
@@ -1250,7 +1265,8 @@ public class SlotListPanel extends JPanel {
 		onChange();
 		
 		// Update information.
-		Event.propagate(SlotListPanel.this, Event.removeUserSlots);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(SlotListPanel.this, Event.removeUserSlots);
 	}
 
 	/**
@@ -1402,6 +1418,63 @@ public class SlotListPanel extends JPanel {
 			loadSlotDescription();
 		});
 	}
+	
+	/**
+	 * Select
+	 * @param slotIds
+	 */
+	// TODO: <---COPY to new version
+	public void selectSlotIds(HashSet<Long> slotIds) {
+		
+		// Get selection model.
+		ListSelectionModel selectionModel = tableSlots.getSelectionModel();
+		if (selectionModel == null) {
+			return;
+		}
+		
+		selectionModel.clearSelection();
+		
+		for (Long slotId : slotIds) {
+			if (slotIds == null) {
+				continue;
+			}
+			
+			// Add slot ID selection.
+			addSelectionSlotId(slotId);
+		}
+	}
+	
+	/** 
+	 * Add slot selection.
+	 * @param slotId
+	 */
+	private void addSelectionSlotId(Long slotId) {
+		
+		// Get selection model.
+		ListSelectionModel selectionModel = tableSlots.getSelectionModel();
+		if (selectionModel == null) {
+			return;
+		}
+		
+		// Find slot index.
+		int slotCount = tableModel.getRowCount();
+		for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+			
+			// Get slot.
+			Slot slot = tableModel.get(slotIndex);
+			if (slot == null) {
+				continue;
+			}
+			
+			// Check slot ID.
+			long foundSlotId = slot.getId();
+			if (foundSlotId == slotId) {
+			
+				// Select row with slot ID.
+				selectionModel.addSelectionInterval(slotIndex, slotIndex);
+			}
+		}
+	}
 
 	/**
 	 * Initialize load description timer.
@@ -1525,20 +1598,11 @@ public class SlotListPanel extends JPanel {
 	public void onUpdate() {
 		
 		// Reset found slots.
-		update();
-	}
-	
-	/**
-	 * Update the list.
-	 */
-	public void update() {
-		
-		// Reset found slots.
 		escapeFoundSlotsMode();
 		
 		// Update information.
 		updatePanelInformation();
-	}	
+	}
 
 	/**
 	 * Select all items.
@@ -2190,6 +2254,26 @@ public class SlotListPanel extends JPanel {
 		// Update data.
 		onChange();
 		
-		Event.propagate(SlotListPanel.this, Event.moveSlots);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(SlotListPanel.this, Event.moveSlots);
+	}
+	
+	/**
+	 * Called when the panel is closed.
+	 */
+	@Override
+	public void close() {
+		
+		// Remove listeners.
+		removeListeners();
+	}
+	
+	/**
+	 * Remove listeners.
+	 */
+	private void removeListeners() {
+		
+		// Remove event receivers.
+		ApplicationEvents.removeReceivers(this);
 	}
 }

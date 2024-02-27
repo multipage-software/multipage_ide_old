@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -176,32 +176,33 @@ public class LanguageEditor extends JDialog {
 		textIdentifier.setColumns(10);
 		
 		labelIcon = new JLabel("");
+		springLayout.putConstraint(SpringLayout.WEST, labelIcon, 22, SpringLayout.EAST, textIdentifier);
+		springLayout.putConstraint(SpringLayout.EAST, labelIcon, -116, SpringLayout.WEST, labelId);
 		labelIcon.setHorizontalAlignment(SwingConstants.CENTER);
-		springLayout.putConstraint(SpringLayout.WEST, labelIcon, 281, SpringLayout.WEST, getContentPane());
 		labelIcon.setMaximumSize(new Dimension(32, 32));
 		springLayout.putConstraint(SpringLayout.NORTH, labelIcon, 6, SpringLayout.SOUTH, textDescription);
 		springLayout.putConstraint(SpringLayout.SOUTH, labelIcon, -23, SpringLayout.NORTH, buttonCancel);
 		getContentPane().add(labelIcon);
 		
 		buttonLoadImage = new JButton("");
-		springLayout.putConstraint(SpringLayout.EAST, labelIcon, -2, SpringLayout.WEST, buttonLoadImage);
+		springLayout.putConstraint(SpringLayout.NORTH, buttonLoadImage, 6, SpringLayout.SOUTH, textDescription);
+		springLayout.putConstraint(SpringLayout.WEST, buttonLoadImage, -35, SpringLayout.EAST, getContentPane());
 		buttonLoadImage.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onLoadIcon();
 			}
 		});
-		springLayout.putConstraint(SpringLayout.NORTH, buttonLoadImage, 10, SpringLayout.SOUTH, textDescription);
 		buttonLoadImage.setMinimumSize(new Dimension(25, 25));
 		buttonLoadImage.setMaximumSize(new Dimension(25, 25));
 		buttonLoadImage.setMargin(new Insets(2, 0, 0, 0));
 		buttonLoadImage.setPreferredSize(new Dimension(25, 25));
-		springLayout.putConstraint(SpringLayout.WEST, buttonLoadImage, 353, SpringLayout.WEST, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, buttonLoadImage, 0, SpringLayout.EAST, buttonCancel);
 		getContentPane().add(buttonLoadImage);
 		
 		buttonLoadFromFile = new JButton("");
-		springLayout.putConstraint(SpringLayout.WEST, buttonLoadFromFile, 0, SpringLayout.WEST, buttonLoadImage);
-		springLayout.putConstraint(SpringLayout.EAST, buttonLoadFromFile, 0, SpringLayout.EAST, buttonLoadImage);
+		springLayout.putConstraint(SpringLayout.NORTH, buttonLoadFromFile, 3, SpringLayout.SOUTH, buttonLoadImage);
+		springLayout.putConstraint(SpringLayout.WEST, buttonLoadFromFile, -35, SpringLayout.EAST, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, buttonLoadFromFile, -10, SpringLayout.EAST, getContentPane());
 		buttonLoadFromFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onLoadIconFromFile();
@@ -211,13 +212,12 @@ public class LanguageEditor extends JDialog {
 		buttonLoadFromFile.setMaximumSize(new Dimension(25, 25));
 		buttonLoadFromFile.setMargin(new Insets(2, 0, 0, 0));
 		buttonLoadFromFile.setPreferredSize(new Dimension(25, 25));
-		springLayout.putConstraint(SpringLayout.NORTH, buttonLoadFromFile, 6, SpringLayout.SOUTH, buttonLoadImage);
 		getContentPane().add(buttonLoadFromFile);
 		
 		buttonResetImage = new JButton("");
-		springLayout.putConstraint(SpringLayout.WEST, buttonResetImage, 0, SpringLayout.WEST, buttonLoadImage);
-		springLayout.putConstraint(SpringLayout.SOUTH, buttonResetImage, -6, SpringLayout.NORTH, buttonCancel);
-		springLayout.putConstraint(SpringLayout.EAST, buttonResetImage, 0, SpringLayout.EAST, buttonCancel);
+		springLayout.putConstraint(SpringLayout.NORTH, buttonResetImage, 3, SpringLayout.SOUTH, buttonLoadFromFile);
+		springLayout.putConstraint(SpringLayout.WEST, buttonResetImage, -35, SpringLayout.EAST, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, buttonResetImage, -10, SpringLayout.EAST, getContentPane());
 		buttonResetImage.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onResetIcon();

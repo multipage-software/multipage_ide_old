@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -314,7 +314,8 @@ public class AreaDependenciesPanel extends AreaDependenciesPanelBase {
 								relatedAreaId, relationName);
 						if (result.isOK()) {
 							currentArea.setSubRelationNameLight(relatedAreaId, relationName);
-							Event.propagate(AreaDependenciesPanel.this, Event.updateAreaSubRelation, currentAreaId, relatedAreaId);
+							// TODO: <---REFACTOR EVENTS
+							//Event.propagate(AreaDependenciesPanel.this, Event.updateAreaSubRelation, currentAreaId, relatedAreaId);
 						}
 						else {
 							// Report error.

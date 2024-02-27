@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -22,8 +22,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -67,16 +65,23 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.SignalGroup;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 import com.maclan.Area;
 import com.maclan.AreaTreeState;
@@ -118,7 +123,7 @@ public class AreaTraceFrame extends JFrame {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		loadSubAreasState = inputStream.readBoolean();
@@ -147,7 +152,7 @@ public class AreaTraceFrame extends JFrame {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeBoolean(loadSubAreasState);
@@ -340,7 +345,6 @@ public class AreaTraceFrame extends JFrame {
 	private JTabbedPane tabbedPane;
 	private JPanel panelList;
 	private JPanel panelTree;
-	private JButton buttonReload;
 	private JLabel labelFilter;
 	private JTextField textFilter;
 	private JCheckBox checkCaseSensitive;
@@ -480,18 +484,6 @@ public class AreaTraceFrame extends JFrame {
 		buttonClose.setPreferredSize(new Dimension(80, 25));
 		buttonClose.setMargin(new Insets(0, 0, 0, 0));
 		getContentPane().add(buttonClose);
-		
-		buttonReload = new JButton("org.multipage.generator.textReload");
-		buttonReload.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				reload();
-			}
-		});
-		springLayout.putConstraint(SpringLayout.NORTH, buttonReload, 0, SpringLayout.NORTH, buttonClose);
-		springLayout.putConstraint(SpringLayout.WEST, buttonReload, 0, SpringLayout.WEST, radioSubAreas);
-		buttonReload.setPreferredSize(new Dimension(80, 25));
-		buttonReload.setMargin(new Insets(0, 0, 0, 0));
-		getContentPane().add(buttonReload);
 		
 		checkShowIds = new JCheckBox("org.multipage.generator.textShowIds");
 		checkShowIds.addActionListener(new ActionListener() {
@@ -1035,32 +1027,24 @@ public class AreaTraceFrame extends JFrame {
 	 */
 	private void createToolBars() {
 		
+		// TODO: <---COPY to new version
 		// Main tool bar.
-		toggleDebug = ToolBarKit.addToggleButton(toolBarMain,  "org/multipage/generator/images/debug.png", this, "onToggleDebug", "org.multipage.generator.tooltipEnableDisplaySourceCode");
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", this, "onUpdateInformation", "org.multipage.generator.tooltipUpdateData");
+		toggleDebug = ToolBarKit.addToggleButton(toolBarMain,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", () -> onToggleDebug());
+		toggleDebug.setVisible(false);
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdate", () -> onUpdateInformation());
 		toolBarMain.addSeparator();
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/render.png", this, "onRender", "org.multipage.generator.tooltipRenderHtmlPages");
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", () -> onRender());
 		toolBarMain.addSeparator();
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/display_home_page.png", this, "onDisplayHomePage", "org.multipage.generator.tooltipDisplayHomePage");
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipMonitorHomePage", () -> onDisplayHomePage());
 		
 		// Area tree tool bar.
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", this, "onExpandTree", "org.multipage.generator.tooltipExpandTree");
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", this, "onCollapseTree", "org.multipage.generator.tooltipCollapseTree");
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", "org.multipage.generator.tooltipExpandTree", () -> onExpandTree());
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", "org.multipage.generator.tooltipCollapseTree", () -> onCollapseTree());
 	}
-	
-	/**
-	 * On update data.
-	 */
-	@SuppressWarnings("unused")
-	private void onUpdateInformation() {
-		
-		Event.propagate(AreaTraceFrame.this, Event.update);
-	}
-	
+
 	/**
 	 * On render HTML pages.
 	 */
-	@SuppressWarnings("unused")
 	private void onRender() {
 		
 		GeneratorMainFrame.getFrame().onRender(this);
@@ -1069,10 +1053,11 @@ public class AreaTraceFrame extends JFrame {
 	/**
 	 * On display home page.
 	 */
-	@SuppressWarnings("unused")
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		// TODO: <---COPY to new version
+		// Transmit the "monitor home page" signal.
+		ApplicationEvents.transmit(this, GuiSignal.monitorHomePage);
 	}
 	
 	/**
@@ -1121,6 +1106,15 @@ public class AreaTraceFrame extends JFrame {
 				toggleDebug.setSelected(selected);
 			}
 		});
+	}
+	
+	/**
+	 * On update dialog.
+	 */
+	private void onUpdateInformation() {
+		
+		reload();
+		tree.updateUI();
 	}
 	
 	/**
@@ -1241,6 +1235,14 @@ public class AreaTraceFrame extends JFrame {
 		    	splitPane.setDividerLocation(location);
 		    	splitPaneProviders.setDividerLocation(location2);
 		    }
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive "update areas" messages.
+		ApplicationEvents.receiver(this, SignalGroup.create(UpdateSignal.updateAreasModel, UpdateSignal.updateAreasTraceFrame), message -> {
+			
+			reload();
+			tree.updateUI();
 		});
 	}
 
@@ -1456,7 +1458,6 @@ public class AreaTraceFrame extends JFrame {
 		
 		tabbedPane.setIconAt(1, Images.getIcon("org/multipage/generator/images/list.png"));
 		buttonClose.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
-		buttonReload.setIcon(Images.getIcon("org/multipage/generator/images/update_icon.png"));
 		menuSelectSubNodes.setIcon(Images.getIcon("org/multipage/generator/images/select_subnodes.png"));
 		menuAddSubArea.setIcon(Images.getIcon("org/multipage/generator/images/area_node.png"));
 		menuRemoveArea.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
@@ -1475,7 +1476,6 @@ public class AreaTraceFrame extends JFrame {
 		Utility.localize(radioSubAreas);
 		Utility.localize(radioSuperAreas);
 		Utility.localize(tabbedPane);
-		Utility.localize(buttonReload);
 		Utility.localize(labelFilter);
 		Utility.localize(checkCaseSensitive);
 		Utility.localize(checkWholeWords);

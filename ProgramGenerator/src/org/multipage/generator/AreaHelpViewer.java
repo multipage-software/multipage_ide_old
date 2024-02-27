@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -50,7 +50,7 @@ public class AreaHelpViewer extends JFrame {
 	 * Load data.
 	 * @param inputStream
 	 */
-	public static void serializeData(ObjectInputStream inputStream)
+	public static void serializeData(StateInputStream inputStream)
 			throws IOException, ClassNotFoundException {
 		
 		Object object = inputStream.readObject();
@@ -67,7 +67,7 @@ public class AreaHelpViewer extends JFrame {
 	 * Save data.
 	 * @param outputStream
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 			throws IOException {
 		
 		outputStream.writeObject(bounds);
@@ -136,19 +136,23 @@ public class AreaHelpViewer extends JFrame {
 		scrollPaneAreas.setPreferredSize(new Dimension(2, 54));
 		
 		listAreas = new JList();
+		listAreas.setSelectionForeground(UIManager.getColor("infoText"));
+		listAreas.setSelectionBackground(UIManager.getColor("info"));
 		listAreas.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		scrollPaneAreas.setViewportView(listAreas);
-		listAreas.setForeground(Color.BLACK);
+		listAreas.setForeground(UIManager.getColor("info"));
 		listAreas.setOpaque(true);
-		listAreas.setBackground(Color.WHITE);
-		listAreas.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		listAreas.setBackground(SystemColor.infoText);
+		listAreas.setFont(new Font("Tahoma", Font.BOLD, 16));
 		
 		scrollPane = new JScrollPane();
 		splitPane.setRightComponent(scrollPane);
 		
 		textPane = new JTextPane();
+		textPane.setFont(new Font("Tahoma", Font.PLAIN, 11));
+		textPane.setForeground(UIManager.getColor("infoText"));
 		textPane.setEditable(false);
-		textPane.setBackground(Color.WHITE);
+		textPane.setBackground(UIManager.getColor("info"));
 		textPane.setContentType("text/html;charset=UTF-8");
 		scrollPane.setViewportView(textPane);
 	}

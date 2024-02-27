@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -228,7 +228,8 @@ public class RelatedAreaPanel extends JPanel {
 		textRelatedArea.setText("");
 		
 		// Update information.
-		Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
 	}
 
 	/**
@@ -269,6 +270,7 @@ public class RelatedAreaPanel extends JPanel {
 		textRelatedArea.setText(relatedArea != null ? relatedArea.getDescriptionForDiagram() : "");
 		
 		// Update information.
-		Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(RelatedAreaPanel.this, Event.updateRelatedArea, currentAreaId);
 	}
 }

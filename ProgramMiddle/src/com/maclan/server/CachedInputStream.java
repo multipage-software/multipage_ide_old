@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2018 (C) sechance
  * 
  * Created on : 05-04-2018
  *
@@ -8,6 +8,7 @@ package com.maclan.server;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedList;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
@@ -19,9 +20,15 @@ import javax.servlet.ServletInputStream;
 public class CachedInputStream extends ServletInputStream {
 	
 	/**
-	 * Cache with the data from the servlet input stream.
+	 * Cache with blocks of data from servlet input stream.
 	 */
-	private byte [] cache = new byte [] {};
+	private static final int blockLength = 1024;
+	private LinkedList<byte []> cache = new LinkedList<byte []>();
+	
+	/**
+	 * Number of bytes in cache.
+	 */
+	private int bytesInCache = 0;
 	
 	/**
 	 * Position in cache.
@@ -39,8 +46,20 @@ public class CachedInputStream extends ServletInputStream {
 	 */
 	public CachedInputStream(InputStream inputStream) throws IOException {
 		
-		// Get posted data
-		cache = inputStream.readAllBytes();
+		// Read bytes from input stream to blocks of data in the cache
+		int bytesRead = 0;
+		
+		do {
+			byte [] block = new byte [blockLength];
+			
+			bytesRead = inputStream.read(block);
+			if (bytesRead > 0) {
+				
+				cache.add(block);
+				bytesInCache += bytesRead;
+			}
+		}
+		while (bytesRead > 0 && bytesRead < blockLength);
 		
 		// Invoke listener method.
 		onDataAvailable();
@@ -51,15 +70,20 @@ public class CachedInputStream extends ServletInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-		
+				
 		// If there is nothing to read, return negative value.
-		if (position >= cache.length) {
+		if (position >= bytesInCache) {
 			onAllDataRead();
 			return -1;
 		}
 		
-		// Get single byte from the cache.
-		byte singleByte = cache[position];
+		// Get block number and position in block.
+		int blockNumber = position / blockLength;
+		int positionInBlock = position % blockLength;
+		
+		// Get block and a byte on given position.
+		byte [] block = cache.get(blockNumber);
+		byte singleByte = block[positionInBlock];
 		
 		// Increment position.
 		position++;
@@ -95,7 +119,7 @@ public class CachedInputStream extends ServletInputStream {
 	@Override
 	public boolean isFinished() {
 		
-		return position >= cache.length;
+		return position >= bytesInCache;
 	}
 	
 	/**
@@ -122,17 +146,5 @@ public class CachedInputStream extends ServletInputStream {
 	public synchronized void rewind() throws IOException {
 		
 		position = 0;
-	}
-	
-	/**
-	 * Get cached data
-	 * @param encoding
-	 * @return
-	 * @throws Exception 
-	 */
-	public byte [] getCachedData() throws Exception {
-		
-		// Get cache data.
-		return cache;
 	}
 }

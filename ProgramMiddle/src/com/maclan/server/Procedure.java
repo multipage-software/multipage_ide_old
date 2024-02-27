@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -88,10 +88,8 @@ public class Procedure {
 			
 			Object valueObject = parameterEntry.getValue();
 			if (valueObject instanceof String) {
-				
 				String specification = (String) valueObject;
 				if (!specification.isEmpty()) {
-					
 					if (specification.equals("out")) {
 						parameterType = ProcedureParameterType.output;
 					}

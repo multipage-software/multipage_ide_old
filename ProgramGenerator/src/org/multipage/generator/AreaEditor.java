@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -404,7 +404,8 @@ public class AreaEditor extends AreaEditorFrameBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		Event.propagate(this, Event.monitorHomePage);
+		// TODO: <---REFACTOR EVENTS
+		//Event.propagate(this, Event.monitorHomePage);
 	}
 	
 	/**

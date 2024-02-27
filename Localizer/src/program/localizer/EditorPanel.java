@@ -880,11 +880,6 @@ public class EditorPanel extends JPanel {
 				return name.startsWith(fileNameStart) && !name.equalsIgnoreCase(primaryFileName);
 			}
 		});
-		
-		// Trim the list
-		if (restFileNames == null) {
-			restFileNames = new File [] {};
-		}
 
 		// Parse primary file content.
 		Properties primaryProperties = parseFileContent(filePath);
@@ -892,10 +887,6 @@ public class EditorPanel extends JPanel {
 		
 		// Parse rest of files contents.
 		for (File file : restFileNames) {
-			
-			if (file == null) {
-				continue;
-			}
 			
 			String filePathAux = file.getPath();
 			if (!file.exists()) {

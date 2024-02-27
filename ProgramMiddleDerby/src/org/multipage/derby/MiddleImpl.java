@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -140,16 +140,24 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	                                                          "WHERE area_id = ? " +
 	                                                          "AND subarea_id = ?";
 	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectAreaSlots = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
+									              "FROM area_slot " +
+									              "WHERE area_slot.area_id = ? " +
+									              "AND area_slot.revision = 0 " +
+									              "ORDER BY alias ASC";
+			
+												  /*"SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
 	                                              "FROM area_slot " +
 	                                              "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot WHERE area_id = ? GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
 	                                              "WHERE area_slot.area_id = ? " +
-	                                              "ORDER BY alias ASC, revision DESC";
-
+	                                              "ORDER BY alias ASC, revision DESC";*/
+	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectAreaSlotsNotHidden = "SELECT alias, revision, text_value, get_localized_text(localized_text_value_id, ?) AS localized_text_value, integer_value, real_value, access, hidden, area_slot.id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider " +
 	                                              "FROM area_slot " +
-	                                              "INNER JOIN (SELECT alias AS aux_alias, MAX(revision) AS last_revision FROM area_slot WHERE area_id = ? GROUP BY alias) lst ON alias = lst.aux_alias AND revision = lst.last_revision " +
 	                                              "WHERE area_slot.area_id = ? " +
+	                                              "AND area_slot.revision = 0 " +
 	                                              "AND hidden = false " +
 	                                              "ORDER BY alias ASC, revision DESC";
 	
@@ -157,7 +165,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	                                                        "FROM area_slot " +
 	                                                        "WHERE alias = ? " +
 	                                                        "AND area_id = ? " +
-	                                                        "AND revision = ?";
+	                                                        // TODO: <---CHANGE Revisions disabled in alpha version.
+	                                                        "AND revision = 0"; //?";
 	
 	private static final String selectAreaSlotTextValueIds = "SELECT localized_text_value_id " +
             												 "FROM area_slot " +
@@ -183,14 +192,22 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 																		            "FROM constructor_holder " +
 																		            "WHERE group_id = ? " +
 																		            "ORDER BY name ASC, id ASC";
-	
+
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String selectAreaSlotTextIds = "SELECT area_slot.localized_text_value_id, area_slot.id, area_slot.alias, revision, area.id AS areaid, area.description_id, " +
+													    "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area " +
+												        "FROM area, area_slot " +
+												        "WHERE localized_text_value_id IS NOT NULL " +
+												        "AND area.id = area_slot.area_id " +
+												        "AND area_slot.revision = 0";
+	
+														/*"SELECT area_slot.localized_text_value_id, area_slot.id, area_slot.alias, revision, area.id AS areaid, area.description_id, " +
 															    "EXISTS( SELECT * FROM constructor_holder WHERE constructor_holder.area_id = area.id) AS is_constructor_area " +
 														        "FROM area, area_slot " +
 														        "INNER JOIN (SELECT alias AS slot_alias, MAX(revision) AS last_revision FROM area_slot GROUP BY alias) lst " +
 														        "ON area_slot.alias = slot_alias AND revision = last_revision " +
 														        "WHERE localized_text_value_id IS NOT NULL " +
-														        "AND area.id = area_slot.area_id";
+														        "AND area.id = area_slot.area_id";*/
 
 	private static final String selectLocalizedTexts = "SELECT text_id, text " +
 	                                                   "FROM localized_text " +
@@ -207,7 +224,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	
 	private static final String selectAreaSlotAliasesPublic = "SELECT alias FROM area_slot WHERE area_id = ? AND access = 'T'";
 	
-	private static final String selectAreaSlotAliases = "SELECT alias, revision FROM area_slot WHERE area_id = ?";
+	// TODO: <---CHANGE Revisions disabled in alpha version.
+	private static final String selectAreaSlotAliases = "SELECT alias, revision FROM area_slot WHERE area_id = ? AND revision = 0";
 	
 	private static final String selectAreaSuperAreasIdsInherited = "SELECT area_id " +
 	                                                               "FROM is_subarea " +
@@ -242,7 +260,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 
 	private static final String selectIsSubArea = "SELECT subarea_id, inheritance, priority_sub, priority_super, name_sub, name_super, hide_sub, recursion, id FROM is_subarea WHERE area_id = ? ORDER BY id ASC";
 
-	private static final String selectSlot = "SELECT alias, revision, created, localized_text_value_id, text_value, integer_value, real_value, access, hidden, id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider, reads_input, writes_output FROM area_slot WHERE area_id = ?";
+	// TODO: <---CHANGE Revisions disabled in alpha version.
+	private static final String selectSlot = "SELECT alias, revision, created, localized_text_value_id, text_value, integer_value, real_value, access, hidden, id, boolean_value, enumeration_value_id, color, description_id, is_default, name, value_meaning, preferred, user_defined, special_value, area_value, external_provider, reads_input, writes_output FROM area_slot WHERE area_id = ? AND revision = 0";
 
 	private static final String selectLocalizedText = "SELECT text FROM localized_text WHERE text_id = ? AND language_id = ?";
 	
@@ -601,6 +620,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	private static final String updateStartLanguage = "UPDATE start_language " +
 	                                                  "SET language_id = ?";
 	
+	// TODO: <---CHANGE Revisions disabled in alpha version.
 	private static final String updateAreaSlot = "UPDATE area_slot " +
 	                                             "SET alias = ?, localized_text_value_id = ?, text_value = ?, integer_value = ?, real_value = ?, access = ?, hidden = ?, boolean_value = ?, enumeration_value_id = ?, color = ?, area_value = ?, is_default = ?, name = ?, value_meaning = ?, preferred = ?, user_defined = ?, special_value = ? " +
 	                                             "WHERE alias = ? " +
@@ -1849,16 +1869,14 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				statement.setBoolean(11, newArea.isProjectRoot());
 				
 				UUID guid = UUID.randomUUID();
-				
-				long lsb = guid.getLeastSignificantBits();
-				long msb = guid.getMostSignificantBits();
-				
-				ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-				byteBuffer.putLong(msb);
-				byteBuffer.putLong(lsb);
-				
-				byte[] bytes = byteBuffer.array();
-				statement.setBytes(12, bytes);
+				Long msb = guid.getMostSignificantBits();
+				Long lsb = guid.getLeastSignificantBits();
+				ByteBuffer guidBuffer = ByteBuffer.allocate(2 * Long.BYTES);
+				guidBuffer.putLong(msb);
+				guidBuffer.putLong(lsb);
+				guidBuffer.flip();
+				byte [] guidBytes = guidBuffer.array();
+				statement.setBytes(12, guidBytes);
 				
 				statement.execute();
 				
@@ -6180,7 +6198,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 	private void loadSlotHelper(ResultSet set, Slot slot)
 				throws SQLException {
 		
-		Integer revision = (Integer) set.getObject("revision");
+		// TODO: <---CHANGE Revisions disabled in alpha version.
+		Integer revision = 0; //(Integer) set.getObject("revision");
 		
 		String textValue = (String) set.getObject("text_value");
 		String localizedTextValue = (String) set.getObject("localized_text_value");
@@ -6287,7 +6306,7 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			statement.setLong(1, currentLanguageId);
 			long areaId = holder.getId();
 			statement.setLong(2, areaId);
-			statement.setLong(3, areaId);
+			//statement.setLong(3, areaId);
 			
 			ResultSet set = statement.executeQuery();
 			while (set.next()) {
@@ -6388,7 +6407,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 			PreparedStatement statement = connection.prepareStatement(command);
 			statement.setString(1, slot.getAlias());
 			statement.setLong(2, holder.getId());
-			statement.setLong(3, slot.getRevision());
+			// TODO: <---CHANGE Revisions disabled in alpha version.
+			//statement.setLong(3, slot.getRevision());
 			
 			ResultSet set = statement.executeQuery();
 			if (set.next()) {
@@ -6577,7 +6597,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				PreparedStatement statement = connection.prepareStatement(command, Statement.RETURN_GENERATED_KEYS);
 				statement.setString(1, slot.getAlias().trim());
 				statement.setLong(2, holder.getId());
-				statement.setLong(3, slot.getRevision());
+				// TODO: <---CHANGE Revisions disabled in alpha version.
+				statement.setLong(3, 0); //slot.getRevision());
 				
 				// Reset values.
 				statement.setNull(4, Types.BIGINT);
@@ -6857,7 +6878,9 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				
 				statement.setString(18, slot.getAlias());
 				statement.setLong(19, holder.getId());
-				long revisionNumber = revision.ref;
+				
+				// TODO: <---CHANGE Revisions disabled in alpha version.
+				long revisionNumber = 0; //revision.ref;
 				statement.setLong(20, revisionNumber);
 				
 				statement.setString(1, newSlot.getAlias());
@@ -10399,7 +10422,8 @@ public class MiddleImpl extends MiddleLightImpl implements Middle {
 				statement = connection.prepareStatement(insertAreaSlot2);
 				statement.setString(1, slotData.alias.trim());
 				statement.setLong(2, areaTreeData.getNewAreaId(slotData.areaId));
-				statement.setLong(3, slotData.revision != null ? slotData.revision : 0);
+				// TODO: <---CHANGE Revisions disabled in alpha version.
+				statement.setLong(3, 0); //slotData.revision != null ? slotData.revision : 0);
 				statement.setTimestamp(4, slotData.created != null ? slotData.created : new Timestamp(System.currentTimeMillis()));
 				
 				// Reset values.

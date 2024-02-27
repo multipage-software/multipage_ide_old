@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol (see attached LICENSE file for additional info)
+ * Copyright 2010-2017 (C) sechance
  * 
  * Created on : 26-04-2017
  *
@@ -10,9 +10,6 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Window;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
@@ -23,6 +20,8 @@ import org.multipage.basic.ProgramBasic;
 import org.multipage.gui.Callback;
 import org.multipage.gui.FoundAttr;
 import org.multipage.gui.SerializeStateAdapter;
+import org.multipage.gui.StateInputStream;
+import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenuAddIn;
 import org.multipage.util.Resources;
@@ -84,14 +83,14 @@ public class ProgramGenerator {
 			serializer.add(new SerializeStateAdapter() {
 				// On read state.
 				@Override
-				protected void onReadState(ObjectInputStream inputStream)
+				protected void onReadState(StateInputStream inputStream)
 						throws IOException, ClassNotFoundException {
 					// Serialize program dictionary.
 					seriliazeData(inputStream);
 				}
 				// On write state.
 				@Override
-				protected void onWriteState(ObjectOutputStream outputStream)
+				protected void onWriteState(StateOutputStream outputStream)
 						throws IOException {
 					// Serialize program dictionary.
 					serializeData(outputStream);
@@ -107,6 +106,10 @@ public class ProgramGenerator {
 
 		// Create areas model.
 		areasModel = new AreasModel();
+		
+		// Start SWT thread for embedded browser.
+		// TODO: <---COPY to new version
+		SwtBrowserCanvas.startSwtThread();
 		
 		return true;
 	}
@@ -168,7 +171,7 @@ public class ProgramGenerator {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void seriliazeData(ObjectInputStream inputStream)
+	public static void seriliazeData(StateInputStream inputStream)
 		throws IOException, ClassNotFoundException {
 		
 		GeneratorMainFrame.serializeData(inputStream);
@@ -227,7 +230,7 @@ public class ProgramGenerator {
 	 * @param outputStream
 	 * @throws IOException
 	 */
-	public static void serializeData(ObjectOutputStream outputStream)
+	public static void serializeData(StateOutputStream outputStream)
 		throws IOException {
 		
 		GeneratorMainFrame.serializeData(outputStream);
@@ -393,6 +396,19 @@ public class ProgramGenerator {
 		
 		return new SlotListPanel();
 	}
+	
+	/**
+	 * Create new selected areas dialog.
+	 * @return
+	 */
+	public static SelectedAreasFrameBase newSelectedAreasFrame() {
+		
+		if (extensionToBuilder != null) {
+			return extensionToBuilder.newSelectedAreasFrame();
+		}
+		
+		return new SelectedAreasFrame();
+	}
 
 	/**
 	 * Create new slot editor object.
@@ -543,6 +559,16 @@ public class ProgramGenerator {
 	}
 
 	/**
+	 * Get area object.
+	 * @param alias
+	 * @return
+	 */
+	public static Area getArea(String alias) {
+		
+		return areasModel.getArea(alias);
+	}
+	
+	/**
 	 * Get home area.
 	 * @return
 	 */
@@ -653,15 +679,8 @@ public class ProgramGenerator {
 			// Get hidden slots flag.
 			boolean loadHiddenSlots = ProgramGenerator.isExtensionToBuilder() ? true : false;
 			
-			// LOG
-			long start = new Date().getTime();
-			
 			// Load areas model from datrabase.
 			MiddleResult result = ProgramBasic.getMiddle().loadAreasModel(properties, model, loadHiddenSlots);
-			
-			// LOG
-			System.out.format("RELOAD MODEL: operation time span %sms\n", new Date().getTime() - start);
-			
 			return result;
 		}
 	}
@@ -683,5 +702,25 @@ public class ProgramGenerator {
 			}
 		}
 		return areaIds;
+	}
+
+	/**
+	 * Get areas with input IDs.
+	 * @param areaIds
+	 * @return
+	 */
+	public static LinkedList<Area> getAreas(HashSet<Long> areaIds) {
+		
+		LinkedList<Area> areas = new LinkedList<Area>();
+		
+		for (Long areaId : areaIds) {
+			if (areaId != null) {
+				
+				Area area = getArea(areaId);
+				areas.add(area);
+			}
+		}
+		
+		return areas;
 	}
 }
