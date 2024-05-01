@@ -43,8 +43,8 @@ import org.maclan.server.ProgramServlet;
 import org.multipage.addinloader.AddInLoader;
 import org.multipage.addins.ProgramAddIns;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.CallbackNoArg;
-import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.Images;
 import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
@@ -157,7 +157,7 @@ public class Settings extends JDialog {
 		httpPortNumber = 8080;
 		commonResourceFileNames = false;
 		enableDebugging = false;
-		animationDuration = 3.0;
+		animationDuration = 1.0;
 	}
 
 	/**
@@ -401,7 +401,7 @@ public class Settings extends JDialog {
 					
 				if (updateRequired) {
 					ProgramBasic.updateDatabaseAccess(newDirectory);
-					ConditionalEvents.transmit(Settings.this, Signal.switchDatabase, newDirectory);
+					ApplicationEvents.transmit(this, Signal.switchDatabase, newDirectory);
 				}
 				
 				isOk = true;
@@ -1001,7 +1001,7 @@ public class Settings extends JDialog {
 											"applicationWorkingDirectory=" + workingDirectory});
 				
 				// Terminate the application.
-				ConditionalEvents.transmit(this, Signal.terminate);
+				ApplicationEvents.transmit(this, Signal.terminate);
 			}
 		}
 		catch (Exception e) {

@@ -22,9 +22,9 @@ import org.maclan.Area;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
@@ -233,9 +233,6 @@ public class RelatedAreaPanel extends JPanel {
 		
 		currentArea.clearRelatedArea();
 		textRelatedArea.setText("");
-		
-		// Update information.
-		ConditionalEvents.transmit(RelatedAreaPanel.this, GuiSignal.updateRelatedArea, currentAreaId);
 	}
 
 	/**
@@ -274,8 +271,5 @@ public class RelatedAreaPanel extends JPanel {
 		// Set new area.
 		currentArea.setRelatedArea(relatedArea);
 		textRelatedArea.setText(relatedArea != null ? relatedArea.getDescriptionForDiagram() : "");
-		
-		// Update information.
-		ConditionalEvents.transmit(RelatedAreaPanel.this, GuiSignal.updateRelatedArea, currentAreaId);
 	}
 }

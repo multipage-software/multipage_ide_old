@@ -41,7 +41,7 @@ public interface TabItemInterface {
 	void beforeTabPanelRemoved();
 	
 	/**
-	 * Compile and get tab state
+	 * Get tab state.
 	 * @return
 	 */
 	TabState getTabState();
@@ -62,4 +62,9 @@ public interface TabItemInterface {
 	 * Get selected areas.
 	 */
 	HashSet<Long> getSelectedAreaIds();
+	
+	/**
+	 * Called when tab panel needs to recreate contents.
+	 */
+	void recreateContent();
 }

@@ -63,20 +63,27 @@ public class DebugListenerSession {
 	 */
 	public AsynchronousServerSocketChannel server = null;
 
+	/**
+	 * Debug listener reference.
+	 */
+	public DebugListener listener = null;
 	
 	/**
 	 * Cosntructor.
 	 * @param server 
 	 * @param client
+	 * @param debugListener 
 	 * @throws Exception 
 	 */
-	public DebugListenerSession(AsynchronousServerSocketChannel server, AsynchronousSocketChannel client)
-			throws Exception {
+	public DebugListenerSession(AsynchronousServerSocketChannel server, AsynchronousSocketChannel client,
+			DebugListener debugListener)
+					throws Exception {
 		
 		// Set members.
 		this.sessionId = generateNewSessionId();
 		this.client = client;
 		this.server = server;
+		this.listener = debugListener;
 	}
 	
 	/**
@@ -106,9 +113,10 @@ public class DebugListenerSession {
 	 * Get process ID.
 	 * @return
 	 */
-	public String getPid() {
+	public long getPid() {
 		
-		return "";
+		// Overrride this method.
+		return -1L;
 	}
 	
 	/**

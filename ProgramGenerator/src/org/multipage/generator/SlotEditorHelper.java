@@ -9,6 +9,7 @@ package org.multipage.generator;
 import java.awt.Component;
 import java.awt.Font;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 import javax.swing.JCheckBox;
@@ -27,16 +28,19 @@ import org.maclan.SlotHolder;
 import org.maclan.SlotType;
 import org.maclan.server.ProgramServlet;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.CallbackNoArg;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.EventSource;
 import org.multipage.gui.FoundAttr;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Signal;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * @author 
@@ -179,7 +183,7 @@ public class SlotEditorHelper {
 		}
 
 		// Update information.
-		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.areaSlotSaved, editedSlot);
+		ApplicationEvents.transmit(this, UpdateSignal.updateSlotList, editedSlot);
 
 		saveDialog();
 	}
@@ -199,10 +203,6 @@ public class SlotEditorHelper {
 			}
 		}
 		
-		// Update information.
-		long slotId = editedSlot.getId();
-		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.cancelSlotEditor, slotId);
-
 		saveDialog();
 	}
 	
@@ -513,7 +513,7 @@ public class SlotEditorHelper {
 		Settings.setEnableDebugging(buttonSelected);
 		
 		// Transmit the "enable / disable" signal.
-		ConditionalEvents.transmit(this, Signal.debugging, buttonSelected);
+		ApplicationEvents.transmit(this, Signal.debugging, buttonSelected);
 	}
 
 	/**
@@ -527,6 +527,7 @@ public class SlotEditorHelper {
 		}
 		
 		final boolean selected = checkBox.isSelected();
+		// TODO: <---FINISH IT
 	}
 
 	/**
@@ -644,11 +645,35 @@ public class SlotEditorHelper {
 		originalSlot = newSlot;
 		
 		// Transmit "area slot saved" signal.
-		ConditionalEvents.transmit(SlotEditorHelper.this, GuiSignal.areaSlotSaved, editedSlot);
+		ApplicationEvents.transmit(this, UpdateSignal.updateSlotList, editedSlot);
 		
 		Utility.stopWaitCursor(editor.getComponent(), cursorInfo);
 		
+		// Get selected area IDs.
+		HashSet<Long> selectedAreaIds = GeneratorMainFrame.getSectedAreaIds();
+		
+		// Get selected slot IDs.
+		HashSet<Long> selectedSlotIds = getSelectedSlotIds();
+		
+		// Transmit the update modules signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL, selectedAreaIds, selectedSlotIds, selectedSlotIds);
+		
+		Utility.stopWaitCursor(editor.getComponent(), cursorInfo);
 		return true;
+	}
+	
+	/**
+	 * Get selected slot IDs.
+	 * @return
+	 */
+	private HashSet<Long> getSelectedSlotIds() {
+		
+		Long slotId = originalSlot.getId();
+
+		HashSet<Long> slotIds = new HashSet<Long>();
+		slotIds.add(slotId);
+		
+		return slotIds;
 	}
 	
 	/**
@@ -980,7 +1005,7 @@ public class SlotEditorHelper {
 		});
 		
 		// Receive the "debugging" signal.
-		ConditionalEvents.receiver(this, Signal.debugging, message -> {
+		ApplicationEvents.receiver(this, Signal.debugging, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -1070,7 +1095,7 @@ public class SlotEditorHelper {
 	 */
 	public void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
+		ApplicationEvents.transmit(this, GuiSignal.displayHomePage);
 	}
 
 	/**

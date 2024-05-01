@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -47,25 +48,32 @@ import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.maclan.ResourceConstructor;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.EventSource;
+import org.multipage.gui.GuiSignal;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.Signal;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.gui.ZoomListener;
 import org.multipage.gui.ZoomShape;
+import org.multipage.util.Closable;
 import org.multipage.util.Obj;
 import org.multipage.util.ProgressResult;
 import org.multipage.util.Resources;
 import org.multipage.util.SwingWorkerHelper;
 
 /**
+ * Diagram that displayes the areas.
  * @author
  *
  */
-public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Update {
+public class AreasDiagram extends GeneralDiagram implements TabItemInterface, NonCyclingReceiver, Closable {
 
 	/**
 	 * Version.
@@ -134,6 +142,16 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	private static double translationyState;
 	private static double zoomState;
 	private static boolean setDefaultStateFlagState;
+	
+	/**
+	 * Set of IDs of selected areaa in this diagram.
+	 */
+	private HashSet<Long> selectedAreaIds = new HashSet<Long>();
+	
+	/**
+	 * Lambda function invoked when set of selected areas changes.
+	 */
+	public Consumer<HashSet<Long>> setSelectedAreaIdsLambda = null;
 
 	/**
 	 * Serialize module data.
@@ -266,6 +284,11 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	private AreasDiagramPanel parentEditor;
 	
 	/**
+	 * List of previous update messages.
+	 */
+	private LinkedList<Message> previousUpdateMessages = new LinkedList<Message>();
+	
+	/**
 	 * Constructor.
 	 * @param parent 
 	 */
@@ -332,174 +355,133 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 */
 	private void setListeners() {
 		
-		// Receive the "update areas' diagram" signal.
-		ConditionalEvents.receiver(this, Signal.array(GuiSignal.loadDiagrams, GuiSignal.updateAreasDiagram), message -> {
-			
-			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
-			if (message.isRepeatingIn(AreasDiagram.this, previousMessage -> true)) {
-				return;
-			}
-			
-			// TODO: debug
-			LoggingDialog.log("RELOADING AreasDiagram");
-			
-			// Reload and repaint the diagram.
-			reload(false, false);
-			setOverview();
-			repaint();
-		});
-		
-		// Add receiver for the "click areas in diagram" event.
-		ConditionalEvents.receiver(this, GuiSignal.onClickDiagramAreas, message -> {
-			
-			// Check the source diagram, clicked graph point and if CTRL key has been pressed.
-			if (AreasDiagram.this.equals(message.source) && message.relatedInfo instanceof Point2D && message.isAdditionalInfo(0, Boolean.class)) {
-				
-				// Pull graph point and CTRL flag from the event action.
-				Point2D graphPoint = (Point2D) message.relatedInfo;
-				boolean ctrlKeyPressed = message.getAdditionalInfo(0);
-				
-				// Select area and sub areas in this diagram. The diagram must be repainted.
-				select(graphPoint, !ctrlKeyPressed);
-				repaint();
-				
-				// Get selected area IDs.
-				HashSet<Long> selectedIds = getSelectedAreaIds();
-				
-				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
-				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
-			}
-		});
-		
-		// Add receiver for the "drag areas in diagram" event.
-		ConditionalEvents.receiver(this, GuiSignal.onDragDiagramAreas, message -> {
-			
-			// Check the source diagram.
-			if (AreasDiagram.this.equals(message.source)) {
-				
-				// Get selected area IDs.
-				HashSet<Long> selectedIds = getSelectedAreaIds();
-				
-				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
-				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
-			}
-		});
-		
-		// Listen for "select diagram areas" event.
-		ConditionalEvents.receiver(this, GuiSignal.selectDiagramAreas, message -> {
-			
-			if (message.relatedInfo instanceof HashSet<?>) {
-				
-				// Pull set of area IDs.
-				@SuppressWarnings("unchecked")
-				HashSet<Long> selectedIds = (HashSet<Long>) message.relatedInfo;
-				// Remove selection.
-				removeSelection();
-				// Select the areas.
-				selectAreas(selectedIds);
-				// Set overview and repaint the GUI.
-				setOverview();
-				repaint();
-			}
-		});
-		
 		// Add area selection receiver.
-		ConditionalEvents.receiver(this, Signal.array(GuiSignal.selectAll), message -> {
+		ApplicationEvents.receiver(this, Signal.array(GuiSignal.selectAll), message -> {
 			if (AreasDiagram.this.isShowing()) {
 				
 				// Select all.
 				setAllSelection(true);
+				storeSelectedAreaIds();
+				
 				// Set overview and repaint the GUI.
 				setOverview();
 				repaint();
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasDiagram.this, GuiSignal.displayAreaProperties, selectedAreaIds);
 			}
 		});
 			
 		// Add unselect all receiver.
-		ConditionalEvents.receiver(this, GuiSignal.unselectAll, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.unselectAll, message -> {
 											 
 			if (AreasDiagram.this.isShowing()) {
 				
 				// Unselect all.
 				setAllSelection(false);
+				storeSelectedAreaIds();
+				
 				// Set overview and repaint the GUI.
 				setOverview();
 				repaint();
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasDiagram.this, GuiSignal.displayAreaProperties, selectedAreaIds);
 			}
 		});
 		
+		// Receive update signal.
+		ApplicationEvents.receiver(this, UpdateSignal._updateAreasDiagram, ApplicationEvents.HIGH_PRIORITY, message -> {
+			
+			reload(false, false);			
+			setOverview();
+			repaint();
+		});
+		
+		// Receive the "focus Basic Area" signal.
+		ApplicationEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
+			
+			// Select Basic Area with null ID.
+			HashSet<Long> selectedAreaIds = new HashSet<Long>();
+			selectedAreaIds.add(0L);
+			
+			removeSelection();
+			selectAreas(selectedAreaIds);
+			setOverview();
+			
+			// Center the areas diagram.
+			center();
+			
+			// Display area properties.
+			ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
+		});
+		
+		// Add receiver for the "show or hide" event.
+		ApplicationEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
+			
+			// Set overview and repaint the GUI.
+			setOverview();
+			repaint();
+		});
+		
+		// Receive the "select area" signal.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramArea, message -> {
+			
+			Long areaId = message.getRelatedInfo();
+			Boolean reset = message.getAdditionalInfo(0);
+			
+			if (areaId == null) {
+				areaId = 0L;
+			}
+			if (reset == null) {
+				reset = false;
+			}
+			
+			GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(areaId, reset);
+			
+			// Display area properties.
+			ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
+		});
+		
+		// Receive the "select area with sub areas" signal.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramAreaWithSubareas, message -> {
+			
+			Long areaId = message.getRelatedInfo();
+			Boolean addToSelection = message.getAdditionalInfo(0);
+			
+			if (areaId == null) {
+				areaId = 0L;
+			}
+			if (addToSelection == null) {
+				addToSelection = false;
+			}
+			
+			selectAreaWithSubareas(areaId, addToSelection);
+		});
+		
+		// Receive area selection messages.
+		ApplicationEvents.receiver(this, GuiSignal.selectDiagramAreas, message -> {
+			
+			if (message.source != AreasDiagram.this) {
+				return;
+			}
+			
+			HashSet<Long> selectedAreaIds = message.getRelatedInfo();
+			if (selectedAreaIds == null) {
+				return;
+			}
+			
+			removeSelection();
+			selectAreas(selectedAreaIds);
+			setOverview();
+		});
+		
 		// Add focus event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
 			
 			// Focus currently visible Basic Area.
 			if (AreasDiagram.this.isShowing()) {
 				focusBasicArea();
-			}
-		});
-		
-		// Add receiver for the "expose read only areas" event.
-		ConditionalEvents.receiver(this, GuiSignal.exposeReadOnlyAreas, message -> {
-			
-			// Set overview and repaint the GUI.
-			setOverview();
-			repaint();
-		});
-		
-		// Add non-coalescing receiver (with time span equal to 0L) for the "display or redraw tool tip" event.
-		ConditionalEvents.receiver(this, GuiSignal.displayOrRedrawToolTip, message -> {
-			
-			if (message.sourceObject(this)) {
-				// Display appropriate tool tip only if constructor window is hidden.
-				boolean isSet = displayConstructorsWindow.isVisible() ? false : onToolTip();
-				// or hide the tool tip window.
-				if (!isSet) {
-					tooltipWindow.hidew();
-				}
-			}
-		},
-		0L);
-		
-		// Add receiver for the "remove toll tip" event. Event priority is decreased with relation to "display or redraw tool tip" event.
-		ConditionalEvents.receiver(this, GuiSignal.removeToolTip, ConditionalEvents.LOW_PRIORITY, message -> {
-			
-			// Hide tool tip window.
-			tooltipWindow.hidew();
-		});
-		
-		// Add receiver for the "show or hide" event.
-		ConditionalEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
-			
-			// Set overview and repaint the GUI.
-			setOverview();
-			repaint();
-		});
-		
-		// Add receiver for the "on tab change" event.
-		ConditionalEvents.receiver(this, GuiSignal.mainTabChange, message -> {
-			
-			if (AreasDiagram.this.isShowing()) {
-				
-				// Get selected area IDs.
-				HashSet<Long> selectedIds = getSelectedAreaIds();
-				
-				// Remove selection.
-				removeSelection();
-				
-				// Selected area IDs.
-				for (long areaId : selectedIds) {
-					
-					Area area = ProgramGenerator.getArea(areaId);
-					selectRecursive(area, true, false);
-				}
-				
-				// Propagate the "show areas' properties" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasProperties, selectedIds);
-				// Propagate the "show areas' relations" signal.
-				ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.showAreasRelations, selectedIds);
 			}
 		});
 	}
@@ -509,7 +491,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 */
 	private void removeListeners() {
 		
-		ConditionalEvents.removeReceivers(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -630,8 +612,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 			setNewAreaVisible(true);
 		}
 		
-		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, GuiSignal.displayOrRedrawToolTip);
+		// Display or redraw tool tip..
+		displayTooltip();
 	}
 
 	/**
@@ -654,8 +636,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		// Hide constructors' names.
 		hideConstructorsDisplay();
 		
-		// Transmit "remove tool tip" signal.
-		ConditionalEvents.transmit(this, GuiSignal.removeToolTip);
+		// Hide tool tip window.
+		tooltipWindow.hidew();
 	}
 
 	/**
@@ -755,8 +737,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 			hideConstructorsDisplay();
 		}
 		
-		// Transmit "display or redraw tool tip" signal.
-		ConditionalEvents.transmit(this, GuiSignal.displayOrRedrawToolTip);
+		// Display or redraw tool tip..
+		displayTooltip();
 	}
 
 	/**
@@ -795,6 +777,19 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				//AreaShapes.setAffectedAreaVisible(!alreadyExists(affectedArea, connectedArea));
 				AreaShapes.setAffectedAreaVisible(!existsCircle(affectedArea, connectedArea));
 			}
+		}
+	}
+	
+	/**
+	 * Display tooltip window.
+	 */
+	private void displayTooltip() {
+		
+		// Display appropriate tool tip only if constructor window is hidden.
+		boolean isSet = displayConstructorsWindow.isVisible() ? false : onToolTip();
+		// or hide the tool tip window.
+		if (!isSet) {
+			tooltipWindow.hidew();
 		}
 	}
 
@@ -970,13 +965,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 					// Get CTRL key pressed.
 					boolean ctrlKeyPressed = e.isControlDown();
 					
-					// Propagate "on diagram areas clicked" event.
-					ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.onClickDiagramAreas, graphPoint, ctrlKeyPressed);
-				}
-				else {
+					// Select diagram area.
+					select(graphPoint, !ctrlKeyPressed);
 					
-					// Propagate "on diagram areas drag end" event.
-					ConditionalEvents.transmit(AreasDiagram.this, GuiSignal.onDragDiagramAreas);
+					// Update selected area IDs.
+					storeSelectedAreaIds();
+					
+					// Transmit the "display area properties" signal.
+					ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 				}
 			}
 		}
@@ -1287,7 +1283,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		}
 		
 		// Reload diagram.
-		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
+		ApplicationEvents.transmit(EventSource.AREAS_DIAGRAM, SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -1326,7 +1322,15 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 */
 	public HashSet<Long> getSelectedAreaIds() {
 		
-		HashSet<Long> areaIds = new HashSet<Long>();
+		return selectedAreaIds;
+	}
+	
+	/**
+	 * Store selected area IDs.
+	 */
+	public void storeSelectedAreaIds() {
+		
+		selectedAreaIds = new HashSet<Long>();
 		
 		// Do loop for all areas.
 		for (Area area : ProgramGenerator.getAreasModel().getAreas()) {
@@ -1339,21 +1343,26 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				
 				// If the area is selected, add it to list.
 				if (shapes.isSelected()) {
-					areaIds.add(areaId);
+					selectedAreaIds.add(areaId);
 				}
 			}
 			else if (user instanceof Boolean) {
 				
 				// If the area is selected, add it to list.
 				if ((Boolean) user) {
-					areaIds.add(areaId);
+					selectedAreaIds.add(areaId);
 				}
 			}
 		}
-
-		return areaIds;
+		
+		// Call lambda function.
+		if (setSelectedAreaIdsLambda != null) {
+			setSelectedAreaIdsLambda.accept(selectedAreaIds);
+		}
 	}
 	
+	
+
 	/**
 	 * Render areas diagram.
 	 */
@@ -1890,6 +1899,34 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 			}
 		}
 	}
+	
+	/**
+	 * Select areas with input IDs.
+	 * @param selectedAreaIds
+	 */
+	public void select(HashSet<Long> selectedAreaIds) {
+		
+		if (selectedAreaIds == null) {
+			return;
+		}
+		
+		removeSelection();
+		selectAreas(selectedAreaIds);
+		setOverview();
+	}
+
+	/**
+	 * Select area.
+	 * @param id
+	 * @param selected
+	 * @param affectSubareas
+	 */
+	public void select(long id, boolean selected, boolean affectSubareas) {
+
+		// Get area.
+		Area area = ProgramGenerator.getAreasModel().getArea(id);
+		selectInternal(area, selected, affectSubareas);
+	}
 
 	/**
 	 * Try to select area and its sub areas. The method doesn't repaint the GUI.
@@ -1942,14 +1979,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				
 				// Remove selection.
 				if (reset) {
-					select(ProgramGenerator.getAreasModel().getArea(0), false, true);
+					selectInternal(ProgramGenerator.getAreasModel().getArea(0), false, true);
 				}
 			}
-			select(affectedArea, select, captionHit);
+			selectInternal(affectedArea, select, captionHit);
 		}
 		else {
 			// Unselect all.
-			select(ProgramGenerator.getAreasModel().getRootArea(), false, true);
+			selectInternal(ProgramGenerator.getAreasModel().getRootArea(), false, true);
 		}
 	}
 	
@@ -1959,7 +1996,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 * @param selected
 	 * @param affectSubareas 
 	 */
-	public void select(Area area, boolean selected, boolean affectSubareas) {
+	public void selectInternal(Area area, boolean selected, boolean affectSubareas) {
 		
 		this.affectSubareas = affectSubareas;
 		
@@ -2003,19 +2040,6 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	}
 
 	/**
-	 * Select area.
-	 * @param id
-	 * @param selected
-	 * @param affectSubareas
-	 */
-	public void select(long id, boolean selected, boolean affectSubareas) {
-
-		// Get area.
-		Area area = ProgramGenerator.getAreasModel().getArea(id);
-		select(area, selected, affectSubareas);
-	}
-
-	/**
 	 * Set affected area.
 	 * @param area
 	 * @param rectangle
@@ -2028,7 +2052,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 			if (user instanceof AreaShapes) {
 				AreaShapes shape = (AreaShapes) user;
 				if (shape.isInside(rectangle)) {
-					select(area, true, true);
+					selectInternal(area, true, true);
 				}
 				// If this area not contained, check sub areas.
 				else {
@@ -2045,12 +2069,22 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 */
 	public void removeSelection() {
 
-		select(ProgramGenerator.getAreasModel().getRootArea(), false, true);
+		selectInternal(ProgramGenerator.getAreasModel().getRootArea(), false, true);
 	}
-
+	
 	/**
 	 * Select area.
+	 */
+	public void selectArea(long areaId) {
+		
+		// Delegate the call.
+		selectArea(areaId, true);
+	}
+	
+	/**
+	 * Select or add area selection.
 	 * @param areaId
+	 * @param reset
 	 */
 	public void selectArea(long areaId, boolean reset) {
 		
@@ -2066,7 +2100,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		Area area = ProgramGenerator.getAreasModel().getArea(areaId);
 		
 		selectAreaInvoked = true;
-		select(area, true, false);
+		selectInternal(area, true, false);
 		
 		// Sets overview.
 		setOverview();
@@ -2079,17 +2113,18 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 * Select area with subareas.
 	 * @param areaId
 	 */
-	public void selectAreaWithSubareas(long areaId, boolean reset) {
+	public void selectAreaWithSubareas(Long areaId, boolean reset) {
+		
+		if (areaId == null) {
+			return;
+		}
 		
 		if (reset) {
 			removeSelection();
 		}
 		
 		Area area = ProgramGenerator.getAreasModel().getArea(areaId);
-		select(area, true, true);
-		
-		// Reload diagram.
-		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
+		selectInternal(area, true, true);
 	}
 	
 	/**
@@ -2652,7 +2687,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 				}
 				
 				// Reload diagram.
-				Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
+				ApplicationEvents.transmit(EventSource.AREAS_DIAGRAM, SignalGroup.UPDATE_AREAS);
 				
 				if (selectAndFocus) {
 					// Select the new area.
@@ -2723,7 +2758,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		dialog.setVisible(true);
 		
 		// Reload diagram.
-		Update.run(GROUP_AREAS, EventSource.AREAS_DIAGRAM);
+		ApplicationEvents.transmit(EventSource.AREAS_DIAGRAM, SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -2732,7 +2767,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 * @param parentArea
 	 * @param parentComponent 
 	 */
-	protected AreasDeletionDialog newAreasDeletionDialog(HashSet topAreas,
+	protected AreasDeletionDialog newAreasDeletionDialog(HashSet<AreaShapes> topAreas,
 			Area parentArea, Component parentComponent) {
 		
 		return new AreasDeletionDialog(parentComponent, topAreas, parentArea);
@@ -2892,7 +2927,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	public void setAllSelection(boolean select) {
 
 		Area globalArea = ProgramGenerator.getAreasModel().getRootArea();
-		select(globalArea, select, true);
+		selectInternal(globalArea, select, true);
 	}
 
 	/**
@@ -2967,13 +3002,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	 * Set selected areas.
 	 * @param areas
 	 */
+	@SuppressWarnings("unused")
 	private void selectAreas(LinkedList<Area> areas) {
 
 		// Do loop for given areas.
 		for (Area area : areas) {
 			// Get loaded area.
 			Area loadedArea = ProgramGenerator.getArea(area.getId());
-			select(loadedArea, true, false);
+			selectInternal(loadedArea, true, false);
 		}
 	}
 	
@@ -2986,7 +3022,7 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		selectedAreaIds.forEach(areaId -> {
 			
 			Area area = ProgramGenerator.getArea(areaId);
-			select(area, true, false);
+			selectInternal(area, true, false);
 		});
 	}
 
@@ -3050,8 +3086,14 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		// Do loop for all areas' shapes.
 		for (Area area : ProgramGenerator.getAreasModel().getAreas()) {
 			
+			// Check if shape object exists.
+			Object userObject = area.getUser();
+			if (!(userObject instanceof AreaShapes)) {
+				continue;
+			}
+			
 			// Get shapes.
-			AreaShapes shapes = (AreaShapes) area.getUser();
+			AreaShapes shapes = (AreaShapes) userObject;
 			if (shapes != null) {
 				
 				double surface = shapes.getBiggestInsideSurface(windowRectangle);
@@ -3138,7 +3180,8 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 	@Override
 	public void onTabPanelChange(ChangeEvent e, int selectedIndex) {
 		
-		
+		// Restore area selection.
+		select(selectedAreaIds);
 	}
 	
 	/**
@@ -3208,7 +3251,26 @@ public class AreasDiagram extends GeneralDiagram implements TabItemInterface, Up
 		this.topAreaId = topAreaId;
 	}
 
+	/**
+	 * On focus area.
+	 * @param area
+	 */
 	public void focus(Area area) {
+		
+		
+	}
+	
+	/**
+	 * Get previous update messages.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousUpdateMessages;
+	}
+
+	@Override
+	public void recreateContent() {
 		// TODO Auto-generated method stub
 		
 	}

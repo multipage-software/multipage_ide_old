@@ -37,7 +37,8 @@ import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
 import org.maclan.AreaRelation;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.IdentifierTreePath;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
@@ -706,9 +707,6 @@ public class AreasTreePanel extends JPanel {
 		diagram.addNewAreaConservatively(area, newArea, this);
 		
 		updateData();
-		
-		long areaId = area.getId();
-		ConditionalEvents.transmit(AreasTreePanel.this, GuiSignal.addArea, areaId);
 	}
 	
 	/**

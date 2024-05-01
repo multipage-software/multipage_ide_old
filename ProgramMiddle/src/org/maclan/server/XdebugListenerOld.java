@@ -23,8 +23,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.Callback;
-import org.multipage.gui.ConditionalEvents;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -1088,7 +1088,7 @@ public class XdebugListenerOld extends DebugListener {
 				Lock lockExit = new Lock();
 				
 				// Create new command listener and wait.
-				ConditionalEvents.receiver(XdebugListenerOld.this, AreaServerSignal.debugStatement, message -> {
+				ApplicationEvents.receiver(this, AreaServerSignal.debugStatement, message -> {
 					
 					// Get command.
 					String command = message.getRelatedInfo();
@@ -1115,7 +1115,7 @@ public class XdebugListenerOld extends DebugListener {
 				Lock.waitFor(lockExit);
 				
 				// Remove previously created receiver.
-				ConditionalEvents.removeReceivers(AreaServerSignal.debugStatement);
+				ApplicationEvents.removeReceivers(AreaServerSignal.debugStatement);
 			}
 			
 			/**

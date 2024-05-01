@@ -485,7 +485,7 @@ public class CssListStylePanel extends InsertPanel implements StringValueEditor 
 
 	/**
 	 * Get image name.
-	 * @param position
+	 * @param index
 	 * @return
 	 */
 	private String getImageName(String string) {

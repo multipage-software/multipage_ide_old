@@ -33,8 +33,9 @@ import org.maclan.Area;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
@@ -206,8 +207,6 @@ public class FileNamesEditor extends JDialog {
 		}
 		
 		dispose();
-		
-		ConditionalEvents.transmit(FileNamesEditor.this, GuiSignal.updateAreaFileNames);
 	}
 
 	/**

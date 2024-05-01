@@ -6,19 +6,14 @@
  */
 package org.maclan.server;
 
-import java.awt.Color;
 import java.awt.Component;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
 
+import org.multipage.gui.PacketChannel;
+import org.multipage.gui.PacketSession;
 import org.multipage.gui.Utility;
-import org.multipage.util.Lock;
-import org.multipage.util.RepeatedTask;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * Xdebug listener is built-in socket server that accepts debugging requests.
@@ -33,24 +28,20 @@ public class XdebugListener extends DebugListener {
 	public static final int DEFAULT_PORT = 9004;
 	
 	/**
-	 * Listener idle timeout. 
-	 */
-	private static final long XDEBUG_RESULT_IDLE_MS = 5000;
-	
-	/**
 	 * Singleton object.
 	 */
     private static XdebugListener instance = null;
-    
-	/**
-	 * Index of the server connection.
-	 */
-	private static int serverConnectionIndex = 0;
 	
 	/**
 	 * Reference to debug viewer component.
 	 */
 	public Component debugViewerComponent = null;
+	
+	/**
+	 * Packet channel that accepts incomming packets.
+	 */
+	private PacketChannel packetChannel = null;
+
 	
     /**
      * Get singleton object.
@@ -114,119 +105,58 @@ public class XdebugListener extends DebugListener {
 	private void openListenerPort(int port)
 			throws Exception {
 		
-		// Open asynchornous server socket.
-        AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open();
-        InetSocketAddress socketAddress = new InetSocketAddress("localhost", port);
-        server.bind(socketAddress);
-        server.accept(server, new CompletionHandler<AsynchronousSocketChannel, AsynchronousServerSocketChannel>() {
-            
-        	// When connection is completed...
-        	@Override
-			public void completed(AsynchronousSocketChannel client, AsynchronousServerSocketChannel server) {
-        		
-				try {
-					// Create and remember new session object.
-					XdebugListenerSession session = new XdebugListenerSession(server, client);
-					XdebugListener.this.sessions.add(session);
-
-					// Call the "accept session" lambda.
-					onAcceptSession(session);
-					
-					String taskName = String.format("serverConnectionIndex%d", ++serverConnectionIndex);
-					
-					// Create read lock.
-					Lock readLock = new Lock();
-					
-					// Enter non blocking loop.
-					RepeatedTask.loopBlocking(taskName, -1, 0, (exit, exception) -> {
-						
-						// Synchronize read operations with the socket client object.
-        				synchronized (client) {
-							// Reset the socket read lock.
-							Lock.reset(readLock);
-
-							// TODO: <---FIX Missing synchronization of input packets.
-							
-							// Read Xdebug data packet bytes.
-		                    client.read(session.inputBuffer, session, new CompletionHandler<Integer, XdebugListenerSession>() {
-		                        
-		                    	// After read completed...
-		                    	public void completed(Integer result, XdebugListenerSession session) {
-		                        	
-									try {
-		                        		// Pull received bytes from the input buffer and put them into the packet buffer.
-		                        		session.readXdebugResponses(xdebugResponse -> {
-		                        			try {
-					                            // Process incomming Xdebug responses.
-					                            session.processXdebugResponse(xdebugResponse);
-					                            
-					                            // Input packet callback.
-					                            onInputPacket(session, xdebugResponse);
-		                        			}
-		                        			catch (Exception e) {
-		                        				e.printStackTrace();
-		                        			}
-			                        	});
-		                        		
-		                        		session.inputBuffer.compact();
-		                        	}
-		                        	catch (Exception e) {
-		                        		exception.ref = e;
-		                        	}
-
-		                        	// Notify the listener lock.
-		                        	Lock.notify(readLock);
-		                        }
-								public void failed(Throwable e, XdebugListenerSession session) {
-		                            // Handle the failure.
-									exception.ref = new Exception(e);
-		                        }
-		                    });
-		                    
-		                    // Wait for the input bytes to be read from the socket channel.
-		                    Lock.waitFor(readLock);
-		                    
-		                    session.inputBuffer = ByteBuffer.allocate(1024);
-		                    return exit;
-        				}
-					});
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
-            }
-			
-			// If the connection failed...
-            public void failed(Throwable exception, AsynchronousServerSocketChannel server) {
-                // handle the failure
-            }
-        });
+		packetChannel = new PacketChannel() {
+			@Override
+			protected PacketSession onAccepted(AsynchronousSocketChannel client) {
+				
+				PacketSession packetSession = XdebugListener.this.onOpenDebugViewer(client);
+				return packetSession;
+			}
+		};
+		
+		// Open packet channel.
+		packetChannel.openReceivingSocket("localhost", port);
 	}
 	
 	/**
-	 * On accept session.
+	 * On accepting incomming connection.
+	 * @param socketClient
+	 * @param packetReader
+	 */
+	protected PacketSession onOpenDebugViewer(AsynchronousSocketChannel socketClient) {
+		
+		// Create and remember new session object.
+		try {
+			
+			// Create Xdebug session.
+			AsynchronousServerSocketChannel socketServer = packetChannel.getServerSocket();
+			XdebugListenerSession xdebugSession = XdebugListenerSession.newSession(socketServer, socketClient, this);
+			XdebugListener.this.sessions.add(xdebugSession);
+			
+			// Call the "accept session" callback.
+			onOpenDebugViewer(xdebugSession);
+			
+			return xdebugSession.getPacketSession();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * On open Xdebug viewer.
 	 * @param server
 	 * @param client
 	 * @param attachment
 	 */
-	protected void onAcceptSession(XdebugListenerSession listenerSession) {
+	protected void onOpenDebugViewer(XdebugListenerSession listenerSession) {
 		
-		if (acceptSessionLambda != null) {
-			acceptSessionLambda.accept(listenerSession);
+		if (openDebugViever != null) {
+			openDebugViever.accept(listenerSession);
 		}
 	}
-	
-	/**
-	 * On input packet.
-	 * @param session 
-	 * @param inputPacket
-	 */
-    private void onInputPacket(XdebugListenerSession session, XdebugResponse inputPacket) {
-		
-		if (inputPacketLambda != null) {
-			inputPacketLambda.accept(session, inputPacket);
-		}
-	}
+
     
     /**
      * Show exception.

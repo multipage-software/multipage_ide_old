@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.multipage.gui.Utility;
+import org.multipage.util.j;
 
 /**
  * Xdebug commands that sends the IDE.
@@ -26,6 +27,7 @@ public class XdebugCommand {
 	 * Xdebug command names.
 	 */
 	public static final String FEATURE_GET = "feature_get";
+	public static final String FEATURE_SET = "feature_set";
 	
 	/**
      * Xdebug NULL symbol.
@@ -47,7 +49,7 @@ public class XdebugCommand {
 	 * Static constructor.
 	 */
 	static {
-		regexCommand = Pattern.compile("^(?<name>[^\\s]+)+\\s+(?<param>.+?)(\\s+(?<data>--.+))?$");
+		regexCommand = Pattern.compile("^(?<name>[^\\s]+)+\\s+(?<param>.+?)(\\s+--(?<data>.+))?$");
 	}
 
 	/**
@@ -76,11 +78,12 @@ public class XdebugCommand {
 	 * @param arguments
 	 * @return
 	 */
-	public static XdebugCommand create(String commandName, String[][] arguments) {
+	public static XdebugCommand create(String commandName, String[][] arguments, byte [] data) {
 		
 		XdebugCommand command = new XdebugCommand();
 		command.name = commandName;
 		command.arguments = arguments;
+		command.data = data;
 		command.transactionId = -1;
 		return command;
 	}
@@ -100,9 +103,11 @@ public class XdebugCommand {
 		// Insert command name.
 		commandChars.append(name);
 		
-		// Compile arguments string and insert init to the character buffer.
+		// Insert transaction ID.
+		commandChars.append(" -i " + String.valueOf(transactionId));
+		
+		// Compile arguments string.
 		if (hasArguments) {
-			commandChars.append(" -i " + String.valueOf(transactionId));
 			for (String [] argument : arguments) {
 				commandChars.append(' ' + argument[0] + ' ' + argument[1]);
 			}
@@ -121,7 +126,7 @@ public class XdebugCommand {
 	}
 	
 	/**
-	 * Parses Xdebug command bytes and create new Xdebug command.
+	 * Parses Xdebug command bytes and creates new Xdebug command.
 	 * @param commandBytes
 	 * @return
 	 * @throws Exception 
@@ -136,13 +141,27 @@ public class XdebugCommand {
 		byte [] bytes = new byte[limit];
 		
 		commandBytes.get(bytes);
-		String commandString = new String(bytes, "UTF-8");
+		String statementText = new String(bytes, "UTF-8");
 		
 		// Reset the command buffer to reuse it next time.
 		commandBytes.clear();
-        
+		
+		// Delegate the function.
+		XdebugCommand command = parseCommand(statementText);
+		return command;
+	}
+	
+	/**
+	 * Parses Xdebug statement text and creates new Xdebug command.
+	 * @param statementText
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugCommand parseCommand(String statementText)
+			throws Exception {
+		
         // Use regex to parse the command name and arguments.
-		Matcher matcher = regexCommand.matcher(commandString);
+		Matcher matcher = regexCommand.matcher(statementText);
 		
         boolean success = matcher.find();
         int groupCount = matcher.groupCount();
@@ -157,13 +176,13 @@ public class XdebugCommand {
             
             // Get command arguments.
             LinkedList<String[]> argumentList = new LinkedList<String[]>();
-            String [] parameter = new String[2];
             String paramString = matcher.group("param");
            	String [] splittedParams = paramString.split("\\s+");
            	
            	int count = splittedParams.length;
            	for (int index = 0; index < count; index++) {
            		
+           		String [] parameter = new String[2];
            		parameter[0] = splittedParams[index++].trim();
            		if (index < count) {
            			
@@ -179,7 +198,7 @@ public class XdebugCommand {
            	}
            	// Check if the transaction ID has been set.
            	if (command.transactionId == -1) {
-               Utility.throwException("org.maclan.server.messageCannotParseXdebugCommandTransactionId", commandString);
+               Utility.throwException("org.maclan.server.messageCannotParseXdebugCommandTransactionId", statementText);
            	}
            	command.arguments = argumentList.toArray(new String[argumentList.size()][]);
            	
@@ -194,7 +213,7 @@ public class XdebugCommand {
         }
 		
         // Throw exception.
-        Utility.throwException("org.maclan.server.messageCannotParseXdebugCommand", commandString);
+        Utility.throwException("org.maclan.server.messageCannotParseXdebugCommand", statementText);
 		return null;
 	}
 	

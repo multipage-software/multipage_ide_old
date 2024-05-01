@@ -6,6 +6,7 @@
  */
 
 package org.multipage.generator;
+
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
@@ -65,15 +66,22 @@ import org.maclan.server.DebugViewerCallback;
 import org.maclan.server.ProgramServlet;
 import org.maclan.server.TextRenderer;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.AreaSignal;
 import org.multipage.gui.BareBonesBrowserLaunch;
-import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EventSource;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
+import org.multipage.gui.LogConsoles;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.sync.SyncMain;
 import org.multipage.util.Obj;
@@ -83,12 +91,12 @@ import org.multipage.util.SimpleMethodRef;
 import org.multipage.util.SwingWorkerHelper;
 
 /**
- * 
+ * Main application dialog.
  * @author
  *
  */
-public class GeneratorMainFrame extends JFrame implements Update {
-
+public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
+	
 	/**
 	 * Version.
 	 */
@@ -252,10 +260,10 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		// Read list object.
 		Object object = inputStream.readObject();
-		if (object instanceof LinkedList) {
+		if (object instanceof LinkedList<?>) {
 			
 			// Do loop for all list items.
-			for (Object item : ((LinkedList) object)) {
+			for (Object item : ((LinkedList<?>) object)) {
 				
 				// Add item to the output list.
 				if (item instanceof TabState) {
@@ -354,11 +362,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		// Update window selection trayMenu.
 		updateWindowSelectionMenu();
-		
-		// Propagate event.
-		SwingUtilities.invokeLater(() -> {
-			ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.loadDiagrams);
-		});
 	}
 
 	/**
@@ -382,8 +385,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		onShowHideIds();
 		// Lighten read only elements state.
 		exposeReadOnly.setSelected(!AreaShapes.readOnlyLighter);
-		// Create cloned diagrams.
-		loadTabPanels();
 	}
 
 	/**
@@ -514,6 +515,11 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 * Area tree data to copy.
 	 */
 	private static AreaTreesData areaTreeDataToCopy = null;
+	
+	/**
+	 * Previous update messages.
+	 */
+	private LinkedList<Message> previousUpdateMessages = new LinkedList<Message>();
 
 	/**
 	 * Constructor.
@@ -522,6 +528,10 @@ public class GeneratorMainFrame extends JFrame implements Update {
 
 		// Set static member.
 		mainFrame = this;
+		
+		// TODO: <---MAKE Initialize logging consoles.
+		LogConsoles.main(new String [] {});
+		
 		
 		// Set close action.
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -551,10 +561,11 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		LoggingDialog.initialize(this);
 		// Load dialog.
 		loadDialog();
+		// Load tab panel contents.
+		loadTabPanels();
 		
-		// Reload areas model.
-		MiddleResult result = ProgramGenerator.reloadModel();
-		result.showError(this);
+		// Transmit the update signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.machine(this), SignalGroup.UPDATE_ALL);
 	}
 
 	/**
@@ -580,13 +591,13 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			reactivateGui();
 		});
 	}
-
+	
 	/**
 	 * Set listeners.
 	 */
 	@SuppressWarnings("unchecked")
 	private void setListeners() {
-
+		
 		tabPanel.addChangeListener(new ChangeListener() {
 			@Override
 			public void stateChanged(ChangeEvent e) {
@@ -637,7 +648,8 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			
 			if (!slotIds.isEmpty()) {
 				SwingUtilities.invokeLater(() -> {
-					ConditionalEvents.transmit(ProgramServlet.class, GuiSignal.updatedSlotsWithServlet, slotIds);
+					
+					// TODO: <---REMOVE IT, do not use callback. Use application event instead.
 				});
 			}
 		});
@@ -673,6 +685,56 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			});
 		}
 		
+		final int UPDATE_AREAS_LATENCY_MS = 2500;
+		
+		// Receive the "display area properties" message.
+		ApplicationEvents.receiver(this, GuiSignal.displayAreaProperties, message -> {
+			
+			setPropertiesVisible(true);
+		});
+		
+		// Receive the "update updateAreasModel" signal.
+		ApplicationEvents.receiver(this, UPDATE_AREAS_LATENCY_MS, UpdateSignal.updateAreasModel, ApplicationEvents.HIGH_PRIORITY, message -> {
+			
+			// Check for infinite message cycles.
+			if (message.isCyclic()) {
+				return;
+			}
+			
+			// Reload areas model.
+			ProgramGenerator.reloadModel();
+		});
+		
+		// Receive the "set home area" message.
+		ApplicationEvents.receiver(this, AreaSignal.setHomeArea, message -> {
+			
+			Long homeAreaId = message.getRelatedInfo();
+			if (homeAreaId == null) {
+				homeAreaId = 0L;
+			}
+			Area homeArea = ProgramGenerator.getArea(homeAreaId);
+			if (homeArea == null) {
+				return;
+			}
+			
+			Component parent = message.getAdditionalInfo(0);
+			Runnable completionLambda = message.getAdditionalInfo(1);
+			
+			// Set home area.
+			setHomeArea(parent, homeArea);
+			
+			if (completionLambda != null) {
+				completionLambda.run();
+			}
+		});
+		
+		// TODO: <---COPY to new version
+		// Receive the "set home area" message.
+		ApplicationEvents.receiver(this, GuiSignal.displayHomePage, message -> {
+		
+			monitorHomePage();
+		});
+		
 		// Set Sync lambda functions.
 		SyncMain.setCloseEvent(() -> {
 			
@@ -680,35 +742,12 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// "Terminate" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.terminate, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.terminate, message -> {
 				closeWindow();
 		});
 		
-		// "Show areas' properties" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.showAreasProperties, message -> {
-			
-			HashSet<Long> selectedAreaIds = null;
-					
-			// Retrieve selected areas' IDs from the event object or get currently selected areas.
-			if (message.relatedInfo instanceof HashSet<?>) {
-				selectedAreaIds = (HashSet<Long>) message.relatedInfo;
-			}
-			else {
-				selectedAreaIds = getAreaDiagram().getSelectedAreaIds();
-			}
-			
-			// Show selected areas' properties.
-			showProperties(selectedAreaIds);
-		});
-		
-		// "Monitor home page" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.monitorHomePage, message -> {
-			
-			monitorHomePage();
-		});
-		
 		// "Reactivate GUI" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.reactivateGui, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.reactivateGui, message -> {
 			
 			// Initialize focused component.
 			Component focusedComponent = null;
@@ -722,12 +761,13 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			// Do reactivation.
 			invokeReactivationOfGui(focusedComponent);
 		});
+
 		
 		// Receive the "update updateAreasModel" signal.
-		ConditionalEvents.receiver(this, GuiSignal.updateAreasModel, ConditionalEvents.HIGH_PRIORITY, message -> {
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasModel, ApplicationEvents.HIGH_PRIORITY, message -> {
 			
-			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
-			if (message.isRepeatingIn(GeneratorMainFrame.this, previousMessage -> true)) {
+			// Check for infinite message cycles.
+			if (message.isCyclic()) {
 				return;
 			}
 			
@@ -735,13 +775,8 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			ProgramGenerator.reloadModel();
 		});
 		
-		// "Expose read only areas" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.exposeReadOnlyAreas, message -> {
-			AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
-		});
-		
 		// "Focus area" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusArea, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusArea, message -> {
 			
 			// Get diagram panel.
 			AreasDiagramPanel areasDiagramPanel = getFrame().getVisibleAreasEditor();
@@ -774,7 +809,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		});
 		
 		// Receive the "debugging" signal.
-		ConditionalEvents.receiver(this, GuiSignal.debugging, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.debugging, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -791,14 +826,14 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			toggleDebug.setSelected(debuggingEnabled);
 		});
  	}
-	
+
 	/**
 	 * Remove listeners.
 	 */
 	protected void removeListeners() {
 		
 		// Remove event receivers.
-		ConditionalEvents.removeReceivers(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -810,7 +845,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		Component focusedControl = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 		
 		// Propagate the event with focused control.
-		ConditionalEvents.transmit(GeneratorMainFrame.class, GuiSignal.reactivateGui, focusedControl);
+		ApplicationEvents.transmit(GeneratorMainFrame.class, GuiSignal.reactivateGui, focusedControl);
 	}
 	
 	/**
@@ -1009,7 +1044,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			}
 		});
 	}
-
+	
 	/**
 	 * Close main frame window.
 	 */
@@ -1081,7 +1116,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 				
 				// Transmit event.
 				if (selectedAreaIds != null) {
-					ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.showAreasProperties, selectedAreaIds);
+					ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 				}
 			}
 		}
@@ -1296,7 +1331,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		updateData.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.updateAreasModel);
+				ApplicationEvents.transmit(GeneratorMainFrame.this, UpdateSignal.updateAreasModel);
 			}});
 		closeAllWindows.addActionListener(new ActionListener() {
 			@Override
@@ -1495,41 +1530,41 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// Add buttons. 24 x 24 icons
 		toolBar.addSeparator();
 		if (ProgramBasic.isUsedLogin()) {
-			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", "org.multipage.generator.tooltipLoginWindow", ()->onLoginProperties());
+			ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/login_icon.png", "org.multipage.generator.tooltipLoginWindow", () -> onLoginProperties());
 			toolBar.addSeparator();
 		}
-		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", "org.multipage.generator.tooltipShowHideIds", ()->onShowHideIds());
+		showIdButton = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/show_hide_id.png", "org.multipage.generator.tooltipShowHideIds", () -> onShowHideIds());
 		addHideSlotsButton(toolBar);
 		toolBar.addSeparator();
-		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", "org.multipage.generator.tooltipAreasUnprotected", ()->onExposeReadOnly());
+		exposeReadOnly = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/enable_remove.png", "org.multipage.generator.tooltipAreasUnprotected", () -> onExposeReadOnly());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdate", ()->onUpdate());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdate", () -> onUpdate());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", "org.multipage.generator.tooltipFocusWhole", ()->onFocusBasicArea());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/center_icon.png", "org.multipage.generator.tooltipFocusWhole", () -> onFocusBasicArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", "org.multipage.generator.tooltipFocus", ()->onFocusTabArea());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/focus_tab_big.png", "org.multipage.generator.tooltipFocus", () -> onFocusTabArea());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", "org.multipage.generator.tooltipFocusHome", ()->onFocusHome());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/home_icon.png", "org.multipage.generator.tooltipFocusHome", () -> onFocusHome());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", "org.multipage.generator.tooltipSearch", ()->onSearch());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/binoculars.png", "org.multipage.generator.tooltipSearch", () -> onSearch());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", "org.multipage.generator.tooltipSelectAll", ()->onSelectAll());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/select_all_large.png", "org.multipage.generator.tooltipSelectAll", () -> onSelectAll());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", "org.multipage.generator.tooltipUnselectAll", ()->onUnselectAll());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/deselect_all_large.png", "org.multipage.generator.tooltipUnselectAll", () -> onUnselectAll());
 		toolBar.addSeparator();
-		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", "org.multipage.generator.tooltipUndoFocus", ()->onUndoFocus());
+		undoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/undo_focus.png", "org.multipage.generator.tooltipUndoFocus", () -> onUndoFocus());
 		toolBar.addSeparator();
-		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", "org.multipage.generator.tooltipRedoFocus", ()->onRedoFocus());
+		redoButton = ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/redo_focus.png", "org.multipage.generator.tooltipRedoFocus", () -> onRedoFocus());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", ()->onRenderTool());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", () -> onRenderTool());
 		toolBar.addSeparator();
-		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", ()->onToggleDebug());
+		toggleDebug = ToolBarKit.addToggleButton(toolBar,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", () -> onToggleDebug());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", "org.multipage.generator.tooltipRevertExternalSourceCodes", ()->onRevert());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/revert.png", "org.multipage.generator.tooltipRevertExternalSourceCodes", () -> onRevert());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipMonitorHomePage", ()->onMonitorHomePage());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipMonitorHomePage", () -> onMonitorHomePage());
 		toolBar.addSeparator();
-		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", "org.multipage.generator.tooltipAbout", ()->onHelpAboutMenu());
+		ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/about_icon.png", "org.multipage.generator.tooltipAbout", () -> onHelpAboutMenu());
 		
 		// Set undo and redo references.
 		getAreaDiagram().setUndoRedoComponents(undoButton, redoButton);
@@ -1546,7 +1581,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		Settings.setEnableDebugging(selected);
 		
 		// Transmit the "enable / disable" signal.
-		ConditionalEvents.transmit(this, GuiSignal.debugging, selected);
+		ApplicationEvents.transmit(this, GuiSignal.debugging, selected);
 	}
 
 	/**
@@ -1582,7 +1617,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onFocusBasicArea() {
 		
-		ConditionalEvents.transmit(this, AreasDiagram.class, GuiSignal.focusBasicArea);
+		ApplicationEvents.transmit(this, AreasDiagram.class, GuiSignal.focusBasicArea);
 	}
 
 	/**
@@ -1602,7 +1637,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	protected void onClose() {
 		
 		// Stop dispatching events.
-		ConditionalEvents.stopDispatching();
+		ApplicationEvents.stopDispatching();
 		
 		// Cancel watch dog.
 		if (timerWatchDog != null) {
@@ -1640,7 +1675,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		ProgramBasic.loginDialog(this, title);
 		statusBar.setLoginProperties(ProgramBasic.getLoginProperties());
-		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.newBasicArea);
 		
 		loginProperties = ProgramBasic.getLoginProperties();
 		String newDatabaseName = loginProperties.getProperty("database");
@@ -1677,8 +1711,9 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		// Inform areas and slots to use IDs in its descriptions.
 		Area.setShowId(showIds);
 		Slot.setShowId(showIds);
+		
 		// Transmit show/hide IDs signal.
-		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.showOrHideIds, showIds);
+		ApplicationEvents.transmit(this, GuiSignal.showOrHideIds, showIds);
 	}
 	
 	/**
@@ -1729,9 +1764,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onSelectAll() {
 		
 		// Select all areas.
-		ConditionalEvents.transmit(this, GuiSignal.selectAll);
-		// Show areas' properties.
-		ConditionalEvents.transmit(this, GuiSignal.showAreasProperties);
+		ApplicationEvents.transmit(this, GuiSignal.selectAll);
 	}
 	
 	/**
@@ -1740,9 +1773,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onUnselectAll() {
 		
 		// Unselect all areas.
-		ConditionalEvents.transmit(this, GuiSignal.unselectAll);
-		// Show areas' properties.
-		ConditionalEvents.transmit(this, GuiSignal.showAreasProperties);
+		ApplicationEvents.transmit(this, GuiSignal.unselectAll);
 	}
 
 	/**
@@ -1788,7 +1819,14 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onUpdate() {
 		
-		Update.run(Update.GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
+		// Get selected area IDs.
+		HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+		if (selectedAreaIds.isEmpty()) {
+			selectedAreaIds = null;
+		}
+		
+		// Transmit update signal.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL, selectedAreaIds);
 	}
 
 	/**
@@ -1797,6 +1835,39 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public static GeneratorMainFrame getFrame() {
 		return mainFrame;
+	}
+	
+	/**
+	 * Get selected area IDs.
+	 * @return
+	 */
+	public static HashSet<Long> getSectedAreaIds() {
+
+		if (mainFrame == null) {
+			return null;
+		}
+		
+		// Delegate the call.
+		HashSet<Long> selectedAreaIds = mainFrame.getSelectedAreaIds();
+		return selectedAreaIds;
+	}
+	
+	/**
+	 * Get selected area IDs.
+	 * @return
+	 */
+	private HashSet<Long> getSelectedAreaIds() {
+		
+		LinkedList<Area> areaList = mainAreaDiagramEditor.getSelectedAreas();
+		
+		HashSet<Long> areaIdSet = new HashSet<Long>();
+		for (Area area : areaList) {
+			
+			long areaId = area.getId();
+			areaIdSet.add(areaId);
+		}
+		
+		return areaIdSet;
 	}
 
 	/**
@@ -1814,7 +1885,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	public void onFocusHome() {
 		
 		// Propagate event.
-		ConditionalEvents.transmit(this, GuiSignal.focusHomeArea);
+		ApplicationEvents.transmit(this, GuiSignal.focusHomeArea);
 	}
 
 	/**
@@ -1855,8 +1926,10 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onExposeReadOnly() {
 		
+		AreaShapes.readOnlyLighter = !exposeReadOnly.isSelected();
+		
 		// Transmit "expose read only areas" signal.
-		ConditionalEvents.transmit(GeneratorMainFrame.this, AreasDiagram.class, GuiSignal.exposeReadOnlyAreas);
+		ApplicationEvents.transmit(this, AreasDiagram.class, UpdateSignal._updateAreasDiagram);
 	}
 
 	/**
@@ -2670,6 +2743,9 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		// On output error.
 		MiddleResult result = progressDialog.getOutput();
+		if (result == null) {
+			return;
+		}		
 		if (result.isNotOK()) {
 			Utility.show2(null, result.getMessage());
 			return;
@@ -2971,8 +3047,8 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	protected void onTest() {
 		
-		// TODO: test the update statement.
-		Update.run(Update.GROUP_ALL, EventSource.GENERATOR_MAIN_FRAME.userAction(this, null));
+		// Transmit update signals.
+		ApplicationEvents.transmit(EventSource.GENERATOR_MAIN_FRAME.user(this), SignalGroup.UPDATE_ALL);
 	}
 
 	/**
@@ -3049,9 +3125,6 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		
 		Area area = areas.getFirst();
 		importArea(area, this, false, true, true);
-		
-		long areaId = area.getId();
-		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.importToArea, areaId);
 	}
 	
 	/**
@@ -3209,7 +3282,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 	 */
 	public void onMonitorHomePage() {
 		
-		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
+		ApplicationEvents.transmit(this, GuiSignal.displayHomePage);
 	}
 
 	/**
@@ -3318,19 +3391,16 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			result.show(parentComponent);
 		}
 		
-		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.updateHomeArea, areaId);
+		ApplicationEvents.transmit(this, AreaSignal.setHomeArea, areaId, this);
 	}
 	
 	/**
-	 * Focus on the tab area.
+	 * Focus on the tab top area.
 	 */
-	@SuppressWarnings("unused")
 	private void onFocusTabArea() {
 		
-		Long tabAreaId = tabPanel.getTopAreaIdOfSelectedTab();
-		
-		ConditionalEvents.transmit(this, GuiSignal.focusTabArea, tabAreaId);
-
+		// Focus on the top area.
+		ApplicationEvents.transmit(this, GuiSignal.focusTopArea);
 	}
 	
 	/**
@@ -3560,9 +3630,7 @@ public class GeneratorMainFrame extends JFrame implements Update {
 			result.show(this);
 			return false;
 		}
-		
-		long areaId = area.getId();
-		ConditionalEvents.transmit(GeneratorMainFrame.this, GuiSignal.importToArea, areaId);
+
 		return true;
 	}
 	
@@ -3773,25 +3841,23 @@ public class GeneratorMainFrame extends JFrame implements Update {
 				result.show(parentComponent);
 			}
 		}
-
-		// Update data.
-		ConditionalEvents.transmit(getFrame(), GuiSignal.transferToArea);
 	}
 	
 	/**
 	 * Hide properties.
 	 */
-	public static void hideProperties() {
+	public static void hidePropertiesView() {
 		
 		// Delegate call.
-		showProperties(null);
+		showPropertiesView(null);
 	}
 	
 	/**
 	 * Display area properties.
 	 * @param areas
 	 */
-	public static void showProperties(Collection<Long> areaIds) {
+	// TODO: <---REFACTOR Remove this method and use application events.
+	public static void showPropertiesView(Collection<Long> areaIds) {
 		
 		// If there are no areas, do not display panel with properties.
 		if (areaIds == null || areaIds.isEmpty()) {
@@ -3847,5 +3913,14 @@ public class GeneratorMainFrame extends JFrame implements Update {
 		AreasDeletionDialog dialog = new AreasDeletionDialog(parentComponent, areaSet,
 				parentArea);
 		dialog.setVisible(true);
+	}
+	
+	/**
+	 * Get previous update messages.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousUpdateMessages;
 	}
 }

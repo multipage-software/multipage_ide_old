@@ -47,7 +47,8 @@ import org.maclan.MiddleResult;
 import org.maclan.MiddleUtility;
 import org.maclan.MimeType;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.ToolBarKit;
@@ -262,7 +263,7 @@ public class MimeTypesEditor extends JDialog {
 		menuRestoreDefaults = new JMenuItem("org.multipage.generator.textRestoreFactoryDefaults");
 		menuRestoreDefaults.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				loadFactoryDefaults();
+				loadDefaults();
 			}
 		});
 		menuEdit.add(menuRestoreDefaults);
@@ -437,8 +438,6 @@ public class MimeTypesEditor extends JDialog {
 		// Import data.
 		importMimeTypes(file);
 		
-		ConditionalEvents.transmit(MimeTypesEditor.this, GuiSignal.importMimeTypes);
-		
     	// Reload table.
     	loadMimeTypes();
 	}
@@ -513,9 +512,9 @@ public class MimeTypesEditor extends JDialog {
 	}
 
 	/**
-	 * Loads factory defaults.
+	 * Loads defaults.
 	 */
-	protected void loadFactoryDefaults() {
+	protected void loadDefaults() {
 
 		// Remove MIME types and load them from file.
 		removeAllMimes(false);
@@ -523,8 +522,6 @@ public class MimeTypesEditor extends JDialog {
 		// Import factory MIME types.
 		MiddleUtility.importFactoryMimeTypes(ProgramBasic.getMiddle(),
 				ProgramBasic.getLoginProperties(), this);
-		
-		ConditionalEvents.transmit(MimeTypesEditor.this, GuiSignal.defaultMimeTypes);
 		
     	// Reload table.
     	loadMimeTypes();

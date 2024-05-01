@@ -273,7 +273,7 @@ public class GeneralGui {
 	private static void setConsolesDefaultData() {
 		
 		// Delegate the call.
-		Consoles.setDefaultData();
+		LogConsoles.setDefaultData();
 	}
 	
 	/**
@@ -286,8 +286,8 @@ public class GeneralGui {
 		Rectangle bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
 		Integer [] splitterPositions = Utility.readInputStreamObject(inputStream, Integer [].class);
 		
-		Consoles.setFrameBounds(bounds);
-		Consoles.setSplitterPositions(splitterPositions);
+		LogConsoles.setFrameBounds(bounds);
+		LogConsoles.setSplitterPositions(splitterPositions);
 	}
 
 	/**
@@ -297,8 +297,8 @@ public class GeneralGui {
 	private static void serializeLogConsolesData(StateOutputStream outputStream)
 			throws IOException {
 		
-		Rectangle bounds = Consoles.getFrameBounds();
-		Integer [] splitterPositions = Consoles.getSplitterPositions();
+		Rectangle bounds = LogConsoles.getFrameBounds();
+		Integer [] splitterPositions = LogConsoles.getSplitterPositions();
 		
 		outputStream.writeObject(bounds);
 		outputStream.writeObject(splitterPositions);

@@ -32,7 +32,7 @@ import java.util.LinkedList;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.CursorArea;
 import org.multipage.gui.CursorAreaImpl;
 import org.multipage.gui.HorizontalScroll;
@@ -118,7 +118,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	public static void updateDiagramsControls() {
 		
-		ConditionalEvents.transmit(GeneralDiagram.class, GuiSignal.updateControls);
 	}
 
 	/**
@@ -261,7 +260,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 * Set listeners.
 	 */
 	private void setListeners() {
-		
 		
 		// Set tool list listener.
 		toolList.setListener(new ToolListListener() {
@@ -464,23 +462,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 			}
 		});
 		positionSaveTimer.setRepeats(false);
-		
-		// "Load diagrams' properties" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.loadDiagrams, message -> {
-			
-			if (message.sourceClass(GeneratorMainFrame.class)) {
-				
-				// Initialize tool list.
-				toolList.initialize();
-				
-				// Reset diagram.
-				resetToolTip();
-				
-				// Update GUI.
-				GeneralDiagram.this.setScrollBarsLocation();
-				GeneralDiagram.this.repaint();
-			}
-		});
 	}
 	
 	/**
@@ -488,7 +469,7 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	private void removeListeners() {
 		
-		ConditionalEvents.removeReceivers(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -1136,7 +1117,6 @@ public abstract class GeneralDiagram extends JPanel implements CursorArea {
 	 */
 	protected void removeDiagram() {
 		
-		ConditionalEvents.transmit(this, GuiSignal.removeDiagram);
 	}
 
 	/**

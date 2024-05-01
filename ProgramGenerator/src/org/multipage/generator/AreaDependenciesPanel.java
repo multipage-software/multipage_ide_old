@@ -33,8 +33,8 @@ import org.maclan.AreasModel;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
-import org.multipage.gui.Signal;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.util.Resources;
 
 /**
@@ -266,6 +266,7 @@ public class AreaDependenciesPanel extends AreaDependenciesPanelBase {
 				return 2;
 			}
 			// Get value.
+			@SuppressWarnings("deprecation")
 			@Override
 			public Object getValueAt(int rowIndex, int columnIndex) {
 				// Get area.
@@ -332,7 +333,6 @@ public class AreaDependenciesPanel extends AreaDependenciesPanelBase {
 								relatedAreaId, relationName);
 						if (result.isOK()) {
 							currentArea.setSubRelationNameLight(relatedAreaId, relationName);
-							ConditionalEvents.transmit(AreaDependenciesPanel.this, GuiSignal.updateAreaSubRelation, currentAreaId, relatedAreaId);
 						}
 						else {
 							// Report error.

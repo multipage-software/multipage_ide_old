@@ -15,7 +15,7 @@ import java.util.LinkedList;
  * @author vakol
  *
  */
-public class Signal implements EventCondition {
+public class Signal implements ApplicationEvent {
 	
 	// Special signal that runs user lambda function placed in a message on the message thread.
 	public static Signal _invokeLater = new Signal();
@@ -23,39 +23,40 @@ public class Signal implements EventCondition {
 	// Enables target signal.
 	public static Signal _enableTargetSignal = new Signal();
 	
-	// Update areas' model for the GUI.
-	public static Signal updateAreasModel = new Signal(
-			SignalType.guiChangeByUser
-			);
-
-	// Update areas' properties.
-	public static Signal updateAreasProperties = new Signal();
-	
 	// TODO: <---MAKE finish the definition of the "terminate" signal
 	public static Signal terminate = new Signal();
 	
 	// Enable or disable debugging.
-	public static Signal debugging = new Signal(
-			SignalType.serverStateChange
-			);
+	public static Signal debugging = new Signal();
 	
-	public static Signal stepLog = new Signal(
-			SignalType.guiStateChange,
-			SignalType.guiChange
-			);
+	public static Signal stepLog = new Signal();
 	
-	public static Signal runLogging = new Signal(
-			SignalType.guiStateChange,
-			SignalType.guiChange
-			);
+	public static Signal runLogging = new Signal();
 	
-	public static Signal breakLogging = new Signal(
-			SignalType.guiStateChange,
-			SignalType.guiChange
-			);
+	public static Signal breakLogging = new Signal();
 	
 	// Switch database.
 	public static Signal switchDatabase = new Signal();
+	
+	/**
+	 * Helper function for assignment of signal types.
+	 * @param signalTypes
+	 * @return
+	 */
+	protected static SignalGroup [] groups(SignalGroup ... signalTypes) {
+		
+		return signalTypes;
+	}
+	
+	/**
+	 * Helper function for assignment of info types.
+	 * @param infoTypes
+	 * @return
+	 */
+	protected static Class [] params(Class ... infoTypes) {
+		
+		return infoTypes;
+	}
 	
 	/**
 	 * Unnecessary signals.
@@ -80,12 +81,17 @@ public class Signal implements EventCondition {
 	/**
 	 * Signal is included in the following signal types.
 	 */
-	private HashSet<SignalType> includedInTypes = new HashSet<SignalType>();
+	private HashSet<SignalGroup> includedInGroups = new HashSet<SignalGroup>();
 	
 	/**
 	 * Enable or disable this signal.
 	 */
 	private boolean enabled = true;
+	
+	/**
+	 * Types of additional information attached to messages of this signal.
+	 */
+	public Class [] infoTypes = null;
 	
 	/**
 	 * Next ordinal number of the signal. Incremented in loadDescriptiveNames(...).
@@ -100,14 +106,57 @@ public class Signal implements EventCondition {
 		addUnnecessary(/* Add them as parameters. */);
 		
 		// Describe signals.
-		describeSignals(Signal.class);
+		reflectSignals(Signal.class);
 	}
 	
 	/**
-	 * Describe signals in input class.
+	 * Get array of checked infos.
+	 * @param infos
+	 * @param infoTypes
+	 * @return
+	 */
+	public Object [] getCheckedInfos(Object [] infos) {
+		
+		// If they are no types return input array.
+		if (infoTypes == null) {
+			return infos;
+		}
+		
+		final int infoCount = infos.length;
+		
+		// Create checked info parameter array.
+		Object [] checkedInfos = new Object[infoCount];
+		
+		// Check info type and reset those that do not match.
+		int typeCount = infoTypes.length;
+		for (int index = 0; (index < infoCount) && (index < typeCount); index++) {
+			
+			// Initialization.
+			Object infoOject = infos[index];
+			checkedInfos[index] = infoOject;
+			
+			// If the info object is null do not check its type.
+			if (infoOject == null) {
+				continue;
+			}
+
+			// Get the "must have class" for the info object.
+			Class<?> mustHaveType = infoTypes[index];
+			 
+			// If type is provided and it doesn't match reset the info value.
+			Class<?> infoType = infoOject.getClass();
+			if (!infoType.equals(mustHaveType)) {
+				checkedInfos[index] = null;
+			}
+		}
+		return checkedInfos;
+	}
+	
+	/**
+	 * Describe signals in the input class using reflection
 	 * @param theClass
 	 */
-	public static void describeSignals(Class<? extends Signal> theClass) {
+	public static void reflectSignals(Class<? extends Signal> theClass) {
 		
 		Field [] fields = theClass.getFields();
 		for (Field field : fields) {
@@ -134,15 +183,49 @@ public class Signal implements EventCondition {
 	}
 	
 	/**
-	 * Constructor of the a signal.
+	 * Constructor of signal.
+	 */
+	public Signal() {
+		
+		// Delegate method call to constructor with implementation.
+		this(null, null);
+	}
+	
+	/**
+	 * Constructor of signal.
 	 * @param signalTypes
 	 */
-	public Signal(SignalType ... signalTypes) {
+	public Signal(SignalGroup [] signalTypes) {
 		
-		// Set list of types.
-		for (SignalType signalType : signalTypes) {
-			includedInTypes.add(signalType);
+		// Delegate method call to constructor with implementation.
+		this(signalTypes, null);		
+	}
+	
+	/**
+	 * Constructor of signal.
+	 * @param infoTypes
+	 */
+	public Signal(Class [] infoTypes) {
+		
+		// Delegate method call to constructor with implementation.
+		this(null, infoTypes);
+	}
+	
+	/**
+	 * Constructor of signal.
+	 * @param signalTypes
+	 * @param infoTypes
+	 */
+	public Signal(SignalGroup [] signalTypes, Class [] infoTypes) {
+		
+		if (signalTypes != null) {
+			for (SignalGroup signalType : signalTypes) {
+				includedInGroups.add(signalType);
+				signalType.addSignal(this);
+			}
 		}
+		
+		this.infoTypes = infoTypes;
 	}
 	
 	/**
@@ -181,19 +264,19 @@ public class Signal implements EventCondition {
 	}
 	
 	/**
-	 * Returns true if current signal is that of the given input type.
-	 * @param signalType
+	 * Returns true if current signal is in input group.
+	 * @param signalGroup
 	 * @return
 	 */
-	public boolean isOfType(SignalType signalType) {
+	public boolean isInGroup(SignalGroup signalGroup) {
 		
 		// Check the input value.
-		if (signalType == null) {
+		if (signalGroup == null) {
 			return false;
 		}
 		
-		// Try to find the type.
-		boolean isIncluded = includedInTypes.contains(signalType);
+		// Try to find the group.
+		boolean isIncluded = includedInGroups.contains(signalGroup);
 		return isIncluded;
 	}
 	
@@ -229,7 +312,7 @@ public class Signal implements EventCondition {
 	 * @param eventSignals
 	 * @return
 	 */
-	public static EventCondition [] array(EventCondition ... eventSignals) {
+	public static ApplicationEvent [] array(ApplicationEvent ... eventSignals) {
 		
 		return eventSignals;
 	}
@@ -249,9 +332,9 @@ public class Signal implements EventCondition {
 	/**
 	 * Get types.
 	 */
-	public HashSet<SignalType> getTypes() {
+	public HashSet<SignalGroup> getTypes() {
 		
-		return includedInTypes;
+		return includedInGroups;
 	}
 	
 	/**
@@ -295,5 +378,13 @@ public class Signal implements EventCondition {
 			return isSame;
 		}
 		return false;
+	}
+	
+	/**
+	 * Return signal name.
+	 */
+	@Override
+	public String toString() {
+		return name;
 	}
 }

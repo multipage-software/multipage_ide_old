@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2021 (C) vakol
+ * Copyright 2010-2023 (C) vakol
  * 
  * Created on : 18-06-2017
  *
@@ -26,62 +26,11 @@ import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 
 /**
- * Conditional events that can signal application states.
+ * Class for events that can be used in this application.
  * @author vakol
  *
  */
-public class ConditionalEvents {
-	
-	/**
-	 * Enumeration of common (not fully specified) message targets.
-	 */
-	public static enum Target {
-		
-		all,
-		gui,
-		notGui
-	}
-	
-	/**
-	 * Log parameters.
-	 */
-	public static class LogParameters {
-		
-		// If you want to enable message LOG on STD ERR, set this flag to true.
-		public boolean enable = false;
-		
-		// To display full log information, set this flag to true.
-		public boolean full = false;
-		
-		// Concrete signals.
-		public Signal [] concreteSignals = { };
-	}
-	public static LogParameters logParameters = new LogParameters();
-	
-	/**
-	 * Coalesce time span.
-	 */
-	private static final long defaultCoalesceTimeMs = 500;
-	
-	/**
-	 * Stop receiving unnecessary events. (Only for debugging purposes).
-	 */
-	private static boolean stopReceivingUnnecessary = true;
-	
-	/**
-	 * Default message coalesce time span in milliseconds.
-	 */
-	private final static long minDelayMessageCoalesceMs = 25;
-	
-	/**
-	 * Dispatch lock timeout in milliseconds. Must be greater then above coalesce time span.
-	 */
-	private final static long dispatchLockTimeoutMs = 250;
-	
-	/**
-	 * Message renewal interval in milliseconds.
-	 */
-	private static long messageRenewalIntervalMs = dispatchLockTimeoutMs;
+public class ApplicationEvents {
 	
 	/**
 	 * Receiver priorities.
@@ -91,41 +40,96 @@ public class ConditionalEvents {
 	public static final int LOW_PRIORITY = 10;
 	
 	/**
+	 * Message targets.
+	 */
+	public static enum Target {
+		
+		all,
+		gui,
+		notGui
+	}
+	
+	/**
+	 * Parameters for event log.
+	 */
+	public static class LogParameters {
+		
+		// If you want to enable message log set this flag to true.
+		public boolean enable = false;
+		
+		// To display full log information set this flag to true.
+		public boolean full = false;
+		
+		// List of signals to log.
+		public Signal [] loggedSignals = { };
+	}
+	public static LogParameters logParameters = new LogParameters();
+	
+	/**
+	 * Message coalescing time in milliseconds.
+	 */
+	private static final long defaultCoalesceTimeMs = 500;
+	
+	/**
+	 * Flag that stops receiving unnecessary events. (Only for debugging purposes).
+	 */
+	private static boolean stopReceivingUnnecessary = false;
+	
+	/**
+	 * Message coalesce delay.
+	 */
+	private final static long minDelayMessageCoalesceMs = 25;
+	
+	/**
+	 * Dispatch lock timeout in milliseconds. Must be greater then above coalesce time span.
+	 */
+	private final static long dispatchLockTimeoutMs = 250;
+	
+	/**
+	 * Message renewal time in milliseconds.
+	 */
+	private static long messageRenewalIntervalMs = dispatchLockTimeoutMs;
+	
+	/**
+	 * Receiver latency.
+	 */
+	private static final int DEFAULT_REPEAT_LATENCY_MS = 1000;
+	
+	/**
 	 * Message queue.
 	 */
 	private static LinkedList<Message> messageQueue = new LinkedList<Message>();
 	
 	/**
-	 * All registered receivers in the application.
+	 * Map of all registered receivers in the application.
 	 */
-	private static LinkedHashMap<EventCondition, LinkedHashMap<Integer,
-					LinkedHashMap<Object, LinkedList<EventHandle>>>> receivers = new LinkedHashMap<EventCondition, LinkedHashMap<Integer,
-																							LinkedHashMap<Object, LinkedList<EventHandle>>>>();
+	private static LinkedHashMap<ApplicationEvent, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>>
+		receivers = new LinkedHashMap<ApplicationEvent, LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>>>();
 	
 	/**
-	 * Main message dispatch thread.
+	 * Main dispatch thread.
 	 */
 	private static Thread dispatchThread;
 	
 	/**
-	 * When this flag is set to true value, the main dispatch thread stops to dispatch the messages.
+	 * If this flag is set to true the above thread stops dispatching messages.
 	 */
 	private static boolean stopDispatchMessages = false;
 	
 	/**
-	 * A lock used in the dispatch thread that is locked when the thread is waiting for incoming messages
-	 * and unlocked when the new message arrives.
+	 * Lock used in the dispatch thread. When locked the thread waits for incoming messages
+	 * and when unlocked a new message arrives.
 	 */
 	private static Lock dispatchLock = new Lock();
 	
 	/**
-	 * Surviving messages needed for coalescing of same messages in given period of time.
-	 * ( Expiration time -> Message )
+	 * Surviving messages for coalescing of same messages within a period of time.
+	 * ( maps Expiration Time to Message )
 	 */
 	private static LinkedHashMap<Long, Message> survivingMessages = new LinkedHashMap<Long, Message>();
 	
 	/**
-	 * Static constructor which runs the message dispatch thread.
+	 * Static constructor. It starts message dispatch thread.
 	 */
 	static {
 		
@@ -140,7 +144,7 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Pop message from the queue.
+	 * Pop message from the message queue.
 	 * @return
 	 */
 	private static Message popMessage() {
@@ -158,20 +162,20 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Push message into the queue.
+	 * Push message into message queue.
 	 * @param message
 	 */
 	private static void pushMessage(Message message) {
 		
 		synchronized (messageQueue) {
 			
-			// Append message.
+			// Append message to the end of the queue.
 			messageQueue.add(message);
 		}
 	}
 
 	/**
-	 * Create message queue snapshot.
+	 * Create queue snapshot.
 	 * @return
 	 */
 	public static LinkedList<Message> getQueueSnapshot() {
@@ -191,22 +195,22 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * The message dispatch thread.
+	 * Message dispatch thread.
 	 */
 	private static void dispatchThread() {
 		
 		Obj<Message> incomingMessage = new Obj<Message>(null);
 		
-		// Enter incoming message dispatch loop.
+		// Enter message dispatch loop.
 		while (!stopDispatchMessages) {
 			
-			// Try to pop single incoming message from the message queue or wait for a new incoming message.
+			// Try to pop single message from the queue or just wait for a new message.
 			do {
 				
-				// Log message queue.
+				// Log message queue snapshot.
 				LoggingCallback.addMessageQueueSnapshot(getQueueSnapshot(), Utility.getNow());
 				
-				// Pop the message and exit the loop.
+				// Pop the message and exit waiting loop.
 				incomingMessage.ref = popMessage();
 				if (incomingMessage.ref != null) {
 					break;
@@ -217,7 +221,7 @@ public class ConditionalEvents {
 			}
 			while (incomingMessage.ref == null);
 			
-			// Get current time and save it in the incoming message.
+			// Get current time and save this value in message member.
 			final Long currentTime = Utility.getNow();
 			incomingMessage.ref.receiveTime = currentTime;
 			
@@ -230,41 +234,39 @@ public class ConditionalEvents {
 			// Clear expired messages.
 			clearExpiredMessages(currentTime);
 			
-			// Check if some similar message is surviving in the dedicated memory,
-			// so that current incoming message will be skipped.
-			// If it is so, skip the invocation of the event actions.
+			// If similar message is surviving in the dedicated memory,
+			// current message shell be skipped.
 			if (!isMessageSurviving(incomingMessage.ref, currentTime)) {
 				
-				// Break point managed by log.
+				// Break point managed by log system.
 				LoggingCallback.breakPoint(signal);
 				
-				// For special signals perform special invocation.
+				// For special signals perform special method invocations.
 				if (signal.isSpecial()) {
 					invokeSpecialEvents(incomingMessage.ref);
 				}
 				// For all other matching receivers invoke theirs actions.
 				else {
-					
 					synchronized (receivers) {
 						
-						// Filter receivers by signal.
+						// Filter the receivers using incoming signal.
 						LinkedHashMap<Integer, LinkedHashMap<Object, LinkedList<EventHandle>>> priorities = receivers.get(signal);
 						if (priorities != null) {
 							
-							// For each stored priority retrieve appropriate receiver objects.
+							// For each stored receiver priority retrieve appropriate receiver objects.
 							priorities.forEach((priority, receiverObjects) -> {
 								if (receiverObjects != null) {
 									
-									// Invoke actions for event handles.
+									// Invoke actions for event handles with above priority.
 									receiverObjects.forEach((receiverObject, eventHandles) -> {
 										
-										if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... a switch for debugging purposes; this condition disables receiving of unnecessary signals
+										if (!(signal.isUnnecessary() && stopReceivingUnnecessary)) {  // ... this switch is only for debugging purposes; the condition disables receiving of unnecessary signals
 											
-											// Save the message's receiver object for debugging purposes.
+											// Remember the message's receiver.
 											incomingMessage.ref.receiverObject = receiverObject;
 											
 											// Invoke event actions matching the incoming message.
-											// Let survive messages for a time spans defined in event handlers.
+											// Let survive messages for a time spans defined in event handler.
 											invokeActions(currentTime, eventHandles, priority, receiverObject, incomingMessage.ref);
 										}
 									});
@@ -276,11 +278,11 @@ public class ConditionalEvents {
 			}
 			else {
 				
-				// If the message should be renewed, schedule it.
+				// If the message should be renewed schedule it again.
 				if (incomingMessage.ref.renew) {
 					
-					// Wait for a while, push the message back into the input queue with renewal flag cleared
-					// and updated message receive time. Release the message dispatch lock.
+					// Wait for a while, then push message back into message queue with renewal flag cleared
+					// and with receive time updated. Release message dispatch lock.
 					try {
 						Thread.sleep(messageRenewalIntervalMs);
 						
@@ -299,31 +301,30 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Invoke special event.
+	 * Invoke special events.
 	 * @param message
 	 */
 	private static void invokeSpecialEvents(Message message) {
 		
-		// Now only on "invoke later" a lambda function sent along with the input message.
 		SwingUtilities.invokeLater(() -> {
 			
 			try {
-				// Check the "invoke later" signal and the message target type that must be some lambda function.
+				// Check the signal and the target function.
 				if (Signal._invokeLater.equals(message.signal) && message.target instanceof Function) {
 					
-					// Retrieve lambda function reference and run the lambda function.
+					// Retrieve lambda function and run it.
 					Function<Message, Exception> lambdaFunction = (Function<Message, Exception>) message.target;
 					Exception exception = lambdaFunction.apply(message);
 					
-					// Throw possible exception (for future debugging and other purposes).
+					// Throw exception.
 					if (exception != null) {
 						throw exception;
 					}
 				}
-				// Check the "enable target signal" and enable the target signal.
+				// Check enable target signal.
 				else if (Signal._enableTargetSignal.equals(message.signal) && message.target instanceof Signal) {
 					
-					// Retrieve the signal that should be enabled.
+					// Get signal that will be enabled.
 					Signal signalToEnable = (Signal) message.target;
 					// Enable the signal.
 					signalToEnable.enable();
@@ -331,14 +332,14 @@ public class ConditionalEvents {
 			}
 			catch (Exception e) {
 				
-				// Print stack trace for the special event when an exception has been raised.
+				// Print stack trace for special event.
 				e.printStackTrace();
 			}
 		});
 	}
 
 	/**
-	 * Invoke events. Pass a reference to the incoming message to input lambda function.
+	 * Invoke events. Pass messages to target lambda functions.
 	 * @param eventHandles
 	 * @param priority 
 	 * @param key - event handler key
@@ -351,37 +352,37 @@ public class ConditionalEvents {
 			return;
 		}
 		
-		// Go through input event handles and if the message survives, invoke appropriate action on the Swing thread.
+		// Go through event handles and invoke appropriate action.
 		for (EventHandle eventHandle : eventHandles) {
 			
-			// Compute expiration time.
+			// Compute message expiration time.
 			long expirationTime = currentTime + eventHandle.coalesceTimeSpanMs;
 			
-			// Remember the priority and event handler key.
+			// Remember message priority and event handler key.
 			eventHandle.priority = priority;
 			eventHandle.key = key;
 			
-			// Let the incoming message survive until their time expiration. For coalescing purposes.
+			// For coalescing purposes let incoming message survive in dedicated memory until expiration time.
 			letMessageSurvive(message, expirationTime);
 			
 			// Break point managed by log.
 			LoggingCallback.breakPoint(message.signal);
 			
-			// Invoke the event on Swing thread and write log.
+			// Invoke event on Swing thread and write to log.
 			SwingUtilities.invokeLater(() -> {
 				
 				// Invoke action.
 				eventHandle.action.accept(message);
 				long executionTime = Utility.getNow();
 						
-				// Log the event.
+				// Log event.
 				LoggingCallback.log(message, eventHandle, executionTime);
 			});
 		}
 	}
 	
 	/**
-	 * Let survive the input message till the expiration time.
+	 * Let survive message in memory dedicated for coalescing of same messages.
 	 * @param message
 	 * @param expirationTime
 	 */
@@ -401,15 +402,15 @@ public class ConditionalEvents {
 		// Get renewal flag.
 		boolean renew = message.renew;
 
-		// Try to find message that equals the input message.
+		// Try to find message that equals input message.
 		List<Entry<Long, Message>> foundEqualMessages = survivingMessages.entrySet().stream()
 			.filter(item -> message.coalesces(item.getValue(), renew))
 			.collect(Collectors.toList());
 		
-		// Check surviving message.
+		// Check survived message.
 		boolean messageSurviving = !foundEqualMessages.isEmpty();
 		
-		// Return the state.
+		// Return state.
 		return messageSurviving;
 	}
 	
@@ -432,7 +433,7 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Stop the main thread.
+	 * Stop main thread.
 	 */
 	public static void stopDispatching() {
 		
@@ -454,11 +455,10 @@ public class ConditionalEvents {
 
 	/**
 	 * Transmit signal.
-	 * @param source - the source is mostly an object that calls transmit(...) method
-	 * @param signal - can be Target that specifies common target group or
-	 *                 it can be any other object in application
-	 * @param info   - the first info object is saved as relatedInfo and additional items
-	 *                 are saved in array and attached to additionalInfo field
+	 * @param source - source is mostly object that calls the transmit() method
+	 * @param signal - transmitted signal
+	 * @param info   - first message info is stored in relatedInfo member, additional
+	 *                 infos are stored in additionalInfo array
 	 */
 	public static void transmit(Object source, Signal signal, Object ... info) {
 		
@@ -468,11 +468,10 @@ public class ConditionalEvents {
 	
 	/**
 	 * Transmit renewed signal.
-	 * @param source - the source is mostly an object that calls transmit(...) method
-	 * @param signal - can be Target that specifies common target group or
-	 *                 it can be any other object in application
-	 * @param info   - the first info object is saved as relatedInfo and additional items
-	 *                 are saved in array and attached to additionalInfo field
+	 * @param source - source is mostly object that calls the transmit() method
+	 * @param signal - transmitted signal
+	 * @param info   - first message info is stored in relatedInfo member, additional
+	 *                 infos are stored in additionalInfo array
 	 */
 	public static void transmitRenewed(Object source, Signal signal, Object ... info) {
 		
@@ -482,12 +481,12 @@ public class ConditionalEvents {
 	
 	/**
 	 * Transmit signal.
-	 * @param source - the source is mostly the object that calls the transmit(...) method
-	 * @param target - the target can be a Target enumeration value that specifies common target group or
-	 *                 it can be any other object in application
-	 * @param signal - current signal
-	 * @param info   - array of additional message informations, the first info object is saved as relatedInfo
-	 * 				   and additional array items are saved in the additionalInfo field as an array
+	 * @param source - source is mostly object that calls the transmit() method
+	 * @param target - can be Target class object that specifies common target group or
+	 *                 it can be any other object used in application
+	 * @param signal - transmitted signal
+	 * @param info   - first message info is stored in relatedInfo member, additional
+	 *                 infos are stored in additionalInfo array
 	 */
 	public static void transmit(Object source, Object target, Signal signal, Object ... info) {
 		
@@ -498,12 +497,12 @@ public class ConditionalEvents {
 	
 	/**
 	 * Transmit renewed signal.
-	 * @param source - the source is mostly the object that calls the transmit(...) method
-	 * @param target - the target can be a Target enumeration value that specifies common target group or
-	 *                 it can be any other object in application
-	 * @param signal - current signal
-	 * @param info   - array of additional message informations, the first info object is saved as relatedInfo
-	 * 				   and additional array items are saved in the additionalInfo field as an array
+	 * @param source - source is mostly object that calls the transmit() method
+	 * @param target - can be Target class object that specifies common target group or
+	 *                 it can be any other object used in application
+	 * @param signal - transmitted signal
+	 * @param info   - first message info is stored in relatedInfo member, additional
+	 *                 infos are stored in additionalInfo array
 	 */
 	public static void transmitRenewed(Object source, Object target, Signal signal, Object ... info) {
 		
@@ -512,7 +511,60 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Propagate message. This is an internal method.
+	 * Entry point that performs signals transmission.
+	 * @param source - source of signals
+	 * @param signalGroup - signal groups
+	 * @param additionalGoupsAndInfos - can contain additional signal group list an can be followed by info list
+	 * 					                that will be transmitted inside each signal message.  
+	 * 				   					The first info is saved as relatedInfo field and additional items
+	 *                 					are saved in an array named additionalInfo inside message. Theirs values 
+	 *                 					are checked against class types included in signal object.
+	 */
+	public static void transmit(EventSource source, SignalGroup signalGroup, Object ... additionalGoupsAndInfos) {
+		
+		// Check group signals.
+		if (signalGroup.signals == null) {
+			return;
+		}
+		
+		// Get list of signals.
+		LinkedList<Signal> signals = new LinkedList<Signal>();
+		signals.addAll(signalGroup.signals);
+		
+		int count = additionalGoupsAndInfos.length;
+		int index = 0;
+		for (; index < count; index++) {
+			
+			Object item = additionalGoupsAndInfos[index];
+			if (item instanceof SignalGroup) {
+				
+				SignalGroup additionalSignalGroup = (SignalGroup) item;
+				signals.addAll(additionalSignalGroup.signals);
+			}
+			else {
+				break;
+			}
+		}
+		
+		// Get array of infos.
+		Object [] infos = new Object[count - index];
+		for (int infoIndex = 0; index < count; index++, infoIndex++) {
+			infos[infoIndex] = additionalGoupsAndInfos[infoIndex];
+		}
+		
+		// Transmit all enabled signals.
+		for (Signal signal : signals) {
+			
+			// Get checked infos.
+			Object [] checkedInfos = signal.getCheckedInfos(infos);
+			
+			// Transmit current signal.
+			ApplicationEvents.transmit(source, signal, checkedInfos);
+		}
+	}
+	
+	/**
+	 * Propagate message. This is internal method.
 	 * @param source
 	 * @param signal
 	 * @param target
@@ -564,7 +616,7 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Invoke lambda function later on the message dispatch thread.
+	 * Invoke lambda function later on the message dispatch thread using Runnable type.
 	 * @param lambdaFunction
 	 */
 	public static void invokeLater(Runnable lambdaFunction) {
@@ -590,7 +642,7 @@ public class ConditionalEvents {
 			
 			Message message = new Message();
 			
-			message.source = ConditionalEvents.class;
+			message.source = ApplicationEvents.class;
 			message.target = lambdaFunction;
 			message.signal = Signal._invokeLater;
 			
@@ -610,18 +662,18 @@ public class ConditionalEvents {
 	}
 	
 	/**
-	 * Enable "enable signal" message.
+	 * Post  "enable signal" message.
 	 * @param signalToEnable
 	 */
 	public static void enableSignal(Signal signalToEnable) {
 		
-		// Create special message with _enableSelectedSignal and put it into the message queue.
-		// Then unlock the message dispatch thread.
+		// Creates special message with _enableSelectedSignal and put it into the message queue.
+		// Then unlocks the message dispatch thread.
 		synchronized (messageQueue) {
 			
 			Message message = new Message();
 			
-			message.source = ConditionalEvents.class;
+			message.source = ApplicationEvents.class;
 			message.target = signalToEnable;
 			message.signal = Signal._enableTargetSignal;
 			
@@ -632,39 +684,67 @@ public class ConditionalEvents {
 	}
 
 	/**
-	 * Register new conditional event, the receiver of messages.
-	 * @param receiverObject - reference to an object that receives events
-	 * @param eventCondition - either Signal or SignalType
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
+	 * @param eventCondition - condition that must be met when the message is received
 	 * @param messageLambda
 	 * @return 
 	 */
-	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda) {
+	public static Object receiver(Object receiverObject, ApplicationEvent eventCondition, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
+	}
+	
+	/**
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
+	 * @param repeatLatencyMs
+	 * @param eventCondition - condition that must be met when the message is received
+	 * @param messageLambda
+	 * @return 
+	 */
+	public static Object receiver(Object receiverObject, int repeatLatencyMs, ApplicationEvent eventCondition, Consumer<Message> messageLambda) {
+		
+		// Delegate the call.
+		return registerReceiver(receiverObject, repeatLatencyMs, eventCondition, MIDDLE_PRIORITY, messageLambda, defaultCoalesceTimeMs, null);
 	}
 		
 	/**
-	 * Register new action for an event group.
-	 * @param receiverObject - reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
 	 * @param eventCondition
 	 * @param priority
 	 * @param messageLambda
 	 */
-	public static Object receiver(Object receiverObject, EventCondition eventCondition, int priority, Consumer<Message> messageLambda) {
+	public static Object receiver(Object receiverObject, ApplicationEvent eventCondition, int priority, Consumer<Message> messageLambda) {
 		
 		// Delegate the call.
-		return registerReceiver(receiverObject, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
 	}
 	
 	/**
-	 * Register new conditional event, the receiver of messages.
-	 * @param receiverObject -reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
+	 * @param repeatLatencyMs
+	 * @param eventCondition
+	 * @param priority
+	 * @param messageLambda
+	 */
+	public static Object receiver(Object receiverObject, int repeatLatencyMs, ApplicationEvent eventCondition, int priority, Consumer<Message> messageLambda) {
+		
+		// Delegate the call.
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, priority, messageLambda, defaultCoalesceTimeMs, null);
+	}
+	
+	/**
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
 	 * @param eventConditions
 	 * @param messageLambda
 	 * @return
 	 */
-	public static Object [] receiver(Object receiverObject, EventCondition [] eventConditions, Consumer<Message> messageLambda) {
+	public static Object [] receiver(Object receiverObject, ApplicationEvent [] eventConditions, Consumer<Message> messageLambda) {
 		
 		final long timeSpanMs = 500;
 		
@@ -675,92 +755,92 @@ public class ConditionalEvents {
 		// Add action rules.
 		for (int index = 0; index < count; index++) {
 			
-			EventCondition eventCondition = eventConditions[index];
-			outputKeys[index] = registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
+			ApplicationEvent eventCondition = eventConditions[index];
+			outputKeys[index] = registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
 		}
 		
 		return outputKeys;
 	}
 	
 	/**
-	 * 
-	 * @param receiverObject - reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
 	 * @param eventCondition
 	 * @param messageLambda
-	 * @param timeSpanMs
+	 * @param messageCoalesceMs
 	 * @return
 	 */
-	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs) {
+	public static Object receiver(Object receiverObject, ApplicationEvent eventCondition, Consumer<Message> messageLambda, Long messageCoalesceMs) {
 		
 		// Delegate the call.
-		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, null);
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, MIDDLE_PRIORITY, messageLambda, messageCoalesceMs, null);
 	}
 
 	/**
-	 * Register new conditional event, the receiver of messages.
-	 * @param receiverObject - reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
 	 * @param eventCondition
 	 * @param messageLambda
 	 * @param coalesceTimeSpanMs
 	 * @param identifier
 	 * @return
 	 */
-	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, String identifier) {
+	public static Object receiver(Object receiverObject, ApplicationEvent eventCondition, Consumer<Message> messageLambda, String identifier) {
 		
 		// Delegate the call.
-		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, minDelayMessageCoalesceMs, identifier);
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, MIDDLE_PRIORITY, messageLambda, minDelayMessageCoalesceMs, identifier);
 	}
 	
 	/**
-	 * Register new action for an event group.
-	 * @param receiverObject - reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
 	 * @param eventCondition
 	 * @param messageLambda
-	 * @param timeSpanMs
+	 * @param messageCoalesceMs
 	 * @param identifier
 	 * @return
 	 */
-	public static Object receiver(Object receiverObject, EventCondition eventCondition, Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
+	public static Object receiver(Object receiverObject, ApplicationEvent eventCondition, Consumer<Message> messageLambda, Long messageCoalesceMs, String identifier) {
 		
 		// Delegate the call.
-		return registerReceiver(receiverObject, eventCondition, MIDDLE_PRIORITY, messageLambda, timeSpanMs, identifier);
+		return registerReceiver(receiverObject, DEFAULT_REPEAT_LATENCY_MS, eventCondition, MIDDLE_PRIORITY, messageLambda, messageCoalesceMs, identifier);
 	}
 	
 	/**
-	 * Register new receiver for conditional events.
-	 * @param receiverObject - reference to an object that receives events
+	 * Register message receiver.
+	 * @param receiverObject - object that receives messages
+	 * @param repeatLatencyMs - latency value that can avoid infinite message cycles
 	 * @param eventCondition
 	 * @param priority 
-	 * @param message
+	 * @param messageLambda
 	 * @param timeSpanMs
 	 * @param identifier 
 	 * @return 
 	 */
-	private static Object registerReceiver(Object receiverObject, EventCondition eventCondition, int priority,
-			Consumer<Message> message, Long timeSpanMs, String identifier) {
+	private static Object registerReceiver(Object receiverObject, int repeatLatencyMs, ApplicationEvent eventCondition, int priority,
+			Consumer<Message> messageLambda, Long timeSpanMs, String identifier) {
 		
-		// Get reflection info.
+		// Get this call reflection.
 		Obj<StackTraceElement> reflection = new Obj<StackTraceElement>(null);
 		StackTraceElement stackElements [] = Thread.currentThread().getStackTrace();
 		if (stackElements.length >= 4) {
 			reflection.ref = stackElements[3];
 		}
 		
-		// A lambda function that can register conditional event.
 		synchronized (receivers) {
 		
-			// Create auxiliary table from current receivers.
-			ReceiversAuxiliaryTable receiversAuxiliaryTable = ReceiversAuxiliaryTable.createFrom(receivers);
+			// Create sorting table for receivers.
+			ReceiversSortingTable receiversSotingTable = ReceiversSortingTable.createFrom(receivers);
 			
-			// Create new event handle and add new table record.
-			EventHandle eventHandle = new EventHandle(message, priority, timeSpanMs, reflection.ref, identifier);
-			receiversAuxiliaryTable.addReceiver(receiverObject, eventCondition, priority, eventHandle);
+			// Create new event handle and add it to sorting table.
+			EventHandle eventHandle = new EventHandle(messageLambda, priority, timeSpanMs, reflection.ref, identifier);
+			receiversSotingTable.addReceiver(receiverObject, eventCondition, priority, eventHandle);
 			
-			// Retrieve sorted list of registered receivers.
-			receivers = receiversAuxiliaryTable.retrieveSorted();
+			// Retrieve sorted list of receivers.
+			receivers = receiversSotingTable.retrieveSortedReceivers();
 		}
 		
-		// If the key is a Swing component, use automatic release of the event receiver when the component is removed.
+		// If the key object is a Swing component automatically release receiver if component was removed.
 		if (receiverObject instanceof JComponent) {
 			JComponent component = (JComponent) receiverObject;
 			
@@ -772,10 +852,10 @@ public class ConditionalEvents {
 					// Nothing to do when the component is added.
 				}
 				
-				// Release all listeners associated with the key.
+				// When component is removed release all listeners associated with key object.
 				@Override
 				public void ancestorRemoved(AncestorEvent event) {
-					ConditionalEvents.removeReceivers(receiverObject);
+					ApplicationEvents.removeReceivers(receiverObject);
 				}
 
 				@Override
@@ -785,19 +865,19 @@ public class ConditionalEvents {
 			});
 		}
 		
-		// Return key.
+		// Return key object.
 		return receiverObject;
 	}
 	
 	/**
-	 * Unregister receivers for conditional events for given key object.
+	 * Unregister receivers using key object.
 	 * @param key
 	 */
 	public static void removeReceivers(Object key) {
 		
 		synchronized (receivers) {
 			
-			// Remove conditional events for key.
+			// Remove receivers for key.
 			receivers.remove(key);
 		}
 	}

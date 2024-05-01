@@ -44,7 +44,8 @@ import org.maclan.MiddleUtility;
 import org.maclan.MimeType;
 import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Progress2Dialog;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.ToolBarKit;
@@ -992,9 +993,6 @@ public abstract class NamespaceResourcesEditor extends JPanel implements Searcha
 		
 	    // Add resource to the list.
 	    addResourceToList(resource);
-		// Update information.
-	    long resourceId = resource.getId();
-		ConditionalEvents.transmit(NamespaceResourcesEditor.this, GuiSignal.newTextResource, resourceId);
 	}
 	
 	/**

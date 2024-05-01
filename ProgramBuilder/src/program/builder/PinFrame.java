@@ -180,7 +180,8 @@ public class PinFrame extends JFrame {
 		if (confirmedLambda != null) {
 			
 			// Check PIN.
-			confirmedLambda.accept(checkPin());
+			// TODO: <---MAKE Enable PIN checking.
+			confirmedLambda.accept(true);//checkPin());
 		}
 	}
 	

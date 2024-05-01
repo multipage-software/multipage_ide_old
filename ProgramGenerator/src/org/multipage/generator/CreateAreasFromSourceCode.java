@@ -32,9 +32,9 @@ import javax.swing.tree.TreePath;
 import org.maclan.Area;
 import org.maclan.Slot;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
@@ -288,8 +288,6 @@ public class CreateAreasFromSourceCode extends JDialog {
 		finally {
 			ProgramBasic.logoutMiddle();
 		}
-			
-		ConditionalEvents.transmit(CreateAreasFromSourceCode.this, GuiSignal.importToArea);
 		
 		saveDialog();
 		dispose();

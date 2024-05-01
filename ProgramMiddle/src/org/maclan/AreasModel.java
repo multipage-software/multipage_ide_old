@@ -453,14 +453,28 @@ public class AreasModel {
 	}
 
 	/**
-	 * @param homeAreaId the homeAreaId to set
+	 * Sets home area ID.
+	 * @param homeAreaId
 	 */
-	public void setHomeAreaId(long startAreaId) {
-		this.homeAreaId = startAreaId;
+	public void setHomeAreaId(long homeAreaId) {
+		this.homeAreaId = homeAreaId;
 	}
 
 	/**
-	 * Returns true value if it is start area.
+	 * Returns true value if it is home area ID.
+	 * @param areaId
+	 * @return
+	 */
+	public boolean isHomeAreaId(Long areaId) {
+		
+		if (areaId == null) {
+			return false;
+		}
+		return areaId == homeAreaId;
+	}
+	
+	/**
+	 * Returns true value if it is home area.
 	 * @param area
 	 * @return
 	 */

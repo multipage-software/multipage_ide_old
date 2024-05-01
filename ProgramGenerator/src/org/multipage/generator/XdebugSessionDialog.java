@@ -465,27 +465,29 @@ public class XdebugSessionDialog extends JDialog {
 		
 		// Number of Xdebug transactions.
 		DefaultTableModel transactionsModel = (DefaultTableModel) tableTransactions.getModel();
-		xdebugSession.transactions.forEach((tid, transaction) -> {
-			
-			XdebugCommand command = transaction.command;
-			
-			String argumentLine = "";
-			String divider = "";
-			for (String [] argument : command.arguments) {
-				argumentLine += divider + argument[0] + ' ' + argument[1];
-				divider = " ";
-			}
-			
-			String hexaData = "";
-			if (command.data != null) {
-				hexaData = HexFormat.of().formatHex(command.data);
-				if (hexaData == null) {
-					hexaData = "";
+		synchronized (xdebugSession.transactions) {
+			xdebugSession.transactions.forEach((tid, transaction) -> {
+				
+				XdebugCommand command = transaction.command;
+				
+				String argumentLine = "";
+				String divider = "";
+				for (String [] argument : command.arguments) {
+					argumentLine += divider + argument[0] + ' ' + argument[1];
+					divider = " ";
 				}
-			}
-			
-			transactionsModel.addRow(new Object [] { tid, command.name, argumentLine, hexaData }); 
-		});
+				
+				String hexaData = "";
+				if (command.data != null) {
+					hexaData = HexFormat.of().formatHex(command.data);
+					if (hexaData == null) {
+						hexaData = "";
+					}
+				}
+				
+				transactionsModel.addRow(new Object [] { tid, command.name, argumentLine, hexaData }); 
+			});			
+		}
 	}
 	
 	/**

@@ -25,7 +25,7 @@ import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
 import org.maclan.server.ProgramHttpServer;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.Consoles;
+import org.multipage.gui.LogConsoles;
 import org.multipage.gui.GeneralGui;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenu;
@@ -87,9 +87,6 @@ public class GeneratorMain {
 	 * @param useLogin
 	 */
 	public static void main(String applicationNaming, String[] args, String pathToMiddleObjects, final boolean useLogin) {
-		
-		// Initialize logging consoles enabled for multitasks.
-		Consoles.main(new String[] {});
 		
 		// Set default application naming. It is used for example for application user directory
 		MiddleUtility.setApplicationNaming(applicationNaming);
@@ -266,6 +263,8 @@ public class GeneratorMain {
 			
 			// Start HTTP server.
 			ProgramHttpServer httpServer = ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUsedLogin());
+			
+			// Attach Area Server debugger to the debug viewer.
 			DebugViewer.getInstance().attachDebugger(httpServer.getDebugger());
 
 			// Initialize main frame class. Create and show main frame.
@@ -406,5 +405,7 @@ public class GeneratorMain {
 			// Interrupt all running threads.
 			InterruptAllThreads();
 		}
+		// Stop SWT thread that displayed embedded browsers.
+		SwtBrowserCanvas.stopSwtThread();
 	}
 }

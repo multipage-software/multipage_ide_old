@@ -8,6 +8,8 @@
 package org.multipage.generator;
 
 import java.awt.Rectangle;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.LinkedList;
 
@@ -16,12 +18,13 @@ import javax.swing.JFrame;
 import org.maclan.Slot;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
+import org.multipage.util.Closable;
 
 /**
  * @author
  *
  */
-public abstract class SlotEditorBaseFrame extends JFrame {
+public abstract class SlotEditorBaseFrame extends JFrame implements Closable {
 
 	/**
 	 * Version.
@@ -158,5 +161,30 @@ public abstract class SlotEditorBaseFrame extends JFrame {
 		
 		// Remove editors from list.
 		createdSlotEditors.removeAll(editorsToRemove);
+	}
+
+	/**
+	 * Constructor.
+	 */
+	public SlotEditorBaseFrame() {
+		
+		setListeners();
+	}
+	
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
+		
+		// On window closing.
+		addWindowListener(new WindowAdapter() {
+
+			@Override
+			public void windowClosing(WindowEvent e) {
+				super.windowClosing(e);
+				// Close frame.
+				close();
+			}
+		});		
 	}
 }

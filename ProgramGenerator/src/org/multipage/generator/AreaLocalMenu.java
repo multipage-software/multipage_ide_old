@@ -16,18 +16,23 @@ import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 
+import javax.swing.ImageIcon;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
+import javax.swing.MenuElement;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
 import org.maclan.Area;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.AreaSignal;
 import org.multipage.gui.EventSource;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -75,6 +80,44 @@ public class AreaLocalMenu {
 	private Area takenAreaParent = null;
 	
 	/**
+	 * All popup menu elements. 
+	 */
+	public MenuElement menuTakeAreaTree;
+	public MenuElement menuCopyTakenAreaTree;
+	public MenuElement menuMoveTakenAreaTree;
+	public MenuElement menuAddToFavoritesArea;
+	public MenuElement menuCreateAreas;
+	public MenuElement menuExternalSources;
+	public MenuElement menuSetHomeArea;
+	public MenuElement menuEditAreaSlots;
+	public MenuElement menuEditStartResources;
+	public MenuElement menuFile;
+	public MenuElement menuExport;
+	public MenuElement menuImport;
+	public MenuElement menuFocusArea;
+	public MenuElement menuFocusSuperArea;
+	public MenuElement menuFocusNextArea;
+	public MenuElement menuFocusPreviousArea;
+	public MenuElement menuFocusTabTopArea;
+	public MenuElement menuEditArea;
+	public MenuElement menuCopyDescription;
+	public MenuElement menuCopyAlias;
+	public MenuElement menuAreaTrace;
+	public MenuElement menuDisplayArea;
+	public MenuElement menuDisplayRenderedArea;
+	public MenuElement displayMenu;
+	public MenuElement menuAreaHelp;
+	public MenuElement menuAreaInheritedFolders;
+	public MenuElement focusMenu;
+	public MenuElement selectMenu;
+	public MenuElement menuSelectArea;
+	public MenuElement menuSelectAreaAdd;
+	public MenuElement menuSelectAreaAndSuabreas;
+	public MenuElement menuSelectAreaAndSuabreasAdd;
+	public MenuElement menuClearSelection;
+	public MenuElement menuCloneDiagram;
+	
+	/**
 	 * Constructor.
 	 * @param areaLocalMenuListener
 	 */
@@ -94,6 +137,88 @@ public class AreaLocalMenu {
 		
 		this.purpose = purpose;
 	}
+	
+
+	/**
+	 * Create new menu item.
+	 * @param menuTextId
+	 * @param iconPath
+	 * @return
+	 */
+	private static JMenu newMenu(String menuTextId, String iconPath) { 
+		
+		String menuText = Resources.getString(menuTextId);
+		JMenu menu = new JMenu(menuText);
+		ImageIcon icon = Images.getIcon(iconPath);
+		
+		menu.setIcon(icon);
+		return menu;
+	}
+	
+	/**
+	 * Create new menu.
+	 * @param menuTextId
+	 * @param iconPath
+	 * @return
+	 */
+	private static JMenu newMenu(String menuTextId) { 
+		
+		String menuText = Resources.getString(menuTextId);
+		JMenu menu = new JMenu(menuText);
+		
+		return menu;
+	}
+	
+	
+	
+	/**
+	 * Create new menu item.
+	 * @param menuTextId
+	 * @param iconPath
+	 * @param accelerator
+	 * @return
+	 */
+	private static JMenuItem newMenuItem(String menuTextId, String iconPath, String accelerator) { 
+		
+		String menuText = Resources.getString(menuTextId);
+		JMenuItem menuItem = new JMenuItem(menuText);
+		ImageIcon icon = Images.getIcon(iconPath);
+		
+		menuItem.setIcon(icon);
+		menuItem.setAccelerator(KeyStroke.getKeyStroke(accelerator));
+		
+		return menuItem;
+	}
+	
+	/**
+	 * Create new menu item.
+	 * @param menuTextId
+	 * @param iconPath
+	 * @return
+	 */
+	private static JMenuItem newMenuItem(String menuTextId, String iconPath) { 
+		
+		String menuText = Resources.getString(menuTextId);
+		JMenuItem menuItem = new JMenuItem(menuText);
+		ImageIcon icon = Images.getIcon(iconPath);
+		
+		menuItem.setIcon(icon);
+		return menuItem;
+	}
+	
+	/**
+	 * Create new menu item.
+	 * @param menuTextId
+	 * @param iconPath
+	 * @return
+	 */
+	private static JMenuItem newMenuItem(String menuTextId) { 
+		
+		String menuText = Resources.getString(menuTextId);
+		JMenuItem menuItem = new JMenuItem(menuText);
+		
+		return menuItem;
+	}
 
 	/**
 	 * Add items to a popup trayMenu.
@@ -112,347 +237,137 @@ public class AreaLocalMenu {
 	 */
 	public void addTo(JPopupMenu popupMenu, int start) {
 		
-		JMenuItem menuTakeAreaTree = createMenuItem(
-				Resources.getString("org.multipage.generator.menuTakeAreaTree"));
-		menuTakeAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
+		menuFile = newMenu("org.multipage.generator.menuFile");
+		menuEditArea = newMenu("org.multipage.generator.menuEditAreaResourcesList", "org/multipage/generator/images/edit.png");
+		focusMenu = newMenu("org.multipage.generator.menuFocus");
+		selectMenu = newMenu("org.multipage.generator.menuSelect");
+		displayMenu = newMenu("org.multipage.generator.menuDisplayMenu");
+		menuCreateAreas = newMenu("org.multipage.generator.menuCreateAreas");
 		
-		JMenuItem menuCopyTakenAreaTree = createMenuItem(
-				Resources.getString("org.multipage.generator.menuCopyTakenAreaTree"));
-		menuCopyTakenAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
-		
-		JMenuItem menuMoveTakenAreaTree = createMenuItem(
-				Resources.getString("org.multipage.generator.menuMoveTakenAreaTree"));
-		menuMoveTakenAreaTree.setIcon(Images.getIcon("org/multipage/gui/images/paste_icon.png"));
-				
-		JMenuItem menuAddToFavoritesArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuAddToFavorites"));
-		menuAddToFavoritesArea.setIcon(Images.getIcon("org/multipage/generator/images/favorite.png"));
-		
-		JMenu menuCreateAreas = createMenu(Resources.getString("org.multipage.generator.menuCreateAreas"));
-		
-		JMenuItem menuExternalSources = createMenuItem(
-				Resources.getString("org.multipage.generator.menuExternalSourceCodes"));
-		menuCreateAreas.add(menuExternalSources);
-		
-		JMenuItem menuSetHomeArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuSetHomeArea"));
-		menuSetHomeArea.setIcon(Images.getIcon("org/multipage/generator/images/home_page.png"));
-		
-		JMenuItem menuEditAreaSlots = createMenuItem(
-				Resources.getString("org.multipage.generator.menuEditArea"));
-		menuEditAreaSlots.setIcon(Images.getIcon("org/multipage/generator/images/list.png"));
-		
-		JMenuItem menuEditStartResources = createMenuItem(
-				Resources.getString("org.multipage.generator.menuEditStartResources"));
-		menuEditStartResources.setIcon(Images.getIcon("org/multipage/generator/images/start_resource.png"));
-		
-		JMenu menuFile = createMenu(Resources.getString("org.multipage.generator.menuFile"));
-		
-		JMenuItem menuExport = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFileExport"));
-		menuExport.setIcon(Images.getIcon("org/multipage/generator/images/export2_icon.png"));
-		
-		JMenuItem menuImport = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFileImport"));
-		menuImport.setIcon(Images.getIcon("org/multipage/generator/images/import2_icon.png"));
-		
-		JMenuItem menuFocusArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFocusArea"));
-		menuFocusArea.setIcon(Images.getIcon("org/multipage/generator/images/search_icon.png"));
-		
-		JMenuItem menuFocusSuperArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFocusSuperArea"));
-		menuFocusSuperArea.setIcon(Images.getIcon("org/multipage/generator/images/search_parent.png"));
-		menuFocusSuperArea.setAccelerator(KeyStroke.getKeyStroke("control S"));
-		
-		JMenuItem menuFocusNextArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFocusNextArea"));
-		menuFocusNextArea.setIcon(Images.getIcon("org/multipage/generator/images/next.png"));
-		
-		JMenuItem menuFocusPreviousArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFocusPreviousArea"));
-		menuFocusPreviousArea.setIcon(Images.getIcon("org/multipage/generator/images/previous.png"));
-		
-		JMenuItem menuFocusTabTopArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuFocusTabTopArea"));
-		menuFocusTabTopArea.setIcon(Images.getIcon("org/multipage/generator/images/focus_tab.png"));
-
-		JMenu menuEditArea = createMenu(
-				Resources.getString("org.multipage.generator.menuEditAreaResourcesList"));
-		menuEditArea.setIcon(Images.getIcon("org/multipage/generator/images/edit.png"));
-
-		JMenuItem menuCopyDescription = createMenuItem(
-				Resources.getString("org.multipage.generator.menuCopyAreaDescription"));
-		menuCopyDescription.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
-		
-		JMenuItem menuCopyAlias = createMenuItem(
-				Resources.getString("org.multipage.generator.menuCopyAreaAlias"));
-		menuCopyAlias.setIcon(Images.getIcon("org/multipage/gui/images/copy_icon.png"));
-		
-		JMenuItem menuAreaTrace = createMenuItem(
-				Resources.getString("org.multipage.generator.menuAreaTrace"));
-		menuAreaTrace.setIcon(Images.getIcon("org/multipage/generator/images/area_trace.png"));
-		
-		JMenuItem menuDisplayArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuDisplayOnlineArea"));
-		menuDisplayArea.setIcon(Images.getIcon("org/multipage/generator/images/display.png"));
-
-		JMenuItem menuDisplayRenderedArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuDisplayRenderedArea"));
-		menuDisplayRenderedArea.setIcon(Images.getIcon("org/multipage/generator/images/display_rendered.png"));
-		
-		JMenu displayMenu = createMenu(
-				Resources.getString("org.multipage.generator.menuDisplayMenu"));
-		displayMenu.add(menuDisplayArea);
-		displayMenu.add(menuDisplayRenderedArea);
-		
-		JMenuItem menuAreaHelp = createMenuItem(
-				Resources.getString("org.multipage.generator.menuAreaHelp"));
-		menuAreaHelp.setIcon(Images.getIcon("org/multipage/generator/images/help_small.png"));
-				
-		JMenuItem menuAreaInheritedFolders = createMenuItem(
-				Resources.getString("org.multipage.generator.menuAreaInheritedFolders"));
-		menuAreaInheritedFolders.setIcon(Images.getIcon("org/multipage/generator/images/folder.png"));
-		
-		JMenu focusMenu = createMenu(
-				Resources.getString("org.multipage.generator.menuFocus"));
-		
-		JMenu selectMenu = createMenu(
-				Resources.getString("org.multipage.generator.menuSelect"));
-		
-		JMenuItem menuSelectArea = createMenuItem(
-				Resources.getString("org.multipage.generator.menuSelectArea2"));
-		menuSelectArea.setIcon(Images.getIcon("org/multipage/generator/images/selected_area.png"));
-		
-		JMenuItem menuSelectAreaAdd = createMenuItem(
-				Resources.getString("org.multipage.generator.menuSelectAreaAdd"));
-		menuSelectAreaAdd.setIcon(Images.getIcon("org/multipage/generator/images/selected_area_add.png"));
-		
-		JMenuItem menuSelectAreaAndSuabreas = createMenuItem(
-				Resources.getString("org.multipage.generator.menuSelectAreaAndSubareas2"));
-		menuSelectAreaAndSuabreas.setIcon(Images.getIcon("org/multipage/generator/images/selected_subareas.png"));
-		
-		JMenuItem menuSelectAreaAndSuabreasAdd = createMenuItem(
-				Resources.getString("org.multipage.generator.menuSelectAreaAndSubareasAdd"));
-		menuSelectAreaAndSuabreasAdd.setIcon(Images.getIcon("org/multipage/generator/images/selected_subareas_add.png"));
-		JMenuItem menuClearSelection = createMenuItem(
-				Resources.getString("org.multipage.generator.menuClearSelection"));
-		menuClearSelection.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
-		// Add clone trayMenu item.
-		JMenuItem menuCloneDiagram = createMenuItem(Resources.getString("org.multipage.generator.menuCloneAreasDiagram"));
-		menuDisplayArea.setIcon(Images.getIcon("org/multipage/generator/images/clone.png"));
+		menuTakeAreaTree = newMenuItem("org.multipage.generator.menuTakeAreaTree", "org/multipage/gui/images/copy_icon.png");
+		menuCopyTakenAreaTree = newMenuItem("org.multipage.generator.menuCopyTakenAreaTree", "org/multipage/gui/images/paste_icon.png");
+		menuMoveTakenAreaTree = newMenuItem("org.multipage.generator.menuMoveTakenAreaTree", "org/multipage/gui/images/paste_icon.png");
+		menuAddToFavoritesArea = newMenuItem("org.multipage.generator.menuAddToFavorites", "org/multipage/generator/images/favorite.png");
+		menuExternalSources = newMenuItem("org.multipage.generator.menuExternalSourceCodes");
+		menuSetHomeArea = newMenuItem("org.multipage.generator.menuSetHomeArea", "org/multipage/generator/images/home_page.png");
+		menuEditAreaSlots = newMenuItem("org.multipage.generator.menuEditArea", "org/multipage/generator/images/list.png");
+		menuEditStartResources = newMenuItem("org.multipage.generator.menuEditStartResources", "org/multipage/generator/images/start_resource.png");
+		menuExport = newMenuItem("org.multipage.generator.menuFileExport", "org/multipage/generator/images/export2_icon.png");
+		menuImport = newMenuItem("org.multipage.generator.menuFileImport", "org/multipage/generator/images/import2_icon.png");
+		menuFocusArea = newMenuItem("org.multipage.generator.menuFocusArea", "org/multipage/generator/images/search_icon.png");
+		menuFocusSuperArea = newMenuItem("org.multipage.generator.menuFocusSuperArea", "org/multipage/generator/images/search_parent.png", "control S");
+		menuFocusNextArea = newMenuItem("org.multipage.generator.menuFocusNextArea", "org/multipage/generator/images/next.png");
+		menuFocusPreviousArea = newMenuItem("org.multipage.generator.menuFocusPreviousArea", "org/multipage/generator/images/previous.png");
+		menuFocusTabTopArea = newMenuItem("org.multipage.generator.menuFocusTabTopArea", "org/multipage/generator/images/focus_tab.png");
+		menuCopyDescription = newMenuItem("org.multipage.generator.menuCopyAreaDescription", "org/multipage/gui/images/copy_icon.png");
+		menuCopyAlias = newMenuItem("org.multipage.generator.menuCopyAreaAlias", "org/multipage/gui/images/copy_icon.png");
+		menuAreaTrace = newMenuItem("org.multipage.generator.menuAreaTrace", "org/multipage/generator/images/area_trace.png");
+		menuDisplayArea = newMenuItem("org.multipage.generator.menuDisplayOnlineArea", "org/multipage/generator/images/display.png");
+		menuDisplayRenderedArea = newMenuItem("org.multipage.generator.menuDisplayRenderedArea", "org/multipage/generator/images/display_rendered.png");
+		menuAreaHelp = newMenuItem("org.multipage.generator.menuAreaHelp", "org/multipage/generator/images/help_small.png");
+		menuAreaInheritedFolders = newMenuItem("org.multipage.generator.menuAreaInheritedFolders", "org/multipage/generator/images/folder.png");
+		menuSelectArea = newMenuItem("org.multipage.generator.menuSelectArea2", "org/multipage/generator/images/selected_area.png");
+		menuSelectAreaAdd = newMenuItem("org.multipage.generator.menuSelectAreaAdd", "org/multipage/generator/images/selected_area_add.png");
+		menuSelectAreaAndSuabreas = newMenuItem("org.multipage.generator.menuSelectAreaAndSubareas2", "org/multipage/generator/images/selected_subareas.png");
+		menuSelectAreaAndSuabreasAdd = newMenuItem("org.multipage.generator.menuSelectAreaAndSubareasAdd", "org/multipage/generator/images/selected_subareas_add.png");
+		menuClearSelection = newMenuItem("org.multipage.generator.menuClearSelection", "org/multipage/generator/images/cancel_icon.png");
+		menuCloneDiagram = newMenuItem("org.multipage.generator.menuCloneAreasDiagram", "org/multipage/generator/images/clone.png");
 		
 		int index = start;
 		
-		popupMenu.insert(menuTakeAreaTree, index++);
-		popupMenu.insert(menuCopyTakenAreaTree, index++);
-		popupMenu.insert(menuMoveTakenAreaTree, index++);
-		popupMenu.addSeparator(); index++;
-		
+		insert(popupMenu, menuTakeAreaTree, index++);
+		insert(popupMenu, menuCopyTakenAreaTree, index++);
+		insert(popupMenu, menuMoveTakenAreaTree, index++);
+		addSeparator(popupMenu); index++;
 		if (isAddFavorites) {
-			popupMenu.insert(menuAddToFavoritesArea, index++);
-			popupMenu.addSeparator(); index++;
+			insert(popupMenu, menuAddToFavoritesArea, index++);
+			addSeparator(popupMenu); index++;
 		}
 		if ((purpose & DIAGRAM) == 0) {
-			popupMenu.insert(selectMenu, index++);
+			insert(popupMenu, selectMenu, index++);
 		}
-		popupMenu.insert(menuCreateAreas, index++);
-		popupMenu.insert(menuSetHomeArea, index++);
-		popupMenu.insert(menuEditArea, index++);
-		popupMenu.insert(menuEditAreaSlots, index++);
-		popupMenu.insert(menuEditStartResources, index++);
-		popupMenu.addSeparator(); index++;
-		popupMenu.insert(menuSetHomeArea, index++);
-		popupMenu.addSeparator(); index++;
+		insert(displayMenu, menuDisplayArea, 0);
+		insert(displayMenu, menuDisplayRenderedArea, 1);
+		insert(popupMenu, menuCreateAreas, index++);
+		insert(menuCreateAreas, menuExternalSources, 0);
+		insert(popupMenu, menuSetHomeArea, index++);
+		insert(popupMenu, menuEditArea, index++);
+		insert(popupMenu, menuEditAreaSlots, index++);
+		insert(popupMenu, menuEditStartResources, index++);
+		addSeparator(popupMenu); index++;
+		insert(popupMenu, menuSetHomeArea, index++);
+		addSeparator(popupMenu); index++;
 		index = insertEditResourceMenuItems(popupMenu, index);
-		popupMenu.insert(focusMenu, index++);
-		popupMenu.insert(displayMenu, index++);
-		popupMenu.insert(menuFile, index++);
-		popupMenu.addSeparator(); index++;
-		popupMenu.insert(menuAreaTrace, index++);
-		popupMenu.insert(menuAreaInheritedFolders, index++);
-		popupMenu.addSeparator(); index++;
-		popupMenu.insert(menuCopyDescription, index++);
-		popupMenu.insert(menuCopyAlias, index++);
-		popupMenu.addSeparator(); index++;
-		popupMenu.insert(menuAreaHelp, index++);
-		popupMenu.addSeparator(); index++;
-		popupMenu.insert(menuCloneDiagram, index++);
+		insert(popupMenu, focusMenu, index++);
+		insert(popupMenu, displayMenu, index++);
+		insert(popupMenu, menuFile, index++);
+		addSeparator(popupMenu); index++;
+		insert(popupMenu, menuAreaTrace, index++);
+		insert(popupMenu, menuAreaInheritedFolders, index++);
+		addSeparator(popupMenu); index++;
+		insert(popupMenu, menuCopyDescription, index++);
+		insert(popupMenu, menuCopyAlias, index++);
+		addSeparator(popupMenu); index++;
+		insert(popupMenu, menuAreaHelp, index++);
+		addSeparator(popupMenu); index++;
+		insert(popupMenu, menuCloneDiagram, index++);
 		
 		index = 0;
-		menuFile.insert(menuImport, index++);
-		menuFile.insert(menuExport, index++);
+		insert(menuFile, menuImport, index++);
+		insert(menuFile, menuExport, index++);
 				
 		index = 0;
-		focusMenu.insert(menuFocusArea, index++);
-		focusMenu.insert(menuFocusSuperArea, index++);
-		focusMenu.insert(menuFocusNextArea, index++);
-		focusMenu.insert(menuFocusPreviousArea, index++);
-		index = insertFocusMenuItems(focusMenu, index++);
-		focusMenu.addSeparator(); index++;
-		focusMenu.insert(menuFocusTabTopArea, index++);
+		insert(focusMenu, menuFocusArea, index++);
+		insert(focusMenu, menuFocusSuperArea, index++);
+		insert(focusMenu, menuFocusNextArea, index++);
+		insert(focusMenu, menuFocusPreviousArea, index++);
+		index = insertFocusMenuItems((JMenu) focusMenu, index++);
+		addSeparator(focusMenu); index++;
+		insert(focusMenu, menuFocusTabTopArea, index++);
 		
-		insertEditAreaMenu(menuEditArea);
+		insertEditAreaMenu((JMenu) menuEditArea);
 		
 		if ((purpose & DIAGRAM) == 0) {
 			index = 0;
-			selectMenu.insert(menuSelectArea, index++);
-			selectMenu.insert(menuSelectAreaAdd, index++);
-			selectMenu.insert(menuSelectAreaAndSuabreas, index++);
-			selectMenu.insert(menuSelectAreaAndSuabreasAdd, index++);
-			selectMenu.addSeparator(); index++;
-			selectMenu.insert(menuClearSelection, index++);
+			insert(selectMenu, menuSelectArea, index++);
+			insert(selectMenu, menuSelectAreaAdd, index++);
+			insert(selectMenu, menuSelectAreaAndSuabreas, index++);
+			insert(selectMenu, menuSelectAreaAndSuabreasAdd, index++);
+			addSeparator(selectMenu); index++;
+			insert(selectMenu, menuClearSelection, index++);
 		}
 
 		// Add listeners.
-		menuTakeAreaTree.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				takeAreaTree();
-			}
-		});
-		menuCopyTakenAreaTree.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				copyTakenAreaTree();
-			}
-		});
-		menuMoveTakenAreaTree.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				moveTakenAreaTree();
-			}
-		});
+		addActionListener(menuTakeAreaTree, () -> takeAreaTree());
+		addActionListener(menuCopyTakenAreaTree, () -> copyTakenAreaTree());
+		addActionListener(menuMoveTakenAreaTree, () -> moveTakenAreaTree());
 		if (isAddFavorites) {
-			menuAddToFavoritesArea.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
-					addToFavorites();
-				}
-			});
+			addActionListener(menuAddToFavoritesArea, () -> addToFavorites());
 		}
-		menuExternalSources.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				createExternalSources();
-			}
-		});
-		menuEditAreaSlots.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				editArea();
-			}
-		});
-		menuFocusArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				focusArea();
-			}
-		});
-		menuFocusSuperArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				focusSuperArea();
-			}
-		});
-		menuFocusNextArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				focusNextArea();
-			}
-		});
-		menuFocusPreviousArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				focusPreviousArea();
-			}
-		});
-		menuCopyDescription.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				copyDescription();
-			}
-		});
-		menuCopyAlias.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				copyAlias();
-			}
-		});
-		menuAreaTrace.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				showAreaTrace();
-			}
-		});
-		menuAreaInheritedFolders.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				showAreaInheritedFolders();
-			}
-		});
-		menuAreaHelp.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				viewHelp();
-			}
-		});
-		menuDisplayArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				displayOnlineArea();
-			}
-		});
-		menuDisplayRenderedArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				displayRenderedArea();
-			}
-		});
-		menuSelectArea.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				selectArea();
-			}
-		});
-		menuSelectAreaAdd.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				selectAreaAdd();
-			}
-		});
-		menuSelectAreaAndSuabreas.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				selectAreaAndSubareas();
-			}
-		});
-		menuSelectAreaAndSuabreasAdd.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				selectAreaAndSubareasAdd();
-			}
-		});
-		menuClearSelection.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				clearSelection();
-			}
-		});
-		menuCloneDiagram.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				cloneDiagram();
-			}
-		});
-		menuSetHomeArea.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				setHomeArea();
-			}
-		});
-		menuFocusTabTopArea.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				focusTabTopArea();
-			}
-		});
-		menuExport.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				exportArea();
-			}
-		});
-		menuImport.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				importArea();
-			}
-		});
-		menuEditStartResources.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				editStartResource(true);
-			}
-		});
+		addActionListener(menuExternalSources, () -> createExternalSources());
+		addActionListener(menuEditAreaSlots, () -> editArea());
+		addActionListener(menuFocusArea, () -> focusArea());
+		addActionListener(menuFocusSuperArea, () -> focusSuperArea());
+		addActionListener(menuFocusNextArea, () -> focusNextArea());
+		addActionListener(menuFocusPreviousArea, () -> focusPreviousArea());
+		addActionListener(menuCopyDescription, () -> copyDescription());
+		addActionListener(menuCopyAlias, () -> copyAlias());
+		addActionListener(menuAreaTrace, () -> showAreaTrace());
+		addActionListener(menuAreaInheritedFolders, () -> showAreaInheritedFolders());
+		addActionListener(menuAreaHelp, () -> viewHelp());
+		addActionListener(menuDisplayArea, () -> displayOnlineArea());
+		addActionListener(menuDisplayRenderedArea, () -> displayRenderedArea());
+		addActionListener(menuSelectArea, () -> selectArea());
+		addActionListener(menuSelectAreaAdd, () -> selectAreaAdd());
+		addActionListener(menuSelectAreaAndSuabreas, () -> selectAreaAndSubareas());
+		addActionListener(menuSelectAreaAndSuabreasAdd, () -> selectAreaAndSubareasAdd());
+		addActionListener(menuClearSelection, () -> clearSelection());
+		addActionListener(menuCloneDiagram, () -> cloneDiagram());
+		addActionListener(menuSetHomeArea, () -> setHomeArea());
+		addActionListener(menuFocusTabTopArea, () -> focusTabTopArea());
+		addActionListener(menuExport, () -> exportArea());
+		addActionListener(menuImport, () -> importArea());
+		addActionListener(menuEditStartResources, () -> editStartResource(true));
 		
 		// Set listeners.
 		popupMenu.addPopupMenuListener(new PopupMenuListener() {
@@ -461,8 +376,12 @@ public class AreaLocalMenu {
 				
 				// Enable / disable pasting of area tree with tray menu item.
 				boolean enable = GeneratorMainFrame.getFrame().isAreaTreeDataCopy();
-				menuCopyTakenAreaTree.setEnabled(enable);
-				menuMoveTakenAreaTree.setEnabled(enable);
+				
+				JMenuItem menuItem = (JMenuItem) menuCopyTakenAreaTree;
+				menuItem.setEnabled(enable);
+				
+				menuItem = (JMenuItem) menuMoveTakenAreaTree;
+				menuItem.setEnabled(enable);
 			}
 			@Override
 			public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
@@ -474,6 +393,102 @@ public class AreaLocalMenu {
 	}
 	
 	/**
+	 * Adds action listener to menu element.
+	 * @param menuElement
+	 * @param runnable
+	 */
+	private void addActionListener(MenuElement menuElement, Runnable runnable) {
+		
+		ActionListener listener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				runnable.run();
+			}
+		};
+		
+		if (menuElement instanceof JMenuItem) {
+			JMenuItem menuItem = (JMenuItem) menuElement;
+			menuItem.addActionListener(listener);
+		}
+	}
+	
+	/**
+	 * Disable menu items.
+	 * @param disableMenuItems
+	 */
+	public void disableMenuItems(MenuElement ...disableMenuItems) {
+		
+		for (MenuElement menuElementDisable : disableMenuItems) {
+			
+			if (menuElementDisable instanceof JMenuItem) {
+				JMenuItem menuItem = (JMenuItem) menuElementDisable;
+				menuItem.setEnabled(false);
+			}
+		}		
+	}
+	
+
+	/**
+	 * Insert separator.
+	 * @param menuElement
+	 */
+	private void addSeparator(MenuElement menuElement) {
+		
+		if (menuElement instanceof JMenu) {
+			JMenu menu = (JMenu) menuElement;
+			menu.addSeparator();
+		}
+	}
+
+	/**
+	 * Insert menu item at indexed position.
+	 * @param menu
+	 * @param menuItem
+	 * @param index
+	 */
+	private void insert(MenuElement menuElement, MenuElement subElement, int index) {
+		
+		if (menuElement instanceof JMenu) { 
+			JMenu menu = (JMenu) menuElement;
+			insert(menu, subElement, index);
+		}
+		else if (menuElement instanceof JPopupMenu) {
+			JPopupMenu popupMenu = (JPopupMenu) menuElement;
+			insert(popupMenu, subElement, index);
+		}
+	}
+	
+	/**
+	 * Insert menu item at indexed position.
+	 * @param menu
+	 * @param menuItem
+	 * @param index
+	 */
+	private void insert(JMenu menu, MenuElement menuElement, int index) {
+		
+		JMenuItem menuItem = (JMenuItem) menuElement;
+		menu.insert(menuItem, index);
+	}
+	
+	/**
+	 * Insert popup menu item at indexed position.
+	 * @param popupMenu
+	 * @param menuItem
+	 * @param index
+	 */
+	private void insert(JPopupMenu popupMenu, MenuElement menuElement, int index) {
+		
+		try {
+			JMenuItem menuItem = (JMenuItem) menuElement;
+			popupMenu.insert(menuItem, index);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	
+	/**
 	 * Create external sources.
 	 */
 	protected void createExternalSources() {
@@ -483,7 +498,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		ApplicationEvents.transmit(EventSource.LOCAL_POPUP_MENU.user(sourceObject), SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -552,19 +567,7 @@ public class AreaLocalMenu {
 		});
 		menuEditArea.add(menuEditConstructor);
 	}
-	
-	/**
-	 * Create new menu.
-	 * @param caption
-	 * @return
-	 */
-	private JMenu createMenu(String caption) {
-		
-		JMenu menu = new JMenu(caption);
-		menu.setMargin(emptyMenuItemPadding);
-		return menu;
-	}
-	
+
 	/**
 	 * Create new menu item.
 	 * @param caption
@@ -668,10 +671,9 @@ public class AreaLocalMenu {
 	 * Focus tab top area.
 	 */
 	protected void focusTabTopArea() {
-
-		Long tabAreaId = GeneratorMainFrame.getTabAreaId();
 		
-		ConditionalEvents.transmit(this, GuiSignal.focusTabArea, tabAreaId);
+		// Focus on the top area.
+		ApplicationEvents.transmit(this, GuiSignal.focusTopArea);
 	}
 
 	/**
@@ -874,10 +876,13 @@ public class AreaLocalMenu {
 			return;
 		}
 		
-		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), true);
+		Long areaId = area.getId();
 		
-		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, GuiSignal.updateGui);
+		// Transmit "select area" signal.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramArea, areaId, true);		
+		
+		// Transmit "update area tree dialog".
+		ApplicationEvents.transmit(EventSource.AREA_LOCAL_MENU.user(this), SignalGroup.UPDATE_TREE);
 	}
 
 	/**
@@ -891,10 +896,13 @@ public class AreaLocalMenu {
 			return;
 		}
 		
-		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectArea(area.getId(), false);
+		Long areaId = area.getId();
+
+		// Transmit "select area" signal.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramArea, areaId, false);		
 		
-		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, GuiSignal.updateGui);
+		// Transmit "update area tree dialog".
+		ApplicationEvents.transmit(EventSource.AREA_LOCAL_MENU.user(this), SignalGroup.UPDATE_TREE);
 	}
 
 	/**
@@ -908,10 +916,13 @@ public class AreaLocalMenu {
 			return;
 		}
 		
-		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), true);
+		long areaId = area.getId();
 		
-		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, GuiSignal.updateGui);
+		// Transmit "select area with sub areas" signal.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreaWithSubareas, areaId, true);
+		
+		// Transmit "update area tree dialog".
+		ApplicationEvents.transmit(EventSource.AREA_LOCAL_MENU.user(this), SignalGroup.UPDATE_TREE);
 	}
 	
 	/**
@@ -925,10 +936,13 @@ public class AreaLocalMenu {
 			return;
 		}
 		
-		GeneratorMainFrame.getFrame().getVisibleAreasEditor().getDiagram().selectAreaWithSubareas(area.getId(), false);
+		long areaId = area.getId();
 		
-		// Transmit "update GUI" signal.
-		ConditionalEvents.transmit(this, GuiSignal.updateGui);
+		// Transmit "add area with sub areas selection" signal.
+		ApplicationEvents.transmit(this, GuiSignal.selectDiagramAreaWithSubareas, areaId, false);		
+		
+		// Transmit "update area tree dialog".
+		ApplicationEvents.transmit(EventSource.AREA_LOCAL_MENU.user(this), SignalGroup.UPDATE_TREE);
 	}
 
 	/**
@@ -961,11 +975,11 @@ public class AreaLocalMenu {
 			return;
 		}
 		
-		GeneratorMainFrame.getFrame().setHomeArea(parentComponent, area);
+		long areaId = area.getId();
 		
-		// Update GUI components with areas.
-		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		// Transmit the "set home area" signal. Wait for procedure completion.
+		Runnable completedLamda = () -> ApplicationEvents.transmit(EventSource.AREA_LOCAL_MENU.user(this), SignalGroup.UPDATE_ALL);
+		ApplicationEvents.transmit(this, AreaSignal.setHomeArea, areaId, parentComponent, completedLamda);
 	}
 	
 	/**
@@ -998,7 +1012,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		ApplicationEvents.transmit(EventSource.LOCAL_POPUP_MENU.user(sourceObject), SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -1019,7 +1033,7 @@ public class AreaLocalMenu {
 		
 		// Update GUI components with areas.
 		Object sourceObject = parentComponent != null ? parentComponent : this;
-		Update.run(Update.GROUP_AREAS, EventSource.LOCAL_POPUP_MENU.userAction(sourceObject, null));
+		ApplicationEvents.transmit(EventSource.LOCAL_POPUP_MENU.user(sourceObject), SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -1059,8 +1073,6 @@ public class AreaLocalMenu {
 		
 		// Callback method.
 		if (newAreaId != null) {
-			
-			ConditionalEvents.transmit(AreaLocalMenu.this, GuiSignal.importToArea, area.getId());
 			
 			SwingUtilities.invokeLater(() -> {
 				listener.onNewArea(newAreaId);

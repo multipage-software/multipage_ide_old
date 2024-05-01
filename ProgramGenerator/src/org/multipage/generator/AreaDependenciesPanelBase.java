@@ -21,9 +21,9 @@ import javax.swing.JTable;
 import org.maclan.Area;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -236,7 +236,6 @@ public class AreaDependenciesPanelBase extends JPanel implements EditorTabAction
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, GuiSignal.swapSiblingAreas, area1.getId(), area2.getId());
 		onAreaChange();
 	}
 
@@ -300,7 +299,6 @@ public class AreaDependenciesPanelBase extends JPanel implements EditorTabAction
 		}
 		
 		// Update information.
-		ConditionalEvents.transmit(AreaDependenciesPanelBase.this, GuiSignal.resetSiblingAreasOrder, currentAreaId);
 		onAreaChange();
 	}
 

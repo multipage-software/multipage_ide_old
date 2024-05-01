@@ -7,6 +7,7 @@
 
 package org.multipage.gui;
 
+import java.util.LinkedList;
 import java.util.function.Function;
 
 /**
@@ -315,32 +316,129 @@ public class Message {
 	}
 	
 	/**
-	 * Check if the message determines itself.
-	 * @param receivingObject
-	 * @param strictChecking
+	 * Check if the message invokes itself and creates infinite loop. To perform this check inherit receiver from NonCyclicReceiver.
+	 * @param updatedModule
+	 * @param subsequentMessageTimeoutMs
+	 * @param previousMessageLambda
 	 * @return
 	 */
-	public boolean isRepeatingIn(Object receivingObject, Function<Message, Boolean> previvousMessageLambda) {
+	public boolean isCyclic(NonCyclingReceiver updatedModule, int subsequentMessageTimeoutMs, Function<Message, Boolean> previousMessageLambda) {
 		
-		// Initialize output value.
-		boolean isRepeated = false;
+		// Check input.
+		if (updatedModule == null || signal == null) {
+			return false;
+		}
 		
-		// Try to get event source.
-		if (source instanceof EventSource) {
+		// Initialization.
+		LinkedList<Message> previousMessages = updatedModule.getPreviousMessages();
+		LinkedList<Message> cyclicMessages = new LinkedList<Message>();
+		LinkedList<Message> receiverMessages = new LinkedList<Message>();
+		
+		// Check if previous messages imply infinite loop of messages.
+		for (Message previousMessage : previousMessages) {
 			
-			// Get event source.
-			EventSource eventSource = (EventSource) source;
+			// Check if message signal matches.
+			if (signal != previousMessage.signal) {
+				continue;
+			}
 			
-			// Check machine action.
-			if (!eventSource.userInitiated) {
+			// Initialize flag value.
+			boolean isRepeated = false;
+			
+			// Check if target of previous message matches the target of this message.
+			Object previousTarget = previousMessage.target;
+			
+			if (previousTarget.equals(target)) {
+				receiverMessages.add(previousMessage);
 				
-				// Traverse previous messages with given signal and receiving object.
-				Message previousMessage = eventSource.traversePreviousMessages(signal, receivingObject, message -> previvousMessageLambda.apply(message));
+				// Check if this message happens before timeout.
+				isRepeated = isInvokedBeforeTimeout(previousMessage, subsequentMessageTimeoutMs);
+			}
+			
+			// Use callback to examine if the message is repeated.
+			if (previousMessageLambda != null) {
 				
-				// Set output flag.
-				isRepeated = previousMessage != null;
+				boolean matches = previousMessageLambda.apply(previousMessage);
+				if (matches) {
+					isRepeated = true;
+				}
+			}
+			
+			// If the message is repeated, remove it from the list.
+			if (isRepeated) {
+				cyclicMessages.add(previousMessage);
+				previousMessages.remove(previousMessage);
 			}
 		}
-		return isRepeated;
+		
+		// Set output value;
+		boolean isCyclic = !cyclicMessages.isEmpty();
+		
+		// Remove found messages from the list.
+		if (isCyclic) {
+			previousMessages.removeAll(cyclicMessages);
+		}
+		
+		// Remove all receiver messages.
+		previousMessages.removeAll(receiverMessages);
+		
+		// Add the new message to the list of previous messages.
+		previousMessages.add(this);
+		
+		// If this action has been invoked by user do not set the output value to cyclic.
+		if (source instanceof EventSource) {
+			EventSource updateSource = (EventSource) source;
+			
+			if (updateSource.isUserAction) {
+				isCyclic = false;
+			}
+		}
+		
+		return isCyclic;
+	}
+	
+	/**
+	 * Check if the message invokes itself and creates infinite loop.
+	 * @return
+	 */
+	public boolean isCyclic() {
+		
+		final int DEFAULT_SUBSEQUENT_MESASGE_TIMEOUT_MS = 1000;
+		
+		if (!(receiverObject instanceof NonCyclingReceiver)) {
+			return false;
+		}
+		
+		NonCyclingReceiver nonCyclicreceiver = (NonCyclingReceiver) receiverObject;
+
+		// Delegate this call with default timeout.
+		return isCyclic(nonCyclicreceiver, DEFAULT_SUBSEQUENT_MESASGE_TIMEOUT_MS, null);
+	}
+
+	/**
+	 * Check if the message invokes itself and creates infinite loop.
+	 * @param updatedModule
+	 * @param previousMessageLambda
+	 * @return
+	 */
+	public boolean isCyclic(NonCyclingReceiver updatedModule, Function<Message, Boolean> previousMessageLambda) {
+		
+		final int DEFAULT_SUBSEQUENT_MESASGE_TIMEOUT_MS = 1000;
+		
+		// Delegate this call with default timeout.
+		return isCyclic(updatedModule, DEFAULT_SUBSEQUENT_MESASGE_TIMEOUT_MS, previousMessageLambda);
+	}
+	
+	/**
+	 * Check if this message has been processed before previous messages timeout ellapsed.
+	 * @param previousMessage
+	 * @param timeoutMs
+	 * @return
+	 */
+	private boolean isInvokedBeforeTimeout(Message previousMessage, int timeoutMs) {
+		
+		long lastChanceTime = previousMessage.receiveTime + timeoutMs;
+		boolean isBefore = (receiveTime <= lastChanceTime);
+		return isBefore;
 	}
 }

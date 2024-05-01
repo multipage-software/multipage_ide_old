@@ -44,7 +44,8 @@ import org.maclan.MiddleUtility;
 import org.maclan.MimeType;
 import org.maclan.Resource;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.ToolBarKit;
 import org.multipage.gui.Utility;
@@ -472,10 +473,6 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		}
 		
 		loadList();
-		
-		// Update information.
-		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.updateAreaResources, areaId);
 	}
 	
 	/**
@@ -782,10 +779,6 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		
 		// Reload the list.
 		loadList();
-		
-		// Update information.
-		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.editResource, areaId);
 	}
 	
 	/**
@@ -831,10 +824,6 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 		if (!removed.ref) {
 			Utility.show(this, "org.multipage.generator.messageResourceNotRemovedFromTable");
 		}
-		
-		// Update information.
-		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.deleteResources, areaId);
 	}
 	
 	/**
@@ -940,10 +929,6 @@ public class AreaResourcesEditor extends JPanel implements SearchableResourcesLi
 	    if (result.isNotOK()) {
 			result.show(this);
 		}
-	    
-		// Update information.
-		long areaId = area.getId();
-		ConditionalEvents.transmit(AreaResourcesEditor.this, GuiSignal.createTextResource, areaId);
 	}
 
 	/**

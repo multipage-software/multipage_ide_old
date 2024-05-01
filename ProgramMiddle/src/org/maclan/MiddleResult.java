@@ -259,7 +259,7 @@ public class MiddleResult {
 	 * Try to show error result.
 	 * @param parent
 	 */
-	public void showError(Component parent) {
+	public void possiblyShowError(Component parent) {
 		
 		if (!isOK()) {
 			show(parent);

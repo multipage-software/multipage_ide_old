@@ -169,7 +169,6 @@ import org.apache.commons.io.IOUtils;
 import org.multipage.gui.SearchTextDialog.Parameters;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
@@ -5218,8 +5217,8 @@ public class Utility {
 	 * @return
 	 */
     public static int min(int... numbers) {
-        return Arrays.stream(numbers)
-          .min().orElse(Integer.MAX_VALUE);
+    	
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
     
     /**
@@ -6143,156 +6142,6 @@ public class Utility {
     	Component component = editor.getComponent();
     	component.setFont(font);
     }
-    
-    /**
-     * Go through input buffer until the input symbol is fully read.
-     * @param inputBuffer
-     * @param startSymbol
-     * @param terminated
-     * @return end of buffer
-     */
-	public static boolean readSymbol(ByteBuffer inputBuffer, byte [] startSymbol, Obj<Integer> index, Obj<Boolean> terminated) {
-		
-		// Initialization.
-		int startLength = startSymbol.length;
-		terminated.ref = false;
-		
-		// Loop for input bytes.
-		while (inputBuffer.hasRemaining()) {
-			
-			// Read current byte from the buffer.
-			byte theByte = inputBuffer.get();
-			
-			// Try to match bytes with the start symbol.
-			if (theByte == startSymbol[index.ref]) {
-				index.ref++;
-				if (index.ref >= startLength) {
-					
-					terminated.ref = true;
-					index.ref = 0;
-					return false;
-				}
-				continue;
-			}
-		}
-		return true;
-	}
-	
-	/**
-	 * Read integer from the input buffer.
-	 * @param inputBuffer
-	 * @param intValue
-	 * @param index
-	 * @param terminated
-	 * @return end of buffer
-	 */
-	public static boolean readInt(ByteBuffer inputBuffer, Obj<Integer> intValue, Obj<Integer> index, Obj<Boolean> terminated) {
-		
-		// Initialization.
-		terminated.ref = false;
-		
-		// Integer vaules occupy 4 bytes.
-		// Read input bytes.
-		for (; index.ref <= 3; index.ref++) {
-			
-			// If no remaining bytes...
-			if (!inputBuffer.hasRemaining()) {
-				return true;
-			}
-			
-			// Read current byte from the buffer.
-			byte theByte = inputBuffer.get();
-			
-			// Compile integer value.
-			intValue.ref |= theByte << ((3 - index.ref) * 8);
-		}
-		
-		terminated.ref = true;
-
-		index.ref = 0;
-		
-		// Return end of buffer flag.
-		boolean endOfBuffer = !inputBuffer.hasRemaining();
-		return endOfBuffer;
-	}
-	
-    /**
-     * Read bytes from input buffer until the terminal symbol is found. If the terminal is not found set
-     * the "terimnated" flag to false. 
-     * @param inputBuffer
-     * @param outputBuffer 
-     * @param terminalSymbol
-     * @param index
-     * @param count
-     * @param terminalIndex
-     * @param successfullyTerminated
-     * @return true value if the end of obuffer has been reached
-     */
-	public static boolean readUntil(ByteBuffer inputBuffer, Obj<ByteBuffer> outputBuffer, int bufferIncrease, byte [] terminalSymbol,
-								    Obj<Integer> index, int count, Obj<Integer> terminalIndex, Obj<Boolean> successfullyTerminated) {
-		
-		// Initialization.
-		int terminalLength = terminalSymbol.length;
-		
-		// Loop for input bytes.
-		while (inputBuffer.hasRemaining()) {
-			
-			// Read current byte from the buffer.
-			byte theByte = inputBuffer.get();
-			
-			// TODO: <---DEBUG
-			System.err.format("{%02X}", theByte);
-
-			// Try to match bytes with the terminal symbol.
-			if (theByte == terminalSymbol[terminalIndex.ref]) {
-				terminalIndex.ref++;
-				if (terminalIndex.ref >= terminalLength) {
-					
-					// TODO: <---DEBUG
-					if (index.ref < count) {
-						System.out.format("[index=%d,count=%d,remains=%b,terminal_len=%d]", index, count, inputBuffer.hasRemaining(), terminalLength);
-					}
-					break;
-				}
-				continue;
-			}
-			
-			index.ref++;
-			
-			// Check buffer capacity.
-			int position = outputBuffer.ref.position();
-			int capacity = outputBuffer.ref.capacity();
-			if (!outputBuffer.ref.hasRemaining() && position >= capacity) {
-				
-				// Increase buffer capacity.
-				int increasedCapacity = capacity + bufferIncrease;
-				ByteBuffer increasedOutputBuffer = ByteBuffer.allocate(increasedCapacity);
-				
-				// TODO: <---DEBUG
-				System.out.format("[Increasing capacity: %d B]", increasedCapacity);
-				
-				outputBuffer.ref.flip();
-				
-				increasedOutputBuffer.put(outputBuffer.ref);
-				outputBuffer.ref = increasedOutputBuffer;
-			}
-			
-			// Output current byte.
-			try {
-				outputBuffer.ref.put(theByte);
-			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		
-		// If the termnal symbol was not found, set the output flag to false value.
-		successfullyTerminated.ref = terminalIndex.ref >= terminalLength;
-		
-		// Return a value indicating wheter the input buffer has remaining bytes.
-		boolean endOfBuffer = !inputBuffer.hasRemaining();
-		return endOfBuffer;
-	}
 	
 	/**
 	 * Read bytes from input array until the terminal symbol is found. If the terminal is not found set
@@ -6372,6 +6221,21 @@ public class Utility {
 	}
 	
 	/**
+	 * Write MSB integer value to stream.
+	 * @param stream
+	 */
+	public static void writeMsbInteger(OutputStream stream, int intValue) 
+			throws Exception {
+		
+		for (int index = 3; index >= 0; index--) {
+			
+			// Shift bytes to get the resulting byte.
+			byte theByte = (byte) (intValue >>> (index * 8));
+			stream.write(theByte);
+		}
+	}
+	
+	/**
 	 * Split input bytes to the array of strings.
 	 * @param inputBytes
 	 * @param dividerSymbol
@@ -6435,5 +6299,22 @@ public class Utility {
 		}
 				
 		return stringList;
+	}
+	
+	/**
+	 * Pretty print of byte array.
+	 * @param bytes
+	 * @return
+	 */
+	public static String prettyPrint(byte [] bytes) {
+		
+		String bytesString = "[";
+		String divider = "";
+		for (int index = 0; index < bytes.length; index++) {
+			bytesString += String.format("%s%02X", divider, bytes[index]);
+			divider = ",";
+		}
+		bytesString += ']';
+		return bytesString;
 	}
 }

@@ -38,7 +38,8 @@ import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.maclan.MiddleUtility;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.ProgressDialog;
 import org.multipage.gui.Utility;
@@ -525,10 +526,6 @@ public class GenerateAreasDialog extends JDialog {
 			// Show result message.
 			Utility.show2(progressDialog.getException().getLocalizedMessage());
 		}
-		
-		// Update data.
-		long areaId = containerArea.getId();
-		ConditionalEvents.transmit(GenerateAreasDialog.this, GuiSignal.createAreasTree, areaId);
 		
 		// Close the window.
 		dispose();

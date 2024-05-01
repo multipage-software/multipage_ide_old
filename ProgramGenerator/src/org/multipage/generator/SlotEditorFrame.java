@@ -313,4 +313,10 @@ public class SlotEditorFrame extends SlotEditorBaseFrame {
 		
 		setIconImage(Images.getImage("org/multipage/basic/images/main_icon.png"));
 	}
+
+	@Override
+	public void close() {
+		// TODO Auto-generated method stub
+		
+	}
 }

@@ -47,18 +47,20 @@ import javax.swing.event.ChangeEvent;
 import org.maclan.Area;
 import org.maclan.AreasModel;
 import org.maclan.VersionObj;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.Utility;
+import org.multipage.util.Closable;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
- * 
- * @author
- *
+ * Container panel for the area diagram.
+ * @author vakol
  */
-public class AreasDiagramPanel extends JPanel implements TabItemInterface {
+public class AreasDiagramPanel extends JPanel implements TabItemInterface, Closable {
 	
 	// $hide>>$
 	/**
@@ -72,11 +74,6 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	public static int splitPositionStateMain = 480;
 	public static int splitPositionStateSecondary = 340;
 	public static LinkedList<Long> selectedAreasIdsState = new LinkedList<Long>();
-	
-	/**
-	 * List of selected area IDs in this diagram.
-	 */
-	private HashSet<Long> selectedAreaIds = new HashSet<Long>();
 	
 	/**
 	 * Areas diagram.
@@ -382,6 +379,8 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		if (value instanceof Long) {
 			Long areaId = (Long) value;
 			
+			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+			
 			selectedAreaIds.clear();
 			selectedAreaIds.add(areaId);
 		}
@@ -404,6 +403,15 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		
 			// Focus area.
 			focusAreaNear(areaId);
+			areasDiagram.selectArea(areaId);
+			
+			displayRelatedAreas(areaId);
+
+			HashSet<Long> selectedAreaIds = new HashSet<Long>();
+			selectedAreaIds.add(areaId);
+			
+			// Display area properties.
+			ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 		}
 	}
 	
@@ -420,11 +428,13 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		if (value instanceof Area) {
 			Area area = (Area) value;
 			
+			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+			
 			selectedAreaIds.clear();
 			selectedAreaIds.add(area.getId());
 			
 			// Transmit "on related areas clicked" signal.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.onClickRelatedAreas, selectedAreaIds);
+			ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 		}
 	}
 	
@@ -446,11 +456,17 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		// Repaint GUI.
 		repaint();
 		
-		// Focus area.
+		// Focus area and select it.
 		focusAreaNear(areaId);
+		areasDiagram.selectArea(areaId);
 		
-		// Transmit "update areas" signal.
-		ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.displayRelatedAreas, areaId);
+		displayRelatedAreas(areaId);
+
+		HashSet<Long> selectedAreaIds = new HashSet<Long>();
+		selectedAreaIds.add(areaId);
+		
+		// Display area properties.
+		ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 	}
 
 	/**
@@ -570,32 +586,18 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void setListeners() {
 		
-		// "On click related areas" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.onClickRelatedAreas, message -> {
+		// Set selected diagram areas callback.
+		areasDiagram.setSelectedAreaIdsLambda = selectedAreaIds -> {
 			
-			// Get selected areas.
-			HashSet<Long> selectedAreaIds = getSelectedAreaIds();
-			
-			// Propagate "show areas properties" event.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.showAreasProperties, selectedAreaIds);
-			// Propagate "select diagram areas" event.
-			ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.selectDiagramAreas, selectedAreaIds);
-		});
-		
-		// "Show areas' relations" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.showAreasRelations, action -> {
-				
-			if (action.relatedInfo instanceof HashSet<?>) {
-				
-				selectedAreaIds = (HashSet<Long>) action.relatedInfo;
-				displayRelatedAreasForSet(selectedAreaIds);
-			}
-		});
+			displayRelatedAreasForSet(selectedAreaIds);
+		};
 		
 		// "Select all" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.selectAll, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.selectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
+				
+				HashSet<Long> selectedAreaIds = getSelectedAreaIds();
 				
 				selectedAreaIds = ProgramGenerator.getAllAreaIds();
 				displayRelatedAreasForSet(selectedAreaIds);
@@ -603,9 +605,11 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Unselect all" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.unselectAll, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.unselectAll, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
+				
+				HashSet<Long> selectedAreaIds = getSelectedAreaIds();
 				
 				selectedAreaIds = new HashSet<Long>();
 				displayRelatedAreasForSet(selectedAreaIds);
@@ -613,37 +617,44 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		});
 		
 		// "Focus home area" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusHomeArea, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusHomeArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
-				focusHomeArea();
+				long homeAreaId = focusHomeArea();
+				
+				areasDiagram.selectArea(homeAreaId);
+				
+				HashSet<Long> selectedAreaIds = new HashSet<Long>();
+				selectedAreaIds.add(homeAreaId);
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasDiagramPanel.this, GuiSignal.displayAreaProperties, selectedAreaIds);
 			}
 		});
 		
 		// "Focus tab area" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusTabArea, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusTopArea, action -> {
 			
 			if (AreasDiagramPanel.this.isShowing()) {
 				
-				Long tabAreaId = action.relatedInfo instanceof Long ? (Long) action.relatedInfo : 0L;
+				Long tabAreaId = GeneratorMainFrame.getTabAreaId();
+				if (tabAreaId == null) {
+					return;
+				}
 				focusAreaNear(tabAreaId);
-			}
-		});
-		
-		// "Display related areas" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.displayRelatedAreas, action -> {
-			
-			if (AreasDiagramPanel.this.isShowing() && action.relatedInfo instanceof Long) {
 				
-				// Pull area ID.
-				long areaId = (Long) action.relatedInfo;
-				// Display related areas.
-				displayRelatedAreas(areaId);
+				areasDiagram.selectArea(tabAreaId);
+				
+				HashSet<Long> selectedAreaIds = new HashSet<Long>();
+				selectedAreaIds.add(tabAreaId);
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasDiagramPanel.this, GuiSignal.displayAreaProperties, selectedAreaIds);				
 			}
 		});
 		
 		// Add receiver for the "show or hide" event.
-		ConditionalEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.showOrHideIds, message -> {
 			
 			// Reload and repaint the GUI.
 			reload();
@@ -657,7 +668,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	private void removeListeners() {
 		
-		ConditionalEvents.removeReceivers(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 
 	/**
@@ -1057,10 +1068,14 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	/**
 	 * Focus on home area.
 	 */
-	public void focusHomeArea() {
+	public long focusHomeArea() {
 		
 		AreasModel model = ProgramGenerator.getAreasModel();
-		focusArea(model.getHomeAreaId());
+		
+		long homeAreaId = model.getHomeAreaId();
+		focusArea(homeAreaId);
+		
+		return homeAreaId;
 	}
 
 	/**
@@ -1203,6 +1218,9 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 			
 			for (Area subArea : siblings) {
 				
+				if (superArea.isSubareasHidden(subArea)) {
+					continue;
+				}				
 				listAreasModel.addElement(subArea);
 				
 				if (subArea.equals(areaSelection)) {
@@ -1252,6 +1270,9 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		
 		for (Area area : areaSelection.getSubareas()) {
 			
+			if (areaSelection.isSubareasHidden(area)) {
+				continue;
+			}			
 			listAreasModel.addElement(area);
 		}
 		
@@ -1275,6 +1296,9 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		
 		for (Area area : areaSelection.getSuperareas()) {
 			
+			if (area.isSubareasHidden(areaSelection)) {
+				continue;
+			}			
 			listAreasModel.addElement(area);
 		}
 		
@@ -1423,13 +1447,15 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 * On tab panel change event.
 	 */
 	@Override
-	public void onTabPanelChange(ChangeEvent e, int selectedIndex) {
+	public void onTabPanelChange(ChangeEvent e, int selectedTabIndex) {
 		
 		// Call this method for diagram panel.
-		areasDiagram.onTabPanelChange(e, selectedIndex);
+		areasDiagram.onTabPanelChange(e, selectedTabIndex);
 		
-		// Propagate event.
-		ConditionalEvents.transmit(AreasDiagramPanel.this, GuiSignal.mainTabChange, selectedIndex);
+		HashSet<Long> selectedAreaIds = getSelectedAreaIds();
+		
+		// Open selected area properties.
+		ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
 	}
 	
 	/**
@@ -1451,7 +1477,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 	 */
 	public HashSet<Long> getSelectedAreaIds() {
 		
-		return this.selectedAreaIds;
+		return areasDiagram.getSelectedAreaIds();
 	}
 
 	/**
@@ -1514,6 +1540,18 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface {
 		}
 		
 		areasDiagram.setAreaId(topAreaId);
+	}
+
+	@Override
+	public void close() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void recreateContent() {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

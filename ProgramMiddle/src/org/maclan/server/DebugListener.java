@@ -11,7 +11,6 @@ import java.awt.Component;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.multipage.gui.CallbackNoArg;
@@ -35,16 +34,10 @@ public abstract class DebugListener {
 	protected static CallbackNoArg enableListener = null;
 	
     /**
-     * Invoked when a new Xdebug session should be accepted.
+     * Invoked when a new Xdebug viewer should be opened.
      */
-    public Consumer<XdebugListenerSession> acceptSessionLambda = null;
-	
-    /**
-     * Invoked when input packet has been received by the debug server.
-     */
-    public BiConsumer<DebugListenerSession, XdebugResponse> inputPacketLambda = null;
+    public Consumer<XdebugListenerSession> openDebugViever = null;
     
-	
 	/**
 	 * Sets listener that determines if debugger is enabled
 	 * @param listener
@@ -114,4 +107,14 @@ public abstract class DebugListener {
 	 * Close debugger
 	 */
 	public abstract void close();
+
+	public void showMessage(String stringResourceId, String message) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void showException(Exception exception) {
+		// TODO Auto-generated method stub
+		
+	}
 }

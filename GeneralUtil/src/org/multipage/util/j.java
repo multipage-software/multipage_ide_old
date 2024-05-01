@@ -63,6 +63,7 @@ public class j {
 			new InetSocketAddress("localhost", 48000),
 			new InetSocketAddress("localhost", 48001),
 			new InetSocketAddress("localhost", 48002),
+			new InetSocketAddress("localhost", 48003)
 		};
 	
 	/**
@@ -106,11 +107,6 @@ public class j {
 	 */
 	@SuppressWarnings("resource")
 	public synchronized static void log(int consoleIndex, Color color, Object parameter, Object ... strings) {
-		
-		// Check console index.
-		if (consoleIndex <= 0 || consoleIndex > openConsoleSockets.length) {
-			return;
-		}
 
 		String type = "";
 		String indentation = "";
@@ -146,7 +142,6 @@ public class j {
 				else {
 					formatToConsole(consoleIndex, timeStamp, indentation + timeStampText + type + '\n', color, strings);
 				}
-				
 			}
 			else {
 				if (os != null) {
@@ -178,7 +173,7 @@ public class j {
 		if (consoleIndex > 0 && consoleIndex <= count) {
 			
 			synchronized (consoleSynchronization[consoleIndex - 1]) {
-			
+				
 				String body = String.format(format, strings);
 				try {
 					// Get timestamp and color.
@@ -196,16 +191,10 @@ public class j {
 					byte [] headerBytes = header.getBytes("UTF-8");
 					byte [] bodyBytes = body.getBytes("UTF-8");
 					
-					// Get lengths.
-					int headerLength = headerBytes.length;
-					int bodyLength = bodyBytes.length;
-					
 					// Send message to socket stream.
 					stream.write(START_OF_HEADING);
-					writeMsbInteger(stream, headerLength);
 					stream.write(headerBytes);	
 					stream.write(START_OF_TEXT);
-					writeMsbInteger(stream, bodyLength);
 					stream.write(bodyBytes);
 					stream.write(END_OF_TRANSMISSION);
 					stream.flush();
@@ -218,21 +207,6 @@ public class j {
 		else {
 			System.err.format(format, strings);
 		} 
-	}
-	
-	/**
-	 * Write MSB integer value to stream.
-	 * @param stream
-	 */
-	private static void writeMsbInteger(OutputStream stream, int intValue) 
-			throws Exception {
-		
-		for (int index = 3; index >= 0; index--) {
-			
-			// Shift bytes to get the resulting byte.
-			byte theByte = (byte) (intValue >>> (index * 8));
-			stream.write(theByte);
-		}
 	}
 
 	/**

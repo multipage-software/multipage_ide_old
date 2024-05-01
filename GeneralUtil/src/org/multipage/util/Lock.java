@@ -39,6 +39,17 @@ public class Lock {
 	}
 	
 	/**
+	 * Constructor
+	 * @param id - lock identifier
+	 * @param notified - initial state of the "notified" flag 
+	 */
+	public Lock(String id, boolean notified) {
+		
+		this.id = id;
+		this.notified = notified;
+	}
+	
+	/**
 	 * Reset the lock state.
 	 * @param lock
 	 */

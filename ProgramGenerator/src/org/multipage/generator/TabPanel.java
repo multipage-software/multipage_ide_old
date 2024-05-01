@@ -362,18 +362,18 @@ public class TabPanel extends DnDTabbedPane {
 		// Get selected tab.
 		int index = getSelectedIndex();
 		if (index == -1) {
-			return null;
+			return 0L;
 		}
 		
 		// Get tab component.
 		Component component = getTabComponentAt(index);
 		if (!(component instanceof TabLabel)) {
-			return null;
+			return 0L;
 		}
 		TabLabel tabLabel = (TabLabel) component;
 		Component tabPanelComponent = tabLabel.getPanelComponent();
 		if (!(tabPanelComponent instanceof TabItemInterface)) {
-			return null;
+			return 0L;
 		}
 		
 		// Get tab state
@@ -381,7 +381,7 @@ public class TabPanel extends DnDTabbedPane {
 		TabState tabState = tabInterface.getTabState();
 		
 		if (!(tabState instanceof AreasTabState)) {
-			return null;
+			return 0L;
 		}
 		
 		// Get the area ID and return it

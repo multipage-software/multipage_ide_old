@@ -32,9 +32,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.maclan.Area;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
-import org.multipage.gui.Signal;
 import org.multipage.gui.TextFieldAutoSave;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.util.Resources;
@@ -411,7 +411,7 @@ public class AreaEditorPanel extends AreaEditorPanelBase {
 	 */
 	private void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
+		ApplicationEvents.transmit(this, GuiSignal.displayHomePage);
 	}
 	
 	/**

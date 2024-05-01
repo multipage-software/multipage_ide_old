@@ -67,17 +67,20 @@ import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
 import org.maclan.AreasModel;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextPaneEx;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
@@ -997,32 +1000,31 @@ public class AreaTraceFrame extends JFrame {
 	private void createToolBars() {
 		
 		// Main tool bar.
-		toggleDebug = ToolBarKit.addToggleButton(toolBarMain,  "org/multipage/generator/images/debug.png", this, "onToggleDebug", "org.multipage.generator.tooltipEnableDisplaySourceCode");
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdateData");
+		toggleDebug = ToolBarKit.addToggleButton(toolBarMain,  "org/multipage/generator/images/debug.png", "org.multipage.generator.tooltipEnableDisplaySourceCode", () -> onToggleDebug());
+		toggleDebug.setVisible(false);
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/reload_icon.png", "org.multipage.generator.tooltipUpdateData", () -> onUpdate());
 		toolBarMain.addSeparator();
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/render.png", this, "onRender", "org.multipage.generator.tooltipRenderHtmlPages");
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/render.png", "org.multipage.generator.tooltipRenderHtmlPages", () -> onRender());
 		toolBarMain.addSeparator();
-		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/display_home_page.png", this, "onDisplayHomePage", "org.multipage.generator.tooltipDisplayHomePage");
+		ToolBarKit.addToolBarButton(toolBarMain, "org/multipage/generator/images/display_home_page.png", "org.multipage.generator.tooltipDisplayHomePage", () -> onDisplayHomePage());
 		
 		// Area tree tool bar.
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", this, "onExpandTree", "org.multipage.generator.tooltipExpandTree");
-		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", this, "onCollapseTree", "org.multipage.generator.tooltipCollapseTree");
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/expand_icon.png", "org.multipage.generator.tooltipExpandTree", () -> onExpandTree());
+		ToolBarKit.addToolBarButton(toolBarTree, "org/multipage/generator/images/collapse_icon.png", "org.multipage.generator.tooltipCollapseTree", () -> onCollapseTree());
 	}
 	
 	/**
 	 * On update data.
 	 */
-	@SuppressWarnings("unused")
 	private void onUpdate() {
 		
 		// Update GUI components with areas.
-		Update.run(Update.GROUP_AREAS, EventSource.AREA_TRACE.userAction(this, null));
+		ApplicationEvents.transmit(EventSource.AREA_TRACE.user(this), SignalGroup.UPDATE_AREAS);
 	}
 	
 	/**
 	 * On render HTML pages.
 	 */
-	@SuppressWarnings("unused")
 	private void onRender() {
 		
 		GeneratorMainFrame.getFrame().onRender(this);
@@ -1031,10 +1033,10 @@ public class AreaTraceFrame extends JFrame {
 	/**
 	 * On display home page.
 	 */
-	@SuppressWarnings("unused")
 	private void onDisplayHomePage() {
 		
-		ConditionalEvents.transmit(this, GuiSignal.monitorHomePage);
+		// Transmit the "monitor home page" signal.
+		ApplicationEvents.transmit(this, GuiSignal.displayHomePage);
 	}
 	
 	/**
@@ -1070,7 +1072,7 @@ public class AreaTraceFrame extends JFrame {
 		Settings.setEnableDebugging(enable);
 		
 		// Transmit the "enable / disable" signal.
-		ConditionalEvents.transmit(this, GuiSignal.debugging, enable);
+		ApplicationEvents.transmit(this, GuiSignal.debugging, enable);
 	}
 	
 	/**
@@ -1194,7 +1196,7 @@ public class AreaTraceFrame extends JFrame {
 		});
 		
 		// Receive the "focus area" signal.
-		ConditionalEvents.receiver(this, GuiSignal.focusArea, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusArea, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -1211,7 +1213,7 @@ public class AreaTraceFrame extends JFrame {
 		});
 		
 		// Receive the "debugging" signal.
-		ConditionalEvents.receiver(this, GuiSignal.debugging, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.debugging, message -> {
 			
 			// Avoid receiving the signal from current dialog window.
 			if (this.equals(message.source)) {
@@ -1226,6 +1228,13 @@ public class AreaTraceFrame extends JFrame {
 			
 			// Select or unselect the debug button.
 			toggleDebug.setSelected(debuggingEnabled);
+		});
+		
+		// Receive "update areas" messages.
+		ApplicationEvents.receiver(this, SignalGroup.create(UpdateSignal.updateAreasModel, UpdateSignal.updateAreasTraceFrame), message -> {
+			
+			reload();
+			tree.updateUI();
 		});
 	}
 
@@ -1480,6 +1489,8 @@ public class AreaTraceFrame extends JFrame {
 	protected void onCloseWindow() {
 		
 		saveDialog();
+		
+		ApplicationEvents.removeReceivers(this);
 		
 		dispose();
 		createdFrames.remove(this);

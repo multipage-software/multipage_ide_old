@@ -131,6 +131,9 @@ public class ProgramGenerator {
 		// Create areas model.
 		areasModel = new AreasModel();
 		
+		// Start SWT thread for embedded browser.
+		SwtBrowserCanvas.startSwtThread();
+		
 		return true;
 	}
 	

@@ -967,4 +967,10 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void close() {
+		// TODO Auto-generated method stub
+		
+	}
 }

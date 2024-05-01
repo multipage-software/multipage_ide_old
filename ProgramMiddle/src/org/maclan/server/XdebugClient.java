@@ -6,18 +6,23 @@
  */
 package org.maclan.server;
 
-import java.net.InetSocketAddress;
+import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
+import org.multipage.gui.Packet;
+import org.multipage.gui.PacketBlock;
+import org.multipage.gui.PacketChannel;
+import org.multipage.gui.PacketElement;
+import org.multipage.gui.PacketSession;
+import org.multipage.gui.PacketSymbol;
 import org.multipage.gui.Utility;
-import org.multipage.util.Obj;
-import org.multipage.util.RepeatedTask;
-import org.multipage.util.Resources;
-import org.multipage.util.j;
+import org.multipage.util.Lock;
 
 /**
  * Xdebug probe for Area Server (a client connected to the XdebugServer).
@@ -30,16 +35,6 @@ public class XdebugClient {
 	 * Default client connection timeout in milliseconds.
 	 */
 	private static final int DEFAUL_CONNECTION_TIMEOUT_MS = 3000;
-
-	/**
-     * Command idle time span in milliseconds.
-     */
-	private static final long COMMAND_IDLE_TIME_MS = 200;
-	
-	/**
-     * Xdebug client input buffer size.
-     */
-	private static final int BUFFER_SIZE = 1024;
 	
 	/**
 	 * Response character set.
@@ -52,20 +47,45 @@ public class XdebugClient {
 	private static final HashMap<String, Object> CONSTANT_FEATURES = new HashMap<String, Object>();
 	
 	/**
-	 * Task stopped, the flag.
+	 * Legth of the buffer that stores Xdebug statement.
 	 */
-	private static boolean taskStopped = false;
+	private static final int STATEMENT_BUFFER_SIZE = 1024;
 	
 	/**
-	 * Current listener (server) socket address to which this client connects.
+	 * Key to statement property.
 	 */
-	private InetSocketAddress serverSocketAddress = null;
+	private static final int STATEMENT_PROP = 1;
 	
 	/**
-	 * Socket channel used by this client.
+	 * Null symbol.
 	 */
-	private SocketChannel clientSocketChannel = null;
+	private PacketSymbol nullSymbol = new PacketSymbol(new byte [] { (byte) 0x00 });
+	
+	/**
+	 * Packet reader.
+	 */
+	private PacketSession packetSession = null;
 
+	/**
+	 * Client socket channel connected to server.
+	 */
+	private PacketChannel packetChannel = null;
+
+	/**
+	 * Data length.
+	 */
+	private PacketElement statementBlock = new PacketBlock(STATEMENT_BUFFER_SIZE, STATEMENT_BUFFER_SIZE, nullSymbol, -1);
+	
+	/**
+	 * Callback lambda function.
+	 */
+	private Function<XdebugCommand, XdebugClientResponse> processCommandLambda = null;
+		
+	/**
+	 * Debugger encoding.
+	 */
+	private String debuggerEncoding = "UTF-8";
+	
 	/**
      * Maximum number of debugged object children.
      */
@@ -84,7 +104,7 @@ public class XdebugClient {
 	/**
      * Flags that indcates debugging of hidden langauge objects..
      */
-	private int debugHiddenObjects = 0;
+	private boolean debugHiddenObjects = false;
 	
 	/**
      * Current encoding for Xdebug packety data.
@@ -92,12 +112,17 @@ public class XdebugClient {
 	private String currentDataEncoding = "base64";	// can also be "none" value 
 	
 	/**
+	 * Enables Xdebug with multiple sessions.
+	 */
+	private boolean multipleSessions = true;
+	
+	/**
 	 * Static constructor.
 	 */
 	static {
         
 		// Constant Xdebug features.
-		CONSTANT_FEATURES.put("language_supports_thread", "1"); 
+		CONSTANT_FEATURES.put("language_supports_threads", "1"); 
 		CONSTANT_FEATURES.put("language_name", "Maclan"); 
 		CONSTANT_FEATURES.put("language_version", "1.0"); 
 		CONSTANT_FEATURES.put("protocol_version", "1"); 
@@ -120,9 +145,11 @@ public class XdebugClient {
 	 */
 	public static XdebugClient connectNewClient(String ideHostName, int xdebugPort, String areaServerStateLocator)
 			throws Exception {
-		
-		// Delegate the call.
-		return connectNewClient(ideHostName, xdebugPort, areaServerStateLocator, DEFAUL_CONNECTION_TIMEOUT_MS);
+
+		// Create new client obejct.
+		XdebugClient client = new XdebugClient();
+		client.connect(ideHostName, xdebugPort, areaServerStateLocator, DEFAUL_CONNECTION_TIMEOUT_MS);
+		return client;
 	}
 	
 	/**
@@ -151,34 +178,54 @@ public class XdebugClient {
 	private void connect(String ideHostName, int xdebugPort, String areaServerStateLocator, int timeoutMs)
 			throws Exception {
 		
+		// TODO: <---REFACTOR Use packet client channel to connect to the IDE.
 		try {
-			// Start timeout.
-			long startTime = System.currentTimeMillis();
+			Lock lock = new Lock();
+			packetChannel = new PacketChannel() {
+				@Override
+				protected PacketSession onConnected(PacketChannel packetChannel) {
+					
+					// Create new session.
+					packetSession = new PacketSession("XdebugClient", clientSocketChannel) {
+						@Override
+						protected PacketElement getNewPacketElement(Packet packet) throws Exception {
+							return XdebugClient.this.getNewPacketElement(packet);
+						}
+						@Override
+						protected boolean onBlock(PacketBlock block) throws Exception {
+							return XdebugClient.this.onBlock(block);
+						}
+						@Override
+						protected void onEndOfPacket(Packet packet) {
+							XdebugClient.this.onEndOfPacket(packet);
+						}
+						@Override
+						protected void onThrownException(Throwable e) {
+							XdebugClient.this.onThrownException(e);
+						}
+					};
+					// Send INIT packet.
+			        XdebugClientResponse initPacket;
+					try {
+						initPacket = XdebugClientResponse.createInitPacket(areaServerStateLocator);
+						sendResponsePacket(packetChannel.clientSocketChannel, initPacket);
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+					
+					Lock.notify(lock);
+					
+					return packetSession;
+				}
+			};
+			packetChannel.connectToSocket(ideHostName, xdebugPort);
 			
-			// Remember server socket address.
-			serverSocketAddress = new InetSocketAddress(ideHostName, xdebugPort);
-			
-			// Create non-blocking socket channel and connect it.
-	        clientSocketChannel = SocketChannel.open();
-	        clientSocketChannel.configureBlocking(false);
-	
-	        // Connect to the server.
-	        clientSocketChannel.connect(serverSocketAddress);
-			
-	        while (!clientSocketChannel.finishConnect()) {
-	        	
-	            // Wait until timeout millicesonds will elapse.
-	            long endTimeMs = System.currentTimeMillis();
-	            long elapsedTimeMs = endTimeMs - startTime;
-	            
-	            if (elapsedTimeMs > timeoutMs) {
-	                Utility.throwException("org.maclan.server.messageXdebugConnectionTimeoutElapsed", timeoutMs);
-	            }
-	        }
-	        
-	        // Send INIT packet.
-	        XdebugResponse initPacket = XdebugResponse.createInitPacket(areaServerStateLocator);
-	        sendResponsePacket(clientSocketChannel, initPacket);
+			// Wait for connection completed.
+			boolean ellapsedTimeout = Lock.waitFor(lock, timeoutMs);
+			if (ellapsedTimeout) {
+				Utility.throwException("org.maclan.server.messageXdebugConnectionTimeout", ideHostName, xdebugPort);
+			}
 		}
 		catch (Exception e) {
 			Utility.throwException("org.maclan.server.messageXdebugConnectionError",
@@ -189,20 +236,150 @@ public class XdebugClient {
 	/**
 	 * Check if this client is connected to Xdebug server (the IDE).
 	 * @return
+	 * @throws IOException 
 	 */
-	public boolean isConnected() {
+	public boolean isConnected() throws IOException {
 		
 		// Check if the client socket channel exists.
-		if (clientSocketChannel == null) {
+		if (packetChannel.clientSocketChannel == null) {
             return false;
         }
         
         // Check if the client socket channel is connected.
-        if (clientSocketChannel.isConnected()) {
+		SocketAddress clientSocketAddress = packetChannel.clientSocketChannel.getRemoteAddress();
+        if (clientSocketAddress !=  null) {
             return true;
         }
-        
 		return false;
+	}
+	
+	/**
+	 * Get new packet element.
+	 * @param packet
+	 * @return
+	 */
+	protected PacketElement getNewPacketElement(Packet packet) {
+		
+		PacketElement element = null;
+		
+		// Get the last element in the packet.
+		if (!packet.packetParts.isEmpty()) {
+			element = packet.packetParts.getLast();
+		}
+		
+		// If current packet element doesn't exit, initialize the packet sequence.
+		if (element == null) {
+			element = statementBlock;
+		}
+		// If current packet element is not finished, return the same value.
+		else if (!element.isCompact) {
+			return element;
+		}
+		else {
+			element = null;
+		}
+		
+		// Set new current element.
+		return element;
+	}	
+	
+	/**
+	 * On block received.
+	 * @param block
+	 * @return
+	 */
+	protected boolean onBlock(PacketBlock block) {
+		
+		// Read nXdebug statement..
+		if (block.equals(statementBlock)) {
+			
+			// Flip buffer to read its contents.
+			block.buffer.flip();
+			
+			// Read buffer bytes.
+			int length = block.buffer.limit();
+			byte [] numberBytes = new byte [length];
+			block.buffer.get(numberBytes);
+			
+			// Get statement text.
+			String statementText = new String(numberBytes);
+			packetSession.readPacket.userProperties.put(STATEMENT_PROP, statementText);
+			return true;
+		}
+		return false;
+	}	
+	
+	/**
+	 * On end of packet.
+	 * @param packet
+	 */
+	protected void onEndOfPacket(Packet packet) {
+		
+		try {
+			// Check if statement is read.
+			boolean success = packet.userProperties.containsKey(STATEMENT_PROP);
+			if (!success) {
+				return;
+			}
+			
+			// Parse Xdebug statement.
+			String statementText = (String) packet.userProperties.get(STATEMENT_PROP);
+			
+		    // If the stop symbol was found in the input buffer, parse the command bytes and process the command.
+	    	XdebugCommand command = XdebugCommand.parseCommand(statementText);
+	    	
+	    	// Process the command and get response packet.
+	    	if (processCommandLambda != null) {
+		        XdebugClientResponse responsePacket = processCommandLambda.apply(command);
+		        
+		        // Send response packet back to the debugger server (the IDE).
+		        if (responsePacket != null) {
+		        	sendResponsePacket(packetChannel.clientSocketChannel, responsePacket);
+		        }
+		        else {
+		        	sendErrorPacket(packetChannel.clientSocketChannel, command, XdebugError.UNIMPLEMENTED_COMMAND);
+		        }
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		packet.reset();
+		packet.packetParts.clear();
+		statementBlock.reset();
+	}
+
+	/**
+	 * On exception thrown.
+	 * @param e
+	 */
+	protected void onThrownException(Throwable e) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	/**
+	 * Send Xdebug error response.
+	 * @param clientSocketChannel
+	 * @param command
+	 * @param xdebugError
+	 * @throws Exception 
+	 */
+	private void sendErrorPacket(AsynchronousSocketChannel clientSocketChannel, XdebugCommand command, XdebugError xdebugError)
+			throws Exception {
+		
+		// Check socket channel.
+		if (clientSocketChannel == null) {
+			return;
+		}
+
+		synchronized (packetSession) {
+			
+			// Create error packet and delegate the call to send it to Xdebug listener.
+			XdebugClientResponse response = XdebugClientResponse.createErrorPacket(command, xdebugError);
+			sendResponsePacket(clientSocketChannel, response);
+		}
 	}
 	
 	/**
@@ -211,7 +388,7 @@ public class XdebugClient {
 	 * @param response
 	 * @throws Exception 
 	 */
-	private void sendResponsePacket(SocketChannel clientSocketChannel, XdebugResponse response)
+	private void sendResponsePacket(AsynchronousSocketChannel clientSocketChannel, XdebugClientResponse response)
 			throws Exception {
 		
 		// Check socket channel.
@@ -219,38 +396,41 @@ public class XdebugClient {
 			return;
 		}
 
-		try {
-			// Get result packet bytes.
-			byte [] packetBytes = response.getBytes();
-			if (packetBytes == null) {
-				return;
+		synchronized (packetSession) {
+			try {
+				// Get result packet bytes.
+				byte [] packetBytes = response.getBytes();
+				if (packetBytes == null) {
+					return;
+				}
+				int packetLength = packetBytes.length;
+				if (packetLength <=0) {
+					return;
+				}
+				
+				// Get leght of packet.
+				int dataLenght = packetBytes.length;
+				String dataLengthString = String.valueOf(dataLenght);
+				byte [] dataLengthBytes = dataLengthString.getBytes(RESPONSE_CHARSET);
+				
+				// Compute buffer size and allocate the buffer.
+				int bufferSize = dataLengthBytes.length + XdebugClientResponse.NULL_SIZE + packetLength + XdebugClientResponse.NULL_SIZE;
+				ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+				
+				// Put bytes into the buffer. 
+				buffer.put(dataLengthBytes);
+				buffer.put(XdebugClientResponse.NULL_SYMBOL);
+				buffer.put(packetBytes);
+				buffer.put(XdebugClientResponse.NULL_SYMBOL);
+				buffer.flip();
+				
+				// Write the buffer with response bytes into socket channel.
+				Future<Integer> sent = clientSocketChannel.write(buffer);
+				int sentBytes = sent.get();
 			}
-			int packetLength = packetBytes.length;
-			if (packetLength <=0) {
-				return;
+			catch (Exception e) {
+				e.printStackTrace();
 			}
-			
-			// Get leght of packet.
-			int dataLenght = packetBytes.length;
-			String dataLengthString = String.valueOf(dataLenght);
-			byte [] dataLengthBytes = dataLengthString.getBytes(RESPONSE_CHARSET);
-			
-			// Compute buffer size and allocate the buffer.
-			int bufferSize = dataLengthBytes.length + XdebugResponse.NULL_SIZE + packetLength + XdebugResponse.NULL_SIZE;
-			ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-			
-			// Put bytes into the buffer. 
-			buffer.put(dataLengthBytes);
-			buffer.put(XdebugResponse.NULL_SYMBOL);
-			buffer.put(packetBytes);
-			buffer.put(XdebugResponse.NULL_SYMBOL);
-			buffer.flip();
-			
-			// Write the buffer with response bytes into socket channel.
-			int sent = clientSocketChannel.write(buffer);
-		}
-		catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 	
@@ -258,84 +438,53 @@ public class XdebugClient {
      * Accept debug commands.
 	 * @throws Exception 
      */
-	public void acceptCommands(Function<XdebugCommand, XdebugResponse> processCommandLambda)
+	public void onAcceptCommands(Function<XdebugCommand, XdebugClientResponse> processCommandLambda)
 			throws Exception {
 		
-		// Create new input buffer and command string buffer..
-		ByteBuffer inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-		Obj<ByteBuffer> commandBuffer = new Obj<ByteBuffer>(ByteBuffer.allocate(BUFFER_SIZE));
-		
-		Obj<Boolean> terminated = new Obj<Boolean>();
-		
-		// Loop until all byte buffers have been read.
-		RepeatedTask.loopBlocking("DebugClientThread", -1, -1, (exit, exception) -> {
-			try {	
-				
-				// Read byte chunks from the input socket stream.
-			    int bytesRead = clientSocketChannel.read(inputBuffer);
-			    if (bytesRead <= 0) {
-			    	
-			    	// If there are no data on input, enter idle state and continue after timeout has ellapsed.
-			    	Thread.sleep(COMMAND_IDLE_TIME_MS);
-			    	return exit;
-			    }
-			    
-			    // Prepare input buffer for reading.
-			    inputBuffer.flip();
-			    
-			    while (inputBuffer.hasRemaining()) {
-			    
-				    // Read input buffer until the NULL symbol is encountered. The output buffer can extend its capacity.
-				    Utility.readUntil(inputBuffer, commandBuffer, BUFFER_SIZE, XdebugCommand.NULL_SYMBOL, null, -1, null, terminated);
-
-					// If the input bytes are not terminated, continue reading.
-				    if (!terminated.ref) {
-				    	break;
-				    }
-				    
-				    // If the stop symbol was found in the input buffer, parse the command bytes and process the command.
-			    	XdebugCommand command = XdebugCommand.parseCommand(commandBuffer.ref);
-			    	
-				    // TODO: <---DEUG Log connads received by client.
-			    	//j.log(1, "READ COMMAND: %s", command.getText());
-			    	
-			        XdebugResponse responsePacket = processCommandLambda.apply(command);
-			        
-			        // Send response packet back to the debugger server (the IDE).
-			        sendResponsePacket(clientSocketChannel, responsePacket);
-			    }
-			    
-				return exit;
-			}
-			catch (Exception e) {
-				exception.ref = new Exception(String.format(
-						Resources.getString("org.maclan.server.messageXdebugConnectionError"), e.getLocalizedMessage()));
-				return true;
-			}
-		});
+		this.processCommandLambda = processCommandLambda;
 	}
 	
 	/**
-	 * An Xdebug probe that accepts incomming commands and responses to them. It can also stop the connection.
+	 * An Xdebug probe that accepts incomming commands and sends responses to them. It can also stop the connection.
 	 * @param areaServer
 	 * @param command
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugResponse xdebugProbe(AreaServer areaServer, XdebugCommand command)
+	public XdebugClientResponse xdebugProbe(AreaServer areaServer, XdebugCommand command)
 			throws Exception {
 		
 		// Get command name.
 		String commandName = command.name;
 		
-		// Rules for incomming commands which are processed with the debugging probe.
+		// Rules for incomming commands that are processed with the debugging probe.
 		
 		// On getting the Xdebug feature.
 		if ("feature_get".equals(commandName)) {
 			
-			XdebugResponse resultPacket = createFeaturePacket(command, areaServer);
+			XdebugClientResponse resultPacket = createFeatureGetResponse(command, areaServer);
             return resultPacket;
         }
+		else if ("feature_set".equals(commandName)) {
+			
+			XdebugClientResponse resultPacket = getFeatureSetResponse(command, areaServer);
+            return resultPacket;
+        }
+		else if ("source".equals(commandName)) {
+			
+			XdebugClientResponse resultPacket = getSourceCodeResponse(command, areaServer);
+            return resultPacket;
+        }
+		else if ("expr".equals(commandName)) {
+			
+			XdebugClientResponse resultPacket = getExprResponse(command, areaServer);
+            return resultPacket;
+		}
+		else if ("run".equals(commandName)) {
+			
+			XdebugClientResponse resultPacket = getRunResponse(command, areaServer);
+            return resultPacket;
+		}
         
 		return null;
 	}
@@ -347,7 +496,7 @@ public class XdebugClient {
      * @return
 	 * @throws Exception 
      */
-	private XdebugResponse createFeaturePacket(XdebugCommand command, AreaServer areaServer)
+	private XdebugClientResponse createFeatureGetResponse(XdebugCommand command, AreaServer areaServer)
 			throws Exception {
 		
 		// Get feature name.
@@ -360,7 +509,7 @@ public class XdebugClient {
         	// Get variable features.
         	switch (featureName) {
         	case "encoding":
-        		featureValue = areaServer.getCurrentEncoding();
+        		featureValue = getCurrentEncoding();
         		break;
         	case "supported_encodings":
             	featureValue = AreaServer. getSupportedEncodings();
@@ -381,7 +530,7 @@ public class XdebugClient {
             	featureValue = getMaxDebuggedDepth();
                 break;
             case "show_hidden":
-            	featureValue = debugHidden();
+            	featureValue = getDebugHidden();
             	break;
         	default:
         		featureValue = Utility.newException("org.maclan.server.messageXdebugFeatureNot", featureName);
@@ -389,17 +538,178 @@ public class XdebugClient {
         }
         
         // Create response packet.
-        XdebugResponse featurePacket = XdebugResponse.createFeaturePacket(command, featureValue);
+        XdebugClientResponse featurePacket = XdebugClientResponse.createGetFeatureResult(command, featureValue);
 		return featurePacket;
+	}
+
+	/**
+	 * Set Xdebug feature and get response.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugClientResponse getFeatureSetResponse(XdebugCommand command, AreaServer areaServer)
+			throws Exception {
+		
+		// Get feature name and value.
+		String featureName = command.getArgument("-n");
+		String featureValue = command.getArgument("-v");
+		
+		boolean success = false;
+		
+    	switch (featureName) {
+	    case "encoding":
+	    	setCurrentEncoding(featureValue);
+	    	success = true;
+	    	break;
+		case "multiple_sessions":
+			setMultipleSessions(featureValue);
+			success = true;
+			break;
+		case "max_children":
+			setMaxDebuggedChildren(featureValue);
+			success = true;
+			break;
+		case "max_data":
+			setMaxDebuggedData(featureValue);
+			success = true;
+			break;
+		case "max_depth":
+			setMaxDebuggedDepth(featureValue);
+			success = true;
+			break;
+		case "show_hidden":
+			setDebugHidden(featureValue);
+			success = true;
+			break;			
+		case "breakpoint_details":
+		case "extended_properties":
+		case "notify_ok":
+			CONSTANT_FEATURES.put(featureName, featureValue);
+			success = true;
+			break;
+    	}
+    	
+    	// Create response packet.
+        XdebugClientResponse setFeatureResponse = XdebugClientResponse.createSetFeatureResult(command, success);
+		return setFeatureResponse;
 	}
 	
 	/**
-	 * Set feature.
-	 * @param feature
+	 * Response with debugged source code.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
 	 */
-	private void setFeature(String [] feature) {
-		// TODO Auto-generated method stub
+	private XdebugClientResponse getSourceCodeResponse(XdebugCommand command, AreaServer areaServer)
+			throws Exception {
 		
+    	String sourceCode = areaServer.state.text.toString();
+    	
+		// Create response packet.
+        XdebugClientResponse sourceResponse = XdebugClientResponse.createSourceResult(command, sourceCode);
+		return sourceResponse;
+	}
+	
+	/**
+	 * Run expr() command and return response.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugClientResponse getExprResponse(XdebugCommand command, AreaServer areaServer) 
+			throws Exception {
+		
+		// Get expression to evaluate with Area Server.
+		String dataText = new String(command.data);
+		String exprResultText = areaServer.evaluateText(dataText, String.class, true);
+		
+		// Create response packet.
+		XdebugClientResponse exprResponse = XdebugClientResponse.createExprResult(command, exprResultText);
+		return exprResponse;
+	}
+	
+	/**
+	 * Release debugged thread lock to run the code. Create run command response.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugClientResponse getRunResponse(XdebugCommand command, AreaServer areaServer)
+			throws Exception {
+		
+		// Unlock current Area Server thread.
+		Lock debuggerLock = areaServer.state.debuggerLock;
+		if (debuggerLock != null) {
+			Lock.notify(debuggerLock);
+		}
+		
+		// Create response packet.
+		XdebugClientResponse runResponse = XdebugClientResponse.createRunResult(command);
+		return runResponse;
+	}
+
+	/**
+	 * Converts input text to Xdebug value of boolean type.
+	 * @param valueText
+	 * @return
+	 * @throws Exception
+	 */
+	private boolean getBooleanValue(String valueText)
+			throws Exception {
+		
+		if ("0".equals(valueText)) {
+			return true;
+		}
+		else if ("1".equals(valueText)) {
+			return false;
+		}
+		
+		Utility.throwException("org.maclan.server.messageXdebugNotBoolean", valueText);
+		return false;
+	}
+	
+	/**
+	 * Set current Xdebug session encoding.
+	 * @param debuggerEncoding
+	 */
+	private void setCurrentEncoding(String debuggerEncoding) {
+		
+		this.debuggerEncoding = debuggerEncoding;
+	}
+	
+	/**
+	 * Get current Xdebug session encoding.
+	 * @return
+	 */
+	private String getCurrentEncoding() {
+		
+		return debuggerEncoding;
+	}
+	
+	/**
+	 * Set multiple sessions flag.
+	 * @param multipleSessionsText
+	 * @throws Exception 
+	 */
+	private void setMultipleSessions(String multipleSessionsText)
+			throws Exception {
+		
+		multipleSessions = getBooleanValue(multipleSessionsText);
+	}
+	
+	/**
+	 * Set multiple sessions flag.
+	 * @param debuggedChildrenText
+	 */
+	private void setMaxDebuggedChildren(String debuggedChildrenText) 
+			throws Exception {
+		
+		debuggedChildren = Integer.valueOf(debuggedChildrenText);
 	}
 
 	/**
@@ -412,12 +722,30 @@ public class XdebugClient {
 	}
 	
 	/**
+	 * Set the number of debugged object data.
+	 * @param debuggedDataText
+	 */
+	private void setMaxDebuggedData(String debuggedDataText) {
+		
+		debuggedChildren = Integer.valueOf(debuggedDataText);
+	}
+	
+	/**
 	 * Get the number of debugged object data.
 	 * @return
 	 */
 	private int getMaxDebuggedData() {
 		
 		return debuggedData;
+	}
+	
+	/**
+	 * Set maximum debugged stack depth.
+	 * @param debuggedDepthText
+	 */
+	private void setMaxDebuggedDepth(String debuggedDepthText) {
+		
+		debuggedDepth = Integer.valueOf(debuggedDepthText);
 	}
 	
 	/**
@@ -430,12 +758,23 @@ public class XdebugClient {
 	}
 	
 	/**
+	 * Set flag that indicates whether to debug hidden objects.
+	 * @param debugHiddenText
+	 * @throws Exception 
+	 */
+	private void setDebugHidden(String debugHiddenText)
+			throws Exception {
+		
+		debugHiddenObjects = getBooleanValue(debugHiddenText);
+	}
+	
+	/**
 	 * Get flag that indicates whether to debug hidden objects.
 	 * @return
 	 */
-	private int debugHidden() {
+	private int getDebugHidden() {
 		
-		return debugHiddenObjects;
+		return debugHiddenObjects ? 1 : 0;
 	}
 	
 	/**

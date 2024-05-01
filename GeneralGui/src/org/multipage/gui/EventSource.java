@@ -7,11 +7,8 @@
 
 package org.multipage.gui;
 
-import java.util.LinkedList;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Initiator of conditional event.
@@ -23,18 +20,14 @@ public class EventSource {
 	/**
 	 * Enumeration of sources.
 	 */
-	// Unknown event source.
 	public static final EventSource UNKNOWN = new EventSource("UNKNOWN");
-	// The Generator Main Frame source.
 	public static final EventSource GENERATOR_MAIN_FRAME = new EventSource("GENERATOR_MAIN_FRAME");
-	// The Area Editor source.
 	public static final EventSource AREA_EDITOR = new EventSource("AREA_EDITOR");
-	// The Local Pop Up Menu source.
+	public static final EventSource SLOT_EDITOR = new EventSource("SLOT_EDITOR");
 	public static final EventSource LOCAL_POPUP_MENU = new EventSource("LOCAL_POPUP_MENU");
-	// The Area Trace source.
 	public static final EventSource AREA_TRACE = new EventSource("AREA_TRACE");
-	// The Areas Diagram source.
 	public static final EventSource AREAS_DIAGRAM = new EventSource("AREAS_DIAGRAM");
+	public static final EventSource AREA_LOCAL_MENU = new EventSource("AREA_LOCAL_MENU");
 	
 	/**
 	 * Name of the event source.
@@ -44,7 +37,7 @@ public class EventSource {
 	/**
 	 * Flag that determines user direct event.
 	 */
-	public boolean userInitiated = false;
+	public boolean isUserAction = true;
 		
 	/**
 	 * Reference to source object .
@@ -90,7 +83,7 @@ public class EventSource {
 		
 		String className = getClass().getSimpleName();
 		String sourceName = name != null ? name : "unknown";
-		String initiator = userInitiated ? "user" : "machine";
+		String initiator = isUserAction ? "user" : "machine";
 		
 		String description = String.format("%s %s initiated by %s", className, sourceName, initiator);
 		return description;
@@ -102,7 +95,7 @@ public class EventSource {
 	 * @param initiatorMessage
 	 * @return
 	 */
-	public EventSource userAction(Object initiatorObject, Message initiatorMessage) {
+	public EventSource user(Object initiatorObject, Message initiatorMessage) {
 		
 		// Clone the event source.
 		EventSource clonedEventSource = clone(initiatorObject, true, initiatorMessage);
@@ -112,18 +105,40 @@ public class EventSource {
 	}
 	
 	/**
+	 * Clone new event source for user action.
+	 * @param initiatorObject
+	 * @return
+	 */
+	public EventSource user(Object initiatorObject) {
+		
+		// Delegate the call.
+		return user(initiatorObject, null);
+	}
+	
+	/**
 	 * Clone new event source for machine action.
 	 * @param initiatorObject
 	 * @param sourceMessage
 	 * @return
 	 */
-	public EventSource machineAction(Object initiatorObject, Message intiatorMessage) {
+	public EventSource machine(Object initiatorObject, Message intiatorMessage) {
 		
 		// Clone the event source.
 		EventSource clonedEventSource = clone(initiatorObject, false, sourceMessage);
 		
 		// Return cloned event source.
 		return clonedEventSource;
+	}
+	
+	/**
+	 * Clone new event source for machine action.
+	 * @param initiatorObject
+	 * @return
+	 */
+	public EventSource machine(Object initiatorObject) {
+		
+		// Delegate the call.
+		return machine(initiatorObject, null);		
 	}
 	
 	/**
@@ -142,7 +157,7 @@ public class EventSource {
 		clonedEventSource.name = name;
 				
 		// Set user initiation flag.
-		clonedEventSource.userInitiated = userInitiated;
+		clonedEventSource.isUserAction = userInitiated;
 		
 		// Preserve basic source reference.
 		clonedEventSource.basicEventSource = basicEventSource;
@@ -171,7 +186,7 @@ public class EventSource {
 		EventSource other = (EventSource) obj;
 		return Objects.equals(basicEventSource, other.basicEventSource)
 				&& Objects.equals(sourceMessage, other.sourceMessage)
-				&& Objects.equals(sourceObject, other.sourceObject) && userInitiated == other.userInitiated;
+				&& Objects.equals(sourceObject, other.sourceObject) && isUserAction == other.isUserAction;
 	}
 
 	/**

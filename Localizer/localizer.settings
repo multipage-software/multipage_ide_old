@@ -1,7 +1,14 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-  <string>C:\from_backup\multipage_ide\GeneralGui\src\org\multipage\gui\properties</string>
-  <boolean>true</boolean>
+  <string>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties</string>
+  <java.awt.Rectangle>
+    <x>0</x>
+    <y>0</y>
+    <width>0</width>
+    <height>0</height>
+  </java.awt.Rectangle>
+  <java.lang.Integer-array/>
+  <boolean>false</boolean>
   <java.awt.Rectangle>
     <x>0</x>
     <y>0</y>
@@ -221,19 +228,19 @@
     <height>330</height>
   </java.awt.Rectangle>
   <java.awt.Rectangle>
-    <x>893</x>
-    <y>25</y>
-    <width>974</width>
-    <height>905</height>
+    <x>510</x>
+    <y>237</y>
+    <width>1200</width>
+    <height>806</height>
   </java.awt.Rectangle>
   <linked-list>
     <program.localizer.LocalizerItem>
-      <filePath>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties\messages_cz_CZ.properties</filePath>
-      <tabName>Middle</tabName>
+      <filePath>C:\from_backup\multipage_ide\GeneralGui\src\org\multipage\gui\properties\messages_cz_CZ.properties</filePath>
+      <tabName>GUI</tabName>
       <columns>
         <column0>30</column0>
-        <column1>326</column1>
-        <otherColumns>356</otherColumns>
+        <column1>100</column1>
+        <otherColumns>200</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
     <program.localizer.LocalizerItem>
@@ -241,26 +248,26 @@
       <tabName>Generator</tabName>
       <columns>
         <column0>30</column0>
-        <column1>259</column1>
-        <otherColumns>200</otherColumns>
+        <column1>361</column1>
+        <otherColumns>387</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
     <program.localizer.LocalizerItem>
-      <filePath>C:\from_backup\multipage_ide\GeneralGui\src\org\multipage\gui\properties\messages_cz_CZ.properties</filePath>
-      <tabName>GUIUtils</tabName>
+      <filePath>C:\from_backup\multipage_ide\ProgramMiddle\src\org\maclan\properties\messages_cz_CZ.properties</filePath>
+      <tabName>Middle</tabName>
       <columns>
         <column0>30</column0>
-        <column1>274</column1>
-        <otherColumns>298</otherColumns>
+        <column1>100</column1>
+        <otherColumns>200</otherColumns>
       </columns>
     </program.localizer.LocalizerItem>
   </linked-list>
-  <int>2</int>
+  <int>1</int>
   <java.awt.Rectangle>
-    <x>995</x>
-    <y>13</y>
+    <x>606</x>
+    <y>289</y>
     <width>707</width>
-    <height>1039</height>
+    <height>502</height>
   </java.awt.Rectangle>
-  <int>366</int>
+  <int>152</int>
 </settings>

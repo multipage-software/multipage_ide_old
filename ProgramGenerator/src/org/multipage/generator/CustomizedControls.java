@@ -22,8 +22,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import org.multipage.gui.ConditionalEvents;
-import org.multipage.gui.Signal;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.Utility;
@@ -306,9 +306,7 @@ public class CustomizedControls extends JDialog {
 	 * On reload button.
 	 */
 	protected void onReloadButton() {
-
-		// Reload diagrams.
-		ConditionalEvents.transmit(CustomizedControls.this, GuiSignal.updateColors);
+		
 	}
 
 	/**

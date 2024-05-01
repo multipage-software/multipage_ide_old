@@ -11,11 +11,14 @@ import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 import javax.swing.JPanel;
 
 import org.maclan.Area;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Resources;
 
@@ -58,14 +61,34 @@ public class PropertiesPanel extends JPanel {
 	 */
 	public PropertiesPanel() {
 		
-		
+		initComponents();
+		postCreate();
+	}
+
+	/**
+	 * Initialize components.
+	 */
+	private void initComponents() {
+
 		// Create area editor.
 		areaEditor = newAreasProperties(true);
-		
 		setLayout(new BorderLayout());
-				
+	}
+	
+	/**
+	 * Post creation.
+	 */
+	private void postCreate() {
+
 		// Initialize.
 		setNoProperties();
+		setListeners();
+	}
+
+	/**
+	 * Set listeners.
+	 */
+	private void setListeners() {
 		
 		// Set listener.
 		addMouseListener(new MouseAdapter() {
@@ -74,8 +97,21 @@ public class PropertiesPanel extends JPanel {
 				setCursor(Cursor.getDefaultCursor());
 			}
 		});
+		
+		// Receive the "display area properties" messages.
+		ApplicationEvents.receiver(this, GuiSignal.displayAreaProperties, message -> {
+			
+			HashSet<Long> selectedAreaIds = message.getRelatedInfo();
+			
+			if (!selectedAreaIds.isEmpty()) {
+				setAreas(selectedAreaIds);
+			}
+			else {
+				setNoProperties();
+			}
+		});
 	}
-	
+
 	/**
 	 * Create new area properties object.
 	 * @param isPropertiesPanel
@@ -84,6 +120,27 @@ public class PropertiesPanel extends JPanel {
 	protected AreasPropertiesBase newAreasProperties(boolean isPropertiesPanel) {
 		
 		return ProgramGenerator.newAreasProperties(isPropertiesPanel);
+	}
+	
+	/**
+	 * Set areas.
+	 * @param selectedAreaIds
+	 */
+	public void setAreas(HashSet<Long> selectedAreaIds) {
+		
+		LinkedList<Area> areas = new LinkedList<Area>();
+		selectedAreaIds.forEach(areaId -> {
+			
+			Area area = ProgramGenerator.getArea(areaId);
+			if (area == null) {
+				return;
+			}
+			
+			areas.add(area);
+		});
+		
+		// Delegate call.
+		setAreas(areas);
 	}
 
 	/**
@@ -143,6 +200,7 @@ public class PropertiesPanel extends JPanel {
 	 */
 	public void dispose() {
 
+		ApplicationEvents.removeReceivers(this);
 		areaEditor.dispose();
 	}
 }

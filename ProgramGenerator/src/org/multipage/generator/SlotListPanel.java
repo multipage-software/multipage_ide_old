@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -65,18 +66,19 @@ import org.maclan.Slot;
 import org.maclan.SlotHolder;
 import org.maclan.SlotType;
 import org.multipage.basic.ProgramBasic;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.Callback;
-import org.multipage.gui.ConditionalEvents;
 import org.multipage.gui.EditorPaneEx;
 import org.multipage.gui.FoundAttr;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * 
@@ -551,9 +553,6 @@ public class SlotListPanel extends JPanel {
 		if (result.isNotOK()) {
 			result.show(this);
 		}
-		
-		// Update information.
-		ConditionalEvents.transmit(SlotListPanel.this, GuiSignal.setSlotsDefaultValues);
 	}
 
 	/**
@@ -641,24 +640,14 @@ public class SlotListPanel extends JPanel {
 	private void setListeners() {
 		
 		// Receive the"show area properties" event.
-		ConditionalEvents.receiver(SlotListPanel.this, GuiSignal.showAreasProperties, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.displayAreaProperties, message -> {
 			
-			Object relatedInfo = message.getRelatedInfo();
-			
-			// On a hash set.
-			if (relatedInfo instanceof Collection) {
-				
-				// Set areas.
-				@SuppressWarnings("unchecked")
-				Collection<Object> areaCollection = (Collection<Object>) relatedInfo;
-				
-				setAreas(areaCollection);
-				return;
-			}
+			HashSet<Long> slectedAreaIds = message.getRelatedInfo();
+			setAreas(slectedAreaIds);
 		});
 		
 		// Receive the "area slot saved" event.
-		ConditionalEvents.receiver(SlotListPanel.this, GuiSignal.areaSlotSaved, message -> {
+		ApplicationEvents.receiver(this, UpdateSignal.updateSlotList, message -> {
 			
 			// Get slot.
 			Slot slot = message.getRelatedInfo();
@@ -677,6 +666,26 @@ public class SlotListPanel extends JPanel {
 			
 				// Reload the slot table view.
 				update();
+			}
+		});
+		
+		ApplicationEvents.receiver(this, UpdateSignal._updateAreasDiagram, message -> {
+			
+			// Get selected area IDs.
+			HashSet<Long> areaIds = message.getRelatedInfo();
+			if (areaIds != null) {
+				
+				// Set edited areas.
+				LinkedList<Area> areas = ProgramGenerator.getAreas(areaIds);
+				setAreas(areas);
+			}
+			
+			// Get selected slot IDs.
+			HashSet<Long> selectedSlotIds = message.getAdditionalInfo(0);
+			if (selectedSlotIds != null) {
+				
+				// Select slot IDs.
+				selectSlotIds(selectedSlotIds);
 			}
 		});
 	}
@@ -1148,7 +1157,7 @@ public class SlotListPanel extends JPanel {
         ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/update_icon.png", this, "onUpdate", "org.multipage.generator.tooltipUpdateSlots");
         toolBar.addSeparator();
         ToolBarKit.addToolBarButton(toolBar, "org/multipage/generator/images/search_icon.png", this, "onSearch", "org.multipage.generator.tooltipSearchInSlots");
-        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/display_search.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
+        buttonShowOnlyFound = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/only_found.png", this, "onClickShowFound", "org.multipage.generator.tooltipShowFoundSlots");
         toolBar.addSeparator();
         buttonShowUserSlots = ToolBarKit.addToggleButton(toolBar, "org/multipage/generator/images/preferred.png", this, "onShowUser", "org.multipage.generator.tooltipShowUserSlots");
         toolBar.addSeparator();
@@ -1359,9 +1368,6 @@ public class SlotListPanel extends JPanel {
 		tableModel.removeAll(slotsToDelete);
 		
 		onChange();
-		
-		// Update information.
-		ConditionalEvents.transmit(SlotListPanel.this, GuiSignal.removeUserSlots);
 	}
 
 	/**
@@ -1513,6 +1519,62 @@ public class SlotListPanel extends JPanel {
 			doNotUpdateSlotDescription = false;
 			loadSlotDescription();
 		});
+	}
+	
+	/**
+	 * Select
+	 * @param slotIds
+	 */
+	public void selectSlotIds(HashSet<Long> slotIds) {
+		
+		// Get selection model.
+		ListSelectionModel selectionModel = tableSlots.getSelectionModel();
+		if (selectionModel == null) {
+			return;
+		}
+		
+		selectionModel.clearSelection();
+		
+		for (Long slotId : slotIds) {
+			if (slotIds == null) {
+				continue;
+			}
+			
+			// Add slot ID selection.
+			addSelectionSlotId(slotId);
+		}
+	}
+	
+	/** 
+	 * Add slot selection.
+	 * @param slotId
+	 */
+	private void addSelectionSlotId(Long slotId) {
+		
+		// Get selection model.
+		ListSelectionModel selectionModel = tableSlots.getSelectionModel();
+		if (selectionModel == null) {
+			return;
+		}
+		
+		// Find slot index.
+		int slotCount = tableModel.getRowCount();
+		for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+			
+			// Get slot.
+			Slot slot = tableModel.get(slotIndex);
+			if (slot == null) {
+				continue;
+			}
+			
+			// Check slot ID.
+			long foundSlotId = slot.getId();
+			if (foundSlotId == slotId) {
+			
+				// Select row with slot ID.
+				selectionModel.addSelectionInterval(slotIndex, slotIndex);
+			}
+		}
 	}
 
 	/**

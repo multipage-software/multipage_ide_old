@@ -59,7 +59,6 @@ public class SyncMain {
 	/**
 	 * Area server client with access string and its format.
 	 */
-	@SuppressWarnings("unused")
 	private static AreaServerClient areaServerClient;
 
 	/**

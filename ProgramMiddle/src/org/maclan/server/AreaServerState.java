@@ -16,6 +16,7 @@ import org.maclan.Area;
 import org.maclan.AreaVersion;
 import org.maclan.Language;
 import org.maclan.MiddleLight;
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 
 /**
@@ -281,6 +282,16 @@ public class AreaServerState {
 	 * Xdebug client.
 	 */
 	public XdebugClient debugClient = null;
+
+	/**
+	 * Debugger lock.
+	 */
+	public Lock debuggerLock = null;
+	
+	/**
+	 * Debugged code descriptor.
+	 */
+	public DebuggedCodeDescriptor debuggedCodeDescriptor = null;
 
 	/**
 	 * Update server state.

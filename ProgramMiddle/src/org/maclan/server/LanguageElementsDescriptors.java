@@ -1305,7 +1305,12 @@ public class LanguageElementsDescriptors {
 				return ((AreaServer)thisObject).getStartLanguageId();
 			}
 			})));
-		
+		descriptors.add(new Descriptor(AreaServer.class, new Method("getThreadName", new Delegate() {
+			@Override
+			Object run(AreaServer server, Object thisObject, Object [] parameters) throws Exception {
+				return ((AreaServer)thisObject).getThreadName((Long) parameters[0]);
+			}
+			}, Long.class)));
 		
 		/**
 		 * Area.

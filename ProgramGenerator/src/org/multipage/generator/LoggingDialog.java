@@ -28,7 +28,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -72,7 +71,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.EventHandle;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.GeneralGui;
@@ -958,7 +957,7 @@ public class LoggingDialog extends JDialog {
 	private void setListeners() {
 
 		// Receive the "step log" signal.
-		ConditionalEvents.receiver(this, Signal.stepLog, message -> {
+		ApplicationEvents.receiver(this, Signal.stepLog, message -> {
 
 			// Notify the log process lock.
 			Lock.notify(logLock);
@@ -2645,7 +2644,7 @@ public class LoggingDialog extends JDialog {
 		}
 
 		// Transmit the "step log" signal.
-		ConditionalEvents.transmit(this, Signal.stepLog);
+		ApplicationEvents.transmit(this, Signal.stepLog);
 	}
 
 	/**
@@ -2667,7 +2666,7 @@ public class LoggingDialog extends JDialog {
 		applyDialogState();
 
 		// Transmit the "run logging" signal.
-		ConditionalEvents.transmit(this, Signal.runLogging);
+		ApplicationEvents.transmit(this, Signal.runLogging);
 	}
 
 	/**
@@ -2682,7 +2681,7 @@ public class LoggingDialog extends JDialog {
 		}
 
 		// Transmit the "break logging" signal.
-		ConditionalEvents.transmit(this, Signal.breakLogging);
+		ApplicationEvents.transmit(this, Signal.breakLogging);
 
 		synchronized (dialog.stateSynchronizaton) {
 			state = BREAKED;

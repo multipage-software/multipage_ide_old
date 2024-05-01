@@ -7,6 +7,7 @@
 package org.multipage.gui;
 
 import java.awt.Dimension;
+import java.net.InetSocketAddress;
 import java.time.format.DateTimeFormatter;
 
 import javax.swing.JLabel;
@@ -133,8 +134,9 @@ public class ConsoleProperties extends JPanel {
 		
 		// Display input socket address.
 		String socketAddressText = null;
-		if (console.socketAddress != null) {
-			socketAddressText = console.socketAddress.getHostString() + ":" + console.socketAddress.getPort();
+		InetSocketAddress socketAddress = console.getSocketAddress();
+		if (socketAddress != null) {
+			socketAddressText = socketAddress.getHostString() + ":" + socketAddress.getPort();
 		}
 		else {
 			socketAddressText = "unknown";

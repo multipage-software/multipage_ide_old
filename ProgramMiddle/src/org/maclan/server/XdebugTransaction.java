@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2023 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 16-05-2023
  *
@@ -7,9 +7,7 @@
 package org.maclan.server;
 
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
-import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
@@ -19,7 +17,7 @@ import org.multipage.util.Resources;
  *
  */
 public class XdebugTransaction {
-	
+
 	/**
 	 * Generated transaction ID.
 	 */
@@ -52,9 +50,14 @@ public class XdebugTransaction {
 	public XdebugCommand command = null;
 	
 	/**
+	 * Transaction state.
+	 */
+	public XdebugTransactionState state = XdebugTransactionState.created;
+	
+	/**
 	 * Lambda function that can receive command result.
 	 */
-	public Consumer<XdebugResponse> responseLambda = null;
+	public Consumer<XdebugClientResponse> responseLambda = null;
 
 	/**
 	 * Set exception thrown when sending this command to the Xdebug client.
@@ -72,12 +75,13 @@ public class XdebugTransaction {
 	 * @param responseLambda 
 	 * @return
 	 */
-	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugResponse> responseLambda) {
+	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugClientResponse> responseLambda) {
 		
 		XdebugTransaction transaction = new XdebugTransaction();
 		transaction.id = command.transactionId = generateNewTransactionId();
 		transaction.command = command;
 		transaction.responseLambda = responseLambda;
+		transaction.state = XdebugTransactionState.created;
 		return transaction;
 	}
 	

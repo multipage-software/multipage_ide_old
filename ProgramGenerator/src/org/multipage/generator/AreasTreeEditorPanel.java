@@ -13,7 +13,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
-import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -28,7 +27,6 @@ import java.util.LinkedList;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
@@ -43,7 +41,6 @@ import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
-import javax.swing.TransferHandler;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -60,25 +57,30 @@ import javax.swing.tree.TreePath;
 
 import org.maclan.Area;
 import org.maclan.AreasModel;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.DefaultMutableTreeNodeDnD;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.GraphUtility;
+import org.multipage.gui.GuiSignal;
 import org.multipage.gui.Images;
 import org.multipage.gui.JTreeDnD;
 import org.multipage.gui.JTreeDndCallback;
+import org.multipage.gui.Message;
+import org.multipage.gui.NonCyclingReceiver;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.ToolBarKit;
+import org.multipage.gui.UpdateSignal;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
 
 /**
- * 
+ * Panel that displays areas in the tree view.
  * @author
  *
  */
-public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Update  {
+public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, NonCyclingReceiver  {
 	
 	/**
 	 * Version.
@@ -108,15 +110,33 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 	@SuppressWarnings("serial")
 	class ItemRendererImpl extends JLabel {
 
+		/**
+		 * Item states.
+		 */
 		private boolean isSelected;
 		private boolean cellHasFocus;
 		private boolean isVisible = false;
 		
+		/**
+		 * Constructor.
+		 */
 		ItemRendererImpl() {
 			
 			setOpaque(true);
 		}
 		
+		/**
+		 * Set item properties.
+		 * @param text
+		 * @param textColor
+		 * @param subName
+		 * @param superName
+		 * @param hiddenSubareas
+		 * @param index
+		 * @param isSelected
+		 * @param cellHasFocus
+		 * @param isHomeArea
+		 */
 		public void setProperties(String text, Color textColor, String subName, String superName, boolean hiddenSubareas, int index,
 				boolean isSelected, boolean cellHasFocus, boolean isHomeArea) {
 
@@ -158,6 +178,15 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 			this.cellHasFocus = cellHasFocus;
 		}
 		
+		/**
+		 * Sets item properties.
+		 * @param text
+		 * @param colorText
+		 * @param index
+		 * @param isSelected
+		 * @param cellHasFocus
+		 * @param isHomeArea
+		 */
 		public void setProperties(String text, Color colorText, int index,
 				boolean isSelected, boolean cellHasFocus, boolean isHomeArea) {
 
@@ -176,6 +205,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 			this.isSelected = isSelected;
 			this.cellHasFocus = cellHasFocus;
 		}
+		
+		/**
+		 * Draw the node.
+		 */
 		@Override
 		public void paint(Graphics g) {
 			
@@ -183,6 +216,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 			GraphUtility.drawSelection(g, this, isSelected, cellHasFocus);
 		}
 
+		/**
+		 * Set area visibility.
+		 * @param isVisible
+		 */
 		public void setAreaVisible(boolean isVisible) {
 			
 			this.isVisible = isVisible;
@@ -199,6 +236,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 	 * Area ID.
 	 */
 	private long areaId;
+	
+	/**
+	 * List of previous update messages.
+	 */
+	private LinkedList<Message> previousUpdateMessages = new LinkedList<Message>();
 
 	/**
 	 * List renderer.
@@ -479,7 +521,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		GeneratorMainFrame.removeAreas(areas, parentArea, this);
 		
 		// Update GUI.
-		Update.run(Update.GROUP_ALL, EventSource.AREA_EDITOR.userAction(this, null));
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_ALL);
 	}
 
 	/**
@@ -522,10 +564,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
 			
 			// If the node holds the home area, select it.
-			if (userObject instanceof Area) {
-				Area area = (Area) userObject;
+			if (userObject instanceof Long) {
+				Long areaId = (Long) userObject;
 				
-				boolean isHomeArea = ProgramGenerator.getAreasModel().isHomeArea(area);
+				boolean isHomeArea = ProgramGenerator.getAreasModel().isHomeAreaId(areaId);
 				if (isHomeArea) {
 					
 					TreePath homeNodePath = new TreePath(node.getPath());
@@ -539,11 +581,13 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 	 * Select area.
 	 * @param coordinatesItem
 	 */
-	private void selectArea(final Long areaId) {
+	private boolean selectArea(final Long areaId) {
+		
+		Obj<Boolean> success = new Obj<Boolean>(false);
 		
 		// Check the input value.
 		if (areaId == null) {
-			return;
+			return success.ref;
 		}
 		
 		// Clear selection
@@ -560,6 +604,8 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 					
 					TreePath areaNodePath = new TreePath(node.getPath());
 					tree.addSelectionPath(areaNodePath);
+					
+					success.ref = true;
 				}
 			}
 		});
@@ -580,10 +626,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				if (areaId == listAreaId) {
 					list.setSelectedIndex(index);
 					list.ensureIndexIsVisible(index);
-					return;
+					success.ref = true;
 				}
 			}
 		}
+		return success.ref;
 	}
 
 	/**
@@ -793,9 +840,18 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				reload();
 			}
 		});
-		// Add new trayMenu items.
-		areaMenuList.addTo(this, popupMenuList);
+		
+		// Add new popup menu items.	
 		areaMenuTree.addTo(this, popupMenuTree);
+		// Set list of disabled menu items.
+		areaMenuTree.disableMenuItems(
+				areaMenuTree.menuAddToFavoritesArea,
+				areaMenuTree.menuFocusSuperArea,
+				areaMenuTree.menuFocusNextArea,
+				areaMenuTree.menuFocusPreviousArea,
+				areaMenuTree.menuFocusTabTopArea
+			);
+		areaMenuList.addTo(this, popupMenuList);
 	}
 
 	/**
@@ -865,17 +921,14 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		DocumentListener listener = new DocumentListener() {
 			@Override
 			public void removeUpdate(DocumentEvent e) {
-				
 				reload();
 			}
 			@Override
 			public void insertUpdate(DocumentEvent e) {
-				
 				reload();
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) {
-				
 				reload();
 			}
 		};
@@ -894,7 +947,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		    	onSelectedTreeItem();
 		    	
 		    	// Propagate the "show areas' properties" event.
-		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, GuiSignal.showAreasProperties, selectedTreeAreaIds);
+		    	ApplicationEvents.transmitRenewed(AreasTreeEditorPanel.this, GuiSignal.displayAreaProperties, selectedTreeAreaIds);
 		    }
 		});
 		
@@ -910,15 +963,22 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				onSelectedListItem();
 				
 		    	// Propagate the "show areas' properties" event.
-		    	ConditionalEvents.transmitRenewed(AreasTreeEditorPanel.this, GuiSignal.showAreasProperties, selectedListAreaIds);
+				ApplicationEvents.transmitRenewed(AreasTreeEditorPanel.this, GuiSignal.displayAreaProperties, selectedListAreaIds);
 			}
 		});
 		
+		// Receive "update areas" messages.
+		ApplicationEvents.receiver(this, SignalGroup.create(UpdateSignal.updateAreasModel, UpdateSignal.updateAreasTreeEditor), message -> {
+			
+			reload();
+			tree.updateUI();
+		});
+		
 		// "Update all request" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.updateAreasTreeEditor, message -> {
+		ApplicationEvents.receiver(this, UpdateSignal.updateAreasTreeEditor, message -> {
 			
 			// Check if the message is repeated. If so, avoid infinite loop of similar messages.
-			if (message.isRepeatingIn(AreasTreeEditorPanel.this, previousMessage -> true)) {
+			if (message.isCyclic(AreasTreeEditorPanel.this, previousMessage -> true)) {
 				return;
 			}
 			
@@ -931,46 +991,84 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 				// Unselect all items.
 				setAllSelection(false);
 			}
-			
-			// TODO: debug
-			//ProgramGenerator.machineUpdate(ProgramGenerator.GUI_GROUP_ALL);
-		});
-		
-		// "Update GUI" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.updateGui, message -> {
-			
-			// Reload editor.
-			reload();
 		});
 		
 		// "Select all' properties" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.selectAll, message -> {
+		ApplicationEvents.receiver(this, GuiSignal.selectAll, message -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
 				setAllSelection(true);
+				
+				int tabIndex = tabbedPane.getSelectedIndex();
+				HashSet<Long> selectedAreaIds = (tabIndex == 0 ? selectedTreeAreaIds : selectedListAreaIds);
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasTreeEditorPanel.this, GuiSignal.displayAreaProperties, selectedAreaIds);
 			}
 		});
 		
 		// "Unselect all' properties" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.unselectAll, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.unselectAll, action -> {
 			
 			boolean isShowing = AreasTreeEditorPanel.this.isShowing();
 			if (isShowing) {
 				setAllSelection(false);
+				
+				HashSet<Long> selectedAreaIds = new HashSet<Long>();
+				
+				// Display area properties.
+				ApplicationEvents.transmit(AreasTreeEditorPanel.this, GuiSignal.displayAreaProperties, selectedAreaIds);
 			}
 		});
 		
 		// "Focus home area' properties" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusHomeArea, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusHomeArea, action -> {
 			
 			if (isShowing()) {
 				selectHomeArea();
 			}
 		});
 		
+		// "Focus top area" event receiver.
+		ApplicationEvents.receiver(this, GuiSignal.focusTopArea, message -> {
+			
+			if (isShowing()) {
+				Long tabAreaId = GeneratorMainFrame.getTabAreaId();
+				if (tabAreaId == null) {
+					return;
+				}
+				selectArea(tabAreaId);
+				
+				HashSet<Long> selectedAreaIds = new HashSet<Long>();
+				selectedAreaIds.add(tabAreaId);
+				
+				// Display area properties.
+				ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
+			}
+		});
+		
+		// Add GUI event listener.
+		ApplicationEvents.receiver(this, GuiSignal.focusBasicArea, message -> {
+			
+			if (isShowing()) {
+				// Center the areas diagram.
+				boolean success = selectArea(0L);
+				if (!success) {
+					Utility.show(AreasTreeEditorPanel.this, "org.multipage.generator.messageEditorDoesntContainBasicArea");
+					return;
+				}
+				
+				HashSet<Long> selectedAreaIds = new HashSet<Long>();
+				selectedAreaIds.add(0L);
+				
+				// Display area properties.
+				ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreaIds);
+			}
+		});
+		
 		// "Focus area" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.focusArea, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.focusArea, action -> {
 			
 			if (isShowing()) {
 				Long areaId = action.getAdditionalInfo(0);
@@ -979,7 +1077,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		});
 		
 		// "Show/hide IDs" event receiver.
-		ConditionalEvents.receiver(this, GuiSignal.showOrHideIds, action -> {
+		ApplicationEvents.receiver(this, GuiSignal.showOrHideIds, action -> {
 			
 			// Set button state.
 			boolean showIds = action.getRelatedInfo();
@@ -995,7 +1093,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 	private void removeListeners() {
 		
 		// Remove event listener.
-		ConditionalEvents.removeReceivers(this);
+		ApplicationEvents.removeReceivers(this);
 	}
 	
 	/**
@@ -1716,9 +1814,6 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		}
 		
 		reload();
-		
-		int index = tabbedPane.getSelectedIndex();
-		ConditionalEvents.transmit(this, GuiSignal.subTabChange, index == 0 ? selectedTreeAreaIds : selectedListAreaIds);
 	}
 
 	/**
@@ -1731,7 +1826,11 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 			return;
 		}
 		
-		ConditionalEvents.transmit(this, GuiSignal.mainTabChange, selectedIndex);
+		boolean isTreeViewSelected = (selectedIndex == 0);
+		HashSet<Long> selectedAreas = isTreeViewSelected ? selectedTreeAreaIds : selectedListAreaIds;
+		
+		// Display area properties.
+		ApplicationEvents.transmit(this, GuiSignal.displayAreaProperties, selectedAreas);
 	}
 	
 	/**
@@ -1810,5 +1909,20 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, Up
 		
 		Area area = ProgramGenerator.getArea(areaId);
 		return area;
+	}
+	
+	/**
+	 * Get previous update messages.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousUpdateMessages;
+	}
+
+	@Override
+	public void recreateContent() {
+		// TODO Auto-generated method stub
+		
 	}
 }

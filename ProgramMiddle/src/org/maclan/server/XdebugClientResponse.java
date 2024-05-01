@@ -6,7 +6,9 @@
  */
 package org.maclan.server;
 
+import java.io.StringReader;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,13 +28,14 @@ import org.w3c.dom.Element;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
+import org.xml.sax.InputSource;
 
 /**
- * Xdebug packet object.
+ * Xdebug client response.
  * @author vakol
  *
  */
-public class XdebugResponse {
+public class XdebugClientResponse {
 	
 	/**
 	 * Xdebug packet constants.
@@ -46,7 +49,7 @@ public class XdebugResponse {
      * Xdebug NULL symbol.
      */
 	public static final byte [] NULL_SYMBOL = new byte [] { 0 };
-	public static final int NULL_SIZE = XdebugResponse.NULL_SYMBOL.length;
+	public static final int NULL_SIZE = XdebugClientResponse.NULL_SYMBOL.length;
 	
 	/**
 	 * Compiled XPATH expresions
@@ -61,15 +64,18 @@ public class XdebugResponse {
 	private static XPathExpression xpathResponseCommandName = null;
 	private static XPathExpression xpathResponseFeatureName = null;
 	private static XPathExpression xpathResponseFeatureSupported = null;
-	private static XPathExpression xpathResponseFeatureValue = null;	
+	private static XPathExpression xpathResponseFeatureValue = null;
+	private static XPathExpression xpathSuccessResponse = null;
+	private static XPathExpression xpathSourceResponse = null;
+	private static XPathExpression xpathEvalResponse = null;
 	
 	/**
-	 * Create regular expression patterns.
+	 * Regular expression.
 	 */
 	private static Pattern regexUriParser = null;
 	
 	/**
-	 * One and only XML serializer.
+	 * XML serializer.
 	 */
     private static LSSerializer lsSerializer = null;
     
@@ -103,6 +109,9 @@ public class XdebugResponse {
 			xpathResponseFeatureName = xpath.compile("/response/@feature_name");
 			xpathResponseFeatureSupported = xpath.compile("/response/@supported");
 			xpathResponseFeatureValue = xpath.compile("/response/text()");
+			xpathSuccessResponse = xpath.compile("/response/@success");
+			xpathSourceResponse = xpath.compile("/response/text()");
+			xpathEvalResponse = xpath.compile("/response/property/text()");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -116,7 +125,7 @@ public class XdebugResponse {
 	 * Constructor.
 	 * @param xml
 	 */
-	public XdebugResponse(Document xml) {
+	public XdebugClientResponse(Document xml) {
 		
 		this.xml = xml;
 	}
@@ -126,7 +135,7 @@ public class XdebugResponse {
 	 * @return
 	 * @throws Exception 
 	 */
-	public static XdebugResponse createInitPacket(String areaServerStateLocator)
+	public static XdebugClientResponse createInitPacket(String areaServerStateLocator)
 			throws Exception {
 		
 		// Set packet content.
@@ -143,10 +152,47 @@ public class XdebugResponse {
 		xml.appendChild(rootElement);
         
 		// Create new packet.
-		XdebugResponse initPacket = new XdebugResponse(xml);
+		XdebugClientResponse initPacket = new XdebugClientResponse(xml);
 		return initPacket;
 	}
 	
+	/**
+	 * Create error packet.
+	 * @param command
+	 * @param xdebugError
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createErrorPacket(XdebugCommand command, XdebugError xdebugError)
+			throws Exception {
+		
+		// Get Xdebug command name.
+		String commandName = command.name;
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.transactionId;
+        if (transactionId < 1) {
+        	Utility.throwException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get error code and error message.
+        int errorCode = xdebugError.getErrorCode();
+        String errorCodeText = String.valueOf(errorCode);
+        
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        Element errorElement = xml.createElement("error");
+        errorElement.setAttribute("code", errorCodeText);
+        rootElement.appendChild(errorElement);
+
+        // Create new packet.
+		XdebugClientResponse errorPacket = new XdebugClientResponse(xml);
+        return errorPacket;
+	}
 	
 	/**
      * Create feature packet.
@@ -155,7 +201,7 @@ public class XdebugResponse {
      * @return
 	 * @throws Exception 
      */
-	public static XdebugResponse createFeaturePacket(XdebugCommand command, Object featureValue)
+	public static XdebugClientResponse createGetFeatureResult(XdebugCommand command, Object featureValue)
 			throws Exception {
 		
 		// Get the feature name from the input command.
@@ -176,15 +222,142 @@ public class XdebugResponse {
         // Create new XML DOM document object.
         Document xml = newXmlDocument();
         Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "feature_get");
         rootElement.setAttribute("feature_name", featureName);
         rootElement.setAttribute("supported", supported ? "1" : "0");
         rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
         rootElement.setTextContent(featureValueString);
         xml.appendChild(rootElement);
         
-        // Create new packet.
-		XdebugResponse featurePacket = new XdebugResponse(xml);
+        // Create and return new packet.
+		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
 		return featurePacket;
+	}
+	
+	/**
+	 * Creates response packet to the set featrue command.
+	 * @param command
+	 * @param success
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createSetFeatureResult(XdebugCommand command, boolean success)
+			throws Exception {
+		
+		// Get the feature name from the input command.
+		String featureName = command.getArgument("-n");
+
+		// Get transaction ID from the input command.
+		int transactionId = command.transactionId;
+        if (transactionId < 1) {
+        	Utility.throwException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "feature_set");
+        rootElement.setAttribute("feature", featureName);
+        rootElement.setAttribute("success", success ? "1" : "0");
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+		
+        // Create and return  new packet.
+		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
+		return featurePacket;
+	}
+	
+	/**
+	 * Creates response to Xdebug source command.
+	 * @param command
+	 * @param sourceCode
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createSourceResult(XdebugCommand command, String sourceCode)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.transactionId;
+        if (transactionId < 1) {
+        	Utility.throwException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "source");
+        boolean success = sourceCode != null && !sourceCode.isEmpty();
+		rootElement.setAttribute("success", success ? "1" : "0");
+		rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+		if (success) {
+			rootElement.setTextContent(sourceCode);
+		}
+		xml.appendChild(rootElement);
+        
+        // Create and return  new packet.
+		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
+		return featurePacket;
+	}
+	
+	/**
+	 * Creates response packet to the expr command.
+	 * @param command
+	 * @param exprResultText
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createExprResult(XdebugCommand command, String exprResultText)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.transactionId;
+        if (transactionId < 1) {
+        	Utility.throwException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "eval");
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        Element propertyElement = xml.createElement("property");
+        propertyElement.setTextContent(exprResultText);
+        rootElement.appendChild(propertyElement);
+		
+        // Create and return  new packet.
+		XdebugClientResponse exprPacket = new XdebugClientResponse(xml);
+		return exprPacket;
+	}
+	
+	/**
+	 * Create run result.
+	 * @param command
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createRunResult(XdebugCommand command)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.transactionId;
+        if (transactionId < 1) {
+        	Utility.throwException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "run");
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        rootElement.setAttribute("status", "running");
+        rootElement.setAttribute("reason", "ok");
+        xml.appendChild(rootElement);
+		
+        // Create and return  new packet.
+		XdebugClientResponse runPacket = new XdebugClientResponse(xml);
+		return runPacket;
 	}
 	
 	/**
@@ -192,7 +365,7 @@ public class XdebugResponse {
 	 * @return
 	 * @throws Exception 
 	 */
-	public boolean isInit() 
+	public boolean isInitPacket() 
 			throws Exception {
 		
 		// Check packet.
@@ -223,6 +396,59 @@ public class XdebugResponse {
         // Create a new Document object.
         Document document = builder.newDocument();
 		return document;
+	}
+	
+	/**
+	 * Get Xdebug XML response.
+	 * @param xmlBuffer
+	 * @return
+	 * @throws Exception 
+	 */
+	private static XdebugClientResponse getXmlContent(ByteBuffer xmlBuffer)
+				throws Exception {
+		
+		// Prepare the XML buffer for reading the XML content.
+		xmlBuffer.flip();
+		
+		// Get the length of the XML buffer. Create byte array to hold the buffer contents.
+		int arrayLength = xmlBuffer.limit();
+		byte [] bytes = new byte [arrayLength];
+		
+		// Read buffer contents into the byte array.
+		xmlBuffer.get(bytes);
+		
+		// Convert bytes into UTF-8 encoded string, the XML.
+		String xmlText = new String(bytes, "UTF-8");
+		
+		// Dalgate the call.
+		XdebugClientResponse clientResponse = getXmlContent(xmlText);
+		
+    	// Reset the XML buffer.
+    	xmlBuffer.clear();
+    	
+    	return clientResponse;
+	}
+	
+	/**
+	 * Get Xdebug XML response.
+	 * @param xmlText
+	 * @return
+	 * @throws Exception 
+	 */
+	static XdebugClientResponse getXmlContent(String xmlText)
+				throws Exception {
+		
+        // Parse the XML string into a Document.
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        
+        Document xml = builder.parse(new InputSource(new StringReader(xmlText)));
+		
+        // Create new packet object.
+    	XdebugClientResponse clientResponse = new XdebugClientResponse(xml);
+    	
+    	// Return XML response.
+    	return clientResponse;
 	}
 	
 	/**
@@ -339,7 +565,7 @@ public class XdebugResponse {
 	 * Get debugged process URI.
 	 * @return
 	 */
-	public String GetDebuggedUri()
+	public String getDebuggedUri()
 		throws Exception {
 		
 		// Try to get URI from current packet.
@@ -366,8 +592,10 @@ public class XdebugResponse {
 			
 			XdebugClientParameters parsedUri = new XdebugClientParameters();
 		    parsedUri.computer = matcher.group("computer");
-		    parsedUri.pid = matcher.group("pid");
-		    parsedUri.tid = matcher.group("tid");
+		    String processIdText = matcher.group("pid");
+		    parsedUri.pid = Long.parseLong(processIdText);
+		    String threadIdText = matcher.group("tid");
+		    parsedUri.tid = Long.parseLong(threadIdText);
 		    parsedUri.aid = matcher.group("aid");
 		    parsedUri.statehash = matcher.group("statehash");
 		    return parsedUri;
@@ -400,12 +628,12 @@ public class XdebugResponse {
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugFeature getFeature() throws Exception {
+	public XdebugFeature getFeatureValue() throws Exception {
 		
 		// Get feature attributes.
 		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
-		if ("feature_get".equals(commandName)) {
-			Utility.throwException("org.maclan.server.messageBadXdebugFeatureCommandName");
+		if (!"feature_get".equals(commandName)) {
+			Utility.throwException("org.maclan.server.messageBadXdebugCommandName", "feature_get", commandName);
 		}
 		String featureName = (String) xpathResponseFeatureName.evaluate(xml, XPathConstants.STRING);
 		String supportedString = (String) xpathResponseFeatureSupported.evaluate(xml, XPathConstants.STRING);
@@ -417,13 +645,54 @@ public class XdebugResponse {
 	}
 	
 	/**
-	 * Create error packet.
-	 * @param command
-	 * @param exception
+	 * Get feature result. 
 	 * @return
+	 * @throws Exception 
 	 */
-	public static XdebugResponse createErrorPacket(XdebugCommand command, Exception exception) {
-		// TODO Auto-generated method stub
-		return null;
+	public boolean getSettingFeatureResult() throws Exception {
+		
+		// Check command name.
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"feature_set".equals(commandName)) {
+			Utility.throwException("org.maclan.server.messageBadXdebugCommandName", "feature_set", commandName);
+		}
+		
+		boolean success = (boolean) xpathSuccessResponse.evaluate(xml, XPathConstants.BOOLEAN);
+		return success;
+	}
+	
+	/**
+	 * Get source result.
+	 * @return
+	 * @throws Exception
+	 */
+	public String getSourceResult() throws Exception {
+		
+		// Check command name.
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"source".equals(commandName)) {
+			Utility.throwException("org.maclan.server.messageBadXdebugCommandName", "source", commandName);
+		}
+		
+		// Get source code.
+		String sourceCode = (String) xpathSourceResponse.evaluate(xml, XPathConstants.STRING);
+		return sourceCode;
+	}
+
+	/**
+	 * Get expr result.
+	 * @throws Exception
+	 */
+	public String getExprResult() throws Exception {
+		
+		// Check command name.
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"eval".equals(commandName)) {
+			Utility.throwException("org.maclan.server.messageBadXdebugCommandName", "eval", commandName);
+		}
+		
+		// Get expression result.
+		String evalResult = (String) xpathEvalResponse.evaluate(xml, XPathConstants.STRING);
+		return evalResult;
 	}
 }

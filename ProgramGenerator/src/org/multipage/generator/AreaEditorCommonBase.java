@@ -33,9 +33,11 @@ import org.maclan.AreasModel;
 import org.maclan.Middle;
 import org.maclan.MiddleResult;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.ConditionalEvents;
+import org.multipage.gui.ApplicationEvents;
+import org.multipage.gui.AreaSignal;
 import org.multipage.gui.EventSource;
 import org.multipage.gui.Images;
+import org.multipage.gui.SignalGroup;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldAutoSave;
@@ -483,7 +485,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Update GUI components with areas.
-		Update.run(Update.GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_AREAS);
 	}
 
 	/**
@@ -495,7 +497,7 @@ public abstract class AreaEditorCommonBase {
 		saveData();
 		
 		// Update GUI components with areas.
-		Update.run(Update.GROUP_AREAS, EventSource.AREA_EDITOR.userAction(this, null));
+		ApplicationEvents.transmit(EventSource.AREA_EDITOR.user(this), SignalGroup.UPDATE_AREAS);
 
 		// Save dialog.
 		saveDialog();
@@ -1090,7 +1092,7 @@ public abstract class AreaEditorCommonBase {
 		getCheckBoxHomeArea().addActionListener(homeAreaListener);
 
 		// Update information.
-		ConditionalEvents.transmit(this, GuiSignal.updateHomeArea, areaId);
+		ApplicationEvents.transmit(this, AreaSignal.setHomeArea, areaId, dialog);
 	}
 
 	/**
@@ -1114,9 +1116,6 @@ public abstract class AreaEditorCommonBase {
 			return;
 		}
 		getCheckBoxIsDisabled().addActionListener(isDisabledListener);
-
-		// Update information.
-		ConditionalEvents.transmit(this, GuiSignal.updateAreaIsDisabled, areaId);
 	}
 
 	/**
