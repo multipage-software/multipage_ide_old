@@ -14,7 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.multipage.gui.Utility;
-import org.multipage.util.j;
 
 /**
  * Xdebug commands that sends the IDE.
@@ -55,22 +54,22 @@ public class XdebugCommand {
 	/**
 	 * Command name.
 	 */
-	public String name = null;
+	private String name = null;
 	
 	/**
 	 * Arguments for the above command.
 	 */
-	public String[][] arguments = null;
+	private String[][] arguments = null;
 	
 	/**
 	 * Data attached to the command.
 	 */
-	public byte [] data = null;
+	private byte [] data = null;
 	
 	/**
 	 * Unique transaction ID.
 	 */
-	public int transactionId = -1;
+	private int transactionId = -1;
 	
 	/**
 	 * Create new Xdebug command.
@@ -243,5 +242,50 @@ public class XdebugCommand {
 		CharBuffer characters = compile(-1);
 		String text = characters.toString();
 		return text;
+	}
+	
+	/**
+	 * Get command name.
+	 * @return
+	 */
+	public String getName() {
+		
+		return name;
+	}
+	
+	/**
+	 * Get command arguments.
+	 * @return
+	 */
+	public String [][] getArguments() {
+		
+		return arguments;
+	}
+	
+	/**
+	 * Get command data part.
+	 * @return
+	 */
+	public byte [] getData() {
+		
+		return data;
+	}
+	
+	/**
+	 * Set transaction ID.
+	 * @param transactionId
+	 */
+	public void setTransactionId(int transactionId) {
+		
+		this.transactionId = transactionId;
+	}
+	
+	/**
+	 * Get transaction ID.
+	 * @return
+	 */
+	public int getTransactionId() {
+		
+		return transactionId;
 	}
 }

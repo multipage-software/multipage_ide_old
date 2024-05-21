@@ -65,7 +65,6 @@ public class LogConsoleTesting {
 				
 				SwingUtilities.invokeLater(() -> {
 					
-					// TODO: <---DEBUG
 					Thread thread1 = new Thread(() -> {
 						
 						//System.out.format("-----------------------------\nSENDING %d. CHUNK OF MESSAGES\n-----------------------------\n", index.ref);
@@ -113,7 +112,6 @@ public class LogConsoleTesting {
 				// Get number of messages.
 				int count = LogConsoles.getJUnitProbe1();
 				
-				// TODO: <---DEBUG
 				//System.err.format("COUNT %d\n", count);
 				
 				//assertSame(count % (1 * MESSAGE_COUNT), 0);
@@ -124,7 +122,6 @@ public class LogConsoleTesting {
 				
 				LogConsoles.runJUnitProbe2();
 				
-				// TODO: <---DEBUG
 				//System.out.format("\nTEST NUMBER %d\n", index.ref);
 			}
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -12,8 +12,8 @@ import java.util.LinkedList;
 import org.multipage.util.Obj;
 
 /**
- * @author
- *
+ * Area Srever listner object.
+ * @author vakol
  */
 public class AreaServerListener {
 

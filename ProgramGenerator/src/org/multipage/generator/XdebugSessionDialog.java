@@ -17,6 +17,7 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HexFormat;
+import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -30,8 +31,11 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
 
+import org.maclan.server.XdebugClientParameters;
 import org.maclan.server.XdebugCommand;
+import org.maclan.server.XdebugFeature;
 import org.maclan.server.XdebugListenerSession;
+import org.maclan.server.XdebugTransaction;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
@@ -86,6 +90,10 @@ public class XdebugSessionDialog extends JDialog {
 	private JLabel labelTransactions;
 	private JScrollPane scrollProtocolTransactions;
 	private JTable tableTransactions;
+	private TextFieldEx textProcessName;
+	private JLabel labelProcessName;
+	private JLabel labelThreadName;
+	private TextFieldEx textThreadName;
 	
 	//$hide>>$
 	/**
@@ -158,6 +166,8 @@ public class XdebugSessionDialog extends JDialog {
 	 * Initialize dialog components.
 	 */
 	private void initComponents() {
+		setMinimumSize(new Dimension(500, 700));
+		setPreferredSize(new Dimension(500, 700));
 
 		addWindowListener(new WindowAdapter() {
 			@Override
@@ -209,14 +219,12 @@ public class XdebugSessionDialog extends JDialog {
 		textSessionId.setColumns(6);
 		
 		labelDebuggedUri = new JLabel("org.multipage.generator.textDebuggedUri");
-		springLayout.putConstraint(SpringLayout.NORTH, labelDebuggedUri, 22, SpringLayout.SOUTH, labelSessionId);
 		springLayout.putConstraint(SpringLayout.WEST, labelDebuggedUri, 0, SpringLayout.WEST, labelSessionId);
 		getContentPane().add(labelDebuggedUri);
 		
 		textDebuggedUri = new TextFieldEx();
 		textDebuggedUri.setFont(new Font("Tahoma", Font.PLAIN, 11));
 		springLayout.putConstraint(SpringLayout.NORTH, textDebuggedUri, 0, SpringLayout.NORTH, labelDebuggedUri);
-		springLayout.putConstraint(SpringLayout.WEST, textDebuggedUri, 6, SpringLayout.EAST, labelDebuggedUri);
 		springLayout.putConstraint(SpringLayout.EAST, textDebuggedUri, -10, SpringLayout.EAST, getContentPane());
 		textDebuggedUri.setHorizontalAlignment(SwingConstants.CENTER);
 		textDebuggedUri.setEditable(false);
@@ -274,7 +282,7 @@ public class XdebugSessionDialog extends JDialog {
 		JScrollPane scrollProtocolFeatures = new JScrollPane();
 		springLayout.putConstraint(SpringLayout.NORTH, scrollProtocolFeatures, 5, SpringLayout.SOUTH, labelProtocolFeatures);
 		springLayout.putConstraint(SpringLayout.WEST, scrollProtocolFeatures, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.SOUTH, scrollProtocolFeatures, 150, SpringLayout.SOUTH, labelProtocolFeatures);
+		springLayout.putConstraint(SpringLayout.SOUTH, scrollProtocolFeatures, 200, SpringLayout.SOUTH, labelProtocolFeatures);
 		springLayout.putConstraint(SpringLayout.EAST, scrollProtocolFeatures, -10, SpringLayout.EAST, getContentPane());
 		getContentPane().add(scrollProtocolFeatures);
 		
@@ -289,12 +297,42 @@ public class XdebugSessionDialog extends JDialog {
 		scrollProtocolTransactions = new JScrollPane();
 		springLayout.putConstraint(SpringLayout.NORTH, scrollProtocolTransactions, 6, SpringLayout.SOUTH, labelTransactions);
 		springLayout.putConstraint(SpringLayout.WEST, scrollProtocolTransactions, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.SOUTH, scrollProtocolTransactions, 163, SpringLayout.SOUTH, labelTransactions);
+		springLayout.putConstraint(SpringLayout.SOUTH, scrollProtocolTransactions, -10, SpringLayout.NORTH, buttonOk);
 		springLayout.putConstraint(SpringLayout.EAST, scrollProtocolTransactions, -10, SpringLayout.EAST, getContentPane());
 		getContentPane().add(scrollProtocolTransactions);
 		
 		tableTransactions = new JTable();
 		scrollProtocolTransactions.setViewportView(tableTransactions);
+		
+		labelProcessName = new JLabel("org.multipage.generator.textProcessName");
+		springLayout.putConstraint(SpringLayout.NORTH, labelProcessName, 24, SpringLayout.SOUTH, labelSessionId);
+		springLayout.putConstraint(SpringLayout.WEST, labelProcessName, 0, SpringLayout.WEST, labelSessionId);
+		getContentPane().add(labelProcessName);
+		
+		textProcessName = new TextFieldEx();
+		textProcessName.setHorizontalAlignment(SwingConstants.CENTER);
+		springLayout.putConstraint(SpringLayout.NORTH, textProcessName, 0, SpringLayout.NORTH, labelProcessName);
+		springLayout.putConstraint(SpringLayout.WEST, textDebuggedUri, 0, SpringLayout.WEST, textProcessName);
+		springLayout.putConstraint(SpringLayout.WEST, textProcessName, 100, SpringLayout.WEST, getContentPane());
+		textProcessName.setEditable(false);
+		springLayout.putConstraint(SpringLayout.EAST, textProcessName, -10, SpringLayout.EAST, getContentPane());
+		getContentPane().add(textProcessName);
+		textProcessName.setColumns(10);
+		
+		labelThreadName = new JLabel("org.nultipage.generator.textThreadName");
+		springLayout.putConstraint(SpringLayout.NORTH, labelDebuggedUri, 24, SpringLayout.SOUTH, labelThreadName);
+		springLayout.putConstraint(SpringLayout.NORTH, labelThreadName, 24, SpringLayout.SOUTH, labelProcessName);
+		springLayout.putConstraint(SpringLayout.WEST, labelThreadName, 0, SpringLayout.WEST, labelSessionId);
+		getContentPane().add(labelThreadName);
+		
+		textThreadName = new TextFieldEx();
+		textThreadName.setHorizontalAlignment(SwingConstants.CENTER);
+		springLayout.putConstraint(SpringLayout.WEST, textThreadName, 0, SpringLayout.WEST, textProcessName);
+		springLayout.putConstraint(SpringLayout.EAST, textThreadName, -10, SpringLayout.EAST, getContentPane());
+		textThreadName.setEditable(false);
+		springLayout.putConstraint(SpringLayout.NORTH, textThreadName, 0, SpringLayout.NORTH, labelThreadName);
+		getContentPane().add(textThreadName);
+		textThreadName.setColumns(10);
 	}
 
 	/**
@@ -411,10 +449,13 @@ public class XdebugSessionDialog extends JDialog {
 		Utility.localize(buttonOk);
 		Utility.localize(buttonCancel);
 		Utility.localize(labelSessionId);
+		Utility.localize(labelProcessName);
+		Utility.localize(labelThreadName);
 		Utility.localize(labelDebuggedUri);
 		Utility.localize(labelClient);
 		Utility.localize(labelDebugServer);
 		Utility.localize(labelProtocolState);
+		Utility.localize(labelProtocolFeatures);
 		Utility.localize(labelTransactions);
 	}
 	
@@ -437,19 +478,48 @@ public class XdebugSessionDialog extends JDialog {
 			throws Exception {
 		
 		// Display session ID.
-		textSessionId.setText(String.valueOf(xdebugSession.sessionId));
+		textSessionId.setText(String.valueOf(xdebugSession.getSessionId()));
 		
+		XdebugClientParameters clientParameters = xdebugSession.getClientParameters();
+		
+		if (clientParameters != null) {
+			
+			// Display process description.
+			Long processId = clientParameters.getProcessId();
+			if (processId == null) {
+				processId = -1L;
+			}
+			String processName = clientParameters.getProcessName();
+			if (processName == null) {
+				processName = "???";
+			}
+			String processDescription = String.format("\"%s\" (#%d)", processName, processId);
+			textProcessName.setText(processDescription);
+			
+			// Display thread description.
+			Long threadId = clientParameters.getThreadId();
+			if (threadId == null) {
+				threadId = -1L;
+			}
+			String threadName = clientParameters.getThreadName();
+			if (threadName == null) {
+				threadName = "???";
+			}
+			String threadDescription = String.format("\"%s\" (#%d)", threadName, threadId);
+			textThreadName.setText(threadDescription);
+		}
+
 		// Display connection string.
-		String debuggedUri = xdebugSession.debuggedUri;
+		String debuggedUri = xdebugSession.getDebuggedUri();
 		textDebuggedUri.setText(debuggedUri);
 		
 		// Display debuged client.
-		InetSocketAddress socketAddress = (InetSocketAddress) xdebugSession.client.getRemoteAddress();
+		InetSocketAddress socketAddress = (InetSocketAddress) xdebugSession.getClientSocketChannel().getRemoteAddress();
 		String debugClient = socketAddress.getHostString() + ":" + socketAddress.getPort();	
 		textDebugClient.setText(debugClient);
 		
 		// Display debuged server.
-		socketAddress = (InetSocketAddress) xdebugSession.server.getLocalAddress();
+		socketAddress = (InetSocketAddress) xdebugSession.getServerSocketChannel().getLocalAddress();
 		String debugServer = socketAddress.getHostString() + ":" + socketAddress.getPort();	
 		textDebugServer.setText(debugServer);
 		
@@ -460,34 +530,42 @@ public class XdebugSessionDialog extends JDialog {
 		// Display protocol features.
 		DefaultTableModel featuresModel = (DefaultTableModel) tableFeatures.getModel();
 		featuresModel.setRowCount(0);
-		xdebugSession.features.forEach((name, feature) -> 
-			featuresModel.addRow(new Object [] { name, feature.value, feature.supported }));
+		
+		Map<String, XdebugFeature> features = xdebugSession.getFeatures();
+		features.forEach((name, feature) -> 
+			featuresModel.addRow(new Object [] { name, feature.getValue(), feature.isSupported() }));
 		
 		// Number of Xdebug transactions.
 		DefaultTableModel transactionsModel = (DefaultTableModel) tableTransactions.getModel();
-		synchronized (xdebugSession.transactions) {
-			xdebugSession.transactions.forEach((tid, transaction) -> {
-				
-				XdebugCommand command = transaction.command;
-				
-				String argumentLine = "";
-				String divider = "";
-				for (String [] argument : command.arguments) {
+		Map<Integer, XdebugTransaction> transactions = xdebugSession.getTransactions();
+		transactions.forEach((tid, transaction) -> {
+			
+			XdebugCommand command = transaction.getCommand();
+			
+			String argumentLine = "";
+			String divider = "";
+			
+			String[][] arguments = command.getArguments();
+			if (arguments != null) {
+				for (String [] argument : arguments) {
 					argumentLine += divider + argument[0] + ' ' + argument[1];
 					divider = " ";
 				}
-				
-				String hexaData = "";
-				if (command.data != null) {
-					hexaData = HexFormat.of().formatHex(command.data);
-					if (hexaData == null) {
-						hexaData = "";
-					}
+			}
+			
+			String hexaData = "";
+			
+			byte [] data = command.getData();
+			if (data != null) {
+				hexaData = HexFormat.of().formatHex(data);
+				if (hexaData == null) {
+					hexaData = "";
 				}
-				
-				transactionsModel.addRow(new Object [] { tid, command.name, argumentLine, hexaData }); 
-			});			
-		}
+			}
+			
+			String commandName = command.getName();
+			transactionsModel.addRow(new Object [] { tid, commandName, argumentLine, hexaData }); 
+		});			
 	}
 	
 	/**
@@ -529,8 +607,5 @@ public class XdebugSessionDialog extends JDialog {
 		
 		// Save current dialog window boundaries.
 		bounds = getBounds();
-	}
-	public JTable getTableTransactions() {
-		return tableTransactions;
 	}
 }

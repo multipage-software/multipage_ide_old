@@ -16,7 +16,7 @@ import java.nio.channels.CompletionHandler;
 import org.multipage.util.Obj;
 
 /**
- * Debug listener session object that stores session states.
+ * Debug listener session.
  * @author vakol
  *
  */
@@ -28,7 +28,7 @@ public class DebugListenerSession {
 	private static final int MAXIMUM_SESSION_ID = 1024;
 	
 	/**
-	 * Current session ID.
+	 * Last generated session ID.
 	 */
 	private static Obj<Integer> generatedSessionId = new Obj<Integer>(0);
 	
@@ -51,22 +51,22 @@ public class DebugListenerSession {
 	/**
 	 * Session ID.
 	 */
-	public int sessionId = -1;
+	protected int sessionId = -1;
 	
 	/**
 	 * Client socket reference.
 	 */
-	public AsynchronousSocketChannel client = null;
+	protected AsynchronousSocketChannel client = null;
 	
 	/**
 	 * Socket server reference.
 	 */
-	public AsynchronousServerSocketChannel server = null;
+	protected AsynchronousServerSocketChannel server = null;
 
 	/**
 	 * Debug listener reference.
 	 */
-	public DebugListener listener = null;
+	protected DebugListener listener = null;
 	
 	/**
 	 * Cosntructor.
@@ -103,10 +103,28 @@ public class DebugListenerSession {
 	 * @throws IOException 
 	 */
 	public InetSocketAddress getClientSocket()
-			throws IOException {
+			throws Exception {
 		
 		InetSocketAddress socketAddress = (InetSocketAddress) client.getRemoteAddress();
 		return socketAddress;
+	}
+	
+	/**
+	 * Get client socket channel.
+	 * @return
+	 */
+	public AsynchronousSocketChannel getClientSocketChannel() {
+		
+		return client;
+	}
+	
+	/**
+	 * Get server socket channel.
+	 * @return
+	 */
+	public AsynchronousServerSocketChannel getServerSocketChannel() {
+		
+		return server;
 	}
 
 	/**
@@ -120,16 +138,55 @@ public class DebugListenerSession {
 	}
 	
 	/**
+	 * Get session thread ID.
+	 * @return
+	 */
+	public long getTid() {
+		
+		// Overrride this method.
+		return -1L;
+	}
+	
+	/**
 	 * Send bytes to the debugging client (the debugging probe).
 	 * @param bytes
 	 * @param session
 	 * @param completionHandler
 	 */
-	protected void sendBytes(ByteBuffer bytes, XdebugTransaction transaction, CompletionHandler<Integer, XdebugTransaction> completionHandler) {
+	protected void sendBytes(ByteBuffer bytes, XdebugTransaction transaction, CompletionHandler<Integer, XdebugTransaction> completionHandler)
+			throws Exception {
 		
 		// Write bytes.
 		synchronized (client) {
-			client.write(bytes, transaction, completionHandler);
+			try {
+				client.write(bytes, transaction, completionHandler);
+			}
+			catch (Exception e) {
+				onThrownException(e);
+			}
 		}
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 * @throws Exception
+	 */
+	protected void onThrownException(Exception e)
+			throws Exception {
+		
+		// Override this method.
+		onException(e);
+		throw e;
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	protected void onException(Exception e) {
+		
+		// Override this method.
+		e.printStackTrace();
 	}
 }

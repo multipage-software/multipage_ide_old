@@ -8,6 +8,7 @@ package org.maclan.server;
 
 import java.util.function.Consumer;
 
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
@@ -22,6 +23,59 @@ public class XdebugTransaction {
 	 * Generated transaction ID.
 	 */
 	private static Obj<Integer> generatedTransactionId = new Obj<Integer>(0);
+	
+	/**
+	 * Current transaction ID.
+	 */
+	private int id = -1;
+	
+	/**
+	 * Xdebug command that will be executed by the debugging client (the probe).
+	 */
+	private XdebugCommand command = null;
+	
+	/**
+	 * Transaction state.
+	 */
+	private XdebugTransactionState state = XdebugTransactionState.created;
+	
+	/**
+	 * Lambda function that receives command responses.
+	 */
+	private Consumer<XdebugClientResponse> responseLambda = null;
+	
+	/**
+	 * A lock that can wait for response completion.
+	 */
+	public Lock responseLock = null;
+	
+	/**
+	 * Lock timout in milliseconds.
+	 */
+	public int responseLockTimeoutMs = 0;
+	
+	/**
+     * Number of bytes to send.
+     */
+	private int bytesToWrite = 0;
+	
+	/**
+	 * Create new transaction for the command.
+	 * @param command
+	 * @param responseLambda 
+	 * @return
+	 */
+	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugClientResponse> responseLambda) {
+		
+		XdebugTransaction transaction = new XdebugTransaction();
+		int transactionId = generateNewTransactionId();
+		command.setTransactionId(transactionId);
+		transaction.id = transactionId;
+		transaction.command = command;
+		transaction.responseLambda = responseLambda;
+		transaction.state = XdebugTransactionState.created;
+		return transaction;
+	}
 	
 	/**
 	 * Generate new transaction ID.
@@ -40,49 +94,48 @@ public class XdebugTransaction {
 	}
 	
 	/**
-	 * Current transaction ID.
-	 */
-	public int id = -1;
-	
-	/**
-	 * Xdebug command that will be executed by the debugging client (the probe).
-	 */
-	public XdebugCommand command = null;
-	
-	/**
-	 * Transaction state.
-	 */
-	public XdebugTransactionState state = XdebugTransactionState.created;
-	
-	/**
-	 * Lambda function that can receive command result.
-	 */
-	public Consumer<XdebugClientResponse> responseLambda = null;
-
-	/**
-	 * Set exception thrown when sending this command to the Xdebug client.
-	 */
-	private Throwable writeException = null;
-	
-	/**
-     * Number of bytes to send.
-     */
-	private int bytesToWrite = 0;
-	
-	/**
-	 * Create new transaction for the command.
-	 * @param command
-	 * @param responseLambda 
+	 * Get transaction ID.
 	 * @return
 	 */
-	public static XdebugTransaction create(XdebugCommand command, Consumer<XdebugClientResponse> responseLambda) {
+	public int getId() {
 		
-		XdebugTransaction transaction = new XdebugTransaction();
-		transaction.id = command.transactionId = generateNewTransactionId();
-		transaction.command = command;
-		transaction.responseLambda = responseLambda;
-		transaction.state = XdebugTransactionState.created;
-		return transaction;
+		return id;
+	}
+	
+	/**
+	 * Get Xdebugu command.
+	 * @return
+	 */
+	public XdebugCommand getCommand() {
+		
+		return command;
+	}
+	
+	/**
+	 * Set transaction state.
+	 * @param state
+	 */
+	public void setState(XdebugTransactionState state) {
+		// 
+		this.state = state;
+	}
+	
+	/**
+	 * Get transaction state.
+	 * @return
+	 */
+	public XdebugTransactionState getState() {
+		
+		return state;
+	}
+	
+	/**
+	 * Get response lambda.
+	 * @return
+	 */
+	public Consumer<XdebugClientResponse> getResponseLambda() {
+		
+		return responseLambda;
 	}
 	
 	/**
@@ -93,20 +146,9 @@ public class XdebugTransaction {
 		
 		if (bytesWritten != bytesToWrite) {
 			String errorMessage = String.format(Resources.getString("org.maclan.server.messageXdebugBytesNotWritten"), bytesToWrite, bytesWritten);
-			this.writeException = new Exception(errorMessage);
+			Exception exception = new Exception(errorMessage);
+			onThrownException(exception);
 		}
-		else {
-			this.writeException = null;
-		};
-	}
-	
-	/**
-	 * Set sending error.
-	 * @param writeException
-	 */
-	public void setWriteException(Throwable writeException) {
-		
-		this.writeException = writeException;
 	}
 	
 	/**
@@ -116,5 +158,15 @@ public class XdebugTransaction {
 	public void setBytesToWrite(int bytesToWrite) {
 		
 		this.bytesToWrite  = bytesToWrite;
+	}
+	
+	/**
+	 * On exception.
+	 * @param e
+	 */
+	protected void onThrownException(Throwable e) {
+		
+		// Override this method.
+		e.printStackTrace();
 	}
 }

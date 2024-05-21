@@ -61,8 +61,6 @@ import org.maclan.Slot;
 import org.maclan.VersionObj;
 import org.maclan.help.HelpUtility;
 import org.maclan.server.BrowserParameters;
-import org.maclan.server.DebugListener;
-import org.maclan.server.DebugViewerCallback;
 import org.maclan.server.ProgramServlet;
 import org.maclan.server.TextRenderer;
 import org.multipage.basic.ProgramBasic;
@@ -657,34 +655,6 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 		// Create debug viewer
 		debugViewer = DebugViewer.getInstance(this);
 		
-		// Set debug viewer listener
-		DebugListener debugger = ProgramBasic.getHttpServer().getDebugger();
-		if (debugger != null) {
-			debugger.setDebugViewerListeners(new DebugViewerCallback() {
-
-				@Override
-				public int openFile(String fileUri) {
-					
-					// Delegates the call to debug viewer
-					return debugViewer.openFile(fileUri);
-				}
-
-				@Override
-				public void showUserAlert(String message, int timeout) {
-					
-					// Delegates the call to debug viewer
-					debugViewer.showUserAlert(message, timeout);
-				}
-
-				@Override
-				public void sessionStateChanged(boolean ready) {
-					
-					// Invoke session ready event in the viewer.
-					debugViewer.onSessionStateChanged(debugger, ready);
-				}
-			});
-		}
-		
 		final int UPDATE_AREAS_LATENCY_MS = 2500;
 		
 		// Receive the "display area properties" message.
@@ -728,7 +698,6 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 			}
 		});
 		
-		// TODO: <---COPY to new version
 		// Receive the "set home area" message.
 		ApplicationEvents.receiver(this, GuiSignal.displayHomePage, message -> {
 		

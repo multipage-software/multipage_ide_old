@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 08-08-2018
  *
@@ -14,17 +14,17 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.multipage.gui.CallbackNoArg;
-import org.multipage.gui.Utility;
+import org.multipage.util.Resources;
 
 /**
- * 
- * @author user
+ * Debug listener that maintains list of sessions.
+ * @author vakol
  *
  */
 public abstract class DebugListener {
 	
 	/**
-	 * List of current sessions. The list is synchronize and can be edited with concurrent threads.
+	 * List of current sessions. The list is synchronized and can be edited with concurrent threads.
 	 */
 	protected List<DebugListenerSession> sessions = Collections.synchronizedList(new LinkedList<DebugListenerSession>());
 	
@@ -48,20 +48,10 @@ public abstract class DebugListener {
 	}
 	
 	/**
-	 * Set open debug viewer listeners.
-	 */
-	public abstract void setDebugViewerListeners(DebugViewerCallback callback);
-	
-	/**
 	 * Activates debugger. The method creates a main thread that communicates with client.
 	 */
 	protected abstract void activate() throws Exception;
-	
-	/**
-	 * Start debugging
-	 */
-	public abstract boolean startDebugging();
-	
+
 	/**
 	 * Get current debug listener sessions.
 	 */
@@ -71,50 +61,51 @@ public abstract class DebugListener {
 	}
 	
 	/**
-	 * Find session with session ID.
-	 * @param sessionId
-	 * @throws Exception 
-	 */
-	public DebugListenerSession getSession(long sessionId)
-			throws Exception {
-		
-		DebugListenerSession foundSession = null;
-		
-		for (DebugListenerSession session : sessions) {
-			if (session.sessionId == sessionId) {
-				
-				if (foundSession != null) {
-					Utility.throwException("org.maclan.server.messageDuplicitSessionIds", sessionId);
-				}
-				foundSession = session;
-			}
-		}
-		return foundSession;
-	}
-	
-	/**
 	 * Get current debug viewer component.
 	 * @param debugViewerComponent
 	 */
 	public abstract void setViewerComponent(Component debugViewerComponent);
 	
 	/**
-	 * Stop debugging
+	 * On close debugger.
 	 */
-	public abstract void stopDebugging();
+	public abstract void onClose();
 	
 	/**
-	 * Close debugger
+	 * Fired on exception.
+	 * @param messageId
+	 * @param parameters
+	 * @throws Exception
 	 */
-	public abstract void close();
-
-	public void showMessage(String stringResourceId, String message) {
-		// TODO Auto-generated method stub
+	protected void onThrownException(String messageId, Object ... parameters)
+			throws Exception {
 		
+		String messageFormat = Resources.getString(messageId); 
+		String message = String.format(messageFormat, parameters);
+		Exception e = new Exception(message);
+		onThrownException(e);
 	}
-
-	public void showException(Exception exception) {
-		// TODO Auto-generated method stub
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 * @throws Exception
+	 */
+	protected void onThrownException(Exception e)
+			throws Exception {
 		
+		// Override this method.
+		onException(e);
+		throw e;
 	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	protected void onException(Exception e) {
+		
+		// Override this method.
+		e.printStackTrace();
+	}	
 }

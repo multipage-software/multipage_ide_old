@@ -21,6 +21,25 @@ public enum XdebugError {
 	UNKNOWN_ERROR(999, "org.maclan.server.messageXdebugUnknownError");
 	
 	/**
+	 * Get error description.
+	 * @param errorCode
+	 * @return
+	 */
+	public static String getErrorDescription(int errorCode) {
+		
+		// Find enumeration with error code.
+		XdebugError [] errors = XdebugError.values();
+		for (XdebugError error : errors) {
+			
+			if (error.errorCode == errorCode) {
+				String description = error.getMessage();
+				return description;
+			}
+		}
+		return "";
+	}
+	
+	/**
 	 * Error number.
 	 */
 	private int errorCode = 0;

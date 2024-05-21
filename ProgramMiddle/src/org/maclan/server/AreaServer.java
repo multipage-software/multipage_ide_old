@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 26-04-2017
  *
@@ -60,8 +60,8 @@ import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
 /**
+ * Area Server helper class.
  * @author
- *
  */
 class AreasListGetter {
 
@@ -88,9 +88,8 @@ class AreasListGetter {
 }
 
 /**
- * 
- * @author
- *
+ * Area Server class.
+ * @author vakol
  */
 public class AreaServer {
 	
@@ -417,7 +416,12 @@ public class AreaServer {
 		clonedState.trayMenu = state.trayMenu;
 		clonedState.newLine = state.newLine;
 		clonedState.enableMetaTags = state.enableMetaTags;
-		clonedState.debugClient = state.debugClient;
+		
+		// If debugger steps into sub tags, set reference to the current debugger client. 
+		boolean isStepInto = (state.debuggerOperation == XdebugOperation.step_into);
+		if (isStepInto) {
+			clonedState.debugClient = state.debugClient;
+		}
 		
 		return clonedState;
 	}
@@ -1205,7 +1209,7 @@ public class AreaServer {
 					
 					// Add meta information about tag source (which is currently a slot mentioned in TAG).
 					TagsSource source = TagsSource.newSlot(slot.ref.getId());
-					returnedText = server.debugPoint(returnedText, source, server.state);
+					returnedText = server.debugStepPoint(returnedText, source, server.state);
 					
 					return returnedText;
 				}
@@ -3667,13 +3671,13 @@ public class AreaServer {
 				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
 				if (debugging) {
 					
-					// Connect to debugger via Xdebug protocol
+					// Connect to debugger via Xdebug protocol.
 					if (server.state.debugClient == null) {
-						server.connectViaXdebug(ideHost.ref, xdebugPort.ref);
-						
-						// TODO: <---TEST Accepted Xdebug commands from debugger.
-						server.debugPoint();
+						server.connectXdebug(ideHost.ref, xdebugPort.ref);
 					}
+					
+					// Accept Xdebug commands from debugger dialog.
+					server.debugBreakPoint();
 				}
 				else {
 					if (breakName != null) {
@@ -3694,7 +3698,7 @@ public class AreaServer {
 	 * @param - ideHost
 	 * @param - xdebugPort
 	 */
-	protected void connectViaXdebug(String ideHostName, int xdebugPort)
+	protected void connectXdebug(String ideHostName, int xdebugPort)
 			throws Exception {
 		
 		// Create new Xdebug client.
@@ -3713,7 +3717,8 @@ public class AreaServer {
 	/**
 	 * Accept incoming debugging statements.
 	 */
-	protected void debugPoint() throws Exception {
+	protected void debugPoint()
+			throws Exception {
 		
 		// If the debugger is enabled and the connection is established, do debugging.
 		if (state.debugClient != null && state.debugClient.isConnected()) {
@@ -3727,6 +3732,11 @@ public class AreaServer {
 			state.debugClient.onAcceptCommands(command -> {
 				try {
 					
+					// Check client.
+					if (state.debugClient == null) {
+						return null;
+					}
+					
 					// Process incomming Xdebug commands with the Xdebug probe.
 					XdebugClientResponse resultPacket = state.debugClient.xdebugProbe(AreaServer.this, command);
 					
@@ -3735,13 +3745,15 @@ public class AreaServer {
 				}
 				catch (Exception exception) {
 					
+					exception.printStackTrace();
+					
 					// Create error packet and return it to the debugger server.
 					try {
-						XdebugClientResponse errorPacket = XdebugClientResponse.createErrorPacket(command, XdebugError.UNKNOWN_ERROR);
+						XdebugClientResponse errorPacket = XdebugClientResponse.createErrorPacket(command, XdebugError.UNKNOWN_ERROR, exception);
 						return errorPacket;
 					} 
 					catch (Exception e) {
-						exception.printStackTrace();
+						e.printStackTrace();
 					}
                     return null;
 				}
@@ -3749,7 +3761,28 @@ public class AreaServer {
 			
 			// Wait for the continuation command.
 			Lock.waitFor(state.debuggerLock);
+			
+			// On debugger stop command throw stop Area Server exception.
+			if (XdebugOperation.stop.equals(state.debuggerOperation)) {
+				throwError("org.maclan.server.messageDebuggerStoppedAreaServer");
+			}
         }
+	}
+	
+	/**
+	 * Debug point for BREAK tags.
+	 */
+	protected void debugBreakPoint()
+			throws Exception {
+		
+		// Get debugger operation.
+		XdebugOperation operation = state.debuggerOperation;
+		if (operation == XdebugOperation.stop) {
+			return;
+		}
+		
+		// Deleagate the call.
+		debugPoint();
 	}
 	
 	/**
@@ -3759,8 +3792,14 @@ public class AreaServer {
 	 * @return
 	 * @throws Exception 
 	 */
-	protected String debugPoint(String replacement, TagsSource tagsSource, AreaServerState state)
+	protected String debugStepPoint(String replacement, TagsSource tagsSource, AreaServerState state)
 			throws Exception {
+		
+		// Check debugger state.
+		XdebugOperation operation = state.debuggerOperation;
+		if (operation == XdebugOperation.run || operation == XdebugOperation.stop) {
+			return replacement;
+		}
 		
 		// Set debugged code descriptor.
 		if (state.debuggedCodeDescriptor == null) {
@@ -3784,8 +3823,14 @@ public class AreaServer {
 	 * @return
 	 * @throws Exception 
 	 */
-	private String debugPoint(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state)
+	private String debugStepPoint(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state)
 			throws Exception {
+		
+		// Check debugger state.
+		XdebugOperation operation = state.debuggerOperation;
+		if (operation == XdebugOperation.run || operation == XdebugOperation.stop) {
+			return replacement;
+		}
 		
 		// Set debugged code descriptor.
 		if (state.debuggedCodeDescriptor == null) {
@@ -4350,7 +4395,7 @@ public class AreaServer {
 			// Get back old state.
 			this.state.parentState = null;
 			this.state = originalState;
-			this.state.progateFrom(subState);
+			this.state.progateFromSubstate(subState);
 		}
 		catch (Exception e) {
 			
@@ -4368,7 +4413,7 @@ public class AreaServer {
 			// Get back old state.
 			this.state = originalState;
 			// Propagate sub state.
-			this.state.progateFrom(subState);
+			this.state.progateFromSubstate(subState);
 			// Return to current block.
 			this.state.blocks.popToBlockDescriptor(currentBlock);
 			
@@ -4747,7 +4792,7 @@ public class AreaServer {
 							
 							// Add meta information.
 							TagsSource source = TagsSource.newResource(startResourceId);
-							resourceText.ref = debugPoint(resourceText.ref, source, state);
+							resourceText.ref = debugStepPoint(resourceText.ref, source, state);
 						
 							// Process page text for the area.
 							state.text = new StringBuilder(resourceText.ref);
@@ -4807,6 +4852,11 @@ public class AreaServer {
 								packTextEx();
 							}
 							
+							// On closing the AreaServer break program.
+							debugBreakPoint();
+							// After the break point close the debugger.
+							closeAreaServerDebugger();
+							
 							// Replace new line tags
 							String textString = replaceNewLineTags(state.text);
 							
@@ -4843,6 +4893,25 @@ public class AreaServer {
 		return true;
 	}
 	
+	/**
+	 * Close Area Server debugger if it is open.
+	 */
+	private void closeAreaServerDebugger() {
+		
+		XdebugClient client = state.debugClient;
+		if (client != null) {
+			
+			try {
+				Thread.sleep(1000);
+			}
+			catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			client.close();
+		}
+	}
+
 	/**
 	 * Finalize Area Server page loading
 	 * @param areaServerResult
@@ -5967,7 +6036,7 @@ public class AreaServer {
 	 */
 	private void checkResponseTimeout() throws Exception {
 		
-		// TODO: <---DEBUGGER Do not check timeout.
+		// TODO: <---TESTING Do not check timeout.
 		return ;
 		
 //		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
@@ -6089,7 +6158,7 @@ public class AreaServer {
 		String replace = processor.processTag(this);
 		
 		// Wrap into meta information.
-		replace = debugPoint(tagName, null, state.tagStartPosition, state.position, replace, state);
+		replace = debugStepPoint(tagName, null, state.tagStartPosition, state.position, replace, state);
 		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -6132,7 +6201,7 @@ public class AreaServer {
 		String replace = processor.processTag(this, properties);
 		
 		// Wrap into meta information.
-		replace = debugPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
+		replace = debugStepPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		state.position = state.tagStartPosition;
@@ -6479,7 +6548,7 @@ public class AreaServer {
 		long from = evaluateProperty(properties, "from", Long.class, 0L, DEFAULT);
 		
 		// Get "to" property.
-		Long to = evaluateProperty(properties, "to", Long.class, 0L, NULL);
+		Long to = evaluateProperty(properties, "to", Long.class, null, NULL);
 		
 		// Get "step" property.
 		long step = evaluateProperty(properties, "step", Long.class, 1L, DEFAULT);
@@ -6620,7 +6689,7 @@ public class AreaServer {
 		String replace = compiledText.toString();
 		
 		// Wrap into meta information.
-		replace = debugPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
+		replace = debugStepPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
 		
 		// Replace text.
 		state.text.replace(state.tagStartPosition, parser.getPosition(), replace);

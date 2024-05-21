@@ -271,7 +271,7 @@ public class BuilderMain {
 			ProgramHttpServer httpServer = ProgramBasic.startHttpServer(Settings.getHttpPortNumber(), !ProgramBasic.isUsedLogin());
 			
 			// Attach Area Server debugger to the debug viewer.
-			DebugViewer.getInstance().attachDebugger(httpServer.getDebugger());
+			DebugViewer.getInstance().attachDebugListener(httpServer.getDebugger());
 			
 			// Initialize main frame class. Create and show main frame.
 			GeneratorMainFrame mainFrame;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 03-05-2023
  *
@@ -12,8 +12,6 @@ import java.nio.channels.AsynchronousSocketChannel;
 
 import org.multipage.gui.PacketChannel;
 import org.multipage.gui.PacketSession;
-import org.multipage.gui.Utility;
-import org.multipage.util.Resources;
 
 /**
  * Xdebug listener is built-in socket server that accepts debugging requests.
@@ -23,7 +21,7 @@ import org.multipage.util.Resources;
 public class XdebugListener extends DebugListener {
 	
 	/**
-	 * Default Xdebug port. It is set to port number 9004 because JVM Xdebug already uses the port number 9000.
+	 * Default Xdebug port. It is set to port number 9004 because JVM Xdebug already uses port number 9000.
 	 */
 	public static final int DEFAULT_PORT = 9004;
 	
@@ -35,7 +33,7 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Reference to debug viewer component.
 	 */
-	public Component debugViewerComponent = null;
+	private Component debugViewerComponent = null;
 	
 	/**
 	 * Packet channel that accepts incomming packets.
@@ -53,12 +51,6 @@ public class XdebugListener extends DebugListener {
         }
         return instance;
     }
-
-	@Override
-	public void setDebugViewerListeners(DebugViewerCallback callback) {
-		// TODO Auto-generated method stub
-		
-	}
 	
 	/**
 	 * Remember the debug viewer component.
@@ -79,24 +71,6 @@ public class XdebugListener extends DebugListener {
 		// Opens Xdebug soket for the IDE.
 		openListenerPort(DEFAULT_PORT);
 	}
-
-	@Override
-	public boolean startDebugging() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void stopDebugging() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void close() {
-		// TODO Auto-generated method stub
-		
-	}
 	
 	/**
 	 * Opens listener port.
@@ -107,7 +81,7 @@ public class XdebugListener extends DebugListener {
 		
 		packetChannel = new PacketChannel() {
 			@Override
-			protected PacketSession onAccepted(AsynchronousSocketChannel client) {
+			protected PacketSession onStartListening(AsynchronousSocketChannel client) {
 				
 				PacketSession packetSession = XdebugListener.this.onOpenDebugViewer(client);
 				return packetSession;
@@ -115,7 +89,7 @@ public class XdebugListener extends DebugListener {
 		};
 		
 		// Open packet channel.
-		packetChannel.openReceivingSocket("localhost", port);
+		packetChannel.listen("localhost", port);
 	}
 	
 	/**
@@ -139,7 +113,7 @@ public class XdebugListener extends DebugListener {
 			return xdebugSession.getPacketSession();
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			onException(e);
 		}
 		return null;
 	}
@@ -156,27 +130,12 @@ public class XdebugListener extends DebugListener {
 			openDebugViever.accept(listenerSession);
 		}
 	}
-
-    
-    /**
-     * Show exception.
-     * @param exception
-     */
-	public void showException(Exception exception) {
-		
-		String errorMessage = exception.getLocalizedMessage();
-		Utility.show(this.debugViewerComponent, errorMessage);
-	}
 	
 	/**
-	 * Show message.
-	 * @param stringResourceId
-	 * @param message
+	 * TODO: <---MAKE On close debugger.
 	 */
-	public void showMessage(String stringResourceId, String message) {
+	@Override
+	public void onClose() {
 		
-		String templateText = Resources.getString(stringResourceId);
-		String messageText = String.format(templateText, message);
-		Utility.show(this.debugViewerComponent, messageText);
 	}
 }

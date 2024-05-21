@@ -41,6 +41,14 @@ public class AreaServerState {
 	 * Reference to parent state.
 	 */
 	public AreaServerState parentState = null;
+	
+	/**
+	 * Process and thread information.
+	 */
+	public long processId = -1;
+	public long threadId = -1;
+	public String processName = null;
+	public String threadName = null;
 
 	/**
 	 * Area server response timeout in milliseconds.
@@ -282,6 +290,11 @@ public class AreaServerState {
 	 * Xdebug client.
 	 */
 	public XdebugClient debugClient = null;
+	
+	/**
+	 * Xdebug opration.
+	 */
+	public XdebugOperation debuggerOperation = XdebugOperation.no_operation;
 
 	/**
 	 * Debugger lock.
@@ -292,16 +305,32 @@ public class AreaServerState {
 	 * Debugged code descriptor.
 	 */
 	public DebuggedCodeDescriptor debuggedCodeDescriptor = null;
+	
+	/**
+	 * Constructor.
+	 */
+	public AreaServerState() {
+		
+		// Save process ID and name.
+    	processId = ProcessHandle.current().pid();
+    	ProcessHandle processHandle = ProcessHandle.of(processId).orElseThrow();
+    	processName = processHandle.info().command().orElseThrow();
+    	
+    	// Save thread ID and name.
+        Thread currentThread = Thread.currentThread();
+        threadId = currentThread.getId();
+        threadName = currentThread.getName();
+	}
 
 	/**
 	 * Update server state.
 	 * @param server
 	 */
-	public void progateFrom(AreaServerState state) {
+	public void progateFromSubstate(AreaServerState subState) {
 		
-		breakPointName = state.breakPointName;
-		exceptionThrown = state.exceptionThrown;
-		trayMenu = state.trayMenu;
+		breakPointName = subState.breakPointName;
+		exceptionThrown = subState.exceptionThrown;
+		trayMenu = subState.trayMenu;
 	}
 	
 	/**

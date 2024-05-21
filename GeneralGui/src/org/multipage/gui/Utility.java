@@ -173,6 +173,8 @@ import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.DomDriver;
 
 /**
  * @author
@@ -5905,7 +5907,7 @@ public class Utility {
 			fileName = fileName.replace(File.separatorChar, '/');
 			// Get keystore input stream. 
 			URL fileUrl = ClassLoader.getSystemResource(fileFolder + '/' + fileName);
-			// TODO: <---DEBUG File name.
+			
 			Utility.show2("Exposed file %s", fileUrl);
 			inputStream = new BufferedInputStream(fileUrl.openStream());
 			
@@ -5921,7 +5923,7 @@ public class Utility {
 			IOUtils.copy(inputStream, outputStream);
 		}
 		catch (Exception e) {
-			// TODO: <---DEBUG Exception.
+			
 			show2("Expose %s error. Line no. %d", fileName, e.getStackTrace()[0].getLineNumber());
 			throwException("org.multipage.gui.messageCannotExposeApplicationFile", e.getLocalizedMessage());
 		}

@@ -6,16 +6,16 @@
  */
 package org.multipage.gui;
 
+import java.awt.Color;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.channels.InterruptedByTimeoutException;
 import java.security.InvalidParameterException;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.multipage.util.j;
@@ -63,11 +63,6 @@ public class PacketSession {
 	private byte [] remainingBytes = null;
 	
 	/**
-	 * Reference to server socket channel.
-	 */
-	private AsynchronousServerSocketChannel serverSocketChannel = null;
-	
-	/**
 	 * Reference to client socket channel.
 	 */
 	private AsynchronousSocketChannel clientSocketChannel = null;
@@ -100,15 +95,6 @@ public class PacketSession {
 		
 		return this.socketAddress;
 	}
-	
-	/**
-	 * Get server socket channel.
-	 * @return
-	 */
-	public AsynchronousServerSocketChannel getServerSocket() {
-		
-		return this.serverSocketChannel;
-	}
 		
 	/**
 	 * Create new completion handler for read operation.
@@ -119,7 +105,7 @@ public class PacketSession {
 	 */
 	private CompletionHandler<Integer, ByteBuffer> newReadCompletionHandler(
 				Consumer<CompletionHandler<Integer, ByteBuffer>> nextReadLambda,
-				BiFunction<Integer, ByteBuffer, Boolean> completedLambda,
+				BiConsumer<Integer, ByteBuffer> completedLambda,
 				Consumer<Throwable> failedLambda) {
 		
 		// Create completion handler.
@@ -127,19 +113,36 @@ public class PacketSession {
 			
         	@Override
 			public void completed(Integer result, ByteBuffer inputBuffer) {
-
-				// Call lambda for completion.
-				boolean success = completedLambda.apply(result, inputBuffer);
-				if (!success) {
-					return;
-				}
-
+        		
+        		// Check connection.
+        		boolean isOpen = clientSocketChannel.isOpen();
+        		if (!isOpen) {
+        			return;
+        		}
+        		
+        		boolean isEof = (result < 0);
+        		
+        		// When requested close the session.
+        		if (isEof) {
+        			closeClientSocket();
+        			return;
+        		}
+        		
+        		// TODO: <---DEBUG On read completed. Check if channel is open.
+        		j.log("On read completed. Channel is open %b. Result is %d", isOpen, result);
+        		
+				// Call lambda function for completion.
+				completedLambda.accept(result, inputBuffer);
+				
+        		// Create new handler and invoke next read operation.
 				CompletionHandler<Integer, ByteBuffer> nextCompletionHandler = newReadCompletionHandler(nextReadLambda, completedLambda, failedLambda);
 				nextReadLambda.accept(nextCompletionHandler); 
-			}
+ 			}
+        	
 			@Override
 			public void failed(Throwable exception, ByteBuffer inputBuffer) {
-				// Call lambda for failed operation.
+								
+				// Call lambda function when operation failed.
 				failedLambda.accept(exception);
 			}
         };
@@ -147,58 +150,71 @@ public class PacketSession {
 	}
 	
 	/**
-	 * Start reading packets from input socket channel.
+	 * Start reading packets from socket channel.
 	 * @param clientSocketChannel
 	 */
-	protected synchronized <T> void startReadingPackets(AsynchronousSocketChannel clientSocketChannel) {
+	protected <T> void startReadingPackets(AsynchronousSocketChannel clientSocketChannel)
+			throws Exception {
 		
-		try {
-			this.clientSocketChannel = clientSocketChannel;
+		// Check socket channel.
+		boolean isOpen = clientSocketChannel.isOpen();
+		if (!isOpen) {
+			return;
+		}
+		
+		// Remember socket channel reference.
+		this.clientSocketChannel = clientSocketChannel;
+		
+		// Process successful result of the read operation.
+		BiConsumer<Integer, ByteBuffer> readCompletedLambda = (bytesToRead, inputBuffer) -> {
 			
-			// Process successful result of the read operation.
-    		BiFunction<Integer, ByteBuffer, Boolean> readCompletedLambda = (bytesToRead, inputBuffer) -> {
-    			
-        		try {
-            		// Read packets from input buffer.
-        			readPacketElements(inputBuffer);
-        		}
-        		catch (Exception e)	{
-        			onThrownException(e);
-        			e.printStackTrace();
-            		return false;
-        		}									
-        		return true;
-			};
+    		try {
+        		// Read packets from input buffer.
+    			readPacketElements(inputBuffer);
+    		}
+    		catch (Exception e)	{
+    			onException(e);
+    		}									
+		};
+		
+		// Read exception.
+		Consumer<Throwable> readFailedLambda = readException -> {
 			
-			// Read exception.
-			Consumer<Throwable> readFailedLambda = readException -> {
+			// If the channel is closed do not show exception.
+			if (readException instanceof AsynchronousCloseException) {
+				return;
+			}
+			// Show exception.
+			onException(readException);			
+		};
+		
+		// Read operation.
+		Consumer<CompletionHandler<Integer, ByteBuffer>> readPacketLambda = readCompletionHandler -> {
+			
+			synchronized (PacketSession.this.readSync) {
 				
-				if (readException instanceof InterruptedByTimeoutException) {
+				// Check if the socket channel is opened.
+				boolean isOpened = clientSocketChannel.isOpen();
+				if (!isOpened) {
 					return;
 				}
-				onThrownException(readException);			
-			};
-			
-			// Read operation.
-			Consumer<CompletionHandler<Integer, ByteBuffer>> readPacketLambda = readCompletionHandler -> {
 				
-				synchronized (PacketSession.this.readSync) {
-
-	    			// Start reading from the socket channel.
+				try {
+					// Start reading from the socket channel.
 					ByteBuffer inputBuffer = ByteBuffer.allocate(INPUT_BUFFER_SIZE);
-	        		clientSocketChannel.read(inputBuffer, 10, TimeUnit.SECONDS, inputBuffer, readCompletionHandler);
+	        		clientSocketChannel.read(inputBuffer, inputBuffer, readCompletionHandler);
+	        		return;
 				}
-			};
-			
-			// Create completion handler.
-    		CompletionHandler<Integer, ByteBuffer> readCompletionHandler = newReadCompletionHandler(readPacketLambda, readCompletedLambda, readFailedLambda);
-    		// Run first read operation with first completion handler. 
-    		readPacketLambda.accept(readCompletionHandler);
-		}
-		catch (Exception e) {
-			// Show error message.
-			e.printStackTrace();
-		}
+				catch (Exception e) {
+					onException(e);
+				}
+			}
+		};
+		
+		// Create completion handler.
+		CompletionHandler<Integer, ByteBuffer> readCompletionHandler = newReadCompletionHandler(readPacketLambda, readCompletedLambda, readFailedLambda);
+		// Run first read operation with first completion handler. 
+		readPacketLambda.accept(readCompletionHandler);
 	}
 	
 	/**
@@ -206,7 +222,8 @@ public class PacketSession {
 	 * @param inputBuffer
 	 * @throws Exception 
 	 */
-	protected int readPacketElements(ByteBuffer inputBuffer) throws Exception {
+	protected int readPacketElements(ByteBuffer inputBuffer)
+			throws Exception {
 		
 		// Put remaining bytes at the beginning of input buffer.
 		int remainingLength = 0;
@@ -287,7 +304,8 @@ public class PacketSession {
 				}
 			}
 			else {
-				throw new IllegalArgumentException();
+				Exception exception = new IllegalArgumentException();
+				onException(exception);
 			}
 			
 			// Call callback method on the end of the input packet.
@@ -314,7 +332,7 @@ public class PacketSession {
      * @param symbol
      * @return end of buffer
      */
-	public static boolean readSymbol(ByteBuffer inputBuffer, PacketSymbol symbol)
+	public boolean readSymbol(ByteBuffer inputBuffer, PacketSymbol symbol)
 			throws Exception {
 		
 		// Initialization.
@@ -349,7 +367,8 @@ public class PacketSession {
 	 * @param number
 	 * @return end of buffer
 	 */
-	public static boolean readInt(ByteBuffer inputBuffer, PacketNumber number) {
+	public boolean readInt(ByteBuffer inputBuffer, PacketNumber number) 
+			throws Exception {
 		
 		// Initialization.
 		number.isCompact = false;
@@ -387,7 +406,7 @@ public class PacketSession {
      * @param block
      * @return true value if the end of obuffer has been reached
      */
-	public static boolean readBlock(ByteBuffer inputBuffer, PacketBlock block)
+	public boolean readBlock(ByteBuffer inputBuffer, PacketBlock block)
 			throws Exception {
 		
 		boolean endOfBuffer = false;
@@ -400,7 +419,8 @@ public class PacketSession {
 			endOfBuffer = readTerminatedBlock(inputBuffer, block);
 		}
 		else {
-			new InvalidParameterException();
+			Exception exception = new InvalidParameterException();
+			onException(exception);
 		}
 		return endOfBuffer;
 	}
@@ -411,7 +431,7 @@ public class PacketSession {
 	 * @param block
 	 * @return
 	 */
-	public static boolean readLongBlock(ByteBuffer inputBuffer, PacketBlock block)
+	public boolean readLongBlock(ByteBuffer inputBuffer, PacketBlock block)
 			throws Exception {
 		
 		// Loop for input bytes.
@@ -447,7 +467,7 @@ public class PacketSession {
 	 * @param block
 	 * @return
 	 */
-	public static boolean readTerminatedBlock(ByteBuffer inputBuffer, PacketBlock block) 
+	public boolean readTerminatedBlock(ByteBuffer inputBuffer, PacketBlock block) 
 			throws Exception {
 		
 		// Initialization.
@@ -480,7 +500,7 @@ public class PacketSession {
 				}
 			}
 			catch (Exception e) {
-				throw e;
+				onException(e);
 			}
 			
 			// Increase buffer capacity.
@@ -514,6 +534,30 @@ public class PacketSession {
 			
 			increasedOutputBuffer.put(block.buffer);
 			block.buffer = increasedOutputBuffer;
+		}
+	}
+	
+	/**
+	 * Close this session.
+	 * @throws IOException 
+	 */
+	public void closeClientSocket() {
+		
+		if (clientSocketChannel == null || !clientSocketChannel.isOpen()) {
+			return;
+		}
+		
+		try {
+			// Close the client socket.
+			clientSocketChannel.shutdownOutput();
+			clientSocketChannel.shutdownInput();
+			clientSocketChannel.close();
+			
+			// TODO: <---DEBUG Display closing thread name.
+			j.log(1, Color.WHITE, "Closing thread: %s. Client socket: %d. Is open %b.", Thread.currentThread().getName(), clientSocketChannel.hashCode(), clientSocketChannel.isOpen());
+		}
+		catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -569,25 +613,19 @@ public class PacketSession {
 	 * Fired on successful processing of whole packet.
 	 * @param packet
 	 */
-    protected void onEndOfPacket(Packet packet) {
+    protected void onEndOfPacket(Packet packet) 
+    		throws Exception {
 		
     	// Override this method.
 	}
     
 	/**
-	 * Update packet reader.
-	 */
-	protected void update() {
-		
-		// Override this method.
-	}
-	
-	/**
 	 * Fired on packet exception.
 	 * @param e
 	 */
-	protected void onThrownException(Throwable e) {
+	protected void onException(Throwable e) {
 		
 		// Override this method.
+		e.printStackTrace();
 	}
 }

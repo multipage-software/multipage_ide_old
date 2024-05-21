@@ -315,7 +315,7 @@ class LogReader extends PacketSession {
 	}
 	
 	@Override
-	protected void onThrownException(Throwable exception) {
+	protected void onException(Throwable exception) {
 		
 		// TODO: <---REFACTOR Display the exception in a dialog window.
 		exception.printStackTrace();

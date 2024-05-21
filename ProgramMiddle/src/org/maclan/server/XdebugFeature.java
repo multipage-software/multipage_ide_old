@@ -16,19 +16,18 @@ import org.multipage.gui.Utility;
 public class XdebugFeature {
 	
 	/**
-	 * Feature name.
+	 * Feature supported or not supported.
 	 */
-	public String name = null;
+	private boolean supported = false;
 	
 	/**
-	 * Feature supported or not supported (a flag).
+	 * Feature name.
 	 */
-	public boolean supported = false;
-	
+	private String name = null;	
 	/**
 	 * Feature value.
 	 */
-	public String value = null;
+	private String value = null;
 
 	/**
 	 * Create feature object.
@@ -49,5 +48,32 @@ public class XdebugFeature {
 			Utility.throwException("org.maclan.server.messageXdebugFeatureSupportedNotNull", supportedString);
 		}
 		return feature;
+	}
+	
+	/**
+	 * Returns true value when the feature is supported.
+	 * @return
+	 */
+	public boolean isSupported() {
+		
+		return supported;
+	}
+	
+	/**
+	 * Get feature name.
+	 * @return
+	 */
+	public String getName() {
+		
+		return name;
+	}
+
+	/**
+	 * Returns feature value.
+	 * @return
+	 */
+	public String getValue() {
+		
+		return value;
 	}
 }

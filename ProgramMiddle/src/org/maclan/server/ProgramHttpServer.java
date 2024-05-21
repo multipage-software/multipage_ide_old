@@ -67,7 +67,7 @@ public abstract class ProgramHttpServer {
 		}
 		
 		try {
-			debugger.close();
+			debugger.onClose();
 			return MiddleResult.OK;
 		}
 		catch (Exception e) {

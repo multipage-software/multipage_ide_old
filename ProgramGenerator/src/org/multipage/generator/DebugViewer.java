@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
  * Created on : 31-07-2018
  *
@@ -17,6 +17,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -58,15 +61,15 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import org.maclan.server.AreaServerSignal;
+import org.maclan.server.AreaServerState;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugListenerSession;
 import org.maclan.server.XdebugClientParameters;
-import org.maclan.server.XdebugListenerOld;
+import org.maclan.server.XdebugClientResponse;
 import org.maclan.server.XdebugListenerSession;
-import org.maclan.server.XdebugPacketOld;
+import org.multipage.addinloader.j;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.ApplicationEvents;
-import org.multipage.gui.Callback;
 import org.multipage.gui.Images;
 import org.multipage.gui.RendererJLabel;
 import org.multipage.gui.StateInputStream;
@@ -94,16 +97,6 @@ public class DebugViewer extends JFrame {
 	 * GUI watchdog timeout in ms.
 	 */
 	private static final int WATCHDOG_TIMEOUT_MS = 1000;
-	
-	/**
-	 * Table font size.
-	 */
-	private static final int TABLE_FONT_SIZE = 9;
-	
-	/**
-	 * Table header height.
-	 */
-	private static final int TABLE_HEADER_HEIGHT = 12;
 	
 	/**
 	 * Xdebug process node.
@@ -157,9 +150,9 @@ public class DebugViewer extends JFrame {
 			XdebugListenerSession xdebugSession = getXdebugSession();
 			if (xdebugSession != null) {
 				
-				XdebugClientParameters parameters = xdebugSession.clientParameters;
+				XdebugClientParameters parameters = xdebugSession.getClientParameters();
 				if (parameters != null) {
-					long pid = parameters.pid;
+					long pid = parameters.getProcessId();
 					String pidTextFormat = Resources.getString("org.multipage.generator.textXdebugProcessId");
 					pidText = String.format(pidTextFormat, pid);
 				}
@@ -220,7 +213,7 @@ public class DebugViewer extends JFrame {
 			XdebugListenerSession xdebugSession = getXdebugSession();
 			if (xdebugSession != null) {
 				
-				XdebugClientParameters parameters = xdebugSession.clientParameters;
+				XdebugClientParameters parameters = xdebugSession.getClientParameters();
 				if (parameters != null) {
 					
 					long tid = getTid();
@@ -509,13 +502,31 @@ public class DebugViewer extends JFrame {
 	private JScrollPane scrollCodePane;
 	private JPanel panelStatus;
 	private JLabel labelStatus;
-	private JButton buttonExit;
+	private JButton buttonStop;
 	private JButton buttonStepInto;
 	private JButton buttonStepOut;
 	private JButton buttonStepOver;
 	private JList listWatch;
 	private JList listStack;
-
+	private JPanel panelOutput;
+	private JScrollPane scrollPane;
+	private JTextArea textOutput;
+	private JPanel panelExceptions;
+	private JScrollPane scrollPaneExceptions;
+	private JPanel panelSearch;
+	private JLabel labelFilter;
+	private TextFieldEx textFilter;
+	private JTextPane textExceptions;
+	private JCheckBox checkCaseSensitive;
+	private JCheckBox checkWholeWords;
+	private JCheckBox checkExactMatch;
+	private JPanel panelDebuggers;
+	private JButton buttonConnected;
+	private JLabel labelThreads;
+	private JButton buttonTest;
+	private JPanel panelThreads;
+	private JTree treeThreads;
+	
     /**
      * Constructor.
      * @param parent 
@@ -558,6 +569,49 @@ public class DebugViewer extends JFrame {
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		panelRight.add(tabbedPane, BorderLayout.CENTER);
 		
+		panelDebuggers = new JPanel();
+		tabbedPane.addTab("Processes", null, panelDebuggers, null);
+		SpringLayout sl_panelDebuggers = new SpringLayout();
+		panelDebuggers.setLayout(sl_panelDebuggers);
+		
+		labelThreads = new JLabel("org.multipage.generator.textDebuggedThreads");
+		sl_panelDebuggers.putConstraint(SpringLayout.WEST, labelThreads, 3, SpringLayout.WEST, panelDebuggers);
+		sl_panelDebuggers.putConstraint(SpringLayout.NORTH, labelThreads, 3, SpringLayout.NORTH, panelDebuggers);
+		panelDebuggers.add(labelThreads);
+		
+		panelThreads = new JPanel();
+		sl_panelDebuggers.putConstraint(SpringLayout.NORTH, panelThreads, 3, SpringLayout.SOUTH, labelThreads);
+		sl_panelDebuggers.putConstraint(SpringLayout.WEST, panelThreads, 3, SpringLayout.WEST, panelDebuggers);
+		sl_panelDebuggers.putConstraint(SpringLayout.SOUTH, panelThreads, -3, SpringLayout.SOUTH, panelDebuggers);
+		sl_panelDebuggers.putConstraint(SpringLayout.EAST, panelThreads, -3, SpringLayout.EAST, panelDebuggers);
+		panelDebuggers.add(panelThreads);
+		panelThreads.setLayout(new BorderLayout(0, 0));
+		
+		JScrollPane scrollPaneThreads = new JScrollPane();
+		panelThreads.add(scrollPaneThreads);
+		
+		treeThreads = new JTree();
+		treeThreads.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					onDoubleClickProcess();
+				}
+			}
+		});
+		treeThreads.setRootVisible(false);
+		scrollPaneThreads.setViewportView(treeThreads);
+		
+		panelStack = new JPanel();
+		tabbedPane.addTab("Stack", null, panelStack, null);
+		panelStack.setLayout(new BorderLayout(0, 0));
+		
+		scrollPaneStack = new JScrollPane();
+		panelStack.add(scrollPaneStack);
+		
+		listStack = new JList<Object>();
+		scrollPaneStack.setViewportView(listStack);
+		
 		panelWatch = new JPanel();
 		tabbedPane.addTab("Watch", null, panelWatch, null);
 		panelWatch.setLayout(new BorderLayout(0, 0));
@@ -567,16 +621,6 @@ public class DebugViewer extends JFrame {
 		
 		listWatch = new JList();
 		scrollPaneWatch.setViewportView(listWatch);
-		
-		panelStack = new JPanel();
-		tabbedPane.addTab("Stack", null, panelStack, null);
-		panelStack.setLayout(new BorderLayout(0, 0));
-		
-		scrollPaneStack = new JScrollPane();
-		panelStack.add(scrollPaneStack);
-		
-		listStack = new JList();
-		scrollPaneStack.setViewportView(listStack);
 		
 		panelOutput = new JPanel();
 		tabbedPane.addTab("Output", null, panelOutput, null);
@@ -599,6 +643,7 @@ public class DebugViewer extends JFrame {
 		panelCommand.add(scrollPaneOutput);
 		
 		textInfo = new JEditorPane();
+		textInfo.setFont(new Font("Consolas", Font.PLAIN, 15));
 		textInfo.setPreferredSize(new Dimension(30, 30));
 		scrollPaneOutput.setViewportView(textInfo);
 		textInfo.setEditable(false);
@@ -686,31 +731,6 @@ public class DebugViewer extends JFrame {
 		sl_panelSearch.putConstraint(SpringLayout.SOUTH, checkExactMatch, 0, SpringLayout.SOUTH, checkCaseSensitive);
 		checkExactMatch.setOpaque(false);
 		panelSearch.add(checkExactMatch);
-		
-		panelDebuggers = new JPanel();
-		tabbedPane.addTab("Processes", null, panelDebuggers, null);
-		SpringLayout sl_panelDebuggers = new SpringLayout();
-		panelDebuggers.setLayout(sl_panelDebuggers);
-		
-		labelThreads = new JLabel("org.multipage.generator.textDebuggedThreads");
-		sl_panelDebuggers.putConstraint(SpringLayout.WEST, labelThreads, 3, SpringLayout.WEST, panelDebuggers);
-		sl_panelDebuggers.putConstraint(SpringLayout.NORTH, labelThreads, 3, SpringLayout.NORTH, panelDebuggers);
-		panelDebuggers.add(labelThreads);
-		
-		panelThreads = new JPanel();
-		sl_panelDebuggers.putConstraint(SpringLayout.NORTH, panelThreads, 3, SpringLayout.SOUTH, labelThreads);
-		sl_panelDebuggers.putConstraint(SpringLayout.WEST, panelThreads, 3, SpringLayout.WEST, panelDebuggers);
-		sl_panelDebuggers.putConstraint(SpringLayout.SOUTH, panelThreads, -3, SpringLayout.SOUTH, panelDebuggers);
-		sl_panelDebuggers.putConstraint(SpringLayout.EAST, panelThreads, -3, SpringLayout.EAST, panelDebuggers);
-		panelDebuggers.add(panelThreads);
-		panelThreads.setLayout(new BorderLayout(0, 0));
-		
-		JScrollPane scrollPaneThreads = new JScrollPane();
-		panelThreads.add(scrollPaneThreads);
-		
-		treeThreads = new JTree();
-		treeThreads.setRootVisible(false);
-		scrollPaneThreads.setViewportView(treeThreads);
 		buttonSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onSendCommand();
@@ -734,23 +754,16 @@ public class DebugViewer extends JFrame {
 		toolBar = new JToolBar();
 		getContentPane().add(toolBar, BorderLayout.NORTH);
 		
-		buttonRun = new JButton("run");
+		buttonRun = new JButton("org.multipage.generator.textDebuggerRun");
 		buttonRun.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				onRun();
 			}
 		});
+		buttonRun.setPreferredSize(new Dimension(20, 20));
+		toolBar.add(buttonRun);
 		
-		buttonStepInto = new JButton("step into");
-		buttonStepInto.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onStepInto();
-			}
-		});
-		buttonStepInto.setPreferredSize(new Dimension(20, 20));
-		toolBar.add(buttonStepInto);
-		
-		buttonStepOver = new JButton("step over");
+		buttonStepOver = new JButton("org.multipage.generator.textDebuggerStepOver");
 		buttonStepOver.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				onStepOver();
@@ -759,25 +772,32 @@ public class DebugViewer extends JFrame {
 		buttonStepOver.setPreferredSize(new Dimension(20, 20));
 		toolBar.add(buttonStepOver);
 		
-		buttonStepOut = new JButton("step out");
+		buttonStepOut = new JButton("org.multipage.generator.textDebuggerStepOut");
 		buttonStepOut.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				onStepOut();
 			}
 		});
-		buttonStepOut.setPreferredSize(new Dimension(20, 20));
-		toolBar.add(buttonStepOut);
-		buttonRun.setPreferredSize(new Dimension(20, 20));
-		toolBar.add(buttonRun);
 		
-		buttonExit = new JButton("exit");
-		buttonExit.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				onExit();
+		buttonStepInto = new JButton("org.multipage.generator.textDebuggerStepInto");
+		buttonStepInto.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onStepInto();
 			}
 		});
-		buttonExit.setPreferredSize(new Dimension(20, 20));
-		toolBar.add(buttonExit);
+		buttonStepInto.setPreferredSize(new Dimension(20, 20));
+		toolBar.add(buttonStepInto);
+		buttonStepOut.setPreferredSize(new Dimension(20, 20));
+		toolBar.add(buttonStepOut);
+		
+		buttonStop = new JButton("org.multipage.generator.textDebuggerStop");
+		buttonStop.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				onStop();
+			}
+		});
+		buttonStop.setPreferredSize(new Dimension(20, 20));
+		toolBar.add(buttonStop);
 		
 		buttonTest = new JButton("TEST");
 		buttonTest.addActionListener(new ActionListener() {
@@ -818,8 +838,6 @@ public class DebugViewer extends JFrame {
 		
 		createViews();
 		setListeners();
-		
-		establishWatchDog();
 		
 		initStackDump();
 		initWatch();
@@ -919,7 +937,7 @@ public class DebugViewer extends JFrame {
 	 * Attach debug listener.
 	 * @param listener
 	 */
-	public void attachDebugger(DebugListener listener) {
+	public void attachDebugListener(DebugListener listener) {
 		
 		// Assign debug viewer.
 		listener.setViewerComponent(this);
@@ -927,40 +945,41 @@ public class DebugViewer extends JFrame {
 		// Add new lambda methods to the DebugListener object to connect callbacks comming from the debug listener (server).
 		
 		// Open Xdebug viewer.
-		listener.openDebugViever = currentSession -> {
+		listener.openDebugViever = newSession -> {
 			
-			DebugViewer.this.currentSession = currentSession;
+			// Remember current session.
+			DebugViewer.this.currentSession = newSession;
 			
 			try {
 				SwingUtilities.invokeLater(() -> {
 
 					// Show dialog window and display threads.
 					DebugViewer.this.setVisible(true);
-					displayThreads(currentSession);
+					displaySessions();
 				});
 			}
 			catch (Exception e) {
-				onDebugProtocolError(e);
+				onException("org.multipage.generator.messageXdebugProtocolException", e);
 			}
 			
 			// When ready for commands, load debugged source code.
-			currentSession.onReady = () -> {
-				updateSourceCode();
-			};
+			newSession.setReadyForCommands(() -> {
+				try {
+					newSession.loadClientContexts(() -> {
+						// After loading contexts.
+						updateSourceCode();
+					});
+					
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
 		};
 		
 		debugListener = listener;
 	}
-	
-	/**
-	 * On debug protocol exception
-	 * @param exception
-	 */
-	private void onDebugProtocolError(Exception exception) {
-		
-		Utility.show(this, "org.multipage.generator.messageXdebugProtocolException", exception.getLocalizedMessage());
-	}
-	
+
 	/**
 	 * On repeated watchdog ticks.
 	 */
@@ -971,7 +990,7 @@ public class DebugViewer extends JFrame {
 			updateSessionView();			
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			onException(e);
 		}
 	}
 
@@ -986,73 +1005,14 @@ public class DebugViewer extends JFrame {
 			return;
 		}
 		
-		// Display session.
-		List<DebugListenerSession> sessions = debugListener.getSessions();
-		for (DebugListenerSession session : sessions) {
-			loadSessionState(session);
-		}
-		
-		// Display threads and source code..
-		displayThreads(currentSession);
-	}
-	
-	/**
-	 * Load session state.
-	 * @param session
-	 * @throws Exception 
-	 */
-	private void loadSessionState(DebugListenerSession session)
-			throws Exception {
-		
-		// Process Xdebug expr to get thread name.
-		if (session instanceof XdebugListenerSession) {
-			
-			XdebugListenerSession xdebugSession = (XdebugListenerSession) session;
-			XdebugClientParameters xdebugParameters = xdebugSession.clientParameters;
-			
-			if (xdebugParameters == null || !xdebugParameters.isInitialized()) {
-				return;
-			}
-			
-			Long threadId = xdebugParameters.tid;
-			
-			// Get current thread name.
-			String expression = String.format("server.getThreadName(%d)", threadId);
-			int transactionId = xdebugSession.createTransaction("expr", null, expression, response -> {
-				
-				// Try to get the transaction result and set thread name.
-				try {
-					String threadName = response.getExprResult();
-					xdebugSession.clientParameters.threadName = threadName;
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
-			});
-			xdebugSession.beginTransaction(transactionId);
-			
-			// Get current area name.
-			expression = "server.thisArea.name";
-			transactionId = xdebugSession.createTransaction("expr", null, expression, response -> {
-				
-				// Try to get the transaction result and set thread name.
-				try {
-					String areaName = response.getExprResult();
-					xdebugSession.clientParameters.areaName = areaName;
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
-			});
-			xdebugSession.beginTransaction(transactionId);
-		}
+		// Display sessions.
+		displaySessions();
 	}
 
 	/**
-	 * Display session threads.
-	 * @param currentSession 
+	 * Display sessions.
 	 */
-	private synchronized void displayThreads(DebugListenerSession currentSession) {
+	private void displaySessions() {
 		
 		// Check debug listsner.
 		if (debugListener == null) {
@@ -1065,17 +1025,17 @@ public class DebugViewer extends JFrame {
 			
 			if (session instanceof XdebugListenerSession) {
 				XdebugListenerSession xdebugSession = (XdebugListenerSession) session;
-				putXdebugProcess(threadsRootNode, xdebugSession);
+				putSession(threadsRootNode, xdebugSession);
 			}
 		}
 	}
 
 	/**
-	 * Put items into the threads tree.
+	 * Put items into the tree.
 	 * @param threadsRootNode
 	 * @param session
 	 */
-	private void putXdebugProcess(DefaultMutableTreeNode threadsRootNode, XdebugListenerSession session) {
+	private void putSession(DefaultMutableTreeNode threadsRootNode, XdebugListenerSession session) {
 		
 		// Get process ID.
 		long processId = session.getPid();
@@ -1098,7 +1058,7 @@ public class DebugViewer extends JFrame {
 			
 			// Compare process IDs. If they are equal, do not add new process node and add new thread node instead.
 			if (pid == processId) {
-				putXdebugThread(processNode, session);
+				putThread(processNode, session);
 				return;
 			}
 		}
@@ -1106,7 +1066,7 @@ public class DebugViewer extends JFrame {
 		// Add process and thread nodes.
 		XdebugProcessNode processNode = new XdebugProcessNode(session);
 		threadsRootNode.add(processNode);
-		putXdebugThread(processNode, session);
+		putThread(processNode, session);
 		
 		Utility.expandAll(treeThreads, true);
 	}
@@ -1116,7 +1076,7 @@ public class DebugViewer extends JFrame {
 	 * @param processNode
 	 * @param session
 	 */
-	private void putXdebugThread(XdebugProcessNode processNode, XdebugListenerSession session) {
+	private void putThread(XdebugProcessNode processNode, XdebugListenerSession session) {
 		
 		// Get thread ID.
 		long threadId = session.getTid();
@@ -1156,18 +1116,18 @@ public class DebugViewer extends JFrame {
 		
 		TreePath selectedPath = treeThreads.getSelectionPath();
 		if (selectedPath == null) {
-			return null;
+			return currentSession;
 		}
 		
 		Object lastComponent = selectedPath.getLastPathComponent();
 		if (!(lastComponent instanceof DefaultMutableTreeNode)) {
-			return null;
+			return currentSession;
 		}
 		
 		DefaultMutableTreeNode node = (DefaultMutableTreeNode) lastComponent;
 		Object userObject = node.getUserObject();
 		if (!(userObject instanceof XdebugListenerSession)) {
-			return null;
+			return currentSession;
 		}
 		
 		XdebugListenerSession session = (XdebugListenerSession) userObject;
@@ -1206,6 +1166,20 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
+	 * On process double click.
+	 */
+	protected void onDoubleClickProcess() {
+		
+		// Display session dialog.
+		try {
+			XdebugSessionDialog.showDialog(this, currentSession);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
+	}
+	
+	/**
 	 * Load dialog
 	 */
 	private void loadDialog() {
@@ -1241,6 +1215,11 @@ public class DebugViewer extends JFrame {
 		Utility.localize(checkWholeWords);
 		Utility.localize(checkExactMatch);
 		Utility.localize(labelThreads);
+		Utility.localize(buttonRun);
+		Utility.localize(buttonStepOver);
+		Utility.localize(buttonStepInto);
+		Utility.localize(buttonStepOut);
+		Utility.localize(buttonStop);
 	}
 
 	/**
@@ -1250,6 +1229,11 @@ public class DebugViewer extends JFrame {
 		
 		// Set main icon
 		setIconImage(Images.getImage("org/multipage/basic/images/main_icon.png"));
+		buttonRun.setIcon(Images.getIcon("org/multipage/generator/images/run.png"));
+		buttonStepOver.setIcon(Images.getIcon("org/multipage/generator/images/step_over.png"));
+		buttonStepInto.setIcon(Images.getIcon("org/multipage/generator/images/step_into.png"));
+		buttonStepOut.setIcon(Images.getIcon("org/multipage/generator/images/step_out.png"));
+		buttonStop.setIcon(Images.getIcon("org/multipage/generator/images/stop.png"));
 	}
 
 	/**
@@ -1314,7 +1298,14 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onTest() {
 		
-		updateSourceCode();
+		// TODO: <---DEBUG On Test button clicked.
+		boolean clientOpened = currentSession.getClientSocketChannel().isOpen();
+		int hashCode = currentSession.getClientSocketChannel().hashCode();
+		j.log("Client channel %d. Is opened %b", hashCode, clientOpened);
+		
+		boolean serverOpened = currentSession.getServerSocketChannel().isOpen();
+		hashCode = currentSession.getServerSocketChannel().hashCode();
+		j.log("Server channel %d. Is opened %b", hashCode, serverOpened);
 	}
 	
 	/**
@@ -1324,21 +1315,28 @@ public class DebugViewer extends JFrame {
 		
 		try {
 			// Get selected Xdebug session.
-			XdebugListenerSession xdebugSession = getSelectedXdebugSession();
-			if (xdebugSession == null) {
-				xdebugSession = currentSession;
+			Obj<XdebugListenerSession> xdebugSession = new Obj<XdebugListenerSession>();
+			xdebugSession.ref = getSelectedXdebugSession();
+			if (xdebugSession.ref == null) {
+				xdebugSession.ref = currentSession;
 			}
 			
-			String debuggedAreaName = xdebugSession.getAreaName();
+			String debuggedAreaName = xdebugSession.ref.getAreaName();
 			
 			// Load the Xdebug session source code from client.
-			xdebugSession.source(sourceCode -> {
+			xdebugSession.ref.source(sourceCode -> {
 
 				displaySourceCode(debuggedAreaName, sourceCode);
 			});
+			
+			// Load Area Server state from Xdebug client. Update session.
+			xdebugSession.ref.getAreaServerState(state -> {
+				
+				xdebugSession.ref.loadAreaServerState(state);
+			});
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			onException(e);
 		}		
 	}
 		
@@ -1374,6 +1372,17 @@ public class DebugViewer extends JFrame {
 		
 		// Show the window
 		setVisible(true);
+	}
+	
+	/**
+	 * Get area server state.
+	 * @param onStateLambda
+	 * @throws Exception
+	 */
+	public void getAreaServerState(Consumer<AreaServerState> onStateLambda)
+			throws Exception {
+		
+		
 	}
 	
 	/**
@@ -1463,21 +1472,50 @@ public class DebugViewer extends JFrame {
 	 */
 	private void consolePrint(String message) {
 		
-		String content = textInfo.getText() + message + "\r\n\r\n";
+		String content = textInfo.getText() + message + "\r\n";
 		textInfo.setText(content);
 	}
 
 	/**
 	 * On send command to Xdebug server
+	 * @throws Exception 
 	 */
 	protected void onSendCommand() {
 		
+		// Get command text.
 		String command = textCommand.getText();
 		if (command.isEmpty()) {
 			return;
 		}
+		
+		try {
+			// Send command to Xdebug probe.
+			int transactionId = currentSession.createTransaction("expr", null, command, response -> {
+				
+				try {
+					// On error, display error message.
+					boolean isError = response.isErrorPacket();
+					if (isError) {
+						String errorMessage = response.getErrorMessage();
+						consolePrint(errorMessage);
+						return;
+					}
+					
+					// Print result in text view.
+					String resultText = response.getExprResult();
+					consolePrint(resultText);
+				} 
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+			currentSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
 	}
-	
+
 	/**
 	 * Shows reload alert depending on input parameter
 	 * @param show
@@ -1503,11 +1541,12 @@ public class DebugViewer extends JFrame {
 			setEditorCss(debugging.cssRule);
 		}
 		catch (Exception e) {
+			onException(e);
 		}
 	}
 
 	/**
-	 * On run till the end of the script
+	 * On run command.
 	 */
 	protected void onRun() {
 		
@@ -1525,74 +1564,8 @@ public class DebugViewer extends JFrame {
 			xdebugSession.beginTransaction(transactionId);
 		}
 		catch (Exception e) {
+			onException(e);
 		}
-	}
-	
-	private JPanel panelOutput;
-	private JScrollPane scrollPane;
-	private JTextArea textOutput;
-	private JPanel panelExceptions;
-	private JScrollPane scrollPaneExceptions;
-	private JPanel panelSearch;
-	private JLabel labelFilter;
-	private TextFieldEx textFilter;
-	private JTextPane textExceptions;
-	private JCheckBox checkCaseSensitive;
-	private JCheckBox checkWholeWords;
-	private JCheckBox checkExactMatch;
-	private JPanel panelDebuggers;
-	private JButton buttonConnected;
-	private JLabel labelThreads;
-	private JButton buttonTest;
-	private JPanel panelThreads;
-	private JTree treeThreads;
-
-	
-	/**
-	 * Do debugging step
-	 */
-	protected void step(String command) {
-		
-		// TODO: <---DEBUGGER MAKE Transmit "step" Xdebug signal.
-		ApplicationEvents.transmit(this, AreaServerSignal.debugStatement, command);
-		
-//		// Process step into command
-//		try {
-//			startDebugging();
-//			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
-//			if (responsePacket.isEmpty()) {
-//				return;
-//			}
-//			String resultText = responsePacket.getPacketText();
-//			consolePrint(resultText);
-//			
-//			String filename = responsePacket.getString("/response/message/@filename");
-//			if (!filename.isEmpty() && !filename.equals(scriptFileName)) {
-//				openFile(filename);
-//			}
-//			
-//			String lineNumber = responsePacket.getString("/response/message/@lineno");
-//			if (!lineNumber.isEmpty()) {
-//				resetStepHighlight();
-//				
-//				final Color color = new Color(255, 255, 255);
-//				final Color bkColor = new Color(255, 0, 0);
-//				
-//				highlightCurrentStep(Integer.parseInt(lineNumber),  color, bkColor);
-//				
-//				listWatchModel.clear();
-//			}
-//			
-//			// Show output buffer content, stack dump and breakpoint context
-//			showOutput();
-//			showStackDump();
-//			processContext(3);
-//			processContext(1);
-//			
-//		}
-//		catch (Exception e) {
-//			j.log("Xdebug: " + e.getLocalizedMessage());
-//		}
 	}
 	
 	/**
@@ -1815,17 +1788,22 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onStepInto() {
 		
-		// Process step into command
-		step("step_into");
-	}
-
-	/**
-	 * On step out
-	 */
-	protected void onStepOut() {
-		
-		// Process step into command
-		step("step_out");
+		// Process step command
+		try {
+			XdebugListenerSession xdebugSession = getSelectedXdebugSession();
+			if (xdebugSession == null) {
+				xdebugSession = currentSession;
+			}
+			
+			int transactionId = xdebugSession.createTransaction("step_into", null, response -> {
+				
+				updateSourceCode();
+			});
+			xdebugSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
 	}
 
 	/**
@@ -1833,8 +1811,68 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onStepOver() {
 		
-		// Process step into command
-		step("step_over");
+		// Process step command
+		try {
+			XdebugListenerSession xdebugSession = getSelectedXdebugSession();
+			if (xdebugSession == null) {
+				xdebugSession = currentSession;
+			}
+			
+			int transactionId = xdebugSession.createTransaction("step_over", null, response -> {
+				
+				updateSourceCode();
+			});
+			xdebugSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
+	}	
+
+	/**
+	 * On step out
+	 */
+	protected void onStepOut() {
+		
+		// Process step command
+		try {
+			XdebugListenerSession xdebugSession = getSelectedXdebugSession();
+			if (xdebugSession == null) {
+				xdebugSession = currentSession;
+			}
+			
+			int transactionId = xdebugSession.createTransaction("step_out", null, response -> {
+				
+				updateSourceCode();
+			});
+			xdebugSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
+	}
+	
+	/**
+	 * On stop.
+	 */
+	protected void onStop() {
+		
+		// Process stop command
+		try {
+			XdebugListenerSession xdebugSession = getSelectedXdebugSession();
+			if (xdebugSession == null) {
+				xdebugSession = currentSession;
+			}
+			
+			int transactionId = xdebugSession.createTransaction("stop", null, response -> {
+				
+				updateSourceCode();
+			});
+			xdebugSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
 	}
 	
 	/**
@@ -1846,7 +1884,6 @@ public class DebugViewer extends JFrame {
 		// TODO: test
 		showOutput();
 		resetStepHighlight();
-		
 	}
 	
 	/**
@@ -1928,45 +1965,6 @@ public class DebugViewer extends JFrame {
 			}
 		});
 	}
-
-	/**
-	 * On exit
-	 */
-	protected void onExit() {
-		
-		XdebugListenerOld client = XdebugListenerOld.getSingleton();
-		if (client == null) {
-			return;
-		}
-		
-		// Process stop command
-		client.stopSession();
-	}
-
-	/**
-	 * A watch dog that scans Xdebug status
-	 */
-	private void establishWatchDog() {
-		
-		XdebugListenerOld client = XdebugListenerOld.getSingleton();
-		if (client == null) {
-			return;
-		}
-
-		client.setWatchDogCallback(new Callback() {
-			@Override
-			public Object run(Object status) {
-				
-				// Process Xdebug status
-				SwingUtilities.invokeLater(() -> {
-					
-					processStatus(status);
-					labelStatus.setText(status.toString());
-				});
-				return null;
-			}
-		});
-	}
 	
 	/**
 	 * Update log. Use control values.
@@ -2045,7 +2043,7 @@ public class DebugViewer extends JFrame {
 	 * Write error packet to log panel.
 	 * @param errorPacket
 	 */
-	private void logException(XdebugPacketOld errorPacket) {
+	private void logException(XdebugClientResponse errorPacket) {
 		
 		// Get transaction ID.
 		String transactionId = errorPacket.getString("/response/@transaction_id");
@@ -2120,5 +2118,41 @@ public class DebugViewer extends JFrame {
 		SwingUtilities.invokeLater(() -> {
 			AlertWithTimeout.showDialog(this, message, timeout);
 		});
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	protected void onThrownException(Throwable e) throws Exception {
+		
+		// Override this method.
+		onException(e);
+		throw new Exception(e);
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param messageFormatId
+	 * @param exception
+	 */
+	private void onException(String messageFormatId, Exception exception) {
+		
+		String messageFormat = Resources.getString(messageFormatId);
+		String errorMessage = exception.getLocalizedMessage();
+		String messageText = String.format(messageFormat, errorMessage);
+		
+		Exception e = new Exception(messageText);
+		onException(e);
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	private void onException(Throwable e) {
+		
+		// Override this method.
+		e.printStackTrace();
 	}
 }
