@@ -91,6 +91,8 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathErrorCode = null;
 	private static XPathExpression xpathErrorMessage = null;
 	private static XPathExpression xpathContextsResponse = null;
+	private static XPathExpression xpathTextTagStartPosition = null;
+	private static XPathExpression xpathCurrentTextPosition = null;
 	
 	/**
 	 * Regular expression.
@@ -144,6 +146,8 @@ public class XdebugClientResponse {
 			xpathErrorCode = xpath.compile("/response/error/@code");
 			xpathErrorMessage = xpath.compile("/response/error/message/text()");
 			xpathContextsResponse = xpath.compile("/response/*");
+			xpathTextTagStartPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='tagStartPosition']/text()");
+			xpathCurrentTextPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='position']/text()");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -412,7 +416,7 @@ public class XdebugClientResponse {
 	        	rootElement.appendChild(stateElement);
 
 	        	// Add process ID.
-        		createPropertyValueElement(xml, stateElement, "processId", INTEGER_TYPE_NAME, processIdValue -> {
+        		createPropertyValueElement(xml, "processId", INTEGER_TYPE_NAME, processIdValue -> {
 	        		
 		        	long processId = state.processId;
 		        	String processIdText = String.valueOf(processId);
@@ -423,7 +427,7 @@ public class XdebugClientResponse {
 	        	});
 	        	
 	        	// Add process name.
-        		createPropertyValueElement(xml, stateElement, "processName", STRING_TYPE_NAME, processNameValue -> {
+        		createPropertyValueElement(xml, "processName", STRING_TYPE_NAME, processNameValue -> {
 	        		
 		        	String processName = state.processName;
 		        	
@@ -433,7 +437,7 @@ public class XdebugClientResponse {
 	        	});
         		
 	        	// Add thread ID.
-        		createPropertyValueElement(xml, stateElement, "threadId", INTEGER_TYPE_NAME, threadIdValue -> {
+        		createPropertyValueElement(xml, "threadId", INTEGER_TYPE_NAME, threadIdValue -> {
 	        		
     	            long threadId = state.threadId;
     	            String threadIdText = String.valueOf(threadId);
@@ -444,7 +448,7 @@ public class XdebugClientResponse {
 	        	});
         		
 	        	// Add thread name.
-        		createPropertyValueElement(xml, stateElement, "threadName", STRING_TYPE_NAME, threadNameValue -> {
+        		createPropertyValueElement(xml, "threadName", STRING_TYPE_NAME, threadNameValue -> {
 	        		
 		        	String threadName = state.threadName;
 		        	
@@ -476,7 +480,7 @@ public class XdebugClientResponse {
     	        		}
     	        		
     	        		if (resourceId != null) {
-    	        			createPropertyValueElement(xml, sourceElement, "resourceId", INTEGER_TYPE_NAME, resourceIdValue -> {
+    	        			createPropertyValueElement(xml, "resourceId", INTEGER_TYPE_NAME, resourceIdValue -> {
     	        				String resourceIdText = String.valueOf(resourceId);
     	        				resourceIdValue.setTextContent(resourceIdText);
     	        				sourceElement.appendChild(resourceIdValue);
@@ -484,7 +488,7 @@ public class XdebugClientResponse {
     	        		}
     	        		
        	        		if (slotId != null) {
-    	        			createPropertyValueElement(xml, sourceElement, "slotId", INTEGER_TYPE_NAME, slotIdValue -> {
+    	        			createPropertyValueElement(xml, "slotId", INTEGER_TYPE_NAME, slotIdValue -> {
     	        				String slotIdText = String.valueOf(slotId);
     	        				slotIdValue.setTextContent(slotIdText);
     	        				sourceElement.appendChild(slotIdValue);
@@ -498,6 +502,59 @@ public class XdebugClientResponse {
 	        });
         }
 
+        // Create and return new packet.
+		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
+		return propertyPacket;
+	}
+	
+	/**
+	 * Create and return response object with Area Server text replacement properties.
+	 * @param command
+	 * @param state
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createAreaServerTextStateResult(XdebugCommand command, AreaServerState state)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "property_get");
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        // Create property tree.
+        if (state != null) {
+        	
+	        createPropertyElement(xml, state, "areaServerTextState", textStateElement -> {
+	        	rootElement.appendChild(textStateElement);
+	        	
+	        	// Add tag position.
+        		createPropertyValueElement(xml, "tagStartPosition", INTEGER_TYPE_NAME, processIdValue -> {
+	        		
+        			String tagStartPositionText = String.valueOf(state.tagStartPosition);
+		        	processIdValue.setTextContent(tagStartPositionText);
+		        	textStateElement.appendChild(processIdValue);
+	        	});
+        		
+	        	// Add Area Server current text position.
+        		createPropertyValueElement(xml, "position", INTEGER_TYPE_NAME, processIdValue -> {
+	        		
+        			String positionText = String.valueOf(state.position);
+		        	processIdValue.setTextContent(positionText);
+		        	textStateElement.appendChild(processIdValue);
+	        	});
+	        	return true;
+	        });
+        }
+        
         // Create and return new packet.
 		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
 		return propertyPacket;
@@ -527,11 +584,10 @@ public class XdebugClientResponse {
 	/**
 	 * Create property value XML element.
 	 * @param xml
-	 * @param value
 	 * @param propertyName
 	 * @param typeName
 	 */
-	private static void createPropertyValueElement(Document xml, Object value, String propertyName, String typeName, Consumer<Element> elementLambda) {
+	private static void createPropertyValueElement(Document xml, String propertyName, String typeName, Consumer<Element> elementLambda) {
 		
 		Element propertyElement = xml.createElement("property");
 		propertyElement.setAttribute("name", propertyName);
@@ -1087,6 +1143,40 @@ public class XdebugClientResponse {
 			onThrownException(e);
 		}
 		return state;
+	}
+	
+	/**
+	 * Get Area Server text state.
+	 * @return
+	 * @throws Exception 
+	 */
+	public XdebugAreaServerTextState getXdebugAreaTextState()
+			throws Exception {
+		
+		// Check command name.
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"property_get".equals(commandName)) {
+			onThrownException("org.maclan.server.messageBadXdebugCommandName", "property_get", commandName);
+		}
+		
+		XdebugAreaServerTextState textState = new XdebugAreaServerTextState();
+		try {
+			// Get tag start position. 
+			String valueText = (String) xpathTextTagStartPosition.evaluate(xml, XPathConstants.STRING);
+			if (!valueText.isEmpty()) {
+				textState.setTagStartPosition(Integer.parseInt(valueText));
+			}
+			
+			// Get Area Server current text position. 
+			valueText = (String) xpathCurrentTextPosition.evaluate(xml, XPathConstants.STRING);
+			if (!valueText.isEmpty()) {
+				textState.setPosition(Integer.parseInt(valueText));
+			}
+		}
+		catch (Exception e) {
+			onThrownException(e);
+		}
+		return textState;
 	}
 
 	/**

@@ -28,7 +28,7 @@ import org.multipage.util.Lock;
 import org.multipage.util.Resources;
 
 /**
- * Xdebug probe for Area Server (a client connected to the XdebugServer).
+ * Xdebug client for Area Server (a client connected to the XdebugServer).
  * @author vakol
  *
  */
@@ -482,20 +482,20 @@ public class XdebugClient {
 	}
 	
 	/**
-	 * An Xdebug probe that accepts incomming commands and sends responses to them. It can also stop the connection.
+	 * An Xdebug client that accepts incomming commands and sends responses to them. It can also stop the connection.
 	 * @param areaServer
 	 * @param command
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugClientResponse xdebugProbe(AreaServer areaServer, XdebugCommand command)
+	public XdebugClientResponse xdebugClient(AreaServer areaServer, XdebugCommand command)
 			throws Exception {
 		
 		// Get command name.
 		String name = command.getName();
 		String commandName = name;
 		
-		// Rules for incomming commands that are processed with the debugging probe.
+		// Rules for incomming commands that are processed with the debugging client.
 		
 		// On getting the Xdebug feature.
 		if ("feature_get".equals(commandName)) {
@@ -758,12 +758,16 @@ public class XdebugClient {
 		int areaServerContextId = CONTEXTS.get(AREA_SERVER_CONTEXT);
 		if (contextId == areaServerContextId) {
 			
+			AreaServerState state = areaServer.state;
+
 			switch (propertyName) {
-			
 			// Get Area Server state.
 			case "area_server_state":
-				AreaServerState state = areaServer.state;
 				response = XdebugClientResponse.createAreaServerStateResult(command, state);
+				break;
+			// Get Area Server text replacement.
+			case "area_server_text_state":
+				response = XdebugClientResponse.createAreaServerTextStateResult(command, state);
 				break;
 			}
 		}

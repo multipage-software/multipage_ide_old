@@ -552,9 +552,6 @@ public class PacketSession {
 			clientSocketChannel.shutdownOutput();
 			clientSocketChannel.shutdownInput();
 			clientSocketChannel.close();
-			
-			// TODO: <---DEBUG Display closing thread name.
-			j.log(1, Color.WHITE, "Closing thread: %s. Client socket: %d. Is open %b.", Thread.currentThread().getName(), clientSocketChannel.hashCode(), clientSocketChannel.isOpen());
 		}
 		catch (Exception e) {
 			e.printStackTrace();

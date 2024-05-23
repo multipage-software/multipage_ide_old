@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -61,9 +60,9 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import org.maclan.server.AreaServerSignal;
-import org.maclan.server.AreaServerState;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugListenerSession;
+import org.maclan.server.XdebugAreaServerTextState;
 import org.maclan.server.XdebugClientParameters;
 import org.maclan.server.XdebugClientResponse;
 import org.maclan.server.XdebugListenerSession;
@@ -97,6 +96,12 @@ public class DebugViewer extends JFrame {
 	 * GUI watchdog timeout in ms.
 	 */
 	private static final int WATCHDOG_TIMEOUT_MS = 1000;
+	
+	/**
+	 * Interlinear annotation characters.
+	 */
+	private static final char INTERLINEAR_ANNOTATION_ANCHOR = '\uFFF9';
+	private static final char INTERLINEAR_ANNOTATION_TERMINATOR = '\uFFFB';
 	
 	/**
 	 * Xdebug process node.
@@ -477,6 +482,11 @@ public class DebugViewer extends JFrame {
 	 * Threads tree root node.
 	 */
 	private DefaultMutableTreeNode threadsRootNode = null;
+	
+	/**
+	 * Current raw source code received from the Xdebug client.
+	 */
+	private String rawSourceCode = null;
 
 	// $hide<<$
 	
@@ -1325,7 +1335,10 @@ public class DebugViewer extends JFrame {
 			
 			// Load the Xdebug session source code from client.
 			xdebugSession.ref.source(sourceCode -> {
-
+				
+				// Remember current raw source code from Xdebug client.
+				rawSourceCode = sourceCode;
+				// Display source code in text panel.
 				displaySourceCode(debuggedAreaName, sourceCode);
 			});
 			
@@ -1334,18 +1347,24 @@ public class DebugViewer extends JFrame {
 				
 				xdebugSession.ref.loadAreaServerState(state);
 			});
+			
+			// Load Area Server text state from Xdebug client. Update source code highlights.
+			xdebugSession.ref.getAreaServerTextState(textState -> {
+				
+				displaySourceCodeTextState(rawSourceCode, textState);
+			});
 		}
 		catch (Exception e) {
 			onException(e);
 		}		
 	}
-		
+
 	/**
 	 * Display source code.
-	 * @param header
+	 * @param caption
 	 * @param sourceCode
 	 */
-	public void displaySourceCode(String header, String sourceCode) {
+	public void displaySourceCode(String caption, String sourceCode) {
 		
 		// Split the source code into lines
 		String [] inputLines = sourceCode.split("\n");
@@ -1356,7 +1375,7 @@ public class DebugViewer extends JFrame {
 		codeLines = new LinkedList<String>();
 		
 		// Display source
-		displaySourceCode(header, new DisplayCodeInterface() {
+		displaySourceCode(caption, new DisplayCodeInterface() {
 			
 			@Override
 			public String line() {
@@ -1375,32 +1394,47 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Get area server state.
-	 * @param onStateLambda
-	 * @throws Exception
+	 * Display the source code form Xdebug client with highlighted Area Server text states.
+	 * @param rawSourceCode
+	 * @param textState
 	 */
-	public void getAreaServerState(Consumer<AreaServerState> onStateLambda)
-			throws Exception {
+	private void displaySourceCodeTextState(String rawSourceCode, XdebugAreaServerTextState textState) {
 		
+		// Initializaction.
+		String sourceCode = null;
 		
+		// Mark tag start position and current Area Server text poition in source code.
+		int tagStartPosition = textState.getTagStartPosition();
+		int position = textState.getPosition();
+		int sourceLength = rawSourceCode.length();
+		
+		if (tagStartPosition >= 0 && position >= 0 && tagStartPosition <= position
+			&& tagStartPosition <= sourceLength && position <= sourceLength) {
+			
+			// Put anchor and terminator into the source code.
+			sourceCode = Utility.insertCharacter(rawSourceCode, tagStartPosition, INTERLINEAR_ANNOTATION_ANCHOR);
+			sourceCode = Utility.insertCharacter(sourceCode, position, INTERLINEAR_ANNOTATION_TERMINATOR);
+		}
+		
+		// Do not use text highlights.
+		if (sourceCode == null) {
+			sourceCode = rawSourceCode;
+		}
+		
+		// Display the source code.
+		String caption = "";
+		if (currentSession != null) {
+			caption = currentSession.getAreaName();
+		}
+		displaySourceCode(caption, sourceCode);
 	}
 	
 	/**
-	 * Invoked whenever the debug session state changes.
-	 * @param debugger 
-	 * @param ready
-	 */
-	public void onSessionStateChanged(DebugListener debugger, boolean ready) {
-		
-		// TODO: <---DEBUGGER FINISH IT OR REMOVE IT
-	}
-
-	/**
 	 * Displays source code. The callback is utilized for miscellaneous code sources
-	 * @param header 
+	 * @param caption 
 	 * @param callbacks
 	 */
-	private void displaySourceCode(String header, DisplayCodeInterface callbacks) {
+	private void displaySourceCode(String caption, DisplayCodeInterface callbacks) {
 		
 		final String tabulator = "&nbsp;&nbsp;&nbsp;&nbsp;";
 		
@@ -1423,13 +1457,16 @@ public class DebugViewer extends JFrame {
 				+ ".code {"
 				+ "		font-family: Monospaced;"
 				+ "}"
+				+ ".currentReplacement {"
+				+ "    background-color: #DDDDDD;"
+				+ "}"
 				+ "</style>"
 				+ "</head>"
 				+ "<body>";
 		
 		// Display header
-		if (header != null) {
-			code += String.format("<div id='header'><center>%s</center></div>", header);
+		if (caption != null) {
+			code += String.format("<div id='header'><center>%s</center></div><div class='code'>", caption);
 		}
 		
 		// Display lines
@@ -1451,11 +1488,14 @@ public class DebugViewer extends JFrame {
         	String linoText = String.format("% 3d ", lineNumber);
         	linoText = linoText.replaceAll("\\s", "&nbsp;");
         	
-    		code += String.format("<span class='lino'>%s</span>&nbsp;<span id='line%d' class='code'>%s</span><br>", linoText, lineNumber, inputLine);
+        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_ANCHOR + "", "<span class='currentReplacement'>");
+        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_TERMINATOR + "", "</span>");
+        	
+    		code += String.format("<span class='lino'>%s</span>&nbsp;%s<br>", linoText, inputLine);
     		lineNumber++;
         }
 
-		code += "</body>"
+		code += "</div></body>"
 				+ "</html>";
 		
 		// Display code (preserve scroll position)
@@ -1489,7 +1529,7 @@ public class DebugViewer extends JFrame {
 		}
 		
 		try {
-			// Send command to Xdebug probe.
+			// Send command to Xdebug client.
 			int transactionId = currentSession.createTransaction("expr", null, command, response -> {
 				
 				try {

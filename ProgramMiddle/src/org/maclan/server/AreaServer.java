@@ -3737,8 +3737,8 @@ public class AreaServer {
 						return null;
 					}
 					
-					// Process incomming Xdebug commands with the Xdebug probe.
-					XdebugClientResponse resultPacket = state.debugClient.xdebugProbe(AreaServer.this, command);
+					// Process incomming Xdebug commands with the Xdebug client.
+					XdebugClientResponse resultPacket = state.debugClient.xdebugClient(AreaServer.this, command);
 					
 					// Return the packet to be sent to the debugger server (ie. the IDE that can display the debug information).
 					return resultPacket;

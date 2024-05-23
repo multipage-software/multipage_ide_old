@@ -6319,4 +6319,22 @@ public class Utility {
 		bytesString += ']';
 		return bytesString;
 	}
+	
+	/**
+	 * Insert character at given position in string.
+	 * @param text
+	 * @param position
+	 * @param character
+	 * @return
+	 */
+	public static String insertCharacter(String text, int position, char character) {
+		
+		int length = text.length();
+		if (position < 0 || position > length) {
+			return text;
+		}
+		
+		text = text.substring(0, position) + character + text.substring(position, length);
+		return text;
+	}
 }

@@ -560,7 +560,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
-	 * Send IDE features to the debugging client (the debugging probe).
+	 * Send IDE features to the debugging client.
 	 * @param ideFeatureValues
 	 * @param onComplete
 	 * @throws Exception 
@@ -862,7 +862,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private void negotiateXdebugFeatures(Runnable onComplete) 
 			throws Exception {
 		
-		// Get Xdebug client (the debugging probe) features and save them into the session state.
+		// Get Xdebug client features and save them into the session state.
 		loadFeaturesFromClient(
 				"language_supports_threads", 
 				"language_name", 
@@ -885,7 +885,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 				"supports_postmortem", 
 				"show_hidden");		
 		
-		// Send IDE features to the client (the debugging probe).
+		// Send IDE features to the client.
 		sendIdeFeaturesToClient(new String [][] {
 			    {"encoding", "UTF-8"},
 				{"multiple_sessions", "1"},
@@ -1043,7 +1043,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 			throws Exception {
 
 		try {
-			// Get Debugger context ID.
+			// Get debugger context ID.
 			if (contextNameMap == null) {
 				onThrownException("org.maclan.server.messageXdebugContextsNotLoaded");
 			}
@@ -1077,6 +1077,47 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
+	 * Get area server text replacement state.
+	 * @param areaServerTextStateLambda
+	 * @throws Exception 
+	 */
+	public void getAreaServerTextState(Consumer<XdebugAreaServerTextState> areaServerTextStateLambda)
+			throws Exception {
+		
+		try {
+			// Get debugger context ID.
+			if (contextNameMap == null) {
+				onThrownException("org.maclan.server.messageXdebugContextsNotLoaded");
+			}
+			
+			Integer debuggerContextId = contextNameMap.get(XdebugClient.AREA_SERVER_CONTEXT);
+			if (debuggerContextId == null) {
+				onThrownException("org.maclan.server.messageCannotGetXdebugAreaServerContext");
+			}
+			String debuggerContextIdText = String.valueOf(debuggerContextId);
+			
+			// Get Area Server text state.
+			int transactionId = createTransaction("property_get",
+					new String [][] {{"-n", "area_server_text_state"},
+									 {"-c", debuggerContextIdText}}, response -> {
+				
+				// Process Area Server state response.
+				try {
+					XdebugAreaServerTextState textState = response.getXdebugAreaTextState();
+					areaServerTextStateLambda.accept(textState);
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+			beginTransaction(transactionId);			
+		}
+		catch (Exception e) {
+			onThrownException(e);
+		}			
+	}
+	
+	/**
 	 * Load Area Server state.
 	 * @param areaServerState
 	 */
@@ -1088,7 +1129,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 		String threadName = areaServerState.getThreadName();
 		this.clientParameters.setThreadName(threadName);
 	}
-
+	
 	/**
 	 * Check whether input object is equal to current object.
 	 */
