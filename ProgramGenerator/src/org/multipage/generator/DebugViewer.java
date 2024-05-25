@@ -1353,6 +1353,12 @@ public class DebugViewer extends JFrame {
 				
 				displaySourceCodeTextState(rawSourceCode, textState);
 			});
+			
+			// Load Area Server stack.
+			xdebugSession.ref.stackGet(stack -> {
+				
+				//displayStack(stack);
+			});
 		}
 		catch (Exception e) {
 			onException(e);
@@ -1413,7 +1419,7 @@ public class DebugViewer extends JFrame {
 			
 			// Put anchor and terminator into the source code.
 			sourceCode = Utility.insertCharacter(rawSourceCode, tagStartPosition, INTERLINEAR_ANNOTATION_ANCHOR);
-			sourceCode = Utility.insertCharacter(sourceCode, position, INTERLINEAR_ANNOTATION_TERMINATOR);
+			sourceCode = Utility.insertCharacter(sourceCode, position + 1, INTERLINEAR_ANNOTATION_TERMINATOR);
 		}
 		
 		// Do not use text highlights.
@@ -1458,7 +1464,8 @@ public class DebugViewer extends JFrame {
 				+ "		font-family: Monospaced;"
 				+ "}"
 				+ ".currentReplacement {"
-				+ "    background-color: #DDDDDD;"
+				+ "     background-color: #DD0000;"
+				+ "		color: #FFFFFF;"
 				+ "}"
 				+ "</style>"
 				+ "</head>"

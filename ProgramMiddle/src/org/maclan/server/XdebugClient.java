@@ -13,6 +13,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -584,6 +585,12 @@ public class XdebugClient {
 			XdebugClientResponse resultPacket = getContinuationCommandResponse(command, areaServer);
             return resultPacket;
 		}
+		else if ("stack_get".equals(commandName)) {
+			
+			// Get stop response.
+			XdebugClientResponse resultPacket = getStackGetResponse(command, areaServer);
+            return resultPacket;
+		}
         
 		return null;
 	}
@@ -814,6 +821,31 @@ public class XdebugClient {
 		
 		// Create response packet.
 		XdebugClientResponse runResponse = XdebugClientResponse.createContinuationCommandResult(command);
+		return runResponse;
+	}
+	
+	/**
+	 * On stack get command. Creates command response.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugClientResponse getStackGetResponse(XdebugCommand command, AreaServer areaServer)
+			throws Exception {
+		
+		// Get stack list.
+		LinkedList<XdebugAreaServerStackLevel> stack = new LinkedList<XdebugAreaServerStackLevel>();
+		AreaServerState state = areaServer.state;
+		stack.add(new XdebugAreaServerStackLevel(state));
+		
+		while (state.parentState != null) {
+			state = state.parentState;
+			stack.add(new XdebugAreaServerStackLevel(state));
+		}
+		
+		// Create response packet.
+		XdebugClientResponse runResponse = XdebugClientResponse.createStackGetResult(command, stack);
 		return runResponse;
 	}
 

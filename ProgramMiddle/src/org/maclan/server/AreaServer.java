@@ -6314,10 +6314,14 @@ public class AreaServer {
 
 		// Call processor.
 		String replace = processor.processText(this, innerText.toString(), properties);
-		state.text.replace(state.tagStartPosition, parser.getPosition(), replace);
+		state.position = parser.getPosition();
 		
+		// Xdebug point.
+		debugPoint();
+		
+		// Replace statement with its result.
+		state.text.replace(state.tagStartPosition, state.position, replace);
 		state.position = state.tagStartPosition;
-
 		return true;
 	}
 	

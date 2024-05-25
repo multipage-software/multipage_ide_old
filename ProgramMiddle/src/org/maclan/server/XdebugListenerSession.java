@@ -15,6 +15,7 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -1115,6 +1116,34 @@ public class XdebugListenerSession extends DebugListenerSession {
 		catch (Exception e) {
 			onThrownException(e);
 		}			
+	}
+	
+	/**
+	 * Get Area Server stack trace.
+	 * @param areaServerStackLambda
+	 * @throws Exception 
+	 */
+	public void stackGet(Consumer<LinkedList<XdebugAreaServerStackLevel>> areaServerStackLambda)
+			throws Exception {
+		
+		try {
+			// Get Area Server text state.
+			int transactionId = createTransaction("stack_get", null, response -> {
+				
+				// Process Area Server state response.
+				try {
+					LinkedList<XdebugAreaServerStackLevel> stack = response.getXdebugAreaStack();
+					areaServerStackLambda.accept(stack);
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+			beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onThrownException(e);
+		}
 	}
 	
 	/**
