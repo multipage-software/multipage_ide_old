@@ -97,8 +97,12 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathContextsResponse = null;
 	private static XPathExpression xpathTextTagStartPosition = null;
 	private static XPathExpression xpathCurrentTextPosition = null;
-	private static XPathExpression xpathStackRootNode = null;
+	private static XPathExpression xpathStackRootNodes = null;
+	private static XPathExpression xpathRelativeStackLevel = null;
+	private static XPathExpression xpathRelativeStackType = null;
 	private static XPathExpression xpathRelativeStackCmdBegin = null;
+	private static XPathExpression xpathRelativeStackCmdEnd = null;
+	private static XPathExpression xpathRelativeSourceCode = null;
 	
 	/**
 	 * Regular expression.
@@ -154,7 +158,12 @@ public class XdebugClientResponse {
 			xpathContextsResponse = xpath.compile("/response/*");
 			xpathTextTagStartPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='tagStartPosition']/text()");
 			xpathCurrentTextPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='position']/text()");
-			xpathStackRootNode = xpath.compile("/response/stack[1]");
+			xpathStackRootNodes = xpath.compile("/response/*");
+			xpathRelativeStackLevel = xpath.compile("@level");
+			xpathRelativeStackType = xpath.compile("@type");
+			xpathRelativeStackCmdBegin = xpath.compile("@cmdbegin");
+			xpathRelativeStackCmdEnd = xpath.compile("@cmdend");
+			xpathRelativeSourceCode = xpath.compile("input/text()");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -697,25 +706,25 @@ public class XdebugClientResponse {
         rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
         xml.appendChild(rootElement);
         
-        int levelNumber = 0;
-        Element parentElement = rootElement;
-        
         for (XdebugAreaServerStackLevel stackLevel : stack) {
         	
         	// Create stack XML element.
         	Element stackElement = xml.createElement("stack");
         	
         	// Set level attribute of the stack element.
-        	String levelText = String.valueOf(levelNumber);
+        	int level = stackLevel.getLevel();
+        	String levelText = String.valueOf(level);
         	stackElement.setAttribute("level", levelText);
-        	stackElement.setAttribute("type", "eval");
+        	
+        	String type = stackLevel.getType();
+        	stackElement.setAttribute("type", type);
         	
         	// Set Area Server state. The tag start position and current text position.
-        	int tagStartPosition = stackLevel.getTagStartPosition();
+        	int tagStartPosition = stackLevel.getCmdBegin();
         	String tagStartPositionText = String.valueOf(tagStartPosition);
         	stackElement.setAttribute("cmdbegin", tagStartPositionText);
         	
-        	int position = stackLevel.getPosition();
+        	int position = stackLevel.getCmdEnd();
         	String positionText = String.valueOf(position);
         	stackElement.setAttribute("cmdend", positionText);
         	
@@ -728,10 +737,7 @@ public class XdebugClientResponse {
         	stackElement.appendChild(inputElement);
         	
         	// Append stack element to its parent element.
-        	parentElement.appendChild(stackElement);
-        	
-        	parentElement = stackElement;
-        	levelNumber++;
+        	rootElement.appendChild(stackElement);
         }
         
         // Create and return new packet.
@@ -1270,18 +1276,37 @@ public class XdebugClientResponse {
 		}
 		
 		LinkedList<XdebugAreaServerStackLevel> stack = new LinkedList<>();
+		
 		try {
 			// Get stack root, i.e. the current stack level which is level 0.
-			Node stackNode = (Node) xpathStackRootNode.evaluate(xml, XPathConstants.NODE);
-			while (stackNode != null) {
-				
-				// TODO: <---TODAY MAKE Create new stack level object from XML stack node.
-//				xpathRelativeStackCmdBegin
-//				XdebugAreaServerStackLevel stackLevel = new XdebugAreaServerStackLevel();
-			}
+			NodeList stackNodes = (NodeList) xpathStackRootNodes.evaluate(xml, XPathConstants.NODESET);
+			int nodeCount = stackNodes.getLength();
 			
-			// TODO: <---BREAK
-			j.log("BREAK");
+			for (int index = 0; index < nodeCount; index++) {
+				
+				Node stackNode = stackNodes.item(index);
+				String nodeName = stackNode.getNodeName();
+				if (!"stack".equals(nodeName)) {
+					onThrownException("org.maclan.server.messageXdebugProtocolExpectingStackNode", nodeName);
+				}
+				
+				// Create new stack level object from XML stack node.
+				String textValue = (String) xpathRelativeStackLevel.evaluate(stackNode, XPathConstants.STRING);
+				int level = Integer.valueOf(textValue);
+				
+				String type = (String) xpathRelativeStackType.evaluate(stackNode, XPathConstants.STRING);
+				
+				textValue = (String) xpathRelativeStackCmdBegin.evaluate(stackNode, XPathConstants.STRING);
+				int cmdBegin = Integer.valueOf(textValue);
+				
+				textValue = (String) xpathRelativeStackCmdEnd.evaluate(stackNode, XPathConstants.STRING);
+				int cmdEnd = Integer.valueOf(textValue);
+				
+				String sourceCode = (String) xpathRelativeSourceCode.evaluate(stackNode, XPathConstants.STRING);
+				
+				XdebugAreaServerStackLevel stackLevel = new XdebugAreaServerStackLevel(level, type, cmdBegin, cmdEnd, sourceCode);
+				stack.add(stackLevel);
+			}
 		}
 		catch (Exception e) {
 			onThrownException(e);

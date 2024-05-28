@@ -228,8 +228,8 @@
     <height>330</height>
   </java.awt.Rectangle>
   <java.awt.Rectangle>
-    <x>260</x>
-    <y>130</y>
+    <x>286</x>
+    <y>129</y>
     <width>1200</width>
     <height>806</height>
   </java.awt.Rectangle>
@@ -262,7 +262,7 @@
       </columns>
     </program.localizer.LocalizerItem>
   </linked-list>
-  <int>2</int>
+  <int>1</int>
   <java.awt.Rectangle>
     <x>606</x>
     <y>289</y>

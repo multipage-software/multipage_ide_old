@@ -6,6 +6,7 @@
  */
 package org.maclan.server;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -27,6 +28,7 @@ import org.multipage.gui.PacketSymbol;
 import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * Xdebug client for Area Server (a client connected to the XdebugServer).
@@ -837,11 +839,14 @@ public class XdebugClient {
 		// Get stack list.
 		LinkedList<XdebugAreaServerStackLevel> stack = new LinkedList<XdebugAreaServerStackLevel>();
 		AreaServerState state = areaServer.state;
-		stack.add(new XdebugAreaServerStackLevel(state));
 		
-		while (state.parentState != null) {
+		int levelNumber = 0;
+		while (state != null) {
+			
+			stack.add(new XdebugAreaServerStackLevel(levelNumber, "eval", state));
+			
 			state = state.parentState;
-			stack.add(new XdebugAreaServerStackLevel(state));
+			levelNumber++;
 		}
 		
 		// Create response packet.
