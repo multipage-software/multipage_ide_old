@@ -197,7 +197,7 @@ public class GeneratorMain {
 		ProgramBasic.setUseLogin(useLogin);
 
 		// Initialize area server.
-		AreaServer.init();
+		AreaServer.initialize();
 		
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.

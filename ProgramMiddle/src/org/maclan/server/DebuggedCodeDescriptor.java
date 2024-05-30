@@ -17,33 +17,38 @@ public class DebuggedCodeDescriptor {
 	/**
 	 * Determines source of debugged code.
 	 */
-	public TagsSource tagsSource = null;
+	private TagsSource tagsSource = null;
 	
 	/**
 	 * Debugged tag name.
 	 */
-	public String tagName = null;
+	private String tagName = null;
 	
 	/**
 	 * Debugged tag properties.
 	 */
-	public Properties properties = null;
+	private Properties properties = null;
 	
 	/**
 	 * Start position for replacement.
 	 */
-	public int start = -1;
+	private int cmdBegin = -1;
 	
 	/**
 	 * Stop position for replacement.
 	 */	
-	public int stop = -1;
+	private int cmdEnd = -1;
+	
+	/**
+	 * Inner text.
+	 */
+	private String innerText = null;
 	
 	/**
 	 * Current replacement text.
 	 */
-	public String replacement = null;
-
+	private String replacement = null;
+	
 	/**
 	 * Set debugged code properties. 
 	 * @param tagsSource
@@ -67,8 +72,55 @@ public class DebuggedCodeDescriptor {
 		
 		this.tagName = tagName;
 		this.properties = properties;
-		this.start = start;
-		this.stop = stop;
+		this.cmdBegin = start;
+		this.cmdEnd = stop;
 		this.replacement = replacement;
+	}
+	
+	/**
+	 * Set debugged code properties.
+	 * @param tagName
+	 * @param properties
+	 * @param start
+	 * @param stop
+	 * @param innerText
+	 * @param replacement
+	 */
+	public void set(String tagName, Properties properties, int start, int stop, String innerText,
+			String replacement) {
+		
+		this.tagName = tagName;
+		this.properties = properties;
+		this.cmdBegin = start;
+		this.cmdEnd = stop;
+		this.innerText = innerText;
+		this.replacement = replacement;		
+	}
+	
+	/**
+	 * Get tags source.
+	 * @return
+	 */
+	public TagsSource gatTagsSource() {
+		
+		return tagsSource;
+	}
+
+	/**
+	 * Get command begin position.
+	 * @return
+	 */
+	public int getCmdBegin() {
+		
+		return cmdBegin;
+	}
+
+	/**
+	 * Get command end position.
+	 * @return
+	 */
+	public int getCmdEnd() {
+		
+		return cmdEnd;
 	}
 }

@@ -7,9 +7,6 @@
 
 package org.maclan.server;
 
-import java.util.*;
-
-
 /**
  * @author
  *
@@ -21,7 +18,7 @@ public class ComplexSingleTagProcessor {
 	 * @param area 
 	 * @param properties 
 	 */
-	public String processTag(AreaServer server, Properties properties) throws Exception {
+	public String processTag(AreaServer server, TagProperties properties) throws Exception {
 		
 		// Override this method.
 		return "";

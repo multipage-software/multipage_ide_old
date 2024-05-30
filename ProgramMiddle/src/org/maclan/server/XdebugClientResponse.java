@@ -483,8 +483,8 @@ public class XdebugClientResponse {
             	createPropertyElement(xml, descriptor, "debuggedCodeDescriptor", descriptorElement -> {
             		stateElement.appendChild(descriptorElement);
             		
-            		TagsSource tagsSource = descriptor.tagsSource;
-                	if (descriptor.tagsSource == null) {
+            		TagsSource tagsSource = descriptor.gatTagsSource();
+                	if (tagsSource == null) {
                 		return false;
                 	}
                 		

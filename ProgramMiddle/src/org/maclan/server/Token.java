@@ -7,8 +7,6 @@
 
 package org.maclan.server;
 
-import java.util.Properties;
-
 /**
  * Token.
  */
@@ -32,7 +30,7 @@ class Token {
 	/**
 	 * Properties.
 	 */
-	Properties properties = new Properties();
+	TagProperties properties = new TagProperties();
 	
 	/**
 	 * Constructor.
@@ -64,7 +62,7 @@ class Token {
 	 * @param properties 
 	 * @param ref 
 	 */
-	public Token(int type, int start, int end, Properties properties) {
+	public Token(int type, int start, int end, TagProperties properties) {
 
 		this(type, start, end);
 

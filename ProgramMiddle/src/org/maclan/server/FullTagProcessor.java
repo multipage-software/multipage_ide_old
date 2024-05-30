@@ -7,9 +7,6 @@
 
 package org.maclan.server;
 
-import java.util.Properties;
-
-
 /**
  * @author
  *
@@ -21,7 +18,7 @@ public class FullTagProcessor {
 	 * @param server
 	 * @param properties 
 	 */
-	public String processText(AreaServer server, String innerText, Properties properties)
+	public String processText(AreaServer server, String innerText, TagProperties properties)
 		throws Exception {
 		
 		// Override this method.

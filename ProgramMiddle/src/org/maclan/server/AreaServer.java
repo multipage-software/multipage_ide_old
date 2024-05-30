@@ -24,7 +24,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.Properties;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -438,12 +437,12 @@ public class AreaServer {
 
 
 	/**
-	 * Static constructor.
+	 * Initialization of tag processors.
 	 */
-	public static void init() {
+	public static void initialize() {
 		
 		// Simple language tags processors.
-		simpleLanguagesTagsProcessors();
+		simpleLanguageTagsProcessors();
 		// Area processor.
 		areaProcessor();
 		// Resource processor.
@@ -476,8 +475,16 @@ public class AreaServer {
 		packProcessor();
 		// Block processor.
 		blockProcessor();
+		// Loop processor.
+		loopProcessor();
+		// List processor.
+		listProcessor();
 		// Last processor.
 		lastProcessor();
+		// Procedure processor.
+		procedureProcessor();
+		// Language list processor.
+		languagelistProcessor();
 		// Trace processor.
 		traceProcessor();
 		// Break processor.
@@ -531,7 +538,7 @@ public class AreaServer {
 		// POST processor
 		postProcessor();
 	}
-	
+
 	/**
 	 * Load area.
 	 * @param request2
@@ -674,7 +681,7 @@ public class AreaServer {
 	/**
 	 * Initialize simple single tag processors.
 	 */
-	private static void simpleLanguagesTagsProcessors() {
+	private static void simpleLanguageTagsProcessors() {
 
 		SimpleSingleTagProcessor processor = new SimpleSingleTagProcessor(){
 			// Process.
@@ -734,6 +741,172 @@ public class AreaServer {
 		simpleSingleTagProcessors.put("LANG_ID", processor);
 		simpleSingleTagProcessors.put("CURRENT_LANG_ID", processor);
 	}
+	
+	/**
+	 * Loop processor.
+	 */
+	private static void loopProcessor() {
+		
+		fullTagProcessors.put("LOOP", new FullTagProcessor() {
+
+			@Override
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
+				
+				server.state.analysis.loop_calls++;
+				
+				// Get "count" value.
+				Long count = server.evaluateProperty(properties, "count", Long.class, null, NULL);
+				
+				// Initialize empty loop flag.
+				boolean emptyLoop = false;
+				
+				// Do infinite loop if the count value is -1.
+				boolean infiniteLoop = count != null && count == -1L;
+				
+				// Check the "count" property.
+				if (count != null && count < -1) {
+					throwError("server.messageCountCannotBeNegative");
+				}
+				
+				// Get "from" value.
+				long from = server.evaluateProperty(properties, "from", Long.class, 0L, DEFAULT);
+				
+				// Get "to" property.
+				Long to = server.evaluateProperty(properties, "to", Long.class, null, NULL);
+				
+				// Get "step" property.
+				long step = server.evaluateProperty(properties, "step", Long.class, 1L, DEFAULT);
+				
+				// Check step property.
+				if (step == 0L) {
+					throwError("server.messageStepValueCannotBeZero");
+				}
+				
+				// If not set, compute "to" value.
+				if (to == null && count != null) {
+					to = from + step * (count - 1);
+				}
+				
+				// Check "to" value.
+				if (to == null) {
+					emptyLoop = true;
+				}
+				
+				// Get divider property.
+				String divider = server.evaluateProperty(properties, "divider", String.class, "", DEFAULT);
+				
+				// Get index variable name.
+				String indexVariableText = properties.getProperty("index");
+				
+				// Get break variable name.
+				String breakVariableText = properties.getProperty("break");
+				
+				// Get discard variable name.
+				String discardVariableText = properties.getProperty("discard");
+				
+				// Compiled text.
+				StringBuilder compiledText = new StringBuilder();
+
+				long index = from;
+				boolean isFirstIteration = true;
+				
+				// Do loop.
+				while (true) {
+					
+					// Check server response timeout.
+					server.checkResponseTimeout();
+					
+					// Break on empty loop.
+					if (emptyLoop) {
+						break;
+					}
+		
+					// Check index.
+					if (!infiniteLoop) {
+						if ((step > 0) && (index > to) || (step < 0) && (index < to)) {
+							break;
+						}
+					}
+					
+					// Push new block.
+					BreakBlockDescriptor block = server.state.blocks.pushNewBreakBlockDescriptor();
+					// Add index variable.
+					if (indexVariableText != null) {
+						block.createBlockVariable(indexVariableText, index);
+					}
+					
+					Variable breakVariable = null;
+					Variable discardVariable = null;
+					
+					// Add break variable.
+		 			if (breakVariableText != null) {
+						breakVariable = block.createBlockVariable(breakVariableText, false);
+						
+						// Add discard variable.
+			 			if (discardVariableText != null) {
+			 				discardVariable = block.createBlockVariable(discardVariableText, false);
+			 			}
+					}
+
+					// Process inner text.
+					String processedInnerText = server.processTextCloned(innerText);
+					
+					// Break.
+					boolean breakLoop = false;
+					boolean discard = false;
+					
+					if (breakVariable != null && breakVariable.value instanceof Boolean) {
+						breakLoop = (Boolean) breakVariable.value;
+					}
+					if (!breakLoop) {
+						breakLoop = block.isBreaked();
+					}
+					
+					// Discard.
+					if (breakLoop) {
+						if (discardVariable != null && discardVariable.value instanceof Boolean) {
+							discard = (Boolean) discardVariable.value;
+						}
+						if (!discard) {
+							discard = block.getDiscard();
+						}
+					}
+		
+					// Pop block.
+					boolean transparent = properties.containsKey("transparent");
+					server.state.blocks.popBlockDescriptor(transparent);
+					
+					if (!discard) {
+						
+						// Add divider text.
+						if (divider != null && !isFirstIteration) {
+							compiledText.append(divider);
+						}
+						
+						// Append processed text.
+						compiledText.append(processedInnerText);
+					}
+					
+					// Break the loop.
+					if (breakLoop) {
+						break;
+					}
+					
+					// Compute new index value.
+					index += step;
+					isFirstIteration = false;
+				}
+				
+				// Get replacement string.
+				String replacement = compiledText.toString();
+				
+				// Wrap into meta information.
+				server.setDebuggedCodeDescriptor("LOOP", properties, server.state.tagStartPosition, server.state.position, replacement);
+				return replacement;
+			}
+		});
+	}
 
 	/**
 	 * Last processor.
@@ -741,9 +914,9 @@ public class AreaServer {
 	private static void lastProcessor() {
 		
 		complexSingleTagProcessors.put("LAST", new ComplexSingleTagProcessor() {
-			// Process break tag.
+			// Process the last tag.
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				
 				// Get top list descriptor.
 				BreakBlockDescriptor listBlock = (BreakBlockDescriptor) server.state.blocks.findFirstDescriptor(
@@ -770,7 +943,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("AREA_NAME", new ComplexSingleTagProcessor() {
 			// Process.
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				Area area = getAreaFromProperties(server, properties, null);
 				String text = area.getDescriptionForced();
 				return (server.state.showLocalizedTextIds && area.isLocalized() ? getIdHtml("A", area.getId()) + text : text);
@@ -779,7 +952,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("AREA_ALIAS", new ComplexSingleTagProcessor() {
 			// Process.
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				Area area = getAreaFromProperties(server, properties, null);
 				String text = area.getAlias();
 				return text;
@@ -788,7 +961,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("AREA_ID", new ComplexSingleTagProcessor() {
 			// Process.
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				Area area = getAreaFromProperties(server, properties, null);
 				return String.valueOf(area.getId());
 			}
@@ -803,7 +976,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("RESOURCE_ID", new ComplexSingleTagProcessor() {
 			// Process
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 
 				Long resourceId = server.getResourceFromProperties(properties).getId();
@@ -814,7 +987,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("RESOURCE_EXT", new ComplexSingleTagProcessor() {
 			// Process
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 
 				Long mimeId = server.getResourceFromProperties(properties).getMimeTypeId();
@@ -826,7 +999,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("RESOURCE_VALUE", new ComplexSingleTagProcessor() {
 			// Process
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				Long resourceId = server.getResourceFromProperties(properties).getId();
@@ -846,7 +1019,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("RESOURCE", new ComplexSingleTagProcessor() {
 			// Process
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				Long resourceId = server.getResourceFromProperties(properties).getId();
@@ -870,7 +1043,7 @@ public class AreaServer {
 	 * @param properties
 	 * @throws Exception
 	 */
-	private Resource getResourceFromProperties(Properties properties)
+	private Resource getResourceFromProperties(TagProperties properties)
 			throws Exception {
 		
 		// Get resource alias.
@@ -904,7 +1077,7 @@ public class AreaServer {
 	 * @return
 	 */
 	protected static Area getAreaFromProperties(AreaServer server,
-			Properties properties, Obj<Boolean> existsAreaSpecification) throws Exception {
+			TagProperties properties, Obj<Boolean> existsAreaSpecification) throws Exception {
 		
 		return getAreaFromProperties(server, properties, "", existsAreaSpecification);
 	}
@@ -924,7 +1097,7 @@ public class AreaServer {
 	 * @return
 	 */
 	protected static Area getAreaFromProperties(AreaServer server,
-			Properties properties, String propertyPrefix, Obj<Boolean> existsAreaSpecification)
+			TagProperties properties, String propertyPrefix, Obj<Boolean> existsAreaSpecification)
 					throws Exception {
 		
 		// Reset flag.
@@ -1046,7 +1219,7 @@ public class AreaServer {
 	 * @return
 	 * @throws Exception
 	 */
-	private static Slot getSlotFromProperties(AreaServer server, Properties properties)
+	private static Slot getSlotFromProperties(AreaServer server, TagProperties properties)
 			throws Exception {
 		
 		// Get slot area.
@@ -1120,7 +1293,7 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("TAG", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 
 				server.state.analysis.tag_calls++;
 				
@@ -1209,7 +1382,7 @@ public class AreaServer {
 					
 					// Add meta information about tag source (which is currently a slot mentioned in TAG).
 					TagsSource source = TagsSource.newSlot(slot.ref.getId());
-					returnedText = server.debugStepPoint(returnedText, source, server.state);
+					server.setDebuggedCodeDescriptor(source, returnedText);
 					
 					return returnedText;
 				}
@@ -1220,7 +1393,7 @@ public class AreaServer {
 			}
 		});
 	}
-	
+
 	/**
 	 * INPUT processor.
 	 */
@@ -1229,7 +1402,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("INPUT", new ComplexSingleTagProcessor() {
 			
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get slot properties.
@@ -1258,7 +1431,7 @@ public class AreaServer {
 		fullTagProcessors.put("OUTPUT", new FullTagProcessor() {
 
 			@Override
-			public String processText(AreaServer server, String innerText, Properties properties)
+			public String processText(AreaServer server, String innerText, TagProperties properties)
 					throws Exception {
 				
 				// Load slot from properties.
@@ -1315,7 +1488,7 @@ public class AreaServer {
 		complexSingleTagProcessors.put("STORE", new ComplexSingleTagProcessor() {
 			
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// TODO: <---FINISH Get area from properties.
@@ -1445,7 +1618,7 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("IMAGE", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				server.state.analysis.image_calls++;
@@ -1540,7 +1713,7 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("VAR", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				server.state.analysis.var_calls++;
@@ -1612,7 +1785,7 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("SET", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				server.state.analysis.set_calls++;
@@ -1666,7 +1839,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("GET", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				server.state.analysis.get_calls++;
@@ -1711,7 +1884,7 @@ public class AreaServer {
 		FullTagProcessor processor = new FullTagProcessor() {
 			@Override
 			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+					TagProperties properties) throws Exception {
 				
 				server.state.analysis.anchor_calls++;
 				
@@ -1878,8 +2051,8 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("URL", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server,
-					Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties)
+					throws Exception {
 				
 				// Get area ID.
 				Area area = getAreaFromProperties(server, properties, null);
@@ -1920,7 +2093,7 @@ public class AreaServer {
 				Long versionId = area.getVersionId();
 				
 				// Get other properties.
-				Properties otherProperties = excludeProperties(properties, areaPropertiesArray, "res", "file", "download", "langId", "langAlias", "localhost");
+				TagProperties otherProperties = excludeProperties(properties, areaPropertiesArray, "res", "file", "download", "langId", "langAlias", "localhost");
 				
 				// Get area URL.
 				String areaUrl = server.getAreaUrl(areaId, languageId, versionId,
@@ -1938,7 +2111,7 @@ public class AreaServer {
 	 * @param objects
 	 * @return
 	 */
-	protected static Properties excludeProperties(Properties properties, Object ... objects) {
+	protected static TagProperties excludeProperties(TagProperties properties, Object ... objects) {
 		
 		// Add reserved properties.
 		HashSet<String> reservedProperties = new HashSet<String>();
@@ -1955,7 +2128,7 @@ public class AreaServer {
 			}
 		}
 		
-		Properties extraProperties = new Properties();
+		TagProperties extraProperties = new TagProperties();
 		for (Object key : properties.keySet()) {
 			
 			// If it is reserved property, continue the loop.
@@ -2036,7 +2209,7 @@ public class AreaServer {
 	 * @param otherProperties
 	 * @return
 	 */
-	public String getAreaUrl(long areaId, Long languageId, Long versionId, Boolean localhost, Properties otherProperties)
+	public String getAreaUrl(long areaId, Long languageId, Long versionId, Boolean localhost, TagProperties otherProperties)
 			throws Exception {
 		
 		if (languageId == null) {
@@ -2112,7 +2285,7 @@ public class AreaServer {
 	 * @throws Exception
 	 */
 	public String getRenderedAreaUrl(long areaId, Long languageId,
-			Long versionId, Properties otherProperties) throws Exception {
+			Long versionId, TagProperties otherProperties) throws Exception {
 
 		try {
 			// Get file name.
@@ -2285,7 +2458,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("USING", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get area from the command properties.
@@ -2396,7 +2569,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("RENDER_CLASS", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				if (server.isRendering() && server.state.response != null) {
@@ -2421,8 +2594,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("VERSION_ANCHOR", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Get version URL.
 				Obj<Boolean> existsAreaSpecification = new Obj<Boolean>();
@@ -2453,7 +2626,7 @@ public class AreaServer {
 	 * @param string
 	 * @return
 	 */
-	protected static String getExtraProperties(Properties properties,
+	protected static String getExtraProperties(TagProperties properties,
 			Object ... objects) {
 		
 		
@@ -2492,7 +2665,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("VERSION_URL", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get version URL.
@@ -2506,7 +2679,7 @@ public class AreaServer {
 				long versionId = area.getVersionId();
 				
 				// Other properties.
-				Properties otherProperties = excludeProperties(properties, null, areaPropertiesArray);
+				TagProperties otherProperties = excludeProperties(properties, null, areaPropertiesArray);
 				
 				// Get area URL.
 				String areaUrl = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, versionId, null, otherProperties);
@@ -2522,7 +2695,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("VERSION_NAME", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Initialize version object.
@@ -2555,7 +2728,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("VERSION_ID", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Initialize version object.
@@ -2589,7 +2762,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("TIMEOUT", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Initialization.
@@ -2682,7 +2855,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("BOOKMARK", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get the "name" property.
@@ -2721,8 +2894,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("REPLACE_BOOKMARK", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Get name property.
 				String name = properties.getProperty("name");
@@ -2733,7 +2906,7 @@ public class AreaServer {
 				}
 				else {
 					// Get first property name.
-					Enumeration keys = properties.keys();
+					Enumeration<?> keys = properties.keys();
 					
 					if (!keys.hasMoreElements()) {
 						throwError("server.messageMissingBookMarkName");
@@ -2760,8 +2933,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("INCLUDE_ONCE", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Check property.
 				if (properties.size() != 1) {
@@ -2796,8 +2969,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("LITERAL", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Replace command open brackets.
 				return innerText.replace("[", "@lb;");
@@ -2812,7 +2985,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("PRAGMA", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get php property and evaluate it.
@@ -2879,8 +3052,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("JAVASCRIPT", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Get global flag.
 				Boolean isGlobal = server.evaluateProperty(properties, "global", Boolean.class, null, FLAG);
@@ -2943,8 +3116,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("INDENT", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Get level.
 				long level = 1;
@@ -3001,8 +3174,7 @@ public class AreaServer {
 		
 		fullTagProcessors.put("NOINDENT", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties) throws Exception {
 				
 				// Process text.
 				innerText = server.processTextCloned(innerText);
@@ -3021,7 +3193,7 @@ public class AreaServer {
 		
 		fullTagProcessors.put("CSS_LOOKUP_TABLE", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText, Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties) throws Exception {
 				
 				// Get collect flag.
 				boolean collect = properties.containsKey("collect");
@@ -3047,7 +3219,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("UNZIP", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				
 				// Get resource from properties.
 				Resource resource = server.getResourceFromProperties(properties);
@@ -3097,7 +3269,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("RUN" , new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				
 				// Get "cmd" property.
 				String command = server.evaluateProperty(properties, "cmd", String.class, null, DEFAULT);
@@ -3151,7 +3323,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("REDIRECT" , new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				
 				// Try to get area specification for redirection.
 				Obj<Boolean> existsArea = new Obj<Boolean>();
@@ -3191,7 +3363,7 @@ public class AreaServer {
 					}
 					
 					// Get other properties.
-					Properties otherProperties = excludeProperties(properties, areaPropertiesArray, "uri", "langId", "langAlias", "versionAlias");
+					TagProperties otherProperties = excludeProperties(properties, areaPropertiesArray, "uri", "langId", "langAlias", "versionAlias");
 					
 					// Get area URI.
 					String areaUri = server.getAreaUrl(area.getId(), server.state.currentLanguage.id, versionId, false, otherProperties);
@@ -3217,7 +3389,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("TRAY_MENU" , new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties) throws Exception {
+			public String processTag(AreaServer server, TagProperties properties) throws Exception {
 				
 				// Get request action value and check it
 				String actionValue = server.state.request.getAction();
@@ -3428,8 +3600,8 @@ public class AreaServer {
 
 		fullTagProcessors.put("REM", new FullTagProcessor(){
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 
 				server.state.analysis.rem_calls++;
 				
@@ -3445,8 +3617,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("PACK", new FullTagProcessor(){
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				server.state.analysis.pack_calls++;
 				
@@ -3484,8 +3656,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("BLOCK", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				server.state.analysis.block_calls++;
 				
@@ -3514,8 +3686,8 @@ public class AreaServer {
 		
 		fullTagProcessors.put("PPTEXT", new FullTagProcessor() {
 			@Override
-			public String processText(AreaServer server, String innerText,
-					Properties properties) throws Exception {
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
 				// Set server processProperties flag.
 				boolean oldFlag = server.state.processProperties;
@@ -3538,7 +3710,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("SUBAREAS", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(final AreaServer server, Properties properties)
+			public String processTag(final AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				server.state.analysis.subareas_calls++;
@@ -3566,7 +3738,7 @@ public class AreaServer {
 
 		complexSingleTagProcessors.put("SUPERAREAS", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(final AreaServer server, Properties properties)
+			public String processTag(final AreaServer server, TagProperties properties)
 					throws Exception {
 
 				server.state.analysis.superareas_call++;
@@ -3594,7 +3766,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("TRACE", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get trace name.
@@ -3651,7 +3823,7 @@ public class AreaServer {
 		
 		complexSingleTagProcessors.put("BREAK", new ComplexSingleTagProcessor() {
 			@Override
-			public String processTag(AreaServer server, Properties properties)
+			public String processTag(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Get break name.
@@ -3785,65 +3957,6 @@ public class AreaServer {
 		debugPoint();
 	}
 	
-	/**
-	 * Debug point.
-	 * @param replacement 
-	 * @param tagsSource
-	 * @return
-	 * @throws Exception 
-	 */
-	protected String debugStepPoint(String replacement, TagsSource tagsSource, AreaServerState state)
-			throws Exception {
-		
-		// Check debugger state.
-		XdebugOperation operation = state.debuggerOperation;
-		if (operation == XdebugOperation.run || operation == XdebugOperation.stop) {
-			return replacement;
-		}
-		
-		// Set debugged code descriptor.
-		if (state.debuggedCodeDescriptor == null) {
-			state.debuggedCodeDescriptor = new DebuggedCodeDescriptor();
-		}
-		
-		state.debuggedCodeDescriptor.set(tagsSource, replacement);
-		
-		// Accept Xdebug statements.
-		debugPoint();
-		return replacement;
-	}
-	
-	/**
-	 * Debug point.
-	 * @param tagName
-	 * @param tagEnd 
-	 * @param tagStart 
-	 * @param replaceent
-	 * @param state
-	 * @return
-	 * @throws Exception 
-	 */
-	private String debugStepPoint(String tagName, Properties properties, int start, int stop, String replacement, AreaServerState state)
-			throws Exception {
-		
-		// Check debugger state.
-		XdebugOperation operation = state.debuggerOperation;
-		if (operation == XdebugOperation.run || operation == XdebugOperation.stop) {
-			return replacement;
-		}
-		
-		// Set debugged code descriptor.
-		if (state.debuggedCodeDescriptor == null) {
-			state.debuggedCodeDescriptor = new DebuggedCodeDescriptor();
-		}
-		
-		state.debuggedCodeDescriptor.set(tagName, properties, start, stop, replacement);
-		
-		// Accept Xdebug statements.
-		debugPoint();
-		return replacement;
-	}
-
 	/**
 	 * Get server info.
 	 * @param decorated 
@@ -4001,7 +4114,7 @@ public class AreaServer {
 	 * @param areasListGetter
 	 */
 	protected static String processCommonAreaListProperties(AreaServer server,
-			Properties properties, AreasListGetter areasListGetter)
+			TagProperties properties, AreasListGetter areasListGetter)
 		throws Exception {
 		
 		// Get variable property.
@@ -4226,7 +4339,7 @@ public class AreaServer {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	protected <T> T evaluateProperty(Properties properties, String name, Class<T> type, T defaultValue, int flags)
+	protected <T> T evaluateProperty(TagProperties properties, String name, Class<T> type, T defaultValue, int flags)
 			throws Exception {
 		
 		// Get value string.
@@ -4269,6 +4382,9 @@ public class AreaServer {
 
 		// Delegate the call.
 		T value = evaluateExpression(expressionString, type, defaultValue, flags);
+		
+		// Save computed value.
+		properties.putComputed(name, value);
 		return value;
 	}
 	
@@ -4279,7 +4395,7 @@ public class AreaServer {
 	 * @param enableNoValue
 	 * @return
 	 */
-	public boolean evaluateFlag(Properties properties, String flagName, boolean enableNoValue)
+	public boolean evaluateFlag(TagProperties properties, String flagName, boolean enableNoValue)
 		throws Exception {
 		
 		Boolean flag = properties.containsKey(flagName);
@@ -4297,7 +4413,7 @@ public class AreaServer {
 	 * Process properties texts.
 	 * @param properties
 	 */
-	private void processPropertyTexts(Properties properties)
+	private void processPropertyTexts(TagProperties properties)
 		throws Exception {
 		
 		if (state.processProperties || properties.containsKey("pptext")) {
@@ -4792,7 +4908,7 @@ public class AreaServer {
 							
 							// Add meta information.
 							TagsSource source = TagsSource.newResource(startResourceId);
-							resourceText.ref = debugStepPoint(resourceText.ref, source, state);
+							setDebuggedCodeDescriptor(source, resourceText.ref);
 						
 							// Process page text for the area.
 							state.text = new StringBuilder(resourceText.ref);
@@ -4909,6 +5025,8 @@ public class AreaServer {
 			}
 			
 			client.close();
+			
+			state.debugClient = null;
 		}
 	}
 
@@ -5900,35 +6018,10 @@ public class AreaServer {
 			if (processFullTags(tagName)) {
 				continue;
 			}
-			// Try to process LIST tags.
-			if (processListTags(tagName)) {
-				continue;
-			}
-			// Try to process LOOP tags.
-			if (processLoopTags(tagName)) {
-				continue;
-			}
-			// Try to process PROCEDURE tags.
-			if (processProcedureTags(tagName)) {
-				continue;
-			}
-			// Try to process IF tags.
-			if (processIfTags(tagName)) {
+			// Try to process IF THEN tags.
+			if (processIfThenTags(tagName)) {
 				continue;
 			}			
-			// Process languages list tag.
-			if (processLanguageListTags(tagName)) {
-				continue;
-			}
-			// Process meta information.
-			if (processMeta(tagName)) {
-				continue;
-			}
-			// Process meta tags.
-			if (processMetaTags(tagName)) {
-				continue;
-			}
-			
 			// Try to process call tags. (Must be the last tag processor.)
 			if (!processCallTags(tagName)) {
 				// On error throw exception.
@@ -5978,7 +6071,7 @@ public class AreaServer {
 			}
 			
 			// Parse properties.
-			Properties properties = new Properties();
+			TagProperties properties = new TagProperties();
 			Obj<Integer> endPosition = new Obj<Integer>(positionOut.ref);
 			MiddleResult result = ServerUtilities.parseTagProperties(state.text, endPosition, properties, true);
 			result.throwPossibleException();
@@ -6097,7 +6190,7 @@ public class AreaServer {
 			if ("@META".equals(tagName)) {
 				
 				// Parse properties.
-				Properties properties = new Properties();
+				TagProperties properties = new TagProperties();
 				Obj<Integer> endPosition = new Obj<Integer>(positionOut.ref);
 				MiddleResult result = ServerUtilities.parseTagProperties(text, endPosition, properties, true);
 				result.throwPossibleException();
@@ -6157,17 +6250,16 @@ public class AreaServer {
 		// Call processor.
 		String replace = processor.processTag(this);
 		
-		// Wrap into meta information.
-		replace = debugStepPoint(tagName, null, state.tagStartPosition, state.position, replace, state);
+		// Debug point.
+		setDebuggedCodeDescriptor(tagName, null, state.tagStartPosition, state.position, replace);
+		debugPoint();
 		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
-		
 		state.position = state.tagStartPosition;
-		
 		return true;
 	}
-	
+
 	/**
 	 * Process single tags.
 	 * @param tagName
@@ -6184,7 +6276,7 @@ public class AreaServer {
 		
 		// Get properties.
 		Obj<Integer> startTagPosition = new Obj<Integer>(state.position);
-		Properties properties = new Properties();
+		TagProperties properties = new TagProperties();
 		
 		MiddleResult result = ServerUtilities.parseTagProperties(state.text, startTagPosition,
 				properties, true);
@@ -6197,24 +6289,25 @@ public class AreaServer {
 
 		state.position = startTagPosition.ref;
 		
-		// Call processor.
+		// Call tag processor.
 		String replace = processor.processTag(this, properties);
 		
-		// Wrap into meta information.
-		replace = debugStepPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
+		// Debug point.
+		setDebuggedCodeDescriptor(tagName, properties, state.tagStartPosition, state.position, replace);
+		debugPoint();
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		state.position = state.tagStartPosition;
 		
 		return true;
 	}
-	
+
 	/**
-	 * Process if tags.
+	 * Process IF THEN tags.
 	 * @param tagName
 	 * @return
 	 */
-	private boolean processIfTags(String tagName)
+	private boolean processIfThenTags(String tagName)
 		throws Exception {
 		
 		// Check tag name.
@@ -6227,10 +6320,10 @@ public class AreaServer {
 		Obj<Boolean> transparentVariables = new Obj<Boolean>(false);
 		Obj<Boolean> transparentProcedures = new Obj<Boolean>(false);
 
-		// Create structured IF command parser.
-		IfStructuredParser parser = new IfStructuredParser(this, state.text, state.tagStartPosition) {
+		// Create structured IF THEN command parser.
+		IfThenStructuredParser parser = new IfThenStructuredParser(this, state.text, state.tagStartPosition) {
 			@Override
-			protected boolean resolveCondition(AreaServer server, Properties properties)
+			protected boolean resolveCondition(AreaServer server, TagProperties properties)
 					throws Exception {
 				
 				// Process properties' texts.
@@ -6293,7 +6386,7 @@ public class AreaServer {
 
 		// Get properties.
 		Obj<Integer> startPosition = new Obj<Integer>(state.position);
-		Properties properties = new Properties();
+		TagProperties properties = new TagProperties();
 		
 		MiddleResult result = ServerUtilities.parseTagProperties(state.text, startPosition, properties);
 		if (result.isNotOK()) {
@@ -6316,7 +6409,8 @@ public class AreaServer {
 		String replace = processor.processText(this, innerText.toString(), properties);
 		state.position = parser.getPosition();
 		
-		// Xdebug point.
+		// Debug point.
+		setDebuggedCodeDescriptor(tagName, properties, state.tagStartPosition, state.position, innerText.toString(), replace);
 		debugPoint();
 		
 		// Replace statement with its result.
@@ -6326,435 +6420,182 @@ public class AreaServer {
 	}
 	
 	/**
-	 * Process area list tags.
-	 * @param tagName
-	 * @return
+	 * LIST tag processor.
 	 */
-	private boolean processListTags(String tagName)
-			throws Exception {
+	private static void listProcessor() {
 		
-		if (!tagName.equals("LIST")) {
-			return false;
-		}
-		
-		state.analysis.list_calls++;
-
-		// Get properties.
-		Obj<Integer> startTagPosition = new Obj<Integer>(state.position);
-		Properties properties = new Properties();
-		
-		MiddleResult result = ServerUtilities.parseTagProperties(state.text, startTagPosition, properties);
-		if (result.isNotOK()) {
-			throwError("server.messageTagParseError", result.getMessage());
-		}
-		
-		// Process property texts.
-		processPropertyTexts(properties);
-
-		// Shift position. Because of errors.
-		state.position = startTagPosition.ref;
-		
-		StringBuilder innerText = new StringBuilder();
-		
-		// Call parser.
-		FullTagParser parser = new FullTagParser(this, tagName, state.text, state.tagStartPosition);
-		parser.parseFullCommand(innerText);
-		
-		// Get list variable name.
-		String listName = properties.getProperty("list");
-		if (listName == null) {
-			throwError("server.messageExpectingUseProperty");
-		}
-		
-		LinkedList<?> list = null;
-		
-		// Try to get list.
-		Object listObject = evaluateText(listName, null, false);
-		if (!(listObject instanceof LinkedList<?>)) {
-			
-			// Try to get map and convert it to a list.
-			if (listObject instanceof Map) {
+		fullTagProcessors.put("LIST", new FullTagProcessor() {
+			@Override
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
-				Map map = (Map) listObject;
-				list = new LinkedList<Entry>(map.entrySet());
-			}
-			else {
-				throwError("server.messageExpectingListOrMapValue", listName);
-			}
-		}
-		else {
-			list = (LinkedList<?>) listObject;
-		}
-
-		// Try to get divider value.
-		String dividerText = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
-		// Get iterator variable name.
-		String iteratorVariableText = properties.getProperty("iterator");
-		// Get item variable name.
-		String itemVariableText = properties.getProperty("item");
-		// Get break variable name.
-		String breakVariableText = properties.getProperty("break");
-		// Get discard variable name.
-		String discardVariableText = properties.getProperty("discard");
-		
-		StringBuilder compiledText = new StringBuilder();
-		
-		// Push list into the stack.
-		ListBlockDescriptor listDescriptor = new ListBlockDescriptor(0, list);
-		state.blocks.pushBlockDescriptor(listDescriptor);
-		
-		// If list variable exists.
-		if (iteratorVariableText != null) {
-			listDescriptor.createBlockVariable(iteratorVariableText, listDescriptor);
-		}
-
-		// Get the "local" flag value.
-		boolean local = evaluateProperty(properties, "local", Boolean.class, false, FLAG);
-		
-		int count = list.size();
-		
-		String innerTextT = innerText.toString();
-		
-		// Do loop for all list items.
-		for (int index = 1; index <= count; index++) {
-
-			// Set index.
-			listDescriptor.setIndex(index);
-			
-			// Create new block descriptor.
-			BlockDescriptor blockDescriptor = state.blocks.pushNewBlockDescriptor();
-			
-			Object listItem = list.get(index - 1);
-			
-			// If item variable exists, create it.
-			if (itemVariableText != null) {
-				blockDescriptor.createBlockVariable(itemVariableText, listItem);
-			}
-			
-			Variable breakVariable = null;
-			Variable discardVariable = null;
-			// Add break variable.
-			if (breakVariableText != null) {
-				breakVariable = blockDescriptor.createBlockVariable(breakVariableText, false);
-				// Add discard variable.
-				if (discardVariableText != null) {
-					discardVariable = blockDescriptor.createBlockVariable(discardVariableText, false);
+				server.state.analysis.list_calls++;
+				
+				// Get list variable name.
+				String listName = properties.getProperty("list");
+				if (listName == null) {
+					throwError("server.messageExpectingUseProperty");
 				}
-			}
-			
-			// Process inner text.
-			String itemInnerText;
-			if (local && listItem instanceof Area) {
-				Area localArea = (Area) listItem;
-				itemInnerText = processTextCloned(localArea, innerTextT);
-			}
-			else {
-				itemInnerText = processTextCloned(innerTextT);
-			}
-			
-			// On break.
-			boolean breakLoop = false;
-			boolean discard = false;
-			
-			if (breakVariable != null && breakVariable.value instanceof Boolean) {
-				breakLoop = (Boolean) breakVariable.value;
-			}
-			if (!breakLoop) {
-				breakLoop = listDescriptor.isBreaked();
-			}
-			
-			if (breakLoop) {
-				if (discardVariable != null && discardVariable.value instanceof Boolean) {
-					discard = (Boolean)discardVariable.value;
+				
+				LinkedList<?> list = null;
+				
+				// Try to get list object.
+				Object listObject = server.evaluateText(listName, null, false);
+				if (!(listObject instanceof LinkedList<?>)) {
+					
+					// Try to get map and convert it to list.
+					if (listObject instanceof Map) {
+						
+						Map<?, ?> map = (Map<?, ?>) listObject;
+						list = new LinkedList<Entry<?, ?>>(map.entrySet());
+					}
+					else {
+						throwError("server.messageExpectingListOrMapValue", listName);
+					}
 				}
-				if (!discard) {
-					discard = listDescriptor.getDiscard();
+				else {
+					list = (LinkedList<?>) listObject;
 				}
-			}
-
-			// Remove block descriptor.
-			state.blocks.popBlockDescriptor(false, false);
-
-			// If not discard, append new text.
-			if (!discard) {
-				compiledText.append(itemInnerText);
-				// Add divider.
-				if (dividerText != null && index < count) {
-					compiledText.append(dividerText);
+				
+				// Try to get divider value.
+				String dividerText = server.evaluateProperty(properties, "divider", String.class, "", DEFAULT);
+				// Get iterator variable name.
+				String iteratorVariableText = properties.getProperty("iterator");
+				// Get item variable name.
+				String itemVariableText = properties.getProperty("item");
+				// Get break variable name.
+				String breakVariableText = properties.getProperty("break");
+				// Get discard variable name.
+				String discardVariableText = properties.getProperty("discard");
+				
+				StringBuilder compiledText = new StringBuilder();
+				
+				// Push list into the stack.
+				ListBlockDescriptor listDescriptor = new ListBlockDescriptor(0, list);
+				server.state.blocks.pushBlockDescriptor(listDescriptor);
+				
+				// Create iterator variable..
+				if (iteratorVariableText != null) {
+					listDescriptor.createBlockVariable(iteratorVariableText, listDescriptor);
 				}
-			}
-			
-			if (breakLoop) {
-				break;
-			}
-		}
 
-		// Get flags used when releasing the block.
-		boolean transparentVariables = evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
-		boolean transparentProcedures = evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
-		
-		// Pop list from the stack.
-		state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
-		
-		// Replace text.
-		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
-		
-		state.position = state.tagStartPosition;
+				// Get the "local" flag value.
+				boolean local = server.evaluateProperty(properties, "local", Boolean.class, false, FLAG);
+				
+				int count = list.size();
 
-		return true;
+				// Do loop for all list items.
+				for (int index = 1; index <= count; index++) {
+
+					// Set index.
+					listDescriptor.setIndex(index);
+					
+					// Create new block descriptor.
+					BlockDescriptor blockDescriptor = server.state.blocks.pushNewBlockDescriptor();
+					
+					Object listItem = list.get(index - 1);
+					
+					// If item variable exists, create it.
+					if (itemVariableText != null) {
+						blockDescriptor.createBlockVariable(itemVariableText, listItem);
+					}
+					
+					Variable breakVariable = null;
+					Variable discardVariable = null;
+					// Add break variable.
+					if (breakVariableText != null) {
+						breakVariable = blockDescriptor.createBlockVariable(breakVariableText, false);
+						// Add discard variable.
+						if (discardVariableText != null) {
+							discardVariable = blockDescriptor.createBlockVariable(discardVariableText, false);
+						}
+					}
+					
+					// Process inner text.
+					String itemInnerText;
+					if (local && listItem instanceof Area) {
+						Area localArea = (Area) listItem;
+						itemInnerText = server.processTextCloned(localArea, innerText);
+					}
+					else {
+						itemInnerText = server.processTextCloned(innerText);
+					}
+					
+					// On break.
+					boolean breakLoop = false;
+					boolean discard = false;
+					
+					if (breakVariable != null && breakVariable.value instanceof Boolean) {
+						breakLoop = (Boolean) breakVariable.value;
+					}
+					if (!breakLoop) {
+						breakLoop = listDescriptor.isBreaked();
+					}
+					
+					if (breakLoop) {
+						if (discardVariable != null && discardVariable.value instanceof Boolean) {
+							discard = (Boolean)discardVariable.value;
+						}
+						if (!discard) {
+							discard = listDescriptor.getDiscard();
+						}
+					}
+
+					// Remove block descriptor.
+					server.state.blocks.popBlockDescriptor(false, false);
+
+					// If not discard, append new text.
+					if (!discard) {
+						compiledText.append(itemInnerText);
+						// Add divider.
+						if (dividerText != null && index < count) {
+							compiledText.append(dividerText);
+						}
+					}
+					
+					if (breakLoop) {
+						break;
+					}
+				}
+				
+				// Get flags used when releasing the block.
+				boolean transparentVariables = server.evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+				boolean transparentProcedures = server.evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
+				
+				// Pop list from the stack.
+				server.state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
+				
+				// Replacement text.
+				String replacement = compiledText.toString();
+				return replacement;
+			}
+		});
 	}
-
+	
 	/**
-	 * Process @LOOP tags.
-	 * @param tagName
-	 * @return
+	 * PROCEDURE tag processor.
 	 */
-	private boolean processLoopTags(String tagName)
-		throws Exception {
+	private static void procedureProcessor() {
 		
-		// Check tag name.
-		if (!tagName.equals("LOOP")) {
-			return false;
-		}
-		
-		state.analysis.loop_calls++;
-		
-		// Parse properties.
-		Properties properties = new Properties();
-		Obj<Integer> textPosition = new Obj<Integer>(state.position);
-		
-		MiddleResult result = ServerUtilities.parseTagProperties(state.text, textPosition, properties);
-		if (result.isNotOK()) {
-			throwError("server.messageTagParseError", result.getMessage());
-		}
-		
-		// Process property texts.
-		processPropertyTexts(properties);
-
-		// Shift position because of error report.
-		state.position = textPosition.ref;
-		
-		// Get "count" value.
-		Long count = evaluateProperty(properties, "count", Long.class, null, NULL);
-		
-		// Initialize empty loop flag.
-		boolean emptyLoop = false;
-		
-		// Do infinite loop if the count is -1.
-		boolean infiniteLoop = count != null && count == -1L;
-		
-		// Check "count" property.
-		if (count != null && count < -1) {
-			throwError("server.messageCountCannotBeNegative");
-		}
-		
-		// Get "from" value.
-		long from = evaluateProperty(properties, "from", Long.class, 0L, DEFAULT);
-		
-		// Get "to" property.
-		Long to = evaluateProperty(properties, "to", Long.class, null, NULL);
-		
-		// Get "step" property.
-		long step = evaluateProperty(properties, "step", Long.class, 1L, DEFAULT);
-
-		// Check step property.
-		if (step == 0L) {
-			throwError("server.messageStepValueCannotBeZero");
-		}
-		
-		// Compute "to" value if not set.
-		if (to == null && count != null) {
-			
-			to = from + step * (count - 1);
-		}
-		
-		// Check "to" value.
-		if (to == null) {
-			emptyLoop = true;
-			//throwError("server.messageToValueCannotBeNull");
-		}
-		
-		// Get divider property.
-		String divider = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
-		
-		// Get index variable name.
-		String indexVariableText = properties.getProperty("index");
-		
-		// Get break variable name.
-		String breakVariableText = properties.getProperty("break");
-		
-		// Get discard variable name.
-		String discardVariableText = properties.getProperty("discard");
+		fullTagProcessors.put("PROCEDURE", new FullTagProcessor() {
+			@Override
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
 				
-		StringBuilder innerText = new StringBuilder();
-		
-		// Call parser and get inner text.
-		FullTagParser parser = new FullTagParser(this, tagName, state.text, state.tagStartPosition);
-		parser.parseFullCommand(innerText);
-		
-		// Compiled text.
-		StringBuilder compiledText = new StringBuilder();
-
-		String innerTextT = innerText.toString();
-		
-		long index = from;
-		
-		boolean isFirstIteration = true;
-		
-		// Do loops.
-		while (true) {
-			
-			// Check server response timeout.
-			checkResponseTimeout();
-			
-			// Break on empty loop.
-			if (emptyLoop) {
-				break;
-			}
-
-			// Check index.
-			if (!infiniteLoop) {
+				server.state.analysis.procedure_calls++;
 				
-				if ((step > 0) && (index > to) || (step < 0) && (index < to)) {
-					break;
+				// Try to add new procedure.
+				try {
+					server.state.blocks.addProcedure(server, properties, innerText);
 				}
-			}
-			
-			// Push new block.
-			BreakBlockDescriptor block = state.blocks.pushNewBreakBlockDescriptor();
-			// Add index variable.
-			if (indexVariableText != null) {
-				block.createBlockVariable(indexVariableText, index);
-			}
-			
-			Variable breakVariable = null;
-			Variable discardVariable = null;
-			
-			// Add break variable.
- 			if (breakVariableText != null) {
-				breakVariable = block.createBlockVariable(breakVariableText, false);
-				
-				// Add discard variable.
-	 			if (discardVariableText != null) {
-	 				discardVariable = block.createBlockVariable(discardVariableText, false);
-	 			}
-			}
- 
-			// Process inner text.
-			String processedInnerText = processTextCloned(innerTextT);
-			
-			// Break.
-			boolean breakLoop = false;
-			boolean discard = false;
-			
-			if (breakVariable != null && breakVariable.value instanceof Boolean) {
-				breakLoop = (Boolean) breakVariable.value;
-			}
-			if (!breakLoop) {
-				breakLoop = block.isBreaked();
-			}
-			
-			// Discard.
-			if (breakLoop) {
-				if (discardVariable != null && discardVariable.value instanceof Boolean) {
-					discard = (Boolean) discardVariable.value;
+				catch (Exception e) {
+					throwError("server.messageProcedureDefinitionError", e.getLocalizedMessage());
 				}
-				if (!discard) {
-					discard = block.getDiscard();
-				}
+				return "";
 			}
-
-			// Pop block.
-			state.blocks.popBlockDescriptor(properties.containsKey("transparent"));
-			
-			if (!discard) {
-				
-				// Add divider text.
-				if (divider != null && !isFirstIteration) {
-					compiledText.append(divider);
-				}
-				
-				// Append processed text.
-				compiledText.append(processedInnerText);
-			}
-			
-			// Break the loop.
-			if (breakLoop) {
-				break;
-			}
-			
-			// Compute new index value.
-			index += step;
-			
-			isFirstIteration = false;
-		}
-		
-		// Get replacement string.
-		String replace = compiledText.toString();
-		
-		// Wrap into meta information.
-		replace = debugStepPoint(tagName, properties, state.tagStartPosition, state.position, replace, state);
-		
-		// Replace text.
-		state.text.replace(state.tagStartPosition, parser.getPosition(), replace);
-		
-		state.position = state.tagStartPosition;
-
-		return true;
+		});
 	}
-
-	/**
-	 * Process @PROCEDURE tags.
-	 * @param tagName
-	 * @return
-	 */
-	private boolean processProcedureTags(String tagName)
-		throws Exception {
-		
-		// Check tag name.
-		if (!tagName.equals("PROCEDURE")) {
-			return false;
-		}
-		
-		state.analysis.procedure_calls++;
-		
-		// Process the rest of tag.
-		Properties properties = new Properties();
-		Obj<Integer> textPosition = new Obj<Integer>(state.position);
-		
-		MiddleResult result = ServerUtilities.parseTagProperties(state.text, textPosition, properties, true);
-		if (result.isNotOK()) {
-			throwError("server.messageTagParseError", result.getMessage());
-		}
-		
-		// Process property texts.
-		processPropertyTexts(properties);
-
-		// Shift position because of error report.
-		state.position = textPosition.ref;
-		
-		StringBuilder innerText = new StringBuilder();
-		
-		// Call parser and get inner text.
-		FullTagParser parser = new FullTagParser(this, tagName, state.text, state.tagStartPosition);
-		parser.parseFullCommand(innerText);
-		
-		// Try to add new procedure.
-		try {
-			state.blocks.addProcedure(this, properties, innerText.toString());
-		}
-		catch (Exception e) {
-			throwError("server.messageProcedureDefinitionError", e.getLocalizedMessage());
-		}
-		
-		// Remove tag.
-		state.text.delete(state.tagStartPosition, parser.getPosition());
-		// Set position.
-		state.position = state.tagStartPosition;
-		
-		return true;
-	}
-
+	
 	/**
 	 * Process @CALL tags.
 	 * @param tagName
@@ -6774,7 +6615,7 @@ public class AreaServer {
 		state.analysis.call_calls++;
 		
 		// Process the rest of tag.
-		final Properties properties = new Properties();
+		final TagProperties properties = new TagProperties();
 		Obj<Integer> endPosition = new Obj<Integer>(state.position);
 		
 		MiddleResult result = ServerUtilities.parseTagProperties(state.text, endPosition, properties, true);
@@ -6949,126 +6790,72 @@ public class AreaServer {
 		
 		return true;
 	}
-
+	
 	/**
-	 * Process languages list
-	 * @param tagName
-	 * @return
+	 * LANGUAGES tag processor.
 	 */
-	private boolean processLanguageListTags(String tagName)
-		throws Exception {
+	private static void languagelistProcessor() {
 		
-		// Check tag name.
-		if (!tagName.equals("LANGUAGES")) {
-			return false;
-		}
-		
-		state.analysis.languages_call++;
-		
-		// Parse properties.
-		Obj<Integer> textPosition = new Obj<Integer>(state.position);
-		Properties properties = new Properties();
-		MiddleResult result = ServerUtilities.parseTagProperties(state.text, textPosition, properties);
-		if (result.isNotOK()) {
-			throwError("server.messageTagParseError", result.getMessage());
-		}
-		
-		// Process property texts.
-		processPropertyTexts(properties);
-
-		// Get divider.
-		String divider = evaluateProperty(properties, "divider", String.class, "", DEFAULT);
-
-		// Shift position because of error report.
-		state.position = textPosition.ref;
-		
-		StringBuilder innerText = new StringBuilder();
-		
-		// Call parser and get inner text.
-		FullTagParser parser = new FullTagParser(this, tagName, state.text, state.tagStartPosition);
-		parser.parseFullCommand(innerText);
-
-		// Push languages list block descriptor.
-		LanguagesBlockDescriptor descriptor = new LanguagesBlockDescriptor(state.languages);
-		state.blocks.pushBlockDescriptor(descriptor);
-		
-		String innerTextT = innerText.toString();
-		StringBuilder compiledText = new StringBuilder();
-		int count = state.languages.size();
-		
-		// Do loop for all languages.
-		for (int index = 0; index < count; index++) {
-			descriptor.setIndex(index);
-			
-			Language language = state.languages.get(index);
-			
-			// Check if the language is rendered.
-			if (state.listener != null) {
-				if (!state.listener.isRendered(language.id)) {
-					continue;
+		fullTagProcessors.put("LANGUAGES", new FullTagProcessor() {
+			@Override
+			public String processText(AreaServer server, String innerText, TagProperties properties)
+					throws Exception {
+				
+				server.state.analysis.languages_call++;
+				
+				// Get divider.
+				String divider = server.evaluateProperty(properties, "divider", String.class, "", DEFAULT);
+				
+				// Push languages list block descriptor.
+				LanguagesBlockDescriptor descriptor = new LanguagesBlockDescriptor(server.state.languages);
+				server.state.blocks.pushBlockDescriptor(descriptor);
+				
+				StringBuilder compiledText = new StringBuilder();
+				int count = server.state.languages.size();
+				
+				// Do loop for all languages.
+				for (int index = 0; index < count; index++) {
+					descriptor.setIndex(index);
+					
+					Language language = server.state.languages.get(index);
+					
+					// Check if the language is rendered.
+					if (server.state.listener != null) {
+						if (!server.state.listener.isRendered(language.id)) {
+							continue;
+						}
+					}
+					
+					String textItem = LanguageServer.processSingleSubTags(innerText, language,
+							server.isRendering(), server, server.state.renderingFlags);
+					
+					// Set local current language.
+					server.state.middle.setCurrentLanguageId(language.id);
+					
+					textItem = server.processTextCloned(textItem);
+					compiledText.append(textItem);
+					
+					if (index > 0 && index < count - 1 && divider != null) {
+						compiledText.append(divider);
+					}
 				}
+				
+				// Restore current language.
+				server.state.middle.setCurrentLanguageId(server.state.currentLanguage.id);
+				
+				// Get flags used when releasing the block.
+				boolean transparentVariables = server.evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
+				boolean transparentProcedures = server.evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
+				
+				// Pop block descriptor.
+				server.state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
+				
+				String replacement = compiledText.toString();
+				return replacement;
 			}
-			
-			String textItem = LanguageServer.processSingleSubTags(innerTextT, language,
-					isRendering(), this, state.renderingFlags);
-			
-			// Set local current language.
-			state.middle.setCurrentLanguageId(language.id);
-			
-			textItem = processTextCloned(textItem);
-			compiledText.append(textItem);
-			
-			if (index > 0 && index < count - 1 && divider != null) {
-				compiledText.append(divider);
-			}
-		}
-		
-		// Restore current language.
-		state.middle.setCurrentLanguageId(state.currentLanguage.id);
-		
-		// Get flags used when releasing the block.
-		boolean transparentVariables = evaluateProperty(properties, "transparentVar", Boolean.class, false, FLAG);
-		boolean transparentProcedures = evaluateProperty(properties, "transparentProc", Boolean.class, false, FLAG);
-		
-		// Pop block descriptor.
-		state.blocks.popBlockDescriptor(transparentVariables, transparentProcedures);
-		
-		// Replace text.
-		state.text.replace(state.tagStartPosition, parser.getPosition(), compiledText.toString());
-		state.position = state.tagStartPosition;
-		
-		return true;
+		});
 	}
 	
-	/**
-	 * TODO: <---MAKE Process META tags.
-	 * @param tagName
-	 * @return
-	 */
-	private boolean processMeta(String tagName) {
-		
-		// Check tag name.
-		if (!tagName.equals("META")) {
-			return false;
-		}
-		// TODO Auto-generated method stub
-		return true;
-	}
-	
-	/**
-	 * TODO: <---MAKE Process META_TAG tags.
-	 * @param tagName
-	 * @return
-	 */
-	private boolean processMetaTags(String tagName) {
-		
-		// Check tag name.
-		if (!tagName.equals("META_TAG")) {
-			return false;
-		}
-		// TODO Auto-generated method stub
-		return true;
-	}
 	/**
 	 * Get home area.
 	 * @return
@@ -8999,5 +8786,58 @@ public class AreaServer {
             }
         }
 		return "UNKNOWN";
+	}
+	
+	/**
+	 * Set code descriptor for Xdebug.
+	 * @param source 
+	 * @param replace
+	 */
+	protected void setDebuggedCodeDescriptor(TagsSource source, String replace) {
+		
+		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
+		if (codeDescriptor == null) {
+			codeDescriptor = new DebuggedCodeDescriptor();
+		}
+		
+		codeDescriptor.set(source, replace);
+	}
+	
+	/**
+	 * Set code descriptor for Xdebug.
+	 * @param tagName
+	 * @param properties
+	 * @param tagStartPosition
+	 * @param position
+	 * @param replace
+	 */
+	private void setDebuggedCodeDescriptor(String tagName, TagProperties properties, int tagStartPosition, int position,
+			String replace) {
+
+		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
+		if (codeDescriptor == null) {
+			codeDescriptor = new DebuggedCodeDescriptor();
+		}
+		
+		codeDescriptor.set(tagName, properties, tagStartPosition, position, replace);
+	}
+	/**
+	 * Set code descriptor for Xdebug.
+	 * @param tagName
+	 * @param properties
+	 * @param tagStartPosition
+	 * @param position
+	 * @param innerText
+	 * @param replace
+	 */
+	private void setDebuggedCodeDescriptor(String tagName, TagProperties properties, int tagStartPosition, int position,
+			String innerText, String replace) {
+
+		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
+		if (codeDescriptor == null) {
+			codeDescriptor = new DebuggedCodeDescriptor();
+		}
+		
+		codeDescriptor.set(tagName, properties, tagStartPosition, position, innerText, replace);
 	}
 }

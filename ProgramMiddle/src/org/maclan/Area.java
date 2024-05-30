@@ -1264,7 +1264,6 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 * @param subAreaId
 	 * @return
 	 */
-	@Deprecated
 	public String getSubRelationName(long subAreaId) {
 		
 		DependentArea subArea = getDependentArea(subareas, subAreaId);
@@ -1284,7 +1283,6 @@ public class Area extends SlotHolder implements FlagElement, Element, ResContain
 	 * @param superAreaId
 	 * @return
 	 */
-	@Deprecated
 	public String getSuperRelationName(long superAreaId) {
 		
 		DependentArea superArea = getDependentArea(superareas, superAreaId);

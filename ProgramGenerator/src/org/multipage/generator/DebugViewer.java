@@ -1454,9 +1454,6 @@ public class DebugViewer extends JFrame {
 				return inputLine;
 			}
 		});
-		
-		// Show the window
-		setVisible(true);
 	}
 	
 	/**

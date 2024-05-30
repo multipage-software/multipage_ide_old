@@ -53,8 +53,15 @@ public class XdebugAreaServerStackLevel {
 		if (state.text != null) {
 			this.sourceCode = state.text.toString();
 		}
-		this.cmdBegin = state.tagStartPosition;
-		this.cmdEnd  = state.position;
+		
+		if (state.debuggedCodeDescriptor != null) {
+			this.cmdBegin = state.debuggedCodeDescriptor.getCmdBegin();
+			this.cmdEnd = state.debuggedCodeDescriptor.getCmdEnd();
+		}
+		else {
+			this.cmdBegin = state.tagStartPosition;
+			this.cmdEnd  = state.position;
+		}
 	}
 	
 	/**

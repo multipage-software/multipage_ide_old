@@ -7,8 +7,8 @@
 
 package org.maclan.server;
 
-import java.util.Properties;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.maclan.MiddleResult;
 import org.multipage.util.Obj;
@@ -17,7 +17,7 @@ import org.multipage.util.Obj;
  * @author
  *
  */
-public class IfStructuredParser extends ParserBase {
+public class IfThenStructuredParser extends ParserBase {
 
 	/**
 	 * Token types.
@@ -38,7 +38,7 @@ public class IfStructuredParser extends ParserBase {
 	/**
 	 * Condition resolve.
 	 */
-	protected boolean resolveCondition(AreaServer server, Properties properties)
+	protected boolean resolveCondition(AreaServer server, TagProperties properties)
 			throws Exception {
 		
 		return true;
@@ -49,7 +49,7 @@ public class IfStructuredParser extends ParserBase {
 	 * @param properties
 	 * @return
 	 */
-	private boolean getConditionValue(Properties properties, int position)
+	private boolean getConditionValue(TagProperties properties, int position)
 			throws Exception {
 		
 		// Resolve condition.
@@ -79,7 +79,7 @@ public class IfStructuredParser extends ParserBase {
 		if (ifMatcher.find(position)) {
 			
 			// Parse IF tag properties.
-			Properties properties = new Properties();
+			TagProperties properties = new TagProperties();
 			Obj<Integer> endPosition = new Obj<Integer>(ifMatcher.end());
 			
 			MiddleResult result = ServerUtilities.parseTagProperties(text, endPosition,
@@ -94,7 +94,7 @@ public class IfStructuredParser extends ParserBase {
 		if (elseifMatcher.find(position)) {
 			
 			// Parse ELSEIF tag properties.
-			Properties properties = new Properties();
+			TagProperties properties = new TagProperties();
 			Obj<Integer> endPosition = new Obj<Integer>(elseifMatcher.end());
 			
 			MiddleResult result = ServerUtilities.parseTagProperties(text, endPosition,
@@ -125,7 +125,7 @@ public class IfStructuredParser extends ParserBase {
 	 * @param text
 	 * @param position
 	 */
-	public IfStructuredParser(AreaServer server, StringBuilder text,
+	public IfThenStructuredParser(AreaServer server, StringBuilder text,
 			int position) {
 		
 		super(server, text, position);
