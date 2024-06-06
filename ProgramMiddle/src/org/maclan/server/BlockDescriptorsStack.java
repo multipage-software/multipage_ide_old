@@ -218,11 +218,31 @@ public class BlockDescriptorsStack {
 	 */
 	public Variable findVariable(String name) {
 		
+		// Delegate the call.
+		return findVariable(name, null);
+	}
+	
+	/**
+	 * Find variable and its block descriptor.
+	 * @param name
+	 * @return
+	 */
+	public Variable findVariable(String name, Obj<BlockDescriptor> foundBlockDescriptor) {
+		
+		// Initialize output.
+		if (foundBlockDescriptor != null) {
+			foundBlockDescriptor.ref = null;
+		}
+		
 		// Do loop for existing block descriptors.
 		for (BlockDescriptor blockDescriptor : stack) {
 
 			Variable variable = blockDescriptor.getBlockVariable(name);
 			if (variable != null) {
+				
+				if (foundBlockDescriptor != null) {
+					foundBlockDescriptor.ref = blockDescriptor;
+				}
 				return variable;
 			}
 		}
@@ -240,8 +260,7 @@ public class BlockDescriptorsStack {
 		
 		Variable variable = findVariable(name);
 		if (variable == null) {
-			throw new Exception(String.format(
-					Resources.getString("server.messageVariableNotFound"), name));
+			throw new Exception(String.format(Resources.getString("server.messageVariableNotFound"), name));
 		}
 		return variable.value;
 	}

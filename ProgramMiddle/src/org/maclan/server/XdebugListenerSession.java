@@ -180,6 +180,17 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
+	 * Get context ID.
+	 * @param contextName
+	 * @return
+	 */
+	public Integer getContextId(String contextName) {
+		
+		Integer contextId = contextNameMap.get(contextName);
+		return contextId;
+	}
+	
+	/**
 	 * Set lambda callback function that is invoked when session is ready for sending Xdebug commands.
 	 * @param onReadyForCommands
 	 */
@@ -1157,6 +1168,24 @@ public class XdebugListenerSession extends DebugListenerSession {
 		this.clientParameters.setProcessName(processName);
 		String threadName = areaServerState.getThreadName();
 		this.clientParameters.setThreadName(threadName);
+	}
+	
+	/**
+	 * Close session.
+	 */
+	public void close() {
+		
+		try {
+			boolean isOpen = client.isOpen();
+			if (!isOpen) {
+				return;
+			}
+			
+			client.close();
+		}
+		catch (Exception e) {
+			onException(e);
+		}
 	}
 	
 	/**

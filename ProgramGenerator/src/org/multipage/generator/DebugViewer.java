@@ -21,6 +21,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -30,6 +32,7 @@ import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.swing.DefaultCellEditor;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -37,21 +40,26 @@ import javax.swing.JCheckBox;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
-import javax.swing.ListCellRenderer;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableColumnModel;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.StyleSheet;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -64,12 +72,14 @@ import javax.swing.tree.TreeSelectionModel;
 import org.maclan.server.AreaServerSignal;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugListenerSession;
+import org.maclan.server.DebugWatchItem;
+import org.maclan.server.DebugWatchItemType;
 import org.maclan.server.XdebugAreaServerStackLevel;
 import org.maclan.server.XdebugAreaServerTextState;
+import org.maclan.server.XdebugClient;
 import org.maclan.server.XdebugClientParameters;
 import org.maclan.server.XdebugClientResponse;
 import org.maclan.server.XdebugListenerSession;
-import org.multipage.addinloader.j;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.Images;
@@ -78,11 +88,10 @@ import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
+import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.w3c.dom.Node;
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeEvent;
 
 /**
  * This is GUI for debugging
@@ -106,6 +115,15 @@ public class DebugViewer extends JFrame {
 	 */
 	private static final char INTERLINEAR_ANNOTATION_ANCHOR = '\uFFF9';
 	private static final char INTERLINEAR_ANNOTATION_TERMINATOR = '\uFFFB';
+
+	/**
+	 * Watch table column indices.
+	 */
+	private static final int WATCHED_NAME_COLUMN_INDEX = 0;
+	private static final int WATCHED_FULLNAME_COLUMN_INDEX = 1;
+	private static final int WATCHED_PROPERTY_TYPE_COLUMN_INDEX = 2;
+	private static final int WATCHED_VALUE_COLUMN_INDEX = 3;
+	private static final int WATCHED_VALUE_TYPE_COLUMN_INDEX = 4;
 	
 	/**
 	 * Xdebug process node.
@@ -342,14 +360,14 @@ public class DebugViewer extends JFrame {
 	private int stepLineNumber = -1;
 	
 	/**
-	 * Watch list model
+	 * Watch table model.
 	 */
-	private DefaultListModel<String> listWatchModel;
+	private DefaultTableModel tableWatchModel = null;
 	
 	/**
 	 * Stack list model
 	 */
-	private DefaultListModel<Node> listStackModel;
+	private DefaultListModel<Node> listStackModel = null;
 	
 	/**
 	 * Class for log items.
@@ -518,7 +536,7 @@ public class DebugViewer extends JFrame {
 	private JButton buttonStepInto;
 	private JButton buttonStepOut;
 	private JButton buttonStepOver;
-	private JList listWatch;
+	private JTable tableWatch;
 	private JPanel panelOutput;
 	private JScrollPane scrollPane;
 	private JTextArea textOutput;
@@ -537,6 +555,9 @@ public class DebugViewer extends JFrame {
 	private JButton buttonTest;
 	private JPanel panelThreads;
 	private JTree treeThreads;
+	private JPopupMenu menuWatch;
+	private JMenuItem menuAddToWatch;
+	private JMenuItem menuRemoveFromWatch;
 	
     /**
      * Constructor.
@@ -581,7 +602,7 @@ public class DebugViewer extends JFrame {
 		panelRight.add(tabbedPane, BorderLayout.CENTER);
 		
 		panelDebuggers = new JPanel();
-		tabbedPane.addTab("org.multipage.generator.textDebugProcesses", null, panelDebuggers, null);
+		tabbedPane.addTab("org.multipage.generator.textDebuggerProcesses", null, panelDebuggers, null);
 		SpringLayout sl_panelDebuggers = new SpringLayout();
 		panelDebuggers.setLayout(sl_panelDebuggers);
 		
@@ -620,14 +641,35 @@ public class DebugViewer extends JFrame {
 		scrollPaneThreads.setViewportView(treeThreads);
 		
 		panelWatch = new JPanel();
-		tabbedPane.addTab("Watch", null, panelWatch, null);
+		tabbedPane.addTab("org.multipage.generator.textDebuggerWatch", null, panelWatch, null);
 		panelWatch.setLayout(new BorderLayout(0, 0));
 		
 		scrollPaneWatch = new JScrollPane();
-		panelWatch.add(scrollPaneWatch);
+		panelWatch.add(scrollPaneWatch, BorderLayout.CENTER);
 		
-		listWatch = new JList();
-		scrollPaneWatch.setViewportView(listWatch);
+		tableWatch = new JTable();
+		tableWatch.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+		scrollPaneWatch.setViewportView(tableWatch);
+		
+		menuWatch = new JPopupMenu();
+		addPopup(scrollPaneWatch, menuWatch);
+		addPopup(tableWatch, menuWatch);
+		
+		menuAddToWatch = new JMenuItem("org.multipage.generator.menuDebuggerAddToWatch");
+		menuAddToWatch.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onAddToWatch();
+			}
+		});
+		menuWatch.add(menuAddToWatch);
+		
+		menuRemoveFromWatch = new JMenuItem("org.multipage.generator.menuDebuggerRemoveFromWatch");
+		menuRemoveFromWatch.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onRemoveWatch();
+			}
+		});
+		menuWatch.add(menuRemoveFromWatch);
 		
 		panelOutput = new JPanel();
 		tabbedPane.addTab("Output", null, panelOutput, null);
@@ -834,7 +876,7 @@ public class DebugViewer extends JFrame {
 		labelStatus = new JLabel("status");
 		panelStatus.add(labelStatus);
 	}
-	
+
 	/**
 	 * Post creation
 	 */
@@ -984,7 +1026,7 @@ public class DebugViewer extends JFrame {
 				try {
 					newSession.loadClientContexts(() -> {
 						// After loading contexts.
-						updateSourceCode();
+						updateViews();
 					});
 					
 				}
@@ -1031,7 +1073,7 @@ public class DebugViewer extends JFrame {
 	 */
 	private void displaySessions() {
 		
-		// Check debug listsner.
+		// Check debug listener.
 		if (debugListener == null) {
 			return;
 		}
@@ -1197,6 +1239,54 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
+	 * On add to watch list.
+	 */
+	protected void onAddToWatch() {
+		
+		DebugWatchItem watchItem = DebugWatchDialog.showDialog(this);
+		if (watchItem == null) {
+			return;
+		}
+		
+		String watchedItemName = watchItem.getName();
+		DebugWatchItemType watchedItemType = watchItem.getType();
+		
+		tableWatchModel.addRow(new Object [] { watchedItemName, null, watchedItemType, null, null });
+		
+		// Load watched values.
+		loadWatchListValues();
+	}
+	
+	/**
+	 * On remove watch item.
+	 */
+	protected void onRemoveWatch() {
+		
+		// Get selected watch item.
+		int selectedRow = tableWatch.getSelectedRow();
+		if (selectedRow < 0) {
+			return;
+		}
+		
+		Object cellValueObject = tableWatch.getValueAt(selectedRow, WATCHED_NAME_COLUMN_INDEX);
+		if (cellValueObject == null) {
+			return;
+		}
+		
+		// Ask user if selected watch item should be removed.
+		String watchedItemName = cellValueObject.toString();
+
+		boolean confirmed = Utility.ask(this, "org.multipage.generator.messageDebuggerRemoveWatchedItem", watchedItemName);
+		if (!confirmed) {
+			return;
+		}
+		
+		// Remove selected watch item.
+		tableWatchModel.removeRow(selectedRow);
+		tableWatch.updateUI();
+	}
+	
+	/**
 	 * Called when a user closes this window with click on window close button
 	 */
 	protected void onClose() {
@@ -1204,10 +1294,53 @@ public class DebugViewer extends JFrame {
 		ApplicationEvents.removeReceivers(this);
 		
 		saveDialog();
+		closeSessions();
 		disposeWatchdog();
 		dispose();
 	}
 	
+	/**
+	 * Close debugger sessions.
+	 */
+	private void closeSessions() {
+		
+		Object rootObject = threadsTreeModel.getRoot();
+		if (!(rootObject instanceof DefaultMutableTreeNode)) {
+			return;
+		}
+		
+		DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) rootObject;
+		Enumeration<? extends TreeNode> processNodes = rootNode.children();
+		
+		while (processNodes.hasMoreElements()) {
+			
+			TreeNode processNode = processNodes.nextElement();
+			Enumeration<? extends TreeNode> threadNodes = processNode.children();
+			
+			while (threadNodes.hasMoreElements()) {
+				
+				TreeNode threadNode = threadNodes.nextElement();
+				if (!(threadNode instanceof XdebugThreadNode)) {
+					continue;
+				}
+				
+				// Get Xdebug session and close it.
+				XdebugThreadNode xdebugThreadNode = (XdebugThreadNode) threadNode;
+				XdebugListenerSession session = xdebugThreadNode.getXdebugSession();
+				if (session == null) {
+					continue;
+				}
+				
+				stopSession(session, () -> session.close());
+			}
+		}
+		
+		// Remove tree nodes.
+		rootNode.removeAllChildren();
+		threadsTreeModel.reload();
+		treeThreads.updateUI();
+	}
+
 	/**
 	 * On select process tree node.
 	 */
@@ -1286,6 +1419,8 @@ public class DebugViewer extends JFrame {
 		Utility.localize(buttonStepInto);
 		Utility.localize(buttonStepOut);
 		Utility.localize(buttonStop);
+		Utility.localize(menuAddToWatch);
+		Utility.localize(menuRemoveFromWatch);
 	}
 
 	/**
@@ -1300,6 +1435,8 @@ public class DebugViewer extends JFrame {
 		buttonStepInto.setIcon(Images.getIcon("org/multipage/generator/images/step_into.png"));
 		buttonStepOut.setIcon(Images.getIcon("org/multipage/generator/images/step_out.png"));
 		buttonStop.setIcon(Images.getIcon("org/multipage/generator/images/stop.png"));
+		menuAddToWatch.setIcon(Images.getIcon("org/multipage/generator/images/watch_debug.png"));
+		menuRemoveFromWatch.setIcon(Images.getIcon("org/multipage/generator/images/remove_icon.png"));
 	}
 
 	/**
@@ -1365,19 +1502,13 @@ public class DebugViewer extends JFrame {
 	protected void onTest() {
 		
 		// TODO: <---DEBUG On Test button clicked.
-		boolean clientOpened = currentSession.getClientSocketChannel().isOpen();
-		int hashCode = currentSession.getClientSocketChannel().hashCode();
-		j.log("Client channel %d. Is opened %b", hashCode, clientOpened);
-		
-		boolean serverOpened = currentSession.getServerSocketChannel().isOpen();
-		hashCode = currentSession.getServerSocketChannel().hashCode();
-		j.log("Server channel %d. Is opened %b", hashCode, serverOpened);
+		getCurrentStack();
 	}
 	
 	/**
-	 * Update the source code fot current session.
+	 * Update the source code fot current session and other debugger views.
 	 */
-	private void updateSourceCode() {
+	private void updateViews() {
 		
 		try {
 			// Get selected Xdebug session.
@@ -1414,11 +1545,18 @@ public class DebugViewer extends JFrame {
 			});
 			
 			// Load Area Server stack.
+			final int STACK_GET_WAIT_TIMEOUT_MS = 1000;
+			Lock stackGetLock = new Lock();
 			xdebugSession.ref.stackGet(stack -> {
 				
 				// Display stack information.
 				displayStack(xdebugSession.ref, stack);
+				Lock.notify(stackGetLock);
 			});
+			Lock.waitFor(stackGetLock, STACK_GET_WAIT_TIMEOUT_MS);
+			
+			// Load watched values.
+			loadWatchListValues();
 		}
 		catch (Exception e) {
 			onException(e);
@@ -1690,6 +1828,188 @@ public class DebugViewer extends JFrame {
 		selectionModel.clearSelection();
 		selectionModel.addSelectionPath(nodePath);
 	}
+	
+	/**
+	 * Load watch list values from Xdebug client.
+	 */
+	private void loadWatchListValues() {
+		
+		// Get current stack.
+		XdebugAreaServerStackLevel stackLevel = getCurrentStack();
+		if (stackLevel == null) {
+			return;
+		}
+		
+		// Get watched items and get its current values.
+		LinkedList<DebugWatchItem> watchedItems = getWatchedItems();
+		for (DebugWatchItem watchedItem : watchedItems) {
+			
+			loadWatchedValue(stackLevel, watchedItem);
+		}
+	}
+	
+	/**
+	 * Load watched value.
+	 * @param stackLevel
+	 * @param watchedItem
+	 * @return
+	 * @throws Exception 
+	 */
+	private void loadWatchedValue(XdebugAreaServerStackLevel stackLevel, DebugWatchItem watchedItem) {
+		
+		try {
+			int stateHashCode = stackLevel.getStateHashCode();
+			String stateHashText = String.valueOf(stateHashCode);
+			String watchedName = watchedItem.getName();
+			
+			DebugWatchItemType watchedType = watchedItem.getType();
+			String watchedTypeText = watchedType.getName();
+			Integer debuggerContextId = currentSession.getContextId(XdebugClient.LOCAL_CONTEXT);
+			String contextIdText = String.valueOf(debuggerContextId);
+			
+			int transactionId = currentSession.createTransaction("property_get", 
+					new String [][] { { "-h", stateHashText }, { "-n", watchedName }, { "-t", watchedTypeText }, { "-c", contextIdText } },
+					"", response -> {
+				
+				try {
+					// Get watched item from Xdebug result and view it.
+					DebugWatchItem watchedItemResult = response.getXdebugWathItemResult(watchedType);
+					displayWatchedValue(watchedItemResult);
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+		
+			currentSession.beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
+	}
+
+	/**
+	 * Display watched item value.
+	 * @param watchedItemResult
+	 */
+	private void displayWatchedValue(DebugWatchItem watchedItemResult) {
+		
+		// Try to find watched item by its name and property type.
+		int rowCount = tableWatchModel.getRowCount();
+		for (int row = 0; row < rowCount; row++) {
+			
+			// Get table cell values.
+			Object nameObject = tableWatchModel.getValueAt(row, WATCHED_NAME_COLUMN_INDEX);
+			Object propertyTypeObject = tableWatchModel.getValueAt(row, WATCHED_PROPERTY_TYPE_COLUMN_INDEX);
+			
+			// Check the cell values.
+			if (!(nameObject instanceof String) || !(propertyTypeObject instanceof DebugWatchItemType)) {
+				continue;
+			}
+			
+			String name = (String) nameObject;
+			DebugWatchItemType propertyType = (DebugWatchItemType) propertyTypeObject;
+			
+			// If the watched item matches the input item, update its full name, value and value type.
+			if (watchedItemResult.matches(name, propertyType)) {
+				
+				String fullNameText = watchedItemResult.getFullName();
+				tableWatchModel.setValueAt(fullNameText, row, WATCHED_FULLNAME_COLUMN_INDEX);
+				
+				String valueText = watchedItemResult.getValue();
+				tableWatchModel.setValueAt(valueText, row, WATCHED_VALUE_COLUMN_INDEX);
+				
+				String valueTypeText = watchedItemResult.getValueType();
+				tableWatchModel.setValueAt(valueTypeText, row, WATCHED_VALUE_TYPE_COLUMN_INDEX);
+			}
+		}
+		
+		// Update wathed items table.
+		tableWatch.updateUI();
+	}
+
+	/**
+	 * Get list of watched items.
+	 * @return
+	 */
+	private LinkedList<DebugWatchItem> getWatchedItems() {
+		
+		LinkedList<DebugWatchItem> watchedList = new LinkedList<DebugWatchItem>();
+		
+		int rowCount = tableWatchModel.getRowCount();
+		for (int row = 0; row < rowCount; row++) {
+			
+			// Get item name and type.
+			Object cellValue = tableWatchModel.getValueAt(row, WATCHED_NAME_COLUMN_INDEX);
+			if (!(cellValue instanceof String)) {
+				continue;
+			}
+			String name = (String) cellValue;
+			
+			cellValue = tableWatchModel.getValueAt(row, WATCHED_PROPERTY_TYPE_COLUMN_INDEX);
+			if (!(cellValue instanceof DebugWatchItemType)) {
+				continue;
+			}
+			DebugWatchItemType type = (DebugWatchItemType) cellValue;
+			
+			DebugWatchItem watchedItem = new DebugWatchItem(name, type);
+			watchedList.add(watchedItem);
+		}
+		
+		return watchedList;
+	}
+
+	/**
+	 * Get current stack.
+	 */
+	private XdebugAreaServerStackLevel getCurrentStack() {
+		
+		// Get selected tree node.
+		Object currentNode = treeThreads.getLastSelectedPathComponent();
+		if (currentNode == null) {
+			return null;
+		}
+		
+		// If the selected node is process node, get first child, it should be the thread node.
+		if (currentNode instanceof XdebugProcessNode) {
+			
+			XdebugProcessNode processNode = (XdebugProcessNode) currentNode;
+			int childrenCount = processNode.getChildCount();
+			if (childrenCount <= 0) {
+				return null;
+			}
+			
+			currentNode = processNode.getChildAt(0);
+		}
+		
+		// If current node is thread node, get first child, it should be the stack node.
+		if (currentNode instanceof XdebugThreadNode) {
+			
+			XdebugThreadNode threadNode = (XdebugThreadNode) currentNode;
+			int childrenCount = threadNode.getChildCount();
+			
+			if (childrenCount <= 0) {
+				return null;
+			}
+			
+			currentNode = threadNode.getChildAt(0);
+		}
+		
+		// If current node is stack node, return the stack object.
+		if (!(currentNode instanceof DefaultMutableTreeNode)) {
+			return null;
+		}
+		
+		DefaultMutableTreeNode currentMutableNode = (DefaultMutableTreeNode) currentNode;
+		Object userObject = currentMutableNode.getUserObject();
+		
+		if (!(userObject instanceof XdebugAreaServerStackLevel)) {
+			return null;
+		}
+		
+		XdebugAreaServerStackLevel stackLevel = (XdebugAreaServerStackLevel) userObject;
+		return stackLevel;
+	}
 
 	/**
 	 * Print message on console
@@ -1784,7 +2104,7 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("run", null, response -> {
 				
-				updateSourceCode();
+				updateViews();
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -1822,31 +2142,66 @@ public class DebugViewer extends JFrame {
 	 */
 	private void initWatch() {
 		
-		listWatchModel = new DefaultListModel<String>();
-		listWatch.setModel(listWatchModel);
+		final int [] columnWidths = { 100, 100, 100, 100, 100 };
+		final int columnCount = columnWidths.length;
 		
-		listWatch.setCellRenderer(new ListCellRenderer<String>() {
-			
-			// Set renderer.
-			final RendererJLabel label = new RendererJLabel();
-
-			@Override
-			public Component getListCellRendererComponent(JList<? extends String> list, String text, int index,
-					boolean isSelected, boolean cellHasFocus) {
-				
-				label.set(isSelected, cellHasFocus, index);
-				
-				label.setText(String.format(
-						  "<html>"
-						+ "<div style='margin: 3;'>"
-						+ "<font size='16px'>"
-						+ "%s"
-						+ "</font>"
-						+ "</div>"
-						+ "</html>", text));
-				return label;
-			}
-		});
+		tableWatchModel = new DefaultTableModel(0, columnCount);
+		tableWatch.setModel(tableWatchModel);
+		
+		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
+		
+		// Name column.
+		final int nameCellWidth = columnWidths[WATCHED_NAME_COLUMN_INDEX];
+		TextFieldEx nameTextField = new TextFieldEx();
+		DefaultCellEditor nameEditor = new DefaultCellEditor(nameTextField);
+		DefaultTableCellRenderer nameRenderer = new DefaultTableCellRenderer();
+		TableColumn nameColumn = new TableColumn(WATCHED_NAME_COLUMN_INDEX, nameCellWidth, nameRenderer, nameEditor);
+		String nameHeaderText = Resources.getString("org.multipage.generator.textDebugWatchItemName");
+		nameColumn.setHeaderValue(nameHeaderText);
+		columnModel.addColumn(nameColumn);
+		
+		// Full name column.
+		final int fullNameCellWidth = columnWidths[WATCHED_FULLNAME_COLUMN_INDEX];
+		TextFieldEx fullNameTextField = new TextFieldEx();
+		DefaultCellEditor fullNameEditor = new DefaultCellEditor(fullNameTextField);
+		DefaultTableCellRenderer fullNameRenderer = new DefaultTableCellRenderer();
+		TableColumn fullNameColumn = new TableColumn(WATCHED_FULLNAME_COLUMN_INDEX, fullNameCellWidth, fullNameRenderer, fullNameEditor);
+		String fullNameHeaderText = Resources.getString("org.multipage.generator.textDebugWatchItemFullName");
+		fullNameColumn.setHeaderValue(fullNameHeaderText);
+		columnModel.addColumn(fullNameColumn);
+		
+		// Property type column.
+		final int typeCellWidth = columnWidths[WATCHED_PROPERTY_TYPE_COLUMN_INDEX];
+		TextFieldEx typeTextField = new TextFieldEx();
+		typeTextField.setEditable(false);
+		DefaultCellEditor typeEditor = new DefaultCellEditor(typeTextField);
+		DefaultTableCellRenderer typeRenderer = new DefaultTableCellRenderer();
+		TableColumn typeColumn = new TableColumn(WATCHED_PROPERTY_TYPE_COLUMN_INDEX, typeCellWidth, typeRenderer, typeEditor);
+		String typeHeaderText = Resources.getString("org.multipage.generator.textDebugWatchItemType");
+		typeColumn.setHeaderValue(typeHeaderText);
+		columnModel.addColumn(typeColumn);
+		
+		// Value column.
+		final int valueCellWidth = columnWidths[WATCHED_VALUE_COLUMN_INDEX];
+		TextFieldEx valueTextField = new TextFieldEx();
+		DefaultCellEditor valueEditor = new DefaultCellEditor(valueTextField);
+		DefaultTableCellRenderer valueRenderer = new DefaultTableCellRenderer();
+		TableColumn valueColumn = new TableColumn(WATCHED_VALUE_COLUMN_INDEX, valueCellWidth, valueRenderer, valueEditor);
+		String valueHeaderText = Resources.getString("org.multipage.generator.textDebugWatchItemValue");
+		valueColumn.setHeaderValue(valueHeaderText);
+		columnModel.addColumn(valueColumn);
+		
+		// Value type column.
+		final int valueTypeCellWidth = columnWidths[WATCHED_VALUE_TYPE_COLUMN_INDEX];
+		TextFieldEx valueTypeTextField = new TextFieldEx();
+		DefaultCellEditor valueTypeEditor = new DefaultCellEditor(valueTypeTextField);
+		DefaultTableCellRenderer valueTypeRenderer = new DefaultTableCellRenderer();
+		TableColumn valueTypeColumn = new TableColumn(WATCHED_VALUE_TYPE_COLUMN_INDEX, valueTypeCellWidth, valueTypeRenderer, valueTypeEditor);
+		String valueTypeHeaderText = Resources.getString("org.multipage.generator.textDebugWatchItemValueType");
+		valueTypeColumn.setHeaderValue(valueTypeHeaderText);
+		columnModel.addColumn(valueTypeColumn);		
+		
+		tableWatch.setColumnModel(columnModel);
 	}
 
 	/**
@@ -1946,7 +2301,7 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("step_into", null, response -> {
 				
-				updateSourceCode();
+				updateViews();
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -1969,7 +2324,7 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("step_over", null, response -> {
 				
-				updateSourceCode();
+				updateViews();
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -1992,7 +2347,7 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("step_out", null, response -> {
 				
-				updateSourceCode();
+				updateViews();
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2013,9 +2368,29 @@ public class DebugViewer extends JFrame {
 				xdebugSession = currentSession;
 			}
 			
+			stopSession(xdebugSession, null);
+		}
+		catch (Exception e) {
+			onException(e);
+		}
+	}
+	
+	/**
+	 * Stop session.
+	 * @param xdebugSession
+	 * @param completedLambda
+	 */
+	private void stopSession(XdebugListenerSession xdebugSession, Runnable completedLambda) {
+		
+		// Process stop command
+		try {
 			int transactionId = xdebugSession.createTransaction("stop", null, response -> {
 				
-				updateSourceCode();
+				updateViews();
+				
+				if (completedLambda != null) {
+					completedLambda.run();
+				}
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2303,5 +2678,28 @@ public class DebugViewer extends JFrame {
 		
 		// Override this method.
 		e.printStackTrace();
+	}
+	
+	/**
+	 * Adds popup menu.
+	 * @param component
+	 * @param popup
+	 */
+	private static void addPopup(Component component, final JPopupMenu popup) {
+		component.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
 	}
 }

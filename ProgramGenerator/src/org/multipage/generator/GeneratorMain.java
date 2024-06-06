@@ -25,7 +25,6 @@ import org.maclan.help.ProgramHelp;
 import org.maclan.server.AreaServer;
 import org.maclan.server.ProgramHttpServer;
 import org.multipage.basic.ProgramBasic;
-import org.multipage.gui.LogConsoles;
 import org.multipage.gui.GeneralGui;
 import org.multipage.gui.StateSerializer;
 import org.multipage.gui.TextPopupMenu;
@@ -390,7 +389,9 @@ public class GeneratorMain {
 	 */
 	private static void closeApplication() {
 		
-		// Close HTTP server.
+		// Stop Area Server.
+		AreaServer.stop();
+		// Stop HTTP server.
 		ProgramBasic.stopHttpServer();
 		// Stop Sync.
 		SyncMain.stop();

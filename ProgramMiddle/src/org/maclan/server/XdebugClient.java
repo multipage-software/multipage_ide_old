@@ -6,7 +6,6 @@
  */
 package org.maclan.server;
 
-import java.awt.Color;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -761,10 +760,12 @@ public class XdebugClient {
 		
 		XdebugClientResponse response = null;
 		
-		// Returns value based on property name and context.
-		
-		// For Area Server context.
 		int areaServerContextId = CONTEXTS.get(AREA_SERVER_CONTEXT);
+		int localContextId = CONTEXTS.get(LOCAL_CONTEXT);
+		int globalContextId = CONTEXTS.get(GLOBAL_CONTEXT);
+		int areaContextId = CONTEXTS.get(AREA_CONTEXT);
+
+		// For Area Server context.
 		if (contextId == areaServerContextId) {
 			
 			AreaServerState state = areaServer.state;
@@ -778,6 +779,29 @@ public class XdebugClient {
 			case "area_server_text_state":
 				response = XdebugClientResponse.createAreaServerTextStateResult(command, state);
 				break;
+			}
+		}
+		else if (contextId == localContextId) {
+			
+			String propertyType = command.getArgument("-t");
+			
+			// For block properties...
+			if (DebugWatchItemType.blockVariable.checkTypeName(propertyType)) {
+				
+				// Find Area State with given hash code.
+				String stateHashCodeText = command.getArgument("-h");
+				if (stateHashCodeText == null || stateHashCodeText.isEmpty()) {
+					onThrownException("org.maclan.server.messageXdebugAreaStateHashCode");
+				}
+				int stateHashCode = Integer.parseInt(stateHashCodeText);
+				
+				AreaServerState state = areaServer.findState(stateHashCode);
+				if (state == null) {
+					onThrownException("org.maclan.server.messageXdebugAreaUnknownStateHashCode", stateHashCode);
+				}
+				
+				// Create reponse.
+				response = XdebugClientResponse.createBlockVariableResponse(command, state, propertyName);
 			}
 		}
 		

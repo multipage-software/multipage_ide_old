@@ -310,7 +310,9 @@ public class BuilderMain {
 	 * Close application.
 	 */
 	private static void closeApplication() {
-			
+		
+		// Stop Area Server.
+		AreaServer.stop();
 		// Close HTTP server.
 		ProgramBasic.stopHttpServer();
 		// Stop Sync.

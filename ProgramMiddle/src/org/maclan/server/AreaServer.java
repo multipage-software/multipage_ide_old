@@ -56,7 +56,9 @@ import org.maclan.expression.ProcedureParameter;
 import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
+import org.multipage.util.RepeatedTask;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * Area Server helper class.
@@ -151,6 +153,16 @@ public class AreaServer {
 	 * Number of JavaScript engines in the pool.
 	 */
 	private static final int JAVASCRIPT_ENGINE_COUNT = 10;
+	
+	/**
+	 * Debugger lock timeout in milliseconds.
+	 */
+	private static final long DEBUGGER_LOCK_TIMEOUT_MS = 200;
+	
+	/**
+	 * Exit debugger flag. Is true when application exits.
+	 */
+	private static boolean exitDebugger = false;
 
 	/**
 	 * Area ID of the page which source code has to be displayed.
@@ -161,7 +173,7 @@ public class AreaServer {
 	 * Synchronized container for future JavaScript engine pool.
 	 */
 	private static Obj<ArrayList<ScriptingEngine>> javaScriptEnginePool = new Obj<ArrayList<ScriptingEngine>>(null);
-
+	
 	/**
 	 * Show page source code.
 	 * @param areaId 
@@ -194,6 +206,7 @@ public class AreaServer {
 	 * Involve user action in the logging process. A lambda function.
 	 */
 	private static Runnable logInvolveUserLambda = null;
+	
 	
 	/**
 	 * Static constructor.
@@ -3932,7 +3945,17 @@ public class AreaServer {
 			});
 			
 			// Wait for the continuation command.
-			Lock.waitFor(state.debuggerLock);
+			RepeatedTask.loopBlocking("DebuggerLock", 0L, 0L, (isRunning, exception) -> {
+				
+				if (!isRunning || exitDebugger) {
+					return false;
+				}
+				boolean isTimeout = Lock.waitFor(state.debuggerLock, DEBUGGER_LOCK_TIMEOUT_MS);
+				if (isTimeout) {
+					return true;
+				}
+				return false;
+			});
 			
 			// On debugger stop command throw stop Area Server exception.
 			if (XdebugOperation.stop.equals(state.debuggerOperation)) {
@@ -8789,6 +8812,27 @@ public class AreaServer {
 	}
 	
 	/**
+	 * Find area server state.
+	 * @param stateHashCode
+	 * @return
+	 */
+	public AreaServerState findState(int stateHashCode) {
+		
+		AreaServerState currentState = state;
+		while (currentState != null) {
+			
+			int currentHashCode = currentState.hashCode();
+			if (currentHashCode == stateHashCode) {
+				
+				return currentState;
+			}
+			
+			currentState = currentState.parentState;
+		}
+		return null;
+	}
+	
+	/**
 	 * Set code descriptor for Xdebug.
 	 * @param source 
 	 * @param replace
@@ -8839,5 +8883,13 @@ public class AreaServer {
 		}
 		
 		codeDescriptor.set(tagName, properties, tagStartPosition, position, innerText, replace);
+	}
+
+	/**
+	 * Stop Area Server.
+	 */
+	public static void stop() {
+		
+		exitDebugger = true;
 	}
 }

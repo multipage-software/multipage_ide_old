@@ -23,6 +23,11 @@ public class XdebugAreaServerStackLevel {
 	 * Stack source code type.
 	 */
 	private String type = "eval";
+	
+	/**
+	 * State hash code that enables to identify the stack level in Area Server.
+	 */
+	private int stateHashCode = -1;
 
 	/**
 	 * Source code.
@@ -49,6 +54,7 @@ public class XdebugAreaServerStackLevel {
 		
 		this.level = level;
 		this.type = type;
+		this.stateHashCode = state.hashCode();
 		
 		if (state.text != null) {
 			this.sourceCode = state.text.toString();
@@ -68,14 +74,16 @@ public class XdebugAreaServerStackLevel {
 	 * Constructor.
 	 * @param level
 	 * @param type
+	 * @param stateHashCode
 	 * @param cmdBegin
 	 * @param cmdEnd
 	 * @param sourceCode
 	 */
-	public XdebugAreaServerStackLevel(int level, String type, int cmdBegin, int cmdEnd, String sourceCode) {
+	public XdebugAreaServerStackLevel(int level, String type, int stateHashCode, int cmdBegin, int cmdEnd, String sourceCode) {
 		
 		this.level = level;
 		this.type = type;
+		this.stateHashCode = stateHashCode;
 		this.cmdBegin = cmdBegin;
 		this.cmdEnd = cmdEnd;
 		this.sourceCode = sourceCode;
@@ -97,6 +105,15 @@ public class XdebugAreaServerStackLevel {
 	public String getType() {
 		
 		return type;
+	}
+	
+	/**
+	 * Get Area Server state hash code.
+	 * @return
+	 */
+	public int getStateHashCode() {
+		
+		return stateHashCode;
 	}
 
 	/**

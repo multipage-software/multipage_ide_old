@@ -28,7 +28,6 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.multipage.util.j;
@@ -100,9 +99,14 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathStackRootNodes = null;
 	private static XPathExpression xpathRelativeStackLevel = null;
 	private static XPathExpression xpathRelativeStackType = null;
+	private static XPathExpression xpathRelativeStackStateHash = null;
 	private static XPathExpression xpathRelativeStackCmdBegin = null;
 	private static XPathExpression xpathRelativeStackCmdEnd = null;
 	private static XPathExpression xpathRelativeSourceCode = null;
+	private static XPathExpression xpathPropertyName = null;
+	private static XPathExpression xpathPropertyFullName = null;
+	private static XPathExpression xpathPropertyValue = null;
+	private static XPathExpression xpathPropertyValueType = null;
 	
 	/**
 	 * Regular expression.
@@ -161,9 +165,14 @@ public class XdebugClientResponse {
 			xpathStackRootNodes = xpath.compile("/response/*");
 			xpathRelativeStackLevel = xpath.compile("@level");
 			xpathRelativeStackType = xpath.compile("@type");
+			xpathRelativeStackStateHash = xpath.compile("@statehash");
 			xpathRelativeStackCmdBegin = xpath.compile("@cmdbegin");
 			xpathRelativeStackCmdEnd = xpath.compile("@cmdend");
 			xpathRelativeSourceCode = xpath.compile("input/text()");
+			xpathPropertyName = xpath.compile("/response/property/name/text()");
+			xpathPropertyFullName = xpath.compile("/response/property/fullname/text()");
+			xpathPropertyValue = xpath.compile("/response/property/value/text()");
+			xpathPropertyValueType = xpath.compile("/response/property/@type");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -352,7 +361,6 @@ public class XdebugClientResponse {
 		rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
 		if (success) {
 			// Set source code text.
-			sourceCode = Utility.htmlSpecialChars(sourceCode);
 			rootElement.setTextContent(sourceCode);
 		}
 		xml.appendChild(rootElement);
@@ -719,6 +727,10 @@ public class XdebugClientResponse {
         	String type = stackLevel.getType();
         	stackElement.setAttribute("type", type);
         	
+        	int stateHashCode = stackLevel.getStateHashCode();
+        	String stateHashText = String.valueOf(stateHashCode);
+        	stackElement.setAttribute("statehash", stateHashText);
+        	
         	// Set Area Server state. The tag start position and current text position.
         	int tagStartPosition = stackLevel.getCmdBegin();
         	String tagStartPositionText = String.valueOf(tagStartPosition);
@@ -731,8 +743,6 @@ public class XdebugClientResponse {
         	// Create child element for source code in the given stack level.
         	Element inputElement = xml.createElement("input");        	
         	String sourceCode = stackLevel.getSourceCode();
-        	
-        	sourceCode = Utility.htmlSpecialChars(sourceCode);
         	inputElement.setTextContent(sourceCode);
         	stackElement.appendChild(inputElement);
         	
@@ -743,6 +753,107 @@ public class XdebugClientResponse {
         // Create and return new packet.
 		XdebugClientResponse stackPacket = new XdebugClientResponse(xml);
 		return stackPacket;
+	}
+	
+	/**
+	 * Create block variable response.
+	 * @param command
+	 * @param state
+	 * @param variableName
+	 * @return
+	 * @throws Exception
+	 */
+	public static XdebugClientResponse createBlockVariableResponse(XdebugCommand command, AreaServerState state, String variableName)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get command name.
+        String commandName = command.getName();
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+		// Try to find variable and get its value.
+        Obj<BlockDescriptor> blockDescriptor = new Obj<>(null);
+		Variable variable = state.blocks.findVariable(variableName, blockDescriptor);
+		
+		String variableValueText = "unknown";
+		Class<?> variableType = null;
+		String blockName = null;
+		
+		if (variable != null) {
+			
+			Object variableValue = variable.value;
+			if (variableValue != null) {
+				variableValueText = variableValue.toString();
+			}
+			else {
+				variableValueText = "null";
+			}
+			
+			variableType = variableValue.getClass();
+			
+			if (blockDescriptor.ref != null) {
+				blockName = blockDescriptor.ref.name;
+				
+				// If the block name doesn't exist, set it to the value of hash code from the block. 
+				if (blockName == null || blockName.isEmpty()) {
+					blockName = String.valueOf(blockDescriptor.ref.hashCode());
+				}
+			}
+		}
+		
+		// Get variable full name with block name part as the first part of the full name.
+		String variableFullName = null;
+		if (blockName != null) {
+			variableFullName = blockName + ':' + variableName;
+		}
+		
+		// Get variable type name.
+		String typeName = null;
+		if (variableType != null) {
+			typeName = variableType.getSimpleName();
+		}
+		else {
+			typeName = "unknown";
+		}
+        
+        // Create the property node.
+        Element propertyElement = xml.createElement("property");
+        propertyElement.setAttribute("type", typeName);
+        propertyElement.setAttribute("children", "false");
+        rootElement.appendChild(propertyElement);
+        
+        // Create the name node.
+        Element nameElement = xml.createElement("name");
+        nameElement.setAttribute("encoding", "none");
+        nameElement.setTextContent(variableName);
+        propertyElement.appendChild(nameElement);
+        
+        // Create the name node.
+        Element fullNameElement = xml.createElement("fullname");
+        fullNameElement.setAttribute("encoding", "none");
+        fullNameElement.setTextContent(variableFullName);
+        propertyElement.appendChild(fullNameElement);
+
+         // Create the value node.
+        Element valueElement = xml.createElement("value");
+        valueElement.setAttribute("encoding", "none");
+        valueElement.setTextContent(variableValueText);
+        propertyElement.appendChild(valueElement);
+        
+        // Create and return new packet.
+		XdebugClientResponse blockVariablePacket = new XdebugClientResponse(xml);
+		return blockVariablePacket;
 	}
 	
 	/**
@@ -1296,6 +1407,9 @@ public class XdebugClientResponse {
 				
 				String type = (String) xpathRelativeStackType.evaluate(stackNode, XPathConstants.STRING);
 				
+				String stateHashText = (String) xpathRelativeStackStateHash.evaluate(stackNode, XPathConstants.STRING);
+				int stateHash = Integer.valueOf(stateHashText);
+				
 				textValue = (String) xpathRelativeStackCmdBegin.evaluate(stackNode, XPathConstants.STRING);
 				int cmdBegin = Integer.valueOf(textValue);
 				
@@ -1304,7 +1418,7 @@ public class XdebugClientResponse {
 				
 				String sourceCode = (String) xpathRelativeSourceCode.evaluate(stackNode, XPathConstants.STRING);
 				
-				XdebugAreaServerStackLevel stackLevel = new XdebugAreaServerStackLevel(level, type, cmdBegin, cmdEnd, sourceCode);
+				XdebugAreaServerStackLevel stackLevel = new XdebugAreaServerStackLevel(level, type, stateHash, cmdBegin, cmdEnd, sourceCode);
 				stack.add(stackLevel);
 			}
 		}
@@ -1312,6 +1426,31 @@ public class XdebugClientResponse {
 			onThrownException(e);
 		}
 		return stack;
+	}
+	
+	/**
+	 * Get watched item.
+	 * @param watchedType 
+	 * @return
+	 * @throws XPathExpressionException 
+	 */
+	public DebugWatchItem getXdebugWathItemResult(DebugWatchItemType watchedType)
+			throws Exception {
+		
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"property_get".equals(commandName)) {
+			onThrownException("org.maclan.server.messageBadXdebugCommandName", "stack_get", commandName);
+		}
+		
+		// Get watched item name, full name, type and value.
+		String itemName = (String) xpathPropertyName.evaluate(xml, XPathConstants.STRING);
+		String itemFullName = (String) xpathPropertyFullName.evaluate(xml, XPathConstants.STRING);
+		String valueText = (String) xpathPropertyValue.evaluate(xml, XPathConstants.STRING);
+		String valueTypeText = (String) xpathPropertyValueType.evaluate(xml, XPathConstants.STRING);
+
+		// Create watched item object.
+		DebugWatchItem watchItem = new DebugWatchItem(watchedType, itemName, itemFullName, valueText, valueTypeText);
+		return watchItem;
 	}
 
 	/**
