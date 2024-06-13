@@ -14,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.util.LinkedList;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -26,7 +27,6 @@ import org.maclan.server.DebugWatchItemType;
 import org.multipage.gui.Images;
 import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
-import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
 
 /**
@@ -51,12 +51,17 @@ public class DebugWatchDialog extends JDialog {
 	 */
 	private static int selectedType = 0;
 	
+	/**]
+	 * List of watched items.
+	 */
+	private static LinkedList<DebugWatchItem> watchItems = null;
+	
 	/**
 	 * Dialog controls.
 	 */
 	private JButton buttonOk;
 	private JButton buttonCancel;
-	private TextFieldEx textName;
+	private JComboBox<String> comboName;
 	private JComboBox<DebugWatchItemType> comboType;
 	private JLabel labelType;
 	private JLabel labelName;
@@ -111,20 +116,35 @@ public class DebugWatchDialog extends JDialog {
 		
 		// Create a new frame object and make it visible.
 		DebugWatchDialog dialog = new DebugWatchDialog(parent);
+		
+		// Load combo box items.
+		DebugWatchItemType selectedType = dialog.getSelectedType();
+		dialog.loadComboWatchedItems(watchItems, selectedType);
+		
 		dialog.setVisible(true);
 		return dialog.watchItem;
+	}
+
+	/**
+	 * Set watch items.
+	 * @param watchItems
+	 */
+	public static void setWatchItems(LinkedList<DebugWatchItem> watchItems) {
+		
+		DebugWatchDialog.watchItems  = watchItems;
 	}
 	
 	/**
 	 * Create the dialog.
 	 */
 	public DebugWatchDialog(Component parent) {
+		
 		super(Utility.findWindow(parent), ModalityType.APPLICATION_MODAL);
 		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		initComponents();
 		postCreate(); //$hide$
-	}
-
+	}	
+	
 	/**
 	 * Initialize dialog components.
 	 */
@@ -173,6 +193,11 @@ public class DebugWatchDialog extends JDialog {
 		getContentPane().add(labelType);
 		
 		comboType = new JComboBox<>();
+		comboType.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onSelectType();
+			}
+		});
 		springLayout.putConstraint(SpringLayout.NORTH, comboType, 3, SpringLayout.SOUTH, labelType);
 		springLayout.putConstraint(SpringLayout.WEST, comboType, 10, SpringLayout.WEST, getContentPane());
 		springLayout.putConstraint(SpringLayout.EAST, comboType, -10, SpringLayout.EAST, getContentPane());
@@ -183,12 +208,12 @@ public class DebugWatchDialog extends JDialog {
 		springLayout.putConstraint(SpringLayout.WEST, labelName, 0, SpringLayout.WEST, labelType);
 		getContentPane().add(labelName);
 		
-		textName = new TextFieldEx();
-		springLayout.putConstraint(SpringLayout.NORTH, textName, 3, SpringLayout.SOUTH, labelName);
-		springLayout.putConstraint(SpringLayout.WEST, textName, 10, SpringLayout.WEST, getContentPane());
-		springLayout.putConstraint(SpringLayout.EAST, textName, -10, SpringLayout.EAST, getContentPane());
-		getContentPane().add(textName);
-		textName.setColumns(10);
+		comboName = new JComboBox<>();
+		comboName.setEditable(true);
+		springLayout.putConstraint(SpringLayout.NORTH, comboName, 3, SpringLayout.SOUTH, labelName);
+		springLayout.putConstraint(SpringLayout.WEST, comboName, 10, SpringLayout.WEST, getContentPane());
+		springLayout.putConstraint(SpringLayout.EAST, comboName, -10, SpringLayout.EAST, getContentPane());
+		getContentPane().add(comboName);
 	}
 
 	/**
@@ -222,6 +247,49 @@ public class DebugWatchDialog extends JDialog {
 		setIconImage(Images.getImage("org/multipage/gui/images/main.png"));
 		buttonOk.setIcon(Images.getIcon("org/multipage/gui/images/ok_icon.png"));
 		buttonCancel.setIcon(Images.getIcon("org/multipage/gui/images/cancel_icon.png"));
+	}
+	
+	/**
+	 * On combo box select type event.
+	 */
+	protected void onSelectType() {
+		
+		DebugWatchItemType type = getSelectedType();
+		loadComboWatchedItems(watchItems, type);
+	}
+	
+	/**
+	 * Load combo box items that are displayed in the list.
+	 * @param watchItems
+	 * @param type
+	 */
+	private void loadComboWatchedItems(LinkedList<DebugWatchItem> watchItems, DebugWatchItemType type) {
+		
+		// Load watched items.
+		comboName.removeAllItems();
+		
+		for(DebugWatchItem item : watchItems) {
+			
+			DebugWatchItemType itemType = item.getType();
+			if (itemType == type) {
+				
+				String watchedItemName = item.getName();
+				comboName.addItem(watchedItemName);
+			}
+		}
+		
+		// Clear edit box.
+		comboName.getEditor().setItem("");
+	}
+	
+	/**
+	 * Get selected watch item type.
+	 * @return
+	 */
+	private DebugWatchItemType getSelectedType() {
+		
+		DebugWatchItemType type = (DebugWatchItemType) comboType.getSelectedItem();
+		return type;
 	}
 	
 	/**
@@ -273,7 +341,7 @@ public class DebugWatchDialog extends JDialog {
 		DebugWatchItemType itemType = (DebugWatchItemType) selectedObject;
 		
 		// Get watch item name.
-		String itemName = textName.getText();
+		String itemName = comboName.getEditor().getItem().toString();
 		if (itemName == null || itemName.isEmpty()) {
 			return null;
 		}

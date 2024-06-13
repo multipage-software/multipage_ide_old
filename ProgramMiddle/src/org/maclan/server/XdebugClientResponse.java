@@ -30,7 +30,6 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.commons.text.StringEscapeUtils;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -107,6 +106,11 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathPropertyFullName = null;
 	private static XPathExpression xpathPropertyValue = null;
 	private static XPathExpression xpathPropertyValueType = null;
+	private static XPathExpression xpathResponseProperties = null;
+	private static XPathExpression xpathResponsePropertyName = null;
+	private static XPathExpression xpathResponsePropertyFullName = null;
+	private static XPathExpression xpathResponsePropertyTypeName = null;
+	private static XPathExpression xpathResponseNullContext = null;
 	
 	/**
 	 * Regular expression.
@@ -173,6 +177,11 @@ public class XdebugClientResponse {
 			xpathPropertyFullName = xpath.compile("/response/property/fullname/text()");
 			xpathPropertyValue = xpath.compile("/response/property/value/text()");
 			xpathPropertyValueType = xpath.compile("/response/property/@type");
+			xpathResponseProperties = xpath.compile("/response/*");
+			xpathResponsePropertyName = xpath.compile("@name");
+			xpathResponsePropertyFullName = xpath.compile("@fullname");
+			xpathResponsePropertyTypeName = xpath.compile("@type");
+			xpathResponseNullContext = xpath.compile("/response/null_context");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -857,6 +866,83 @@ public class XdebugClientResponse {
 	}
 	
 	/**
+	 * Create context items response.
+	 * @param command
+	 * @param watchItems
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createContextGetResult(XdebugCommand command, LinkedList<DebugWatchItem> watchItems)
+				throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get command name.
+        String commandName = command.getName();
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        // Create property nodes.
+        for (DebugWatchItem watchItem : watchItems) {
+        	
+        	Element propertyElement = xml.createElement("property");
+        	String propertyName = watchItem.getName();
+        	propertyElement.setAttribute("name", propertyName);
+        	String propertyFullName = watchItem.getFullName();
+        	propertyElement.setAttribute("fullname", propertyFullName);
+        	String typeName = watchItem.getTypeName();
+        	propertyElement.setAttribute("type", typeName);
+        	rootElement.appendChild(propertyElement);
+        }
+        		
+        // Create and return new packet.
+		XdebugClientResponse contextPacket = new XdebugClientResponse(xml);
+		return contextPacket;
+	}
+	
+	/**
+	 * Create no context result.
+	 * @param command
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createContextGetNullResult(XdebugCommand command)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get command name.
+        String commandName = command.getName();
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        Element nullContextElement = xml.createElement("null_context");
+        rootElement.appendChild(nullContextElement);
+        
+        // Create and return new packet.
+		XdebugClientResponse nullContextPacket = new XdebugClientResponse(xml);
+		return nullContextPacket;
+	}
+	
+	/**
 	 * Check if the input packet is an INIT packet.
 	 * @return
 	 * @throws Exception 
@@ -1451,6 +1537,57 @@ public class XdebugClientResponse {
 		// Create watched item object.
 		DebugWatchItem watchItem = new DebugWatchItem(watchedType, itemName, itemFullName, valueText, valueTypeText);
 		return watchItem;
+	}
+	
+	/**
+	 * Get the Area Server context properties for debugger watch list.
+	 * @return
+	 * @throws Exception 
+	 */
+	public LinkedList<DebugWatchItem> getContextProperties()
+			throws Exception {
+		
+		// Check Xdebug command name.
+		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+		if (!"context_get".equals(commandName)) {
+			onThrownException("org.maclan.server.messageBadXdebugCommandName", "context_get", commandName);
+		}
+		
+		// Check null context.
+		Node nullContextNode = (Node) xpathResponseNullContext.evaluate(xml, XPathConstants.NODE);
+		if (nullContextNode != null) {
+			
+			return null;
+		}
+		
+		// Initialize watch list.
+		LinkedList<DebugWatchItem> watchList = new LinkedList<DebugWatchItem>();
+		
+		// Get watch list items from current response object.
+		NodeList properties = (NodeList) xpathResponseProperties.evaluate(xml, XPathConstants.NODESET);
+		int count = properties.getLength();
+		
+		for (int index = 0; index < count; index++) {
+			
+			Node propertyNode = properties.item(index);
+			String propertyName = propertyNode.getNodeName();
+			
+			if (!"property".equals(propertyName)) {
+				onThrownException("org.maclan.server.messageXdebugExpectingResponseNode", "property", propertyName);
+			}
+			
+			// Get watched item properties.
+			String name = (String) xpathResponsePropertyName.evaluate(propertyNode, XPathConstants.STRING);
+			String fullName = (String) xpathResponsePropertyFullName.evaluate(propertyNode, XPathConstants.STRING);
+			String typeName = (String) xpathResponsePropertyTypeName.evaluate(propertyNode, XPathConstants.STRING);
+			DebugWatchItemType type = DebugWatchItemType.getByName(typeName);
+			
+			// Create debugger watched item and add it to the list.
+			DebugWatchItem watchedItem = new DebugWatchItem(type, name, fullName, null, null);
+			watchList.add(watchedItem);
+		}
+		
+		return watchList;
 	}
 
 	/**

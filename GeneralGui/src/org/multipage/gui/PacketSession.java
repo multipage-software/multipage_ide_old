@@ -128,9 +128,6 @@ public class PacketSession {
         			return;
         		}
         		
-        		// TODO: <---DEBUG On read completed. Check if channel is open.
-        		j.log("On read completed. Channel is open %b. Result is %d", isOpen, result);
-        		
 				// Call lambda function for completion.
 				completedLambda.accept(result, inputBuffer);
 				

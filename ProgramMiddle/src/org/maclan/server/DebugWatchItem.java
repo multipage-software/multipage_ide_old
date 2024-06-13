@@ -93,6 +93,19 @@ public class DebugWatchItem {
 	}
 	
 	/**
+	 * Get type name.
+	 * @return
+	 */
+	public String getTypeName() {
+		
+		if (type == null) {
+			return "unknown";
+		}
+		String typeName = type.name();
+		return typeName;
+	}
+	
+	/**
 	 * Get watch item value.
 	 * @return
 	 */
@@ -124,5 +137,17 @@ public class DebugWatchItem {
 		
 		boolean matches = name.equals(this.name) && type.equals(this.type);
 		return matches;
+	}
+	
+	/**
+	 * Get text representation of the watch item.
+	 */
+	@Override
+	public String toString() {
+		
+		if (fullName != null && !fullName.isEmpty()) {
+			return fullName;
+		}
+		return name;
 	}
 }

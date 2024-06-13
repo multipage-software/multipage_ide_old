@@ -553,11 +553,13 @@ public class XdebugListenerSession extends DebugListenerSession {
 		
 		// Prepare commands that will be sent to the debug client.
 		for (String featureName : featureNames) {
-			createTransaction(XdebugCommand.FEATURE_GET, new String [][] {{"-n", featureName}}, responsePacket -> {
+			createTransaction(XdebugCommand.FEATURE_GET, new String [][] {{"-n", featureName}}, response -> {
 				
 				// Get Xdebug feature and add it to feature map.
 				try {
-					XdebugFeature feature = responsePacket.getFeatureValue();
+					throwPossibleException(response);
+					
+					XdebugFeature feature = response.getFeatureValue();
 					String responseFeatureName = feature.getName();
 					
 					features.put(responseFeatureName, feature);
@@ -589,17 +591,20 @@ public class XdebugListenerSession extends DebugListenerSession {
 			String featureName = feature[0];
 			String featureValue = feature[1];
 			
-			createTransaction(XdebugCommand.FEATURE_SET, new String [][] {{"-n", featureName}, {"-v", featureValue}},  responsePacket -> {
+			createTransaction(XdebugCommand.FEATURE_SET, new String [][] {{"-n", featureName}, {"-v", featureValue}},  response -> {
 				
 				// Get Xdebug feature and add it to feature map.
 				try {
-					boolean success = responsePacket.getSettingFeatureResult();
+					
+					XdebugListenerSession.throwPossibleException(response);
+					
+					boolean success = response.getSettingFeatureResult();
 					if (!success) {
 						onException("org.mclan.server.messageErrorSettingXdebugFeature", featureName);
 					}
 					
 					// Callback on last transaction complete.
-					int transactionId = responsePacket.getTransactionId();
+					int transactionId = response.getTransactionId();
 					if (transactionId >= 0 && transactionId == lastTransactionID.ref && onComplete != null) {
 						onComplete.run();
 					}
@@ -993,6 +998,8 @@ public class XdebugListenerSession extends DebugListenerSession {
 		int transactionId = createTransaction("source", new String [][] {{"-f", debuggedUri}}, response -> {
 			
 			try {
+				XdebugListenerSession.throwPossibleException(response);
+				
 				String sourceCode = response.getSourceResult();
 				sourceCodeLambda.accept(sourceCode);
 			}
@@ -1016,10 +1023,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 			
 			try {
 				// Check error response.
-				boolean isError = response.isErrorPacket();
-				if (isError) {
-					response.throwPacketException();
-				}
+				throwPossibleException(response);
 				
 				contextNameMap = response.getContextNames();
 			}
@@ -1072,9 +1076,10 @@ public class XdebugListenerSession extends DebugListenerSession {
 									 {"-c", debuggerContextIdText}}, response -> {
 				
 				// Process Area Server state response.
-				XdebugAreaServerState state;
 				try {
-					state = response.getXdebugAreaState();
+					throwPossibleException(response);
+					
+					XdebugAreaServerState state = response.getXdebugAreaState();
 					areaServerStateLambda.accept(state);
 				}
 				catch (Exception e) {
@@ -1115,6 +1120,8 @@ public class XdebugListenerSession extends DebugListenerSession {
 				
 				// Process Area Server state response.
 				try {
+					throwPossibleException(response);
+					
 					XdebugAreaServerTextState textState = response.getXdebugAreaTextState();
 					areaServerTextStateLambda.accept(textState);
 				}
@@ -1143,6 +1150,8 @@ public class XdebugListenerSession extends DebugListenerSession {
 				
 				// Process Area Server state response.
 				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
 					LinkedList<XdebugAreaServerStackLevel> stack = response.getXdebugAreaStack();
 					areaServerStackLambda.accept(stack);
 				}
@@ -1170,6 +1179,57 @@ public class XdebugListenerSession extends DebugListenerSession {
 		this.clientParameters.setThreadName(threadName);
 	}
 	
+	/**
+	 * Load Area Server context properties that can be placed in the debugger watch list.
+	 * @param contextId
+	 * @param stackLevel
+	 * @param watchItemsLambda
+	 */
+	public void contextGet(int contextId, XdebugAreaServerStackLevel stackLevel, Consumer<LinkedList<DebugWatchItem>> watchItemsLambda)
+			throws Exception {
+		
+		try {
+			// Get state hash code and convert context ID to string value.
+			int stateHashCode = stackLevel.getStateHashCode();
+			String stateHashText = String.valueOf(stateHashCode);
+			String contextIdText = String.valueOf(contextId);
+			
+			// Get Area Server context properties.
+			int transactionId = createTransaction("context_get", new String [][] {{ "-h", stateHashText }, { "-c", contextIdText }}, response -> {
+				
+				// Process Area Server context properties.
+				try {
+					throwPossibleException(response);
+					
+					LinkedList<DebugWatchItem> watchList = response.getContextProperties();
+					watchItemsLambda.accept(watchList);
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+			beginTransaction(transactionId);
+		}
+		catch (Exception e) {
+			onThrownException(e);
+		}		
+	}
+	
+	/**
+	 * If the sesponse contains error packet, then throw the exception.
+	 * @param response
+	 * @throws Exception
+	 */
+	public static void throwPossibleException(XdebugClientResponse response)
+			throws Exception {
+
+		// Check error response.
+		boolean isError = response.isErrorPacket();
+		if (isError) {
+			response.throwPacketException();
+		}
+	}
+
 	/**
 	 * Close session.
 	 */

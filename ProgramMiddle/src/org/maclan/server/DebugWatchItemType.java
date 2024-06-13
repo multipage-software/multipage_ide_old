@@ -19,6 +19,7 @@ public enum DebugWatchItemType {
 	 */
 	tagProperty("org.maclan.server.textDebugWatchTagProperty"),
 	blockVariable("org.maclan.server.textDebugWatchBlockVariable"),
+	blockProcedure("org.maclan.server.textDebugWatchBlockProcedure"),
 	expression("org.maclan.server.textDebugWatchExpression");
 	
 	/**
@@ -68,5 +69,23 @@ public enum DebugWatchItemType {
 		String enumName = super.name();
 		boolean matches = enumName.equals(typeName);
 		return matches;
+	}
+	
+	/**
+	 * Get enumeration value by its name.
+	 * @param typeName
+	 * @return
+	 */
+	public static DebugWatchItemType getByName(String typeName) {
+		
+		DebugWatchItemType [] enumValues = DebugWatchItemType.values();
+		for (DebugWatchItemType enumValue : enumValues) {
+			
+			String valueName = enumValue.name();
+			if (valueName.equals(typeName)) {
+				return enumValue;
+			}
+		}
+		return null;
 	}
 }

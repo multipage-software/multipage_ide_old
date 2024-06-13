@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 
@@ -199,6 +200,20 @@ public class XdebugClient {
 	public static Map<String, Integer> getContexts() {
 		
 		return CONTEXTS;
+	}
+	
+	/**
+	 * Get context ID by context name.
+	 * @return
+	 */
+	public static int getContextId(String contextName) 
+			throws Exception {
+		
+		Integer contextId = CONTEXTS.get(contextName);
+		if (contextId == null) {
+			throw new NoSuchElementException();
+		}
+		return contextId;
 	}
 
 	/**
@@ -484,7 +499,7 @@ public class XdebugClient {
 	}
 	
 	/**
-	 * An Xdebug client that accepts incomming commands and sends responses to them. It can also stop the connection.
+	 * Xdebug client entry point that accepts incomming commands and sends responses to them. It can also stop the connection.
 	 * @param areaServer
 	 * @param command
 	 * @return
@@ -588,8 +603,14 @@ public class XdebugClient {
 		}
 		else if ("stack_get".equals(commandName)) {
 			
-			// Get stop response.
+			// Get stack response.
 			XdebugClientResponse resultPacket = getStackGetResponse(command, areaServer);
+            return resultPacket;
+		}
+		else if ("context_get".equals(commandName)) {
+			
+			// Get context properties response.
+			XdebugClientResponse resultPacket = getContextGetResponse(command, areaServer);
             return resultPacket;
 		}
         
@@ -846,8 +867,8 @@ public class XdebugClient {
 		}
 		
 		// Create response packet.
-		XdebugClientResponse runResponse = XdebugClientResponse.createContinuationCommandResult(command);
-		return runResponse;
+		XdebugClientResponse continuationResponse = XdebugClientResponse.createContinuationCommandResult(command);
+		return continuationResponse;
 	}
 	
 	/**
@@ -874,8 +895,104 @@ public class XdebugClient {
 		}
 		
 		// Create response packet.
-		XdebugClientResponse runResponse = XdebugClientResponse.createStackGetResult(command, stack);
-		return runResponse;
+		XdebugClientResponse stackGetResponse = XdebugClientResponse.createStackGetResult(command, stack);
+		return stackGetResponse;
+	}
+	
+	/**
+	 * On context get command. Creates command response.
+	 * @param command
+	 * @param areaServer
+	 * @return
+	 * @throws Exception 
+	 */
+	private XdebugClientResponse getContextGetResponse(XdebugCommand command, AreaServer areaServer)
+			throws Exception {
+		
+		// Initialization.
+		LinkedList<DebugWatchItem> watchItems = new LinkedList<DebugWatchItem>();
+		String commandName = command.getName();
+
+		// Get context ID and Area Server state hash.
+		String contextIdText = command.getArgument("-c");
+		if (contextIdText == null) {
+			onThrownException("org.maclan.server.messageXdebugMissingContextId", commandName);
+		}
+		int contextId = -1;
+		try {
+			contextId = Integer.parseInt(contextIdText);
+		}
+		catch (Exception e) {
+			onThrownException(e, "org.maclan.server.messageXdebugBadContextId", commandName);
+		}
+
+		String stateHashText = command.getArgument("-h");
+		if (stateHashText == null) {
+			onThrownException("org.maclan.server.messageXdebugMissingStateHashCode", commandName);
+		}
+		int stateHash = -1;
+		try {
+			stateHash = Integer.parseInt(stateHashText);
+		}
+		catch (Exception e) {
+			onThrownException(e, "org.maclan.server.messageXdebugBadStateHashCode", commandName);
+		}
+		
+		// Find Area Server state by its hash code.
+		AreaServerState state = areaServer.findState(stateHash);
+		if (state == null) {
+			
+			// Create null state response.
+			XdebugClientResponse nullContextResponse = XdebugClientResponse.createContextGetNullResult(command);
+			return nullContextResponse;
+		}
+		
+		// Load tag properties, block variables and block procedures.
+		loadTagProperties(watchItems, contextId, state);
+		loadBlockVariables(watchItems, contextId, state);
+		loadBlockProcedures(watchItems, contextId, state);
+		
+		// Create response packet.
+		XdebugClientResponse contextGetResponse = XdebugClientResponse.createContextGetResult(command, watchItems);
+		return contextGetResponse;
+	}
+
+	/**
+	 * Load tag properties.
+	 * @param watchItems
+	 * @param contextId
+	 * @param state
+	 */
+	private void loadTagProperties(LinkedList<DebugWatchItem> watchItems, int contextId, AreaServerState state) {
+		
+		// TODO: <---MAKE Load current tag properties.
+		
+	}
+	
+	/**
+	 * Load block variables.
+	 * @param watchItems
+	 * @param contextId
+	 * @param state
+	 */
+	private void loadBlockVariables(LinkedList<DebugWatchItem> watchItems, int contextId, AreaServerState state) {
+		
+		// Get names of accessible block variables and add them to the watch list.
+		LinkedList<DebugWatchItem> watchedVariables = state.blocks.getVariableWatchList();
+		watchItems.addAll(watchedVariables);
+	}
+	
+	/**
+	 * Load block procedures.
+	 * @param watchItems
+	 * @param contextId
+	 * @param state
+	 */
+	private void loadBlockProcedures(LinkedList<DebugWatchItem> watchItems, int contextId, AreaServerState state) {
+		
+		// Get names of accessible block procedures and add them to the watch list.
+		LinkedList<DebugWatchItem> watchedProcedures = state.blocks.getLocalProcedureWatchList();
+		watchItems.addAll(watchedProcedures);
 	}
 
 	/**
@@ -1029,8 +1146,25 @@ public class XdebugClient {
 	private void onThrownException(String messageFormatId, Object ... parameters)
 			throws Exception {
 		
+		// Delegate the call.
+		onThrownException(null, messageFormatId, parameters);
+	}
+	
+	/**
+	 * On exception.
+	 * @param e
+	 * @param messageFormatId
+	 * @param parameters
+	 */
+	private void onThrownException(Exception e, String messageFormatId, Object ... parameters)
+			throws Exception {
+		
 		String messageFormat = Resources.getString(messageFormatId);
 		String message = String.format(messageFormat, parameters);
+		
+		if (e != null) {
+			message = e.getLocalizedMessage() + ' ' + message;
+		}
 		
 		Exception exception = new Exception(message);
 		onException(exception);

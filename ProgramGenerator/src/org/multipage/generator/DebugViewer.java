@@ -91,6 +91,7 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 import org.w3c.dom.Node;
 
 /**
@@ -1014,7 +1015,6 @@ public class DebugViewer extends JFrame {
 
 					// Show dialog window and display threads.
 					DebugViewer.this.setVisible(true);
-					displaySessions();
 				});
 			}
 			catch (Exception e) {
@@ -1065,13 +1065,13 @@ public class DebugViewer extends JFrame {
 		}
 		
 		// Display sessions.
-		displaySessions();
+		displayListenerSessions();
 	}
 
 	/**
 	 * Display sessions.
 	 */
-	private void displaySessions() {
+	private void displayListenerSessions() {
 		
 		// Check debug listener.
 		if (debugListener == null) {
@@ -1096,38 +1096,41 @@ public class DebugViewer extends JFrame {
 	 */
 	private void putSession(DefaultMutableTreeNode threadsRootNode, XdebugListenerSession session) {
 		
-		// Get process ID.
-		long processId = session.getPid();
-		if (processId < 0) {
-			return;
-		};
+		SwingUtilities.invokeLater(() -> {
 		
-		// Add new node only if it doesn't already exist.
-		int processNodeCount = threadsRootNode.getChildCount();
-		for (int index = 0; index < processNodeCount; index++) {
-			
-			// Get child node.
-			TreeNode treeNode = threadsRootNode.getChildAt(index);
-			if (!(treeNode instanceof XdebugProcessNode)) {
-				continue;
-			}
-			
-			XdebugProcessNode processNode = (XdebugProcessNode) treeNode;
-			long pid = processNode.getPid();
-			
-			// Compare process IDs. If they are equal, do not add new process node and add new thread node instead.
-			if (pid == processId) {
-				putThread(processNode, session);
+			// Get process ID.
+			long processId = session.getPid();
+			if (processId < 0) {
 				return;
+			};
+			
+			// Add new node only if it doesn't already exist.
+			int processNodeCount = threadsRootNode.getChildCount();
+			for (int index = 0; index < processNodeCount; index++) {
+				
+				// Get child node.
+				TreeNode treeNode = threadsRootNode.getChildAt(index);
+				if (!(treeNode instanceof XdebugProcessNode)) {
+					continue;
+				}
+				
+				XdebugProcessNode processNode = (XdebugProcessNode) treeNode;
+				long pid = processNode.getPid();
+				
+				// Compare process IDs. If they are equal, do not add new process node and add new thread node instead.
+				if (pid == processId) {
+					putThread(processNode, session);
+					return;
+				}
 			}
-		}
-		
-		// Add process and thread nodes.
-		XdebugProcessNode processNode = new XdebugProcessNode(session);
-		threadsRootNode.add(processNode);
-		putThread(processNode, session);
-		
-		Utility.expandAll(treeThreads, true);
+			
+			// Add process and thread nodes.
+			XdebugProcessNode processNode = new XdebugProcessNode(session);
+			threadsRootNode.add(processNode);
+			putThread(processNode, session);
+			
+			Utility.expandAll(treeThreads, true);
+		});
 	}
 	
 	/**
@@ -1340,7 +1343,7 @@ public class DebugViewer extends JFrame {
 		threadsTreeModel.reload();
 		treeThreads.updateUI();
 	}
-
+	
 	/**
 	 * On select process tree node.
 	 */
@@ -1362,7 +1365,7 @@ public class DebugViewer extends JFrame {
 		// Display the selected stack level.
 		SwingUtilities.invokeLater(() -> displaySourceCodeTextState(sourceCode, textState.ref));
 	}
-
+	
 	/**
 	 * On process double click.
 	 */
@@ -1506,11 +1509,14 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Update the source code fot current session and other debugger views.
+	 * Update the source code for current session and other debugger views.
 	 */
 	private void updateViews() {
 		
 		try {
+			// Display listener sessions.
+			displayListenerSessions();
+			
 			// Get selected Xdebug session.
 			Obj<XdebugListenerSession> xdebugSession = new Obj<XdebugListenerSession>();
 			xdebugSession.ref = getSelectedXdebugSession();
@@ -1520,6 +1526,17 @@ public class DebugViewer extends JFrame {
 			if (xdebugSession.ref == null) {
 				return;
 			}
+			
+			// Load Area Server stack.
+			final int STACK_GET_WAIT_TIMEOUT_MS = 1000;
+			Lock stackGetLock = new Lock();
+			xdebugSession.ref.stackGet(stack -> {
+				
+				// Display stack information.
+				displayStack(xdebugSession.ref, stack);
+				Lock.notify(stackGetLock);
+			});
+			Lock.waitFor(stackGetLock, STACK_GET_WAIT_TIMEOUT_MS);
 			
 			String debuggedAreaName = xdebugSession.ref.getAreaName();
 			
@@ -1544,23 +1561,49 @@ public class DebugViewer extends JFrame {
 				displaySourceCodeTextState(rawSourceCode, textState);
 			});
 			
-			// Load Area Server stack.
-			final int STACK_GET_WAIT_TIMEOUT_MS = 1000;
-			Lock stackGetLock = new Lock();
-			xdebugSession.ref.stackGet(stack -> {
-				
-				// Display stack information.
-				displayStack(xdebugSession.ref, stack);
-				Lock.notify(stackGetLock);
-			});
-			Lock.waitFor(stackGetLock, STACK_GET_WAIT_TIMEOUT_MS);
-			
 			// Load watched values.
 			loadWatchListValues();
+			
+			// Get current stack.
+			XdebugAreaServerStackLevel stackLevel = getCurrentStack();
+			if (stackLevel != null) {
+				
+				// Get current context.
+				int contextId = XdebugClient.getContextId(XdebugClient.LOCAL_CONTEXT);
+				
+				// Load context properties.
+				xdebugSession.ref.contextGet(contextId, stackLevel, watchItems -> {
+					
+					// Set watched items.
+					SwingUtilities.invokeLater(() -> {
+						
+						if (watchItems == null) {
+							removeStackLevel(stackLevel);
+							return;
+						}
+						
+						DebugWatchDialog.setWatchItems(watchItems);
+					});
+				});
+			}
 		}
 		catch (Exception e) {
 			onException(e);
 		}		
+	}
+	
+	/**
+	 * Remove stack level from the thread tree.
+	 * @param stackLevel
+	 */
+	private void removeStackLevel(XdebugAreaServerStackLevel stackLevel) {
+		
+		// TODO: <---MAKE
+		Utility.traverseElements(treeThreads, userObject -> node -> parentNode -> {
+			
+			// TODO: <---DEBUG
+			j.log("BREAK %s", userObject != null ? userObject.getClass().getSimpleName() : "null");
+		});
 	}
 
 	/**
@@ -1637,73 +1680,75 @@ public class DebugViewer extends JFrame {
 	 */
 	private void displaySourceCode(String caption, DisplayCodeInterface callbacks) {
 		
-		final String tabulator = "&nbsp;&nbsp;&nbsp;&nbsp;";
-		
-		String code = "<html>"
-				+ "<head>"
-				+ "<style>"
-				+ "body {"
-				+ "		white-space:nowrap;"
-				+ "}"
-				+ "#header {"
-				+ "		font-family: Monospaced;"
-				+ "		background-color: #DDDDDD;"
-				+ "		color: #FFFFFF;"
-				+ "}"
-				+ ".lino {"
-				+ "		font-family: Monospaced;"
-				+ "		background-color: #DDDDDD;"
-				+ "		color: #FFFFFF;"
-				+ "}"
-				+ ".code {"
-				+ "		font-family: Monospaced;"
-				+ "}"
-				+ ".currentReplacement {"
-				+ "     background-color: #DD0000;"
-				+ "		color: #FFFFFF;"
-				+ "}"
-				+ "</style>"
-				+ "</head>"
-				+ "<body>";
-		
-		// Display header
-		if (caption != null) {
-			code += String.format("<div id='header'><center>%s</center></div><div class='code'>", caption);
-		}
-		
-		// Display lines
-		String inputLine;
-		int lineNumber = 1;
-		
-        for (;;) {
-        	
-        	Object returned = callbacks.line();
-        	if (returned == null) {
-        		break;
-        	}
-        	
-        	inputLine = returned.toString();
-        	inputLine = Utility.htmlSpecialChars(inputLine);
-        	
-			inputLine = inputLine.replaceAll("\\t", tabulator);
-        	inputLine = inputLine.replaceAll("\\s", "&nbsp;");
-        	String linoText = String.format("% 3d ", lineNumber);
-        	linoText = linoText.replaceAll("\\s", "&nbsp;");
-        	
-        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_ANCHOR + "", "<span class='currentReplacement'>");
-        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_TERMINATOR + "", "</span>");
-        	
-    		code += String.format("<span class='lino'>%s</span>&nbsp;%s<br>", linoText, inputLine);
-    		lineNumber++;
-        }
-
-		code += "</div></body>"
-				+ "</html>";
-		
-		// Display code (preserve scroll position)
-		Point viewPosition = scrollCodePane.getViewport().getViewPosition();
-		textCode.setText(code);
 		SwingUtilities.invokeLater(() -> {
+			
+			final String tabulator = "&nbsp;&nbsp;&nbsp;&nbsp;";
+			
+			String code = "<html>"
+					+ "<head>"
+					+ "<style>"
+					+ "body {"
+					+ "		white-space:nowrap;"
+					+ "}"
+					+ "#header {"
+					+ "		font-family: Monospaced;"
+					+ "		background-color: #DDDDDD;"
+					+ "		color: #FFFFFF;"
+					+ "}"
+					+ ".lino {"
+					+ "		font-family: Monospaced;"
+					+ "		background-color: #DDDDDD;"
+					+ "		color: #FFFFFF;"
+					+ "}"
+					+ ".code {"
+					+ "		font-family: Monospaced;"
+					+ "}"
+					+ ".currentReplacement {"
+					+ "     background-color: #DD0000;"
+					+ "		color: #FFFFFF;"
+					+ "}"
+					+ "</style>"
+					+ "</head>"
+					+ "<body>";
+			
+			// Display header
+			if (caption != null) {
+				code += String.format("<div id='header'><center>%s</center></div><div class='code'>", caption);
+			}
+		
+			// Display lines
+			String inputLine;
+			int lineNumber = 1;
+		
+	        for (;;) {
+	        	
+	        	Object returned = callbacks.line();
+	        	if (returned == null) {
+	        		break;
+	        	}
+	        	
+	        	inputLine = returned.toString();
+	        	inputLine = Utility.htmlSpecialChars(inputLine);
+	        	
+				inputLine = inputLine.replaceAll("\\t", tabulator);
+	        	inputLine = inputLine.replaceAll("\\s", "&nbsp;");
+	        	String linoText = String.format("% 3d ", lineNumber);
+	        	linoText = linoText.replaceAll("\\s", "&nbsp;");
+	        	
+	        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_ANCHOR + "", "<span class='currentReplacement'>");
+	        	inputLine = inputLine.replaceAll(INTERLINEAR_ANNOTATION_TERMINATOR + "", "</span>");
+	        	
+	    		code += String.format("<span class='lino'>%s</span>&nbsp;%s<br>", linoText, inputLine);
+	    		lineNumber++;
+	        }
+
+			code += "</div></body>"
+					+ "</html>";
+			
+			// Display code (preserve scroll position)
+			Point viewPosition = scrollCodePane.getViewport().getViewPosition();
+			textCode.setText(code);
+		
 			scrollCodePane.getViewport().setViewPosition(viewPosition);
 		});
 	}
@@ -1715,27 +1760,30 @@ public class DebugViewer extends JFrame {
 	 */
 	private void displayStack(XdebugListenerSession session, LinkedList<XdebugAreaServerStackLevel> stack) {
 		
-		// Get displayed thread node, if it exists.
-		XdebugThreadNode threadNode = findThreadNode(session);
-		if (threadNode == null) {
-			return;
-		}
-		
-		// Clear thread node children.
-		threadNode.removeAllChildren();
-		
-		// Add stack level information to the thread node.
-		for (XdebugAreaServerStackLevel stackLevel : stack) {
+		SwingUtilities.invokeLater(() -> {
 			
-			DefaultMutableTreeNode stackLevelNode = new DefaultMutableTreeNode(stackLevel);
-			threadNode.add(stackLevelNode);
-		}
-		
-		// Update the tree view to reflect the new stack information.
-		treeThreads.updateUI();
-		
-		// Select the top level of the stack.
-		selectStackTop();
+			// Get displayed thread node, if it exists.
+			XdebugThreadNode threadNode = findThreadNode(session);
+			if (threadNode == null) {
+				return;
+			}
+			
+			// Clear thread node children.
+			threadNode.removeAllChildren();
+			
+			// Add stack level information to the thread node.
+			for (XdebugAreaServerStackLevel stackLevel : stack) {
+				
+				DefaultMutableTreeNode stackLevelNode = new DefaultMutableTreeNode(stackLevel);
+				threadNode.add(stackLevelNode);
+			}
+			
+			// Update the tree view to reflect the new stack information.
+			treeThreads.updateUI();
+			
+			// Select the top level of the stack.
+			selectStackTop();
+		});
 	}
 
 	/**
@@ -1872,6 +1920,7 @@ public class DebugViewer extends JFrame {
 					"", response -> {
 				
 				try {
+					
 					// Get watched item from Xdebug result and view it.
 					DebugWatchItem watchedItemResult = response.getXdebugWathItemResult(watchedType);
 					displayWatchedValue(watchedItemResult);
@@ -1894,38 +1943,41 @@ public class DebugViewer extends JFrame {
 	 */
 	private void displayWatchedValue(DebugWatchItem watchedItemResult) {
 		
-		// Try to find watched item by its name and property type.
-		int rowCount = tableWatchModel.getRowCount();
-		for (int row = 0; row < rowCount; row++) {
+		SwingUtilities.invokeLater(() ->  {
 			
-			// Get table cell values.
-			Object nameObject = tableWatchModel.getValueAt(row, WATCHED_NAME_COLUMN_INDEX);
-			Object propertyTypeObject = tableWatchModel.getValueAt(row, WATCHED_PROPERTY_TYPE_COLUMN_INDEX);
-			
-			// Check the cell values.
-			if (!(nameObject instanceof String) || !(propertyTypeObject instanceof DebugWatchItemType)) {
-				continue;
+			// Try to find watched item by its name and property type.
+			int rowCount = tableWatchModel.getRowCount();
+			for (int row = 0; row < rowCount; row++) {
+				
+				// Get table cell values.
+				Object nameObject = tableWatchModel.getValueAt(row, WATCHED_NAME_COLUMN_INDEX);
+				Object propertyTypeObject = tableWatchModel.getValueAt(row, WATCHED_PROPERTY_TYPE_COLUMN_INDEX);
+				
+				// Check the cell values.
+				if (!(nameObject instanceof String) || !(propertyTypeObject instanceof DebugWatchItemType)) {
+					continue;
+				}
+				
+				String name = (String) nameObject;
+				DebugWatchItemType propertyType = (DebugWatchItemType) propertyTypeObject;
+				
+				// If the watched item matches the input item, update its full name, value and value type.
+				if (watchedItemResult.matches(name, propertyType)) {
+					
+					String fullNameText = watchedItemResult.getFullName();
+					tableWatchModel.setValueAt(fullNameText, row, WATCHED_FULLNAME_COLUMN_INDEX);
+					
+					String valueText = watchedItemResult.getValue();
+					tableWatchModel.setValueAt(valueText, row, WATCHED_VALUE_COLUMN_INDEX);
+					
+					String valueTypeText = watchedItemResult.getValueType();
+					tableWatchModel.setValueAt(valueTypeText, row, WATCHED_VALUE_TYPE_COLUMN_INDEX);
+				}
 			}
 			
-			String name = (String) nameObject;
-			DebugWatchItemType propertyType = (DebugWatchItemType) propertyTypeObject;
-			
-			// If the watched item matches the input item, update its full name, value and value type.
-			if (watchedItemResult.matches(name, propertyType)) {
-				
-				String fullNameText = watchedItemResult.getFullName();
-				tableWatchModel.setValueAt(fullNameText, row, WATCHED_FULLNAME_COLUMN_INDEX);
-				
-				String valueText = watchedItemResult.getValue();
-				tableWatchModel.setValueAt(valueText, row, WATCHED_VALUE_COLUMN_INDEX);
-				
-				String valueTypeText = watchedItemResult.getValueType();
-				tableWatchModel.setValueAt(valueTypeText, row, WATCHED_VALUE_TYPE_COLUMN_INDEX);
-			}
-		}
-		
-		// Update wathed items table.
-		tableWatch.updateUI();
+			// Update wathed items table.
+			tableWatch.updateUI();
+		});
 	}
 
 	/**
@@ -2104,7 +2156,14 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("run", null, response -> {
 				
-				updateViews();
+				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
+					updateViews();
+				}
+				catch (Exception e) {
+					onException(e);
+				}
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2301,7 +2360,14 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("step_into", null, response -> {
 				
-				updateViews();
+				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
+					updateViews();
+				}
+				catch (Exception e) {
+					onException(e);
+				}
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2324,7 +2390,14 @@ public class DebugViewer extends JFrame {
 			
 			int transactionId = xdebugSession.createTransaction("step_over", null, response -> {
 				
-				updateViews();
+				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
+					updateViews();
+				}
+				catch (Exception e) {
+					onException(e);
+				}
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2346,8 +2419,14 @@ public class DebugViewer extends JFrame {
 			}
 			
 			int transactionId = xdebugSession.createTransaction("step_out", null, response -> {
-				
-				updateViews();
+				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
+					updateViews();
+				}
+				catch (Exception e) {
+					onException(e);
+				}
 			});
 			xdebugSession.beginTransaction(transactionId);
 		}
@@ -2386,10 +2465,17 @@ public class DebugViewer extends JFrame {
 		try {
 			int transactionId = xdebugSession.createTransaction("stop", null, response -> {
 				
-				updateViews();
-				
-				if (completedLambda != null) {
-					completedLambda.run();
+				try {
+					XdebugListenerSession.throwPossibleException(response);
+					
+					updateViews();
+					
+					if (completedLambda != null) {
+						completedLambda.run();
+					}
+				}
+				catch (Exception e) {
+					onException(e);
 				}
 			});
 			xdebugSession.beginTransaction(transactionId);

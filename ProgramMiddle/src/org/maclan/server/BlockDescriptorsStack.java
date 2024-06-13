@@ -8,6 +8,8 @@
 package org.maclan.server;
 
 import java.util.*;
+import java.util.Map.Entry;
+
 import org.multipage.util.*;
 
 /**
@@ -209,6 +211,38 @@ public class BlockDescriptorsStack {
 				currentVariables.put(key, entry.getValue());
 			}
 		}
+	}
+	
+	/**
+	 * Get watch list of accessible variables.
+	 * @param contextId
+	 * @return
+	 */
+	public LinkedList<DebugWatchItem> getVariableWatchList() {
+		
+		LinkedList<DebugWatchItem> variableWatchList = new LinkedList<>();
+		if (!stack.isEmpty()) {
+			
+			BlockDescriptor block = stack.getLast();
+			String blockName = block.name;
+			if (blockName == null || blockName.isEmpty()) {
+				
+				int blockHashCode = block.hashCode();
+				blockName = String.valueOf(blockHashCode);
+			}
+			
+			Map<String, Variable> localVariables = block.variables;
+			for (Map.Entry<String, Variable> entry : localVariables.entrySet()) {
+				
+				String variableName = entry.getKey();
+				String variableFullName = String.format("%s:%s", blockName, variableName);
+				
+				DebugWatchItem variableWatch = new DebugWatchItem(DebugWatchItemType.blockVariable, variableName, variableFullName, null, null);
+				
+				variableWatchList.add(variableWatch);
+			}
+		}
+		return variableWatchList;
 	}
 
 	/**
@@ -579,6 +613,37 @@ public class BlockDescriptorsStack {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * Get local procedure names.
+	 * @return
+	 */
+	public LinkedList<DebugWatchItem> getLocalProcedureWatchList() {
+		
+		LinkedList<DebugWatchItem> procedureWatchList = new LinkedList<>();
+		if (!stack.isEmpty()) {
+			
+			BlockDescriptor block = stack.getLast();
+			String blockName = block.name;
+			if (blockName == null || blockName.isEmpty()) {
+				
+				int blockHashCode = block.hashCode();
+				blockName = String.valueOf(blockHashCode);
+			}
+			
+			Map<String, Procedure> localProcedures = block.procedures;
+			for (Map.Entry<String, Procedure> entry : localProcedures.entrySet()) {
+				
+				String procedureName = entry.getKey();
+				String procedureFullName = String.format("%s:%s", blockName, procedureName);
+				
+				DebugWatchItem variableWatch = new DebugWatchItem(DebugWatchItemType.blockProcedure, procedureName, procedureFullName, null, null);
+				
+				procedureWatchList.add(variableWatch);
+			}
+		}
+		return procedureWatchList;
 	}
 
 	/**

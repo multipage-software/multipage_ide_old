@@ -30,7 +30,7 @@ public class Procedure {
 	private HashMap<String, Parameter> parameters;
 	
 	/**
-	 * When users CALL procedure with this flag declared, them must use complex tags such:
+	 * When calling procedure with this flag use complex tags like:
 	 * [@CALL name]...inner text...[/@CALL] or [@Name]...inner text...[/@Name].
 	 * Inner text of CALL tags is passed as an argument of the call.
 	 */

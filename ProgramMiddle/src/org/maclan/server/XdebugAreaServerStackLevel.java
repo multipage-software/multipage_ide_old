@@ -6,6 +6,8 @@
  */
 package org.maclan.server;
 
+import java.util.LinkedList;
+
 import org.multipage.util.Obj;
 
 /**
@@ -43,6 +45,11 @@ public class XdebugAreaServerStackLevel {
 	 * Get current source code position.
 	 */
 	private int cmdEnd = -1;
+	
+	/**
+	 * Watched items.
+	 */
+	private LinkedList<DebugWatchItem> watchItems = null;
 
 	/**
 	 * Constructor.
