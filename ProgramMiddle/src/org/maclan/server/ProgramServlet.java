@@ -432,20 +432,19 @@ public class ProgramServlet extends FastCGIServlet {
 							// Initialize server state.
 							areaServer.initServerState();
 							
+							// Initialize debugging.
+							boolean isDebugged = isDebuggingEnabled();
+							areaServer.setDebugged(isDebugged);
+							
 							// Set listener.
 							areaServer.setListener(new AreaServerListener() {
 								
 								@Override
 								public boolean getXdebugHostPort(Obj<String> ideHost, Obj<Integer> xdebugPort) {
 									
-									// Check if the debugger is enabled or disabled.
-									if (!isDebuggingEnabled()) {
-										return false;
-									}
-									
 									// Set connection properties.
 									ideHost.ref = "localhost";
-									xdebugPort.ref = XdebugListener.DEFAULT_PORT;
+									xdebugPort.ref = XdebugListener.DEFAULT_XDEBUG_PORT;
 									return true;
 								}
 

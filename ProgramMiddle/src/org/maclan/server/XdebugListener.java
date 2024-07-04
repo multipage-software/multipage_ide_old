@@ -23,7 +23,7 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Default Xdebug port. It is set to port number 9004 because JVM Xdebug already uses port number 9000.
 	 */
-	public static final int DEFAULT_PORT = 9004;
+	public static final int DEFAULT_XDEBUG_PORT = 9004;
 	
 	/**
 	 * Singleton object.
@@ -69,7 +69,7 @@ public class XdebugListener extends DebugListener {
 			throws Exception {
 		
 		// Opens Xdebug soket for the IDE.
-		openListenerPort(DEFAULT_PORT);
+		openListenerPort(DEFAULT_XDEBUG_PORT);
 	}
 	
 	/**

@@ -72,10 +72,11 @@ import javax.swing.tree.TreeSelectionModel;
 import org.maclan.server.AreaServerSignal;
 import org.maclan.server.DebugListener;
 import org.maclan.server.DebugListenerSession;
+import org.maclan.server.DebugTagInfo;
 import org.maclan.server.DebugWatchItem;
 import org.maclan.server.DebugWatchItemType;
+import org.maclan.server.DebugInfo;
 import org.maclan.server.XdebugAreaServerStackLevel;
-import org.maclan.server.XdebugAreaServerTextState;
 import org.maclan.server.XdebugClient;
 import org.maclan.server.XdebugClientParameters;
 import org.maclan.server.XdebugClientResponse;
@@ -110,6 +111,11 @@ public class DebugViewer extends JFrame {
 	 * GUI watchdog timeout in ms.
 	 */
 	private static final int WATCHDOG_TIMEOUT_MS = 1000;
+	
+	/**
+	 * Transaction timeout in milliseconds.
+	 */
+	private static final int TRANSACTION_TIMEOUT_MS = 3000;
 	
 	/**
 	 * Interlinear annotation characters.
@@ -262,6 +268,11 @@ public class DebugViewer extends JFrame {
 	private static Rectangle bounds;
 	
 	/**
+	 * Main splitter position.
+	 */
+	private static int mainSplitterPosition;
+	
+	/**
 	 * Text constants that are dislpayed with the dialog.
 	 */
 	private static String textConnected = "org.multipage.generator.textDebuggerConnected";
@@ -283,6 +294,7 @@ public class DebugViewer extends JFrame {
 	public static void setDefaultData() {
 		
 		bounds = new Rectangle();
+		mainSplitterPosition = 500;
 		
 		// Load static texts from text resources.
 		loadTextResources();
@@ -298,6 +310,7 @@ public class DebugViewer extends JFrame {
 			throws IOException, ClassNotFoundException {
 		
 		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		mainSplitterPosition = inputStream.readInt();
 		
 		// Load static texts from text resources.
 		loadTextResources();
@@ -311,6 +324,7 @@ public class DebugViewer extends JFrame {
 		throws IOException {
 		
 		outputStream.writeObject(bounds);
+		outputStream.writeInt(mainSplitterPosition);
 	}
 	
 	/**
@@ -559,6 +573,7 @@ public class DebugViewer extends JFrame {
 	private JPopupMenu menuWatch;
 	private JMenuItem menuAddToWatch;
 	private JMenuItem menuRemoveFromWatch;
+	private JSplitPane splitPane;
 	
     /**
      * Constructor.
@@ -589,9 +604,10 @@ public class DebugViewer extends JFrame {
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		getContentPane().setLayout(new BorderLayout(0, 0));
 		
-		JSplitPane splitPane = new JSplitPane();
+		splitPane = new JSplitPane();
+		splitPane.setMinimumSize(new Dimension(0, 0));
 		splitPane.setOneTouchExpandable(true);
-		splitPane.setResizeWeight(0.7);
+		splitPane.setResizeWeight(1.0);
 		getContentPane().add(splitPane);
 		
 		panelRight = new JPanel();
@@ -673,7 +689,7 @@ public class DebugViewer extends JFrame {
 		menuWatch.add(menuRemoveFromWatch);
 		
 		panelOutput = new JPanel();
-		tabbedPane.addTab("Output", null, panelOutput, null);
+		tabbedPane.addTab("org.multipage.generator.textDebuggerOutput", null, panelOutput, null);
 		panelOutput.setLayout(new BorderLayout(0, 0));
 		
 		scrollPane = new JScrollPane();
@@ -685,7 +701,7 @@ public class DebugViewer extends JFrame {
 		scrollPane.setViewportView(textOutput);
 		
 		panelCommand = new JPanel();
-		tabbedPane.addTab("Command", null, panelCommand, null);
+		tabbedPane.addTab("org.multipage.generator.textDebuggerCommands", null, panelCommand, null);
 		panelCommand.setLayout(new BorderLayout(0, 0));
 		
 		scrollPaneOutput = new JScrollPane();
@@ -714,7 +730,7 @@ public class DebugViewer extends JFrame {
 		panelExceptions = new JPanel();
 		panelExceptions.setBackground(Color.WHITE);
 		panelExceptions.setOpaque(false);
-		tabbedPane.addTab("Exceptions", null, panelExceptions, null);
+		tabbedPane.addTab("org.multipage.generator.textDebuggerExceptions", null, panelExceptions, null);
 		panelExceptions.setLayout(new BorderLayout(0, 0));
 		
 		scrollPaneExceptions = new JScrollPane();
@@ -800,6 +816,7 @@ public class DebugViewer extends JFrame {
 		textCode.setPreferredSize(new Dimension(20, 20));
 		textCode.setContentType("text/html");
 		textCode.setEditable(false);
+		splitPane.setDividerLocation(1.0);
 		
 		toolBar = new JToolBar();
 		getContentPane().add(toolBar, BorderLayout.NORTH);
@@ -1021,14 +1038,44 @@ public class DebugViewer extends JFrame {
 				onException("org.multipage.generator.messageXdebugProtocolException", e);
 			}
 			
-			// When ready for commands, load debugged source code.
+			// When ready for commands, load debugged source code information.
 			newSession.setReadyForCommands(() -> {
 				try {
 					newSession.loadClientContexts(() -> {
-						// After loading contexts.
-						updateViews();
+						
+						// Set "server_ready" property to true.
+						try {
+							int transationId = newSession.createTransaction("property_set", new String [][] {{"-n", "server_ready"},  {"-l", "1"}}, "1", response -> {
+								     
+								boolean success = response.isPropertySetSuccess();
+								if (!success) {
+									onException("org.multipage.generator.messageDebugServerReadyError");
+								}
+							});
+							newSession.beginTransactionWait(transationId, TRANSACTION_TIMEOUT_MS);
+						}
+						catch (Exception e) {
+							onException(e);
+						}
 					});
 					
+				}
+				catch (Exception e) {
+					onException(e);
+				}
+			});
+			
+			// Process notifications.
+			newSession.setReceivingNotifications(notification -> {
+
+				try {
+					// On breakpoint resolved notification...
+					boolean breakpointResolved = notification.isBreakpointResolved();
+					if (breakpointResolved) {
+						
+						// Update debugger views.
+						updateViews();
+					}
 				}
 				catch (Exception e) {
 					onException(e);
@@ -1175,6 +1222,9 @@ public class DebugViewer extends JFrame {
 	 * @return
 	 */
 	private XdebugListenerSession getSelectedXdebugSession() {
+		
+		// Check live sessions. Removes closed sessions.
+		ensureLiveSessions();
 		
 		TreePath selectedPath = treeThreads.getSelectionPath();
 		if (selectedPath == null) {
@@ -1358,12 +1408,11 @@ public class DebugViewer extends JFrame {
 		// Get source code from the stack level.
 		String sourceCode = stackLevel.getSourceCode();
 		
-		// Load text state object from stak information.
-		Obj<XdebugAreaServerTextState> textState = new Obj<>();
-		stackLevel.loadAreaServerTextState(textState);
+		// Get debugged code information.
+		DebugInfo debugInfo = stackLevel.getDebuggedCodeInfo();
 		
-		// Display the selected stack level.
-		SwingUtilities.invokeLater(() -> displaySourceCodeTextState(sourceCode, textState.ref));
+		// Display debugged source code..
+		SwingUtilities.invokeLater(() -> displayDebuggedSourceCode(sourceCode, debugInfo));
 	}
 	
 	/**
@@ -1385,13 +1434,14 @@ public class DebugViewer extends JFrame {
 	 */
 	private void loadDialog() {
 		
-		// Set window boundary
+		// Set window boundary and main splitter position.
 		if (bounds.isEmpty()) {
 			Utility.centerOnScreen(this);
 		}
 		else {
 			setBounds(bounds);
 		}
+		splitPane.setDividerLocation(mainSplitterPosition);
 	}
 	
 	/**
@@ -1399,8 +1449,9 @@ public class DebugViewer extends JFrame {
 	 */
 	private void saveDialog() {
 		
-		// Save window boundary
+		// Save window boundary and main splitter position.
 		bounds = getBounds();
+		mainSplitterPosition = splitPane.getDividerLocation();
 	}
 	
 	/**
@@ -1514,6 +1565,10 @@ public class DebugViewer extends JFrame {
 	private void updateViews() {
 		
 		try {
+			
+			// Check live sessions. Removes closed sessions.
+			ensureLiveSessions();
+			
 			// Display listener sessions.
 			displayListenerSessions();
 			
@@ -1549,16 +1604,12 @@ public class DebugViewer extends JFrame {
 				displaySourceCode(debuggedAreaName, sourceCode);
 			});
 			
-			// Load Area Server state from Xdebug client. Update session.
-			xdebugSession.ref.getAreaServerState(state -> {
+			// Load Area Server debug information from Xdebug client.
+			xdebugSession.ref.getDebugInfo(debugInfo -> {
 				
-				xdebugSession.ref.loadAreaServerState(state);
-			});
-			
-			// Load Area Server text state from Xdebug client. Update source code highlights.
-			xdebugSession.ref.getAreaServerTextState(textState -> {
-				
-				displaySourceCodeTextState(rawSourceCode, textState);
+				xdebugSession.ref.loadThreadInfo(debugInfo);
+				xdebugSession.ref.loadSourceInfo(debugInfo);
+				displayDebuggedSourceCode(rawSourceCode, debugInfo);
 			});
 			
 			// Load watched values.
@@ -1593,16 +1644,80 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
+	 * Ensure that sessions are opened. Remove the closed sessions.
+	 */
+	private void ensureLiveSessions() {
+		
+		if (debugListener == null) {
+			return;
+		}
+		
+		LinkedList<DebugListenerSession> sessionsToRemove = new LinkedList<>();
+		
+		// Find closed sessions.
+		List<DebugListenerSession> sessions = debugListener.getSessions();
+		for (DebugListenerSession session : sessions) {
+			
+			boolean isOpen = session.isOpen();
+			if (!isOpen) {
+				sessionsToRemove.addLast(session);
+			}
+		}
+		
+		// Remove the closed sessions.
+		debugListener.removeSessions(sessionsToRemove);
+		
+		SwingUtilities.invokeLater(() -> {
+			
+			LinkedList<DefaultMutableTreeNode> nodesToRemoveFromParent = new LinkedList<>();
+			
+			Utility.traverseElements(treeThreads, userObject -> node -> parentNode -> {
+				if (userObject instanceof XdebugListenerSession) {
+					
+					XdebugListenerSession session = (XdebugListenerSession) userObject;
+					boolean isOpen = session.isOpen();
+					if (!isOpen) {
+						
+						if (parentNode != null) {
+							nodesToRemoveFromParent.addLast(node);
+						}
+					}				
+				}
+			});
+			
+			nodesToRemoveFromParent.forEach(node ->
+				threadsTreeModel.removeNodeFromParent(node));
+			
+			treeThreads.updateUI();
+		});
+	}
+
+	/**
 	 * Remove stack level from the thread tree.
 	 * @param stackLevel
 	 */
 	private void removeStackLevel(XdebugAreaServerStackLevel stackLevel) {
 		
-		// TODO: <---MAKE
+		int stackLevelHash = stackLevel.hashCode();
+		LinkedList<DefaultMutableTreeNode> nodesToRemove = new LinkedList<>();
+		
+		// Find the stack level and remove it.
 		Utility.traverseElements(treeThreads, userObject -> node -> parentNode -> {
 			
-			// TODO: <---DEBUG
-			j.log("BREAK %s", userObject != null ? userObject.getClass().getSimpleName() : "null");
+			if (userObject instanceof XdebugAreaServerStackLevel) {
+				XdebugAreaServerStackLevel foundStackLevel = (XdebugAreaServerStackLevel) userObject;
+				
+				int foundStackLevelHash = foundStackLevel.hashCode();
+				if (foundStackLevelHash == stackLevelHash) {
+					
+					// Remove the stack level.
+					nodesToRemove.addLast(node);
+				}
+			}
+		});
+		
+		nodesToRemove.forEach(node -> {
+			threadsTreeModel.removeNodeFromParent(node);
 		});
 	}
 
@@ -1638,26 +1753,31 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Display the source code form Xdebug client with highlighted Area Server text states.
+	 * Display the source code form Xdebug client with highlighted parts.
 	 * @param rawSourceCode
-	 * @param textState
+	 * @param debugInfo
 	 */
-	private void displaySourceCodeTextState(String rawSourceCode, XdebugAreaServerTextState textState) {
+	private void displayDebuggedSourceCode(String rawSourceCode, DebugInfo debugInfo) {
 		
 		// Initializaction.
 		String sourceCode = null;
 		
-		// Mark tag start position and current Area Server text poition in source code.
-		int tagStartPosition = textState.getTagStartPosition();
-		int position = textState.getPosition();
+		DebugTagInfo tagInfo = debugInfo.getTagInfo();
+		if (tagInfo == null) {
+			return;
+		}
+		
+		// Mark tag beginning and end positions in source code.
+		int cmdBegin = tagInfo.getCmdBegin();
+		int cmdEnd = tagInfo.getCmdEnd();
 		int sourceLength = rawSourceCode.length();
 		
-		if (tagStartPosition >= 0 && position >= 0 && tagStartPosition <= position
-			&& tagStartPosition <= sourceLength && position <= sourceLength) {
+		if (cmdBegin >= 0 && cmdEnd >= 0 && cmdBegin <= cmdEnd
+			&& cmdBegin <= sourceLength && cmdEnd <= sourceLength) {
 			
-			// Put anchor and terminator into the source code.
-			sourceCode = Utility.insertCharacter(rawSourceCode, tagStartPosition, INTERLINEAR_ANNOTATION_ANCHOR);
-			sourceCode = Utility.insertCharacter(sourceCode, position + 1, INTERLINEAR_ANNOTATION_TERMINATOR);
+			// Insert "anchor" and "terminator" special characters into the source code.
+			sourceCode = Utility.insertCharacter(rawSourceCode, cmdBegin, INTERLINEAR_ANNOTATION_ANCHOR);
+			sourceCode = Utility.insertCharacter(sourceCode, cmdEnd + 1, INTERLINEAR_ANNOTATION_TERMINATOR);
 		}
 		
 		// Do not use text highlights.
@@ -2154,12 +2274,12 @@ public class DebugViewer extends JFrame {
 				xdebugSession = currentSession;
 			}
 			
+			updateViews();
+			
 			int transactionId = xdebugSession.createTransaction("run", null, response -> {
 				
 				try {
 					XdebugListenerSession.throwPossibleException(response);
-					
-					updateViews();
 				}
 				catch (Exception e) {
 					onException(e);
@@ -2358,12 +2478,12 @@ public class DebugViewer extends JFrame {
 				xdebugSession = currentSession;
 			}
 			
+			updateViews();
+			
 			int transactionId = xdebugSession.createTransaction("step_into", null, response -> {
 				
 				try {
 					XdebugListenerSession.throwPossibleException(response);
-					
-					updateViews();
 				}
 				catch (Exception e) {
 					onException(e);
@@ -2388,12 +2508,12 @@ public class DebugViewer extends JFrame {
 				xdebugSession = currentSession;
 			}
 			
+			updateViews();
+			
 			int transactionId = xdebugSession.createTransaction("step_over", null, response -> {
 				
 				try {
 					XdebugListenerSession.throwPossibleException(response);
-					
-					updateViews();
 				}
 				catch (Exception e) {
 					onException(e);
@@ -2418,11 +2538,11 @@ public class DebugViewer extends JFrame {
 				xdebugSession = currentSession;
 			}
 			
+			updateViews();
+			
 			int transactionId = xdebugSession.createTransaction("step_out", null, response -> {
 				try {
 					XdebugListenerSession.throwPossibleException(response);
-					
-					updateViews();
 				}
 				catch (Exception e) {
 					onException(e);
@@ -2463,12 +2583,13 @@ public class DebugViewer extends JFrame {
 		
 		// Process stop command
 		try {
+			
+			updateViews();
+			
 			int transactionId = xdebugSession.createTransaction("stop", null, response -> {
 				
 				try {
 					XdebugListenerSession.throwPossibleException(response);
-					
-					updateViews();
 					
 					if (completedLambda != null) {
 						completedLambda.run();
@@ -2719,7 +2840,7 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Show user alert
+	 * Show user alert.
 	 * @param message
 	 * @param timeout 
 	 */
@@ -2731,7 +2852,7 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Fired on exception.
+	 * Called on exception.
 	 * @param e
 	 */
 	protected void onThrownException(Throwable e) throws Exception {
@@ -2742,7 +2863,21 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Fired on exception.
+	 * Called on exception.
+	 * @param messageFormatId
+	 * @param exception
+	 */
+	private void onException(String messageFormatId, Object ... params) {
+		
+		String messageFormat = Resources.getString(messageFormatId);
+		String errorMessage = String.format(messageFormat, params);
+		
+		Exception e = new Exception(errorMessage);
+		onException(e);
+	}
+	
+	/**
+	 * Called on exception.
 	 * @param messageFormatId
 	 * @param exception
 	 */
@@ -2757,7 +2892,7 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Fired on exception.
+	 * Called on exception.
 	 * @param e
 	 */
 	private void onException(Throwable e) {

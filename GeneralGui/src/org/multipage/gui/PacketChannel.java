@@ -11,7 +11,8 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-import org.multipage.util.j;
+import org.multipage.util.Obj;
+import org.multipage.util.RepeatedTask;
 
 /**
  * Packet channel that uses sockets, server side.
@@ -69,36 +70,50 @@ public class PacketChannel {
         socketAddress = new InetSocketAddress(hostname, port);
         serverSocketChannel.bind(socketAddress);
         
-        // Set event that accepts incoming connections from input socket.
-        serverSocketChannel.accept(this, new CompletionHandler<AsynchronousSocketChannel, PacketChannel>() {
+        Obj<Boolean> acceptNewConnection = new Obj<>(true);
         
-        	// An event that is invoked when socket connection is completed.
-        	@Override
-			public void completed(AsynchronousSocketChannel client, PacketChannel packetChannel) {
+        // Create thread that accepts incoming connections.
+        RepeatedTask.loopNonBlocking("AcceptXdebugConnecions", 0, 100, (running, exception) -> {
+        	
+        	// Set event that accepts incoming connections from input socket.
+        	if (acceptNewConnection.ref) {
+        		acceptNewConnection.ref = false;
         		
-        		try {
-        			// Remember connected socket channel.
-	        		clientSocketChannel = client;
-	
-	    			// Invoke callback function.
-	    			PacketSession packetSession = onStartListening(client);
-	    			if (packetSession == null) {
-	    				return;
-	    			}
-	
-	        		// Read incoming packets until the connection is closed or interrupted.
-					packetSession.startReadingPackets(client);
-        		}
-        		catch (Exception e) {
-        			onException(e);
-        		}
+	            serverSocketChannel.accept(this, new CompletionHandler<AsynchronousSocketChannel, PacketChannel>() {
+	            
+	            	// An event that is invoked when the socket connection is completed.
+	            	@Override
+	    			public void completed(AsynchronousSocketChannel client, PacketChannel packetChannel) {
+	            		
+	            		acceptNewConnection.ref = true;
+	            		
+	            		try {
+	            			// Remember connected socket channel.
+	    	        		clientSocketChannel = client;
+	    	
+	    	    			// Invoke callback function.
+	    	    			PacketSession packetSession = onStartListening(client);
+	    	    			if (packetSession == null) {
+	    	    				return;
+	    	    			}
+	    	
+	    	        		// Read incoming packets until the connection is closed or interrupted.
+	    					packetSession.startReadingPackets(client);
+	            		}
+	            		catch (Exception e) {
+	            			onException(e);
+	            		}
+	            	}
+	            	
+	    			// If the connection failed...
+	                public void failed(Throwable e, PacketChannel packetChannel) {
+	                	onException(e);
+	                }
+	            });
         	}
         	
-			// If the connection failed...
-            public void failed(Throwable e, PacketChannel packetChannel) {
-            	onException(e);
-            }
-        });	
+	        return true;
+        });
 	}
 	
 	/**
@@ -126,9 +141,6 @@ public class PacketChannel {
 			// Remember server socket address.
 			serverSocketAddress = new InetSocketAddress(hostname, port);
 			clientSocketChannel = AsynchronousSocketChannel.open();
-			
-			// TODO: <---DEBUG Display connecting thread name.
-			j.log("Connecting thread: %s Client socket: %d", Thread.currentThread().getName(), clientSocketChannel.hashCode());
 			
 			// Create non-blocking socket channel and connect it.
 	        clientSocketChannel.connect(serverSocketAddress, this, new CompletionHandler<Void, PacketChannel>() {

@@ -126,6 +126,20 @@ public class DebugListenerSession {
 		
 		return server;
 	}
+	
+	/**
+	 * Check if this session is opened.
+	 * @return
+	 */
+	public boolean isOpen() {
+		
+		if (client == null) {
+			return false;
+		}
+		
+		boolean isOpen = client.isOpen();
+		return isOpen;
+	}
 
 	/**
 	 * Get process ID.

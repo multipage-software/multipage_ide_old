@@ -61,6 +61,15 @@ public abstract class DebugListener {
 	}
 	
 	/**
+	 * Remove input sessions from session list.
+	 * @param sessionsToRemove
+	 */
+	public void removeSessions(List<DebugListenerSession> sessionsToRemove) {
+		
+		sessions.removeAll(sessionsToRemove);
+	}
+	
+	/**
 	 * Get current debug viewer component.
 	 * @param debugViewerComponent
 	 */
@@ -107,5 +116,5 @@ public abstract class DebugListener {
 		
 		// Override this method.
 		e.printStackTrace();
-	}	
+	}
 }

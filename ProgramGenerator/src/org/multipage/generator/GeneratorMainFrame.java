@@ -34,7 +34,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.AbstractButton;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -60,6 +62,7 @@ import org.maclan.MiddleUtility;
 import org.maclan.Slot;
 import org.maclan.VersionObj;
 import org.maclan.help.HelpUtility;
+import org.maclan.server.AreaServer;
 import org.maclan.server.BrowserParameters;
 import org.maclan.server.ProgramServlet;
 import org.maclan.server.TextRenderer;
@@ -520,6 +523,11 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 	private LinkedList<Message> previousUpdateMessages = new LinkedList<Message>();
 
 	/**
+	 * Development mode menu item.
+	 */
+	private JCheckBoxMenuItem  developmentMode = null;
+
+	/**
 	 * Constructor.
 	 */
 	public GeneratorMainFrame() {
@@ -527,9 +535,8 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 		// Set static member.
 		mainFrame = this;
 		
-		// TODO: <---MAKE Initialize logging consoles.
-		LogConsoles.main(new String [] {});
-		
+		// TODO: <---DEBUG Initialize logging consoles.
+		//LogConsoles.main(new String [] {});
 		
 		// Set close action.
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -585,15 +592,17 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 	private void setCallbacks() {
 		
 		SyncMain.setReactivateGuiCallback(() -> {
-			
 			reactivateGui();
+		});
+		
+		AreaServer.setDevelopmentModeLambda(() -> {
+			return isDevelopmentMode();
 		});
 	}
 	
 	/**
 	 * Set listeners.
 	 */
-	@SuppressWarnings("unchecked")
 	private void setListeners() {
 		
 		tabPanel.addChangeListener(new ChangeListener() {
@@ -1129,10 +1138,14 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 			JMenu debugMenu = new JMenu(Resources.getString("org.multipage.generator.menuDebug"));
 			menuBar.add(debugMenu);
 			
+			developmentMode = new JCheckBoxMenuItem(Resources.getString("org.multipage.generator.menuDevelopmentMode"));
 			JMenuItem test = new JMenuItem(Resources.getString("org.multipage.generator.menuTest"));
 			JMenuItem setUserValue = new JMenuItem(Resources.getString("org.multipage.generator.menuSetUserValue"));
 			JMenuItem loggingDialog = new JMenuItem(Resources.getString("org.multipage.generator.menuLoggingDialog"));
 			
+			developmentMode.setSelected(true);
+			
+			debugMenu.add(developmentMode);
 			debugMenu.add(setUserValue);
 			debugMenu.add(test);
 			debugMenu.add(loggingDialog);
@@ -1397,6 +1410,29 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 				onVideo();
 			}
 		});
+	}
+	
+	/**
+	 * Return true if the development mode is selected.
+	 * @return
+	 */
+	public static boolean isDevelopmentMode() {
+		
+		// Get main frame.
+		GeneratorMainFrame mainFrame = getFrame();
+		if (mainFrame == null) {
+			return false;
+		}
+		
+		// Get menu item.
+		JCheckBoxMenuItem developmentMode = mainFrame.developmentMode;
+		
+		// Return selection of the menu item.
+		if (developmentMode == null) {
+			return false;
+		}
+		boolean isSelected = developmentMode.isSelected();
+		return isSelected;
 	}
 	
 	/**

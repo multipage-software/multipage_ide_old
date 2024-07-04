@@ -6,7 +6,6 @@
  */
 package org.multipage.gui;
 
-import java.awt.Color;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -17,8 +16,6 @@ import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
-import org.multipage.util.j;
 
 /**
  * Packet session that reads sent packets and writes outcome packets.
@@ -545,13 +542,9 @@ public class PacketSession {
 		}
 		
 		try {
-			// Close the client socket.
-			clientSocketChannel.shutdownOutput();
-			clientSocketChannel.shutdownInput();
 			clientSocketChannel.close();
 		}
 		catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 	

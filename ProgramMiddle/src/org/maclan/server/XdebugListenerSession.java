@@ -79,6 +79,11 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private static final long SENDING_PACKET_TIMEOUT_MS = 200;
 	
 	/**
+	 * UTF-8 encoder.
+	 */
+	private static final CharsetEncoder utf8Encoder = StandardCharsets.UTF_8.newEncoder();
+	
+	/**
 	 * Null symbol.
 	 */
 	private PacketSymbol NULL_SYMBOL = new PacketSymbol(new byte [] { (byte) 0x00 });
@@ -104,9 +109,9 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private XdebugClientParameters clientParameters = null;
 	
 	/**
-	 * Area server state used in debugger.
+	 * Area Server debugger information.
 	 */
-	private XdebugAreaServerState areaServerState = null;
+	private DebugInfo debugInfo = null;
 	
 	/**
 	 * Xdebug transactions.
@@ -121,7 +126,12 @@ public class XdebugListenerSession extends DebugListenerSession {
 	/**
 	 * Callback invoked when the session is ready for Xdebug commands. It is called after feature negotiation.
 	 */
-	private Runnable onReadyForCommands = null;
+	private Runnable onReadyForCommandsLambda = null;
+	
+	/**
+	 * Callback invoked when the session is receives notifications.
+	 */
+	private Consumer<XdebugClientResponse> onNotificationLambda = null;
 	
 	/**
 	 * Xdebug client contexts.
@@ -192,11 +202,20 @@ public class XdebugListenerSession extends DebugListenerSession {
 	
 	/**
 	 * Set lambda callback function that is invoked when session is ready for sending Xdebug commands.
-	 * @param onReadyForCommands
+	 * @param onReadyForCommandsLambda
 	 */
-	public void setReadyForCommands(Runnable onReadyForCommands) {
+	public void setReadyForCommands(Runnable onReadyForCommandsLambda) {
 		
-		this.onReadyForCommands = onReadyForCommands;
+		this.onReadyForCommandsLambda = onReadyForCommandsLambda;
+	}
+	
+	/**
+	 * Set callback for notifications.
+	 * @param object
+	 */
+	public void setReceivingNotifications(Consumer<XdebugClientResponse> onNotificationLambda) {
+		
+		this.onNotificationLambda = onNotificationLambda;
 	}
 	
 	/**
@@ -721,10 +740,9 @@ public class XdebugListenerSession extends DebugListenerSession {
 			CharBuffer commandString = command.compile(transactionId);
 			
 			// Send command bytes to the Xdebug client. On completion event check if the number of bytes sent macthes.
-			CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
 			
 			// Encode packet bytes. Add NULL byte at the end of the message.
-			ByteBuffer buffer = encoder.encode(commandString);
+			ByteBuffer buffer = utf8Encoder.encode(commandString);
 			int limit = buffer.limit();
 			buffer.position(limit - 1);
 			buffer.put(XdebugCommand.NULL_SYMBOL);
@@ -800,8 +818,8 @@ public class XdebugListenerSession extends DebugListenerSession {
 					xdebugProtocolState = ACCEPT_XDEBUG_COMMANDS;
 					
 					// Invoke callback.
-					if (onReadyForCommands != null) {
-						onReadyForCommands.run();
+					if (onReadyForCommandsLambda != null) {
+						onReadyForCommandsLambda.run();
 					}
 				});
 			}
@@ -828,13 +846,32 @@ public class XdebugListenerSession extends DebugListenerSession {
 		if (xdebugProtocolState == ACCEPT_XDEBUG_COMMANDS) {
 			// Process command response.
 			try {
-				// Do process command response.
-				processXdebugCommandResponse(clientResponse);
+				// Process notification.
+				boolean isNotification = clientResponse.isNotificationPacket();
+				if (isNotification) {
+					processXdebugNotification(clientResponse);
+				}
+				else {
+					// Process command response.
+					processXdebugCommandResponse(clientResponse);
+				}
 			}
 			catch (Exception e) {
 				// Handle exception.
 				onException(e);
 			}
+		}
+	}
+	
+	/**
+	 * Process Xdebug notification.
+	 * @param clientResponse
+	 * @return
+	 */
+	private void processXdebugNotification(XdebugClientResponse clientResponse) {
+		
+		if (onNotificationLambda != null) {
+			onNotificationLambda.accept(clientResponse);
 		}
 	}
 
@@ -1051,54 +1088,11 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
-	 * Get area server state.
-	 * @param areaServerStateLambda
+	 * Get Aarea Server debug info.
+	 * @param debugInfoLambda
 	 * @throws Exception 
 	 */
-	public void getAreaServerState(Consumer<XdebugAreaServerState> areaServerStateLambda)
-			throws Exception {
-
-		try {
-			// Get debugger context ID.
-			if (contextNameMap == null) {
-				onThrownException("org.maclan.server.messageXdebugContextsNotLoaded");
-			}
-			
-			Integer debuggerContextId = contextNameMap.get(XdebugClient.AREA_SERVER_CONTEXT);
-			if (debuggerContextId == null) {
-				onThrownException("org.maclan.server.messageCannotGetXdebugAreaServerContext");
-			}
-			String debuggerContextIdText = String.valueOf(debuggerContextId);
-			
-			// Get Area Server state.
-			int transactionId = createTransaction("property_get",
-					new String [][] {{"-n", "area_server_state"},
-									 {"-c", debuggerContextIdText}}, response -> {
-				
-				// Process Area Server state response.
-				try {
-					throwPossibleException(response);
-					
-					XdebugAreaServerState state = response.getXdebugAreaState();
-					areaServerStateLambda.accept(state);
-				}
-				catch (Exception e) {
-					onException(e);
-				}
-			});
-			beginTransaction(transactionId);
-		}
-		catch (Exception e) {
-			onThrownException(e);
-		}	
-	}
-	
-	/**
-	 * Get area server text replacement state.
-	 * @param areaServerTextStateLambda
-	 * @throws Exception 
-	 */
-	public void getAreaServerTextState(Consumer<XdebugAreaServerTextState> areaServerTextStateLambda)
+	public void getDebugInfo(Consumer<DebugInfo> debugInfoLambda)
 			throws Exception {
 		
 		try {
@@ -1115,15 +1109,15 @@ public class XdebugListenerSession extends DebugListenerSession {
 			
 			// Get Area Server text state.
 			int transactionId = createTransaction("property_get",
-					new String [][] {{"-n", "area_server_text_state"},
+					new String [][] {{"-n", "debug_info"},
 									 {"-c", debuggerContextIdText}}, response -> {
 				
-				// Process Area Server state response.
+				// Process Area Server debug information response.
 				try {
 					throwPossibleException(response);
 					
-					XdebugAreaServerTextState textState = response.getXdebugAreaTextState();
-					areaServerTextStateLambda.accept(textState);
+					DebugInfo debugInfo = response.getDebugInfo();
+					debugInfoLambda.accept(debugInfo);
 				}
 				catch (Exception e) {
 					onException(e);
@@ -1167,16 +1161,25 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
-	 * Load Area Server state.
-	 * @param areaServerState
+	 * Load Area Server debugged thread information.
+	 * @param debugInfo
 	 */
-	public void loadAreaServerState(XdebugAreaServerState areaServerState) {
+	public void loadThreadInfo(DebugInfo debugInfo) {
 		
-		this.areaServerState = areaServerState;
-		String processName = areaServerState.getProcessName();
+		this.debugInfo = debugInfo;
+		String processName = debugInfo.getProcessName();
 		this.clientParameters.setProcessName(processName);
-		String threadName = areaServerState.getThreadName();
+		String threadName = debugInfo.getThreadName();
 		this.clientParameters.setThreadName(threadName);
+	}
+	
+	/**
+	 * Load Area Server debugged code source information.
+	 * @param debugInfo
+	 */
+	public void loadSourceInfo(DebugInfo debugInfo) {
+		
+		// TODO: <---MAKE Update information about sources of the source code (slots or resources).
 	}
 	
 	/**

@@ -93,8 +93,8 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathErrorCode = null;
 	private static XPathExpression xpathErrorMessage = null;
 	private static XPathExpression xpathContextsResponse = null;
-	private static XPathExpression xpathTextTagStartPosition = null;
-	private static XPathExpression xpathCurrentTextPosition = null;
+	private static XPathExpression xpathCmdBeginPosition = null;
+	private static XPathExpression xpathCmdEndPosition = null;
 	private static XPathExpression xpathStackRootNodes = null;
 	private static XPathExpression xpathRelativeStackLevel = null;
 	private static XPathExpression xpathRelativeStackType = null;
@@ -111,6 +111,8 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathResponsePropertyFullName = null;
 	private static XPathExpression xpathResponsePropertyTypeName = null;
 	private static XPathExpression xpathResponseNullContext = null;
+	private static XPathExpression xpathNotificationName = null;
+	private static XPathExpression xpathResponseSuccess = null;
 	
 	/**
 	 * Regular expression.
@@ -164,8 +166,8 @@ public class XdebugClientResponse {
 			xpathErrorCode = xpath.compile("/response/error/@code");
 			xpathErrorMessage = xpath.compile("/response/error/message/text()");
 			xpathContextsResponse = xpath.compile("/response/*");
-			xpathTextTagStartPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='tagStartPosition']/text()");
-			xpathCurrentTextPosition = xpath.compile("/response/property[@name='areaServerTextState']/property[@name='position']/text()");
+			xpathCmdBeginPosition = xpath.compile("/response/property[@name='debug_tag_info']/property[@name='cmdBegin']/text()");
+			xpathCmdEndPosition = xpath.compile("/response/property[@name='debug_tag_info']/property[@name='cmdEnd']/text()");
 			xpathStackRootNodes = xpath.compile("/response/*");
 			xpathRelativeStackLevel = xpath.compile("@level");
 			xpathRelativeStackType = xpath.compile("@type");
@@ -182,6 +184,8 @@ public class XdebugClientResponse {
 			xpathResponsePropertyFullName = xpath.compile("@fullname");
 			xpathResponsePropertyTypeName = xpath.compile("@type");
 			xpathResponseNullContext = xpath.compile("/response/null_context");
+			xpathNotificationName = xpath.compile("/notify/@name");
+			xpathResponseSuccess = xpath.compile("/response/@success");
 			
 			// Create regex patterns.
 			regexUriParser = Pattern.compile("debug:\\/\\/(?<computer>[^\\/]*)\\/\\?pid=(?<pid>\\d*)&tid=(?<tid>\\d*)&aid=(?<aid>\\d*)&statehash=(?<statehash>\\d*)", Pattern.CASE_INSENSITIVE);
@@ -340,6 +344,54 @@ public class XdebugClientResponse {
         rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
         xml.appendChild(rootElement);
 		
+        // Create and return new packet.
+		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
+		return featurePacket;
+	}
+	
+	/**
+	 * Create "set property" response.
+	 * @param command
+	 * @param propertyName
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createSetPropertyResponse(XdebugCommand command, String propertyName)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+		
+		// Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", "property_set");
+        rootElement.setAttribute("success", "1");
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        // Create and return new packet.
+		XdebugClientResponse setPropertyPacket = new XdebugClientResponse(xml);
+		return setPropertyPacket;
+	}
+	
+	/**
+	 * Create notification for breakpoint resolved event.
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createBreakpointNotification()
+			throws Exception {
+		
+		// Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("notify");
+        rootElement.setAttribute("name", "breakpoint_resolved");
+        xml.appendChild(rootElement);
+        
         // Create and return  new packet.
 		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
 		return featurePacket;
@@ -423,15 +475,15 @@ public class XdebugClientResponse {
 	}
 	
 	/**
-	 * Creates response packet with area server state.
+	 * Creates response packet with debug information.
 	 * @param command
 	 * @param state
 	 * @return
 	 * @throws Exception 
 	 */
-	public static XdebugClientResponse createAreaServerStateResult(XdebugCommand command, AreaServerState state)
+	public static XdebugClientResponse createDebugInfo(XdebugCommand command, AreaServerState state)
 			throws Exception {
-		
+
 		// Get transaction ID from the input command.
 		int transactionId = command.getTransactionId();
         if (transactionId < 1) {
@@ -445,156 +497,112 @@ public class XdebugClientResponse {
         rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
         xml.appendChild(rootElement);
         
-        // Create property tree.
+        final Obj<DebugInfo> debugInfo = new Obj<>(null);
         if (state != null) {
-	        createPropertyElement(xml, state, "areaServerState", stateElement -> {
-	        	rootElement.appendChild(stateElement);
+        	debugInfo.ref = state.debugInfo;
+        }
+        
+        // Create property tree.
+        if (debugInfo.ref != null) {
+	        createPropertyElement(xml, debugInfo.ref, "debugInfo", debugInfoElement -> {
+	        	
+	        	rootElement.appendChild(debugInfoElement);
 
 	        	// Add process ID.
         		createPropertyValueElement(xml, "processId", INTEGER_TYPE_NAME, processIdValue -> {
 	        		
-		        	long processId = state.processId;
+		        	long processId = debugInfo.ref.getProcessId();
 		        	String processIdText = String.valueOf(processId);
 		        	
 		        	processIdValue.setTextContent(processIdText);
-		            stateElement.appendChild(processIdValue);
-
+		            debugInfoElement.appendChild(processIdValue);
 	        	});
 	        	
 	        	// Add process name.
         		createPropertyValueElement(xml, "processName", STRING_TYPE_NAME, processNameValue -> {
 	        		
-		        	String processName = state.processName;
+		        	String processName = debugInfo.ref.getProcessName();
 		        	
 		        	processNameValue.setTextContent(processName);
-		            stateElement.appendChild(processNameValue);
+		            debugInfoElement.appendChild(processNameValue);
 
 	        	});
         		
 	        	// Add thread ID.
         		createPropertyValueElement(xml, "threadId", INTEGER_TYPE_NAME, threadIdValue -> {
 	        		
-    	            long threadId = state.threadId;
+    	            long threadId = debugInfo.ref.getThreadId();
     	            String threadIdText = String.valueOf(threadId);
 		        	
     	            threadIdValue.setTextContent(threadIdText);
-		            stateElement.appendChild(threadIdValue);
+		            debugInfoElement.appendChild(threadIdValue);
 
 	        	});
         		
 	        	// Add thread name.
         		createPropertyValueElement(xml, "threadName", STRING_TYPE_NAME, threadNameValue -> {
 	        		
-		        	String threadName = state.threadName;
+		        	String threadName = debugInfo.ref.getThreadName();
 		        	
 		        	threadNameValue.setTextContent(threadName);
-		            stateElement.appendChild(threadNameValue);
+		            debugInfoElement.appendChild(threadNameValue);
 
+	        	});
+        		
+        		Long resourceId = debugInfo.ref.getSourceResourceId();
+        		Long slotId = debugInfo.ref.getSourceSlotId();
+        		
+        		if (resourceId == null && slotId == null) {
+        			return false;
+        		}
+        		
+        		if (resourceId != null) {
+        			createPropertyValueElement(xml, "resourceId", INTEGER_TYPE_NAME, resourceIdValue -> {
+        				
+        				String resourceIdText = String.valueOf(resourceId);
+        				resourceIdValue.setTextContent(resourceIdText);
+        				debugInfoElement.appendChild(resourceIdValue);
+        			});
+        		}
+    		
+        		if (slotId != null) {
+	    			createPropertyValueElement(xml, "slotId", INTEGER_TYPE_NAME, slotIdValue -> {
+	    				
+	    				String slotIdText = String.valueOf(slotId);
+	    				slotIdValue.setTextContent(slotIdText);
+	    				debugInfoElement.appendChild(slotIdValue);
+	    			});
+        		}
+        		
+	        	// Add tag begin position.
+        		createPropertyValueElement(xml, "cmdBegin", INTEGER_TYPE_NAME, cmdBeginElement -> {
+	        		
+        			int cmdBegin = debugInfo.ref.getCmdBegin();
+        			String cmdBeginText = String.valueOf(cmdBegin);
+        			
+		        	cmdBeginElement.setTextContent(cmdBeginText);
+		        	debugInfoElement.appendChild(cmdBeginElement);
+	        	});
+        		
+	        	// Add tag end position.
+        		createPropertyValueElement(xml, "cmdEnd", INTEGER_TYPE_NAME, cmdEndElement -> {
+	        		
+        			int cmdEnd = debugInfo.ref.getCmdEnd();
+        			String cmdEndText = String.valueOf(cmdEnd);
+        			
+		        	cmdEndElement.setTextContent(cmdEndText);
+		        	debugInfoElement.appendChild(cmdEndElement);
 	        	});        		
-	            
-	        	DebuggedCodeDescriptor descriptor = state.debuggedCodeDescriptor;
-	            if (descriptor == null) {
-	            	return false;
-	            }
-	            
-            	createPropertyElement(xml, descriptor, "debuggedCodeDescriptor", descriptorElement -> {
-            		stateElement.appendChild(descriptorElement);
-            		
-            		TagsSource tagsSource = descriptor.gatTagsSource();
-                	if (tagsSource == null) {
-                		return false;
-                	}
-                		
-    	        	createPropertyElement(xml, tagsSource, "tagsSource", sourceElement -> {
-    	        		descriptorElement.appendChild(sourceElement);
-
-    	        		Long resourceId = tagsSource.resourceId;
-    	        		Long slotId = tagsSource.slotId;
-    	        		if (resourceId == null && slotId == null) {
-    	        			return false;
-    	        		}
-    	        		
-    	        		if (resourceId != null) {
-    	        			createPropertyValueElement(xml, "resourceId", INTEGER_TYPE_NAME, resourceIdValue -> {
-    	        				String resourceIdText = String.valueOf(resourceId);
-    	        				resourceIdValue.setTextContent(resourceIdText);
-    	        				sourceElement.appendChild(resourceIdValue);
-    	        			});
-    	        		}
-    	        		
-       	        		if (slotId != null) {
-    	        			createPropertyValueElement(xml, "slotId", INTEGER_TYPE_NAME, slotIdValue -> {
-    	        				String slotIdText = String.valueOf(slotId);
-    	        				slotIdValue.setTextContent(slotIdText);
-    	        				sourceElement.appendChild(slotIdValue);
-    	        			});
-    	        		}
-    	        		return true;
-    	        	});             			
-            		return true;
-            	});
-            	return true;
+        		
+        		return true;
 	        });
         }
-
+        
         // Create and return new packet.
 		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
 		return propertyPacket;
 	}
 	
-	/**
-	 * Create and return response object with Area Server text replacement properties.
-	 * @param command
-	 * @param state
-	 * @return
-	 * @throws Exception 
-	 */
-	public static XdebugClientResponse createAreaServerTextStateResult(XdebugCommand command, AreaServerState state)
-			throws Exception {
-		
-		// Get transaction ID from the input command.
-		int transactionId = command.getTransactionId();
-        if (transactionId < 1) {
-        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
-        }
-        
-        // Create new XML DOM document object.
-        Document xml = newXmlDocument();
-        Element rootElement = xml.createElement("response");
-        rootElement.setAttribute("command", "property_get");
-        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
-        xml.appendChild(rootElement);
-        
-        // Create property tree.
-        if (state != null) {
-        	
-	        createPropertyElement(xml, state, "areaServerTextState", textStateElement -> {
-	        	rootElement.appendChild(textStateElement);
-	        	
-	        	// Add tag position.
-        		createPropertyValueElement(xml, "tagStartPosition", INTEGER_TYPE_NAME, tagPositionValue -> {
-	        		
-        			String tagStartPositionText = String.valueOf(state.tagStartPosition);
-		        	tagPositionValue.setTextContent(tagStartPositionText);
-		        	textStateElement.appendChild(tagPositionValue);
-	        	});
-        		
-	        	// Add Area Server current text position.
-        		createPropertyValueElement(xml, "position", INTEGER_TYPE_NAME, positionValue -> {
-	        		
-        			String positionText = String.valueOf(state.position);
-		        	positionValue.setTextContent(positionText);
-		        	textStateElement.appendChild(positionValue);
-	        	});
-	        	return true;
-	        });
-        }
-        
-        // Create and return new packet.
-		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
-		return propertyPacket;
-	}
-
 	/**
 	 * Create property XML element.
 	 * @param xml
@@ -947,7 +955,8 @@ public class XdebugClientResponse {
 	 * @return
 	 * @throws Exception 
 	 */
-	public boolean isInitPacket() throws Exception {
+	public boolean isInitPacket()
+			throws Exception {
 		
 		// Check packet.
 		if (xml == null) {
@@ -961,11 +970,31 @@ public class XdebugClientResponse {
 	}
 	
 	/**
+	 * Check if the input packet is a notification packet.
+	 * @return
+	 * @throws Exception 
+	 */
+	public boolean isNotificationPacket()
+			throws Exception {
+		
+		// Check packet.
+		if (xml == null) {
+			return false;
+		}
+		
+		// Try to get packet root node.
+		String nodeName = (String) xpathRootNodeName.evaluate(xml, XPathConstants.STRING);
+		boolean isNotificationPacket = "notify".equalsIgnoreCase(nodeName);
+		return isNotificationPacket;
+	}
+	
+	/**
 	 * Check if the input packet is an error packet.
 	 * @return
 	 * @throws Exception 
 	 */
-	public boolean isErrorPacket() throws Exception {
+	public boolean isErrorPacket()
+			throws Exception {
 		
 		// Check packet.
 		if (xml == null) {
@@ -976,6 +1005,24 @@ public class XdebugClientResponse {
 		String codeText = (String) xpathErrorCode.evaluate(xml, XPathConstants.STRING);
 		boolean isErrorPacket = !codeText.isEmpty();
 		return isErrorPacket;
+	}
+	
+	/**
+	 * Check if the input packet is result of successful property set operation.
+	 * @return
+	 * @throws Exception 
+	 */
+	public boolean isPropertySetSuccess() {
+
+		try {
+			String successText = (String) xpathResponseSuccess.evaluate(xml, XPathConstants.STRING);
+			boolean success = "1".equals(successText);
+			return success;
+		}
+		catch (Exception e) {
+		}
+		
+		return false;
 	}
 	
 	/**
@@ -1271,6 +1318,18 @@ public class XdebugClientResponse {
 	}
 	
 	/**
+	 * Check if it is a "breakpoint resolved" response.
+	 * @return
+	 */
+	public boolean isBreakpointResolved()
+			throws Exception {
+		
+		String notificationName = (String) xpathNotificationName.evaluate(xml, XPathConstants.STRING);
+		boolean success = "breakpoint_resolved".equals(notificationName);
+		return success;
+	}
+	
+	/**
 	 * Get source result.
 	 * @return
 	 * @throws Exception
@@ -1368,11 +1427,11 @@ public class XdebugClientResponse {
 	}
 	
 	/**
-	 * Get area state available for Xdebug.
+	 * Retrieve Area Server debug info from the Xdebug response.
 	 * @return
 	 * @throws Exception 
 	 */
-	public XdebugAreaServerState getXdebugAreaState()
+	public DebugInfo getDebugInfo()
 			throws Exception {
 		
 		// Check command name.
@@ -1381,82 +1440,64 @@ public class XdebugClientResponse {
 			onThrownException("org.maclan.server.messageBadXdebugCommandName", "property_get", commandName);
 		}
 		
-		XdebugAreaServerState state = new XdebugAreaServerState();
+		DebugInfo debugInfo = new DebugInfo();
 		try {
-			// Get ID of slot that supplied the source code. 
-			String valueText = (String) xpathStateSlotId.evaluate(xml, XPathConstants.STRING);
+			// Get tag start position. 
+			String valueText = (String) xpathCmdBeginPosition.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setSourceTagId(Long.parseLong(valueText));
+				
+				int cmdBegin = Integer.parseInt(valueText);
+				debugInfo.setCmdBegin(cmdBegin);
+			}
+			
+			// Get tag end position. 
+			valueText = (String) xpathCmdEndPosition.evaluate(xml, XPathConstants.STRING);
+			if (!valueText.isEmpty()) {
+				
+				int cmdEnd = Integer.parseInt(valueText);
+				debugInfo.setCmdEnd(cmdEnd);
+			}
+			
+			// Get ID of slot that supplied current source code. 
+			 valueText = (String) xpathStateSlotId.evaluate(xml, XPathConstants.STRING);
+			if (!valueText.isEmpty()) {
+				debugInfo.setSourceSlotId(Long.parseLong(valueText));
 			}
 			
 			// Get ID of resource that supplied the source code. 
 			valueText = (String) xpathStateResourceId.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setTagResourceId(Long.parseLong(valueText));
+				debugInfo.setSourceResourceId(Long.parseLong(valueText));
 			}
 			
 			// Get process ID.
 			valueText = (String) xpathStateProcessId.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setProcessId(Long.parseLong(valueText));
+				debugInfo.setProcessId(Long.parseLong(valueText));
 			}
 			
 			// Get process name.
 			valueText = (String) xpathStateProcessName.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setProcessName(valueText);
+				debugInfo.setProcessName(valueText);
 			}	
 			
 			// Get thread ID.
 			valueText = (String) xpathStateThreadId.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setThreadId(Long.parseLong(valueText));
+				debugInfo.setThreadId(Long.parseLong(valueText));
 			}
 			
 			// Get thread name.
 			valueText = (String) xpathStateThreadName.evaluate(xml, XPathConstants.STRING);
 			if (!valueText.isEmpty()) {
-				state.setThreadName(valueText);
+				debugInfo.setThreadName(valueText);
 			}	
 		}
 		catch (Exception e) {
 			onThrownException(e);
 		}
-		return state;
-	}
-	
-	/**
-	 * Get Area Server text state.
-	 * @return
-	 * @throws Exception 
-	 */
-	public XdebugAreaServerTextState getXdebugAreaTextState()
-			throws Exception {
-		
-		// Check command name.
-		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
-		if (!"property_get".equals(commandName)) {
-			onThrownException("org.maclan.server.messageBadXdebugCommandName", "property_get", commandName);
-		}
-		
-		XdebugAreaServerTextState textState = new XdebugAreaServerTextState();
-		try {
-			// Get tag start position. 
-			String valueText = (String) xpathTextTagStartPosition.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				textState.setTagStartPosition(Integer.parseInt(valueText));
-			}
-			
-			// Get Area Server current text position. 
-			valueText = (String) xpathCurrentTextPosition.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				textState.setPosition(Integer.parseInt(valueText));
-			}
-		}
-		catch (Exception e) {
-			onThrownException(e);
-		}
-		return textState;
+		return debugInfo;
 	}
 	
 	/**

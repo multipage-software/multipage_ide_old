@@ -54,11 +54,8 @@ import org.maclan.VersionObj;
 import org.maclan.expression.ExpressionSolver;
 import org.maclan.expression.ProcedureParameter;
 import org.multipage.gui.Utility;
-import org.multipage.util.Lock;
 import org.multipage.util.Obj;
-import org.multipage.util.RepeatedTask;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * Area Server helper class.
@@ -153,16 +150,6 @@ public class AreaServer {
 	 * Number of JavaScript engines in the pool.
 	 */
 	private static final int JAVASCRIPT_ENGINE_COUNT = 10;
-	
-	/**
-	 * Debugger lock timeout in milliseconds.
-	 */
-	private static final long DEBUGGER_LOCK_TIMEOUT_MS = 200;
-	
-	/**
-	 * Exit debugger flag. Is true when application exits.
-	 */
-	private static boolean exitDebugger = false;
 
 	/**
 	 * Area ID of the page which source code has to be displayed.
@@ -193,6 +180,11 @@ public class AreaServer {
 	}
 	
 	/**
+	 * Development mode lambda function.
+	 */
+	private static Supplier<Boolean> isDevelopmentLambda = null;
+	
+	/**
 	 * Can log lambda function.
 	 */
 	private static Supplier<Boolean> canLogLambda = null;
@@ -219,6 +211,15 @@ public class AreaServer {
     }
 	
 	/**
+	 * Set lambda that gets the "is development mode" flag.
+	 * @return
+	 */
+	public static void setDevelopmentModeLambda(Supplier<Boolean> isDevelopmentLambda) {
+		
+		AreaServer.isDevelopmentLambda = isDevelopmentLambda;
+	}
+	
+	/**
 	 * Set "can log" lambda function.
 	 * @param logLambda
 	 */
@@ -243,6 +244,19 @@ public class AreaServer {
 	public static void setLogInvolveUserLambda(Runnable logInvolveUserLambda) {
 		
 		AreaServer.logInvolveUserLambda = logInvolveUserLambda;
+	}
+	
+	/**
+	 * Returns true is the development mode is on.
+	 * @return
+	 */
+	private static boolean isDevelopmentMode() {
+
+		if (isDevelopmentLambda == null) {
+			return false;
+		}
+		boolean isDevelopment = isDevelopmentLambda.get();
+		return isDevelopment;
 	}
 	
 	/**
@@ -376,6 +390,27 @@ public class AreaServer {
 	public AreaServerState state;
 	
 	/**
+	 * Flag indicating that the Area Server is debugged.
+	 */
+	private boolean isDebugged = false;
+	
+	/**
+	 * Set flag indicating that the Area Server is debugged.
+	 * @param isDebugged
+	 */
+	public void setDebugged(boolean isDebugged) {
+		this.isDebugged = isDebugged;
+	}
+	
+	/**
+	 * Get flag indicating that the Area Server is debugged.
+	 * @return
+	 */
+	public boolean isDebugged() {
+		return isDebugged;
+	}
+	
+	/**
 	 * Clone server.
 	 * @param area
 	 * @param textValue
@@ -428,12 +463,6 @@ public class AreaServer {
 		clonedState.trayMenu = state.trayMenu;
 		clonedState.newLine = state.newLine;
 		clonedState.enableMetaTags = state.enableMetaTags;
-		
-		// If debugger steps into sub tags, set reference to the current debugger client. 
-		boolean isStepInto = (state.debuggerOperation == XdebugOperation.step_into);
-		if (isStepInto) {
-			clonedState.debugClient = state.debugClient;
-		}
 		
 		return clonedState;
 	}
@@ -915,7 +944,6 @@ public class AreaServer {
 				String replacement = compiledText.toString();
 				
 				// Wrap into meta information.
-				server.setDebuggedCodeDescriptor("LOOP", properties, server.state.tagStartPosition, server.state.position, replacement);
 				return replacement;
 			}
 		});
@@ -1392,10 +1420,6 @@ public class AreaServer {
 					else {
 						returnedText =  textId + slotTextValue;
 					}
-					
-					// Add meta information about tag source (which is currently a slot mentioned in TAG).
-					TagsSource source = TagsSource.newSlot(slot.ref.getId());
-					server.setDebuggedCodeDescriptor(source, returnedText);
 					
 					return returnedText;
 				}
@@ -3850,19 +3874,18 @@ public class AreaServer {
 					return "";
 				}
 				
-				// Check debug flag and if satisfied, run the debugger.
+				// Check debug flag and if it is true, run the debugger.
 				Obj<String> ideHost = new Obj<String>();
 				Obj<Integer> xdebugPort = new Obj<Integer>();
 				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
 				if (debugging) {
 					
 					// Connect to debugger via Xdebug protocol.
-					if (server.state.debugClient == null) {
-						server.connectXdebug(ideHost.ref, xdebugPort.ref);
-					}
-					
+					XdebugClient debugClient = DebugInfo.connectXdebug(server, ideHost.ref, xdebugPort.ref);
+					// Add debug information about Xdebug protocol client.
+					DebugInfo.setDebugInfo(server, debugClient);
 					// Accept Xdebug commands from debugger dialog.
-					server.debugBreakPoint();
+					DebugInfo.debugPoint(server);
 				}
 				else {
 					if (breakName != null) {
@@ -3872,112 +3895,9 @@ public class AreaServer {
 						AreaServer.throwError("server.messageProgramBreak");
 					}
 				}
-				
 				return "";
 			}
 		});
-	}
-	
-	/**
-	 * Connect to debugger via Xdebug protocol.
-	 * @param - ideHost
-	 * @param - xdebugPort
-	 */
-	protected void connectXdebug(String ideHostName, int xdebugPort)
-			throws Exception {
-		
-		// Create new Xdebug client.
-		String areaServer = state.request.getOriginalRequest().getServerName();
-		long processId = ProcessHandle.current().pid();
-		long threadId = Thread.currentThread().getId();
-		long areaId = state.area.getId();
-		long stateHash = state.hashCode();
-		
-		// Area server state locator.
-		String areaServerStateLocator = String.format("debug://%s/?pid=%d&amp;tid=%d&amp;aid=%d&amp;statehash=%d", areaServer, processId, threadId, areaId, stateHash);
-		
-		state.debugClient = XdebugClient.connectNewClient(ideHostName, xdebugPort, areaServerStateLocator);
-	}
-	
-	/**
-	 * Accept incoming debugging statements.
-	 */
-	protected void debugPoint()
-			throws Exception {
-		
-		// If the debugger is enabled and the connection is established, do debugging.
-		if (state.debugClient != null && state.debugClient.isConnected()) {
-			
-            // Accept incoming debug commands.
-			if (state.debuggerLock == null) {
-				state.debuggerLock = new Lock();
-			}
-			Lock.reset(state.debuggerLock);
-			
-			state.debugClient.onAcceptCommands(command -> {
-				try {
-					
-					// Check client.
-					if (state.debugClient == null) {
-						return null;
-					}
-					
-					// Process incomming Xdebug commands with the Xdebug client.
-					XdebugClientResponse resultPacket = state.debugClient.xdebugClient(AreaServer.this, command);
-					
-					// Return the packet to be sent to the debugger server (ie. the IDE that can display the debug information).
-					return resultPacket;
-				}
-				catch (Exception exception) {
-					
-					exception.printStackTrace();
-					
-					// Create error packet and return it to the debugger server.
-					try {
-						XdebugClientResponse errorPacket = XdebugClientResponse.createErrorPacket(command, XdebugError.UNKNOWN_ERROR, exception);
-						return errorPacket;
-					} 
-					catch (Exception e) {
-						e.printStackTrace();
-					}
-                    return null;
-				}
-			});
-			
-			// Wait for the continuation command.
-			RepeatedTask.loopBlocking("DebuggerLock", 0L, 0L, (isRunning, exception) -> {
-				
-				if (!isRunning || exitDebugger) {
-					return false;
-				}
-				boolean isTimeout = Lock.waitFor(state.debuggerLock, DEBUGGER_LOCK_TIMEOUT_MS);
-				if (isTimeout) {
-					return true;
-				}
-				return false;
-			});
-			
-			// On debugger stop command throw stop Area Server exception.
-			if (XdebugOperation.stop.equals(state.debuggerOperation)) {
-				throwError("org.maclan.server.messageDebuggerStoppedAreaServer");
-			}
-        }
-	}
-	
-	/**
-	 * Debug point for BREAK tags.
-	 */
-	protected void debugBreakPoint()
-			throws Exception {
-		
-		// Get debugger operation.
-		XdebugOperation operation = state.debuggerOperation;
-		if (operation == XdebugOperation.stop) {
-			return;
-		}
-		
-		// Deleagate the call.
-		debugPoint();
 	}
 	
 	/**
@@ -4498,27 +4418,14 @@ public class AreaServer {
 	 * @param area
 	 * @param textValue
 	 * @param propagateErrors
-	 * @param source
 	 * @return
 	 */
-	public String processTextCloned(Area area1, String textValue, boolean propagateErrors)
+	public String processTextCloned(Area area, String textValue, boolean propagateErrors)
 		throws Exception {
-		
-		// TODO: debug
-		Area requestedArea = this.getRequestedArea();
-		Long versionId = this.getCurrentVersionId();
-		VersionObj version = this.getVersion(versionId);
-		String requestedAreaName = requestedArea.getDescriptionForced(true);
-		String currentAreaName = area1.getDescriptionForced(true);
-		String versionName = version.getDescription();
-		log("\nA cur = %s, ver = %s, A req = %s\n" +
-		    "---------------------------------------------------------------------\n%s",
-		    requestedAreaName, versionName, currentAreaName, textValue);
-		logInvolveUser();
 		
 		// Save original server state and clone server state.
 		AreaServerState originalState = this.state;
-		AreaServerState subState = cloneServerState(area1, textValue);
+		AreaServerState subState = cloneServerState(area, textValue);
 		subState.parentState = originalState;
 		
 		// Get current block reference.
@@ -4929,9 +4836,9 @@ public class AreaServer {
 							// Initialize level number.
 							state.level = 1L;
 							
-							// Add meta information.
+							// Add debug information about code source.
 							TagsSource source = TagsSource.newResource(startResourceId);
-							setDebuggedCodeDescriptor(source, resourceText.ref);
+							DebugInfo.setDebugInfo(this, source, resourceText.ref);
 						
 							// Process page text for the area.
 							state.text = new StringBuilder(resourceText.ref);
@@ -4991,16 +4898,16 @@ public class AreaServer {
 								packTextEx();
 							}
 							
-							// On closing the AreaServer break program.
-							debugBreakPoint();
-							// After the break point close the debugger.
-							closeAreaServerDebugger();
-							
 							// Replace new line tags
 							String textString = replaceNewLineTags(state.text);
 							
 							// Do post processing
 							textString = response2.postProcessText(textString);
+
+							// Debugger entry point.
+							DebugInfo.debugPoint(this);
+							// After the break point close the debugger.
+							closeDebugger();
 							
 							// Try to execute Area Server API operation.
 							if (executeApiOperation(processResponse, ApiCallType.apiCallForAreaServerResult, textString)) {
@@ -5035,22 +4942,20 @@ public class AreaServer {
 	/**
 	 * Close Area Server debugger if it is open.
 	 */
-	private void closeAreaServerDebugger() {
+	private void closeDebugger() {
 		
-		XdebugClient client = state.debugClient;
-		if (client != null) {
-			
-			try {
-				Thread.sleep(1000);
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-			client.close();
-			
-			state.debugClient = null;
+		DebugInfo debugInfo = state.debugInfo;
+		if (debugInfo == null) {
+			return;
 		}
+		
+		XdebugClient client = debugInfo.getDebugClient();
+		if (client == null) {
+			return;
+		}
+		
+		client.close();
+		debugInfo.setDebugClient(null);
 	}
 
 	/**
@@ -6152,16 +6057,19 @@ public class AreaServer {
 	 */
 	private void checkResponseTimeout() throws Exception {
 		
-		// TODO: <---TESTING Do not check timeout.
-		return ;
+		// Do not check timeout when development mode is on.
+		boolean developmentMode = isDevelopmentMode();
+		if (developmentMode) {
+			return;
+		}
+
+		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
 		
-//		long deltaMilliseconds = System.currentTimeMillis() - state.responseStartTime;
-//		
-//		if (deltaMilliseconds >= state.responseTimeoutMilliseconds) {
-//			throwError("server.messageResponseTimeExceedsTimout", state.responseTimeoutMilliseconds);
-//		}
+		if (deltaMilliseconds >= state.responseTimeoutMilliseconds) {
+			throwError("server.messageResponseTimeExceedsTimout", state.responseTimeoutMilliseconds);
+		}
 	}
-	
+
 	/**
 	 * Returns remaining time out.
 	 * @return
@@ -6273,9 +6181,10 @@ public class AreaServer {
 		// Call processor.
 		String replace = processor.processTag(this);
 		
-		// Debug point.
-		setDebuggedCodeDescriptor(tagName, null, state.tagStartPosition, state.position, replace);
-		debugPoint();
+		// Add debug information about current tag.
+		DebugInfo.setDebugInfo(this, tagName, null, state.tagStartPosition, state.position, null, replace);
+		// Debug point for simple tags.
+		DebugInfo.debugPoint(this);
 		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -6315,9 +6224,10 @@ public class AreaServer {
 		// Call tag processor.
 		String replace = processor.processTag(this, properties);
 		
-		// Debug point.
-		setDebuggedCodeDescriptor(tagName, properties, state.tagStartPosition, state.position, replace);
-		debugPoint();
+		// Add debug information about current tag.
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, null, replace);
+		// Debug point for complex single tags.
+		DebugInfo.debugPoint(this);
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		state.position = state.tagStartPosition;
@@ -6432,9 +6342,10 @@ public class AreaServer {
 		String replace = processor.processText(this, innerText.toString(), properties);
 		state.position = parser.getPosition();
 		
-		// Debug point.
-		setDebuggedCodeDescriptor(tagName, properties, state.tagStartPosition, state.position, innerText.toString(), replace);
-		debugPoint();
+		// Add debug information about current tag and replacement.
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, innerText.toString(), replace);
+		// Debug point for full tags.
+		DebugInfo.debugPoint(this);
 		
 		// Replace statement with its result.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -8826,63 +8737,9 @@ public class AreaServer {
 				
 				return currentState;
 			}
-			
 			currentState = currentState.parentState;
 		}
 		return null;
-	}
-	
-	/**
-	 * Set code descriptor for Xdebug.
-	 * @param source 
-	 * @param replace
-	 */
-	protected void setDebuggedCodeDescriptor(TagsSource source, String replace) {
-		
-		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
-		if (codeDescriptor == null) {
-			codeDescriptor = new DebuggedCodeDescriptor();
-		}
-		
-		codeDescriptor.set(source, replace);
-	}
-	
-	/**
-	 * Set code descriptor for Xdebug.
-	 * @param tagName
-	 * @param properties
-	 * @param tagStartPosition
-	 * @param position
-	 * @param replace
-	 */
-	private void setDebuggedCodeDescriptor(String tagName, TagProperties properties, int tagStartPosition, int position,
-			String replace) {
-
-		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
-		if (codeDescriptor == null) {
-			codeDescriptor = new DebuggedCodeDescriptor();
-		}
-		
-		codeDescriptor.set(tagName, properties, tagStartPosition, position, replace);
-	}
-	/**
-	 * Set code descriptor for Xdebug.
-	 * @param tagName
-	 * @param properties
-	 * @param tagStartPosition
-	 * @param position
-	 * @param innerText
-	 * @param replace
-	 */
-	private void setDebuggedCodeDescriptor(String tagName, TagProperties properties, int tagStartPosition, int position,
-			String innerText, String replace) {
-
-		DebuggedCodeDescriptor codeDescriptor = state.debuggedCodeDescriptor;
-		if (codeDescriptor == null) {
-			codeDescriptor = new DebuggedCodeDescriptor();
-		}
-		
-		codeDescriptor.set(tagName, properties, tagStartPosition, position, innerText, replace);
 	}
 
 	/**
@@ -8890,6 +8747,6 @@ public class AreaServer {
 	 */
 	public static void stop() {
 		
-		exitDebugger = true;
+		DebugInfo.setExitDebugger(true);
 	}
 }

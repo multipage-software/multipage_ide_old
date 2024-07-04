@@ -10,14 +10,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeSet;
 
 import org.maclan.Area;
 import org.maclan.AreaVersion;
 import org.maclan.Language;
 import org.maclan.MiddleLight;
-import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 
 /**
@@ -288,24 +286,9 @@ public class AreaServerState {
 	public boolean processMetaTags = false;
 	
 	/**
-	 * Xdebug client.
+	 * Debugged tag information.
 	 */
-	public XdebugClient debugClient = null;
-	
-	/**
-	 * Xdebug opration.
-	 */
-	public XdebugOperation debuggerOperation = XdebugOperation.no_operation;
-
-	/**
-	 * Debugger lock.
-	 */
-	public Lock debuggerLock = null;
-	
-	/**
-	 * Debugged code descriptor.
-	 */
-	public DebuggedCodeDescriptor debuggedCodeDescriptor = null;
+	public DebugInfo debugInfo = null;
 	
 	/**
 	 * Constructor.
@@ -344,5 +327,20 @@ public class AreaServerState {
 			exceptionThrown = new MaclanException();
 		}
 		exceptionThrown.exception = exception;
+	}
+	
+	/**
+	 * Set debugger information.
+	 * @param debugInfo
+	 */
+	public void setDebugInfo(DebugInfo debugInfo) {	
+		this.debugInfo = debugInfo;
+	}
+	
+	/**
+	 * Get debugger information.
+	 */
+	public DebugInfo getDebugInfo() {
+		return debugInfo;
 	}
 }

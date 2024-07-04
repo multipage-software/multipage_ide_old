@@ -8,8 +8,6 @@ package org.maclan.server;
 
 import java.util.LinkedList;
 
-import org.multipage.util.Obj;
-
 /**
  * Area Srever stack level information for Xdebug viewer.
  * @author vakol
@@ -37,15 +35,10 @@ public class XdebugAreaServerStackLevel {
 	private String sourceCode = null;
 	
 	/**
-	 * Start position of current tag in the source code text.
+	 * Debugged code information.
 	 */
-	private int cmdBegin = -1;
+	private DebugInfo debugInfo = null;
 
-	/**
-	 * Get current source code position.
-	 */
-	private int cmdEnd = -1;
-	
 	/**
 	 * Watched items.
 	 */
@@ -67,14 +60,7 @@ public class XdebugAreaServerStackLevel {
 			this.sourceCode = state.text.toString();
 		}
 		
-		if (state.debuggedCodeDescriptor != null) {
-			this.cmdBegin = state.debuggedCodeDescriptor.getCmdBegin();
-			this.cmdEnd = state.debuggedCodeDescriptor.getCmdEnd();
-		}
-		else {
-			this.cmdBegin = state.tagStartPosition;
-			this.cmdEnd  = state.position;
-		}
+		this.setDebugInfo(state.debugInfo);
 	}
 	
 	/**
@@ -91,9 +77,29 @@ public class XdebugAreaServerStackLevel {
 		this.level = level;
 		this.type = type;
 		this.stateHashCode = stateHashCode;
-		this.cmdBegin = cmdBegin;
-		this.cmdEnd = cmdEnd;
 		this.sourceCode = sourceCode;
+		
+		if (debugInfo == null) {
+			debugInfo = new DebugInfo();
+		}
+
+		DebugTagInfo tagInfo = debugInfo.getTagInfo();
+		if (tagInfo == null) {
+			tagInfo = new DebugTagInfo();
+			debugInfo.setTagInfo(tagInfo);
+		}
+		
+		tagInfo.setCmdBegin(cmdBegin);
+		tagInfo.setCmdEnd(cmdEnd);
+	}
+	
+	/**
+	 * Set debugged code information.
+	 * @param debuggedCodeInfo
+	 */
+	public void setDebugInfo(DebugInfo debuggedCodeInfo) {
+		
+		this.debugInfo = debuggedCodeInfo;
 	}
 	
 	/**
@@ -138,28 +144,43 @@ public class XdebugAreaServerStackLevel {
 	 */
 	public int getCmdBegin() {
 		
-		return cmdBegin;
+		if (debugInfo == null) {
+			return -1;
+		}
+		
+		DebugTagInfo tagInfo = debugInfo.getTagInfo();
+		if (tagInfo == null) {
+			return -1;
+		}
+		
+		return tagInfo.getCmdBegin();
 	}
 
 	/**
-	 * Get current source code position.
+	 * Get tag end position.
 	 * @return
 	 */
 	public int getCmdEnd() {
 		
-		return cmdEnd;
+		if (debugInfo == null) {
+			return -1;
+		}
+		
+		DebugTagInfo tagInfo = debugInfo.getTagInfo();
+		if (tagInfo == null) {
+			return -1;
+		}
+		
+		return tagInfo.getCmdEnd();
 	}
 	
 	/**
-	 * Load area server text state from current stack level.
+	 * Get debug information.
 	 * @param textState
 	 */
-	public void loadAreaServerTextState(Obj<XdebugAreaServerTextState> textState) {
+	public DebugInfo getDebuggedCodeInfo() {
 		
-		// Create text state object.
-		textState.ref = new XdebugAreaServerTextState();
-		textState.ref.setTagStartPosition(cmdBegin);
-		textState.ref.setPosition(cmdEnd);
+		return debugInfo;
 	}
 	
 	/**

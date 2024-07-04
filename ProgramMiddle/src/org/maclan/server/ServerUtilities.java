@@ -20,26 +20,21 @@ import org.maclan.*;
 import org.multipage.util.*;
 
 /**
- * @author
- *
+ * Miscellaneous Area Sever utilities.
+ * @author vakol
  */
 public class ServerUtilities {
 	
 	/**
-	 * ELSE statement pattern.
+	 * Regular expression patterns.
 	 */
-	static final Pattern elsePattern = Pattern.compile("\\[\\s*@ELSE\\s*]",
-			Pattern.CASE_INSENSITIVE);
-	
-	/**
-	 * End tag pattern.
-	 */
-	static final Pattern endPattern = Pattern.compile("\\[\\s*\\/\\s*@\\s*\\w+\\s*]");
-	
-	/**
-	 * REM end tag pattern.
-	 */
-	static final Pattern remEndPattern = Pattern.compile("\\[\\s*\\/\\s*@\\s*REM\\s*]");
+	private static final Pattern endPattern = Pattern.compile("\\[\\s*\\/\\s*@\\s*\\w+\\s*]");
+	private static final Pattern remEndPattern = Pattern.compile("\\[\\s*\\/\\s*@\\s*REM\\s*]");
+	private static final Pattern tagStartPattern = Pattern.compile("\\[\\s*@[^@]");
+	private static final Pattern tagStartNextLevelPattern = Pattern.compile("\\[\\s*@@");
+	private static final Pattern tagEndNextLevelPattern = Pattern.compile("\\[\\s*\\/\\s*@@");
+	private static final Pattern tagEndPattern = Pattern.compile("\\s*]");
+	private static final Pattern remTagPattern = Pattern.compile("\\[\\s*\\/\\s*@\\s*REM\\s*]");
 	
 	/**
 	 * Output text.
@@ -424,14 +419,12 @@ public class ServerUtilities {
 
 		}
 	}
-
+	
 	/**
 	 * Find tag start.
 	 */
 	public static boolean findTagStart(StringBuilder text,
 			Obj<Integer> position, Obj<Integer> tagStartPosition) {
-		
-		final Pattern tagStartPattern = Pattern.compile("\\[\\s*@[^@]");
 		
 		Matcher matcher = tagStartPattern.matcher(text);
 		if (!matcher.find(position.ref)) {
@@ -452,9 +445,7 @@ public class ServerUtilities {
 	public static boolean findTagStartNextLevel(StringBuilder text,
 			Obj<Integer> position, Obj<Integer> tagStartPosition) {
 		
-		final Pattern tagStartPattern = Pattern.compile("\\[\\s*@@");
-		
-		Matcher matcher = tagStartPattern.matcher(text);
+		Matcher matcher = tagStartNextLevelPattern.matcher(text);
 		if (!matcher.find(position.ref)) {
 			return false;
 		}
@@ -473,9 +464,7 @@ public class ServerUtilities {
 	public static boolean findTagEndNextLevel(StringBuilder text,
 			Obj<Integer> position, Obj<Integer> tagStartPosition) {
 		
-		final Pattern tagStartPattern = Pattern.compile("\\[\\s*\\/\\s*@@");
-		
-		Matcher matcher = tagStartPattern.matcher(text);
+		Matcher matcher = tagEndNextLevelPattern.matcher(text);
 		if (!matcher.find(position.ref)) {
 			return false;
 		}
@@ -532,10 +521,9 @@ public class ServerUtilities {
 	 * @param textPointer
 	 * @return
 	 */
-	public static String readTagName(StringBuilder text,
-			Obj<Integer> position) {
+	public static String readTagName(StringBuilder text, Obj<Integer> position) {
 		
-		// Skip.
+		// Skip whitespace characters.
 		skip(text, position);
 		
 		StringBuilder tagName = new StringBuilder();
@@ -558,14 +546,12 @@ public class ServerUtilities {
 		
 		return tagName.toString();
 	}
-
+	
 	/**
 	 * Find tag end.
 	 */
 	public static void findTagEnd(StringBuilder text, Obj<Integer> position) throws Exception {
 		
-		final Pattern tagEndPattern = Pattern.compile("\\s*]");
-	
 		Matcher matcher = tagEndPattern.matcher(text);
 		if (!matcher.find(position.ref)) {
 			AreaServer.throwError("server.messageCannotFindEndOfTag");
@@ -680,7 +666,9 @@ public class ServerUtilities {
 	    	
 	    	// If it is a REM tag skip it.
 	    	String endTag = text.substring(start, end);
-	    	if (endTag.matches("\\[\\s*\\/\\s*@\\s*REM\\s*]")) {
+	    	Matcher remTagMatcher = remTagPattern.matcher(endTag);
+	    	boolean found = remTagMatcher.find();
+	    	if (found) {
 	    		continue;
 	    	}
 	    	
