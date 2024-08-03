@@ -31,7 +31,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
 
-import org.maclan.server.XdebugClientParameters;
+import org.maclan.server.CurrentXdebugClientData;
 import org.maclan.server.XdebugCommand;
 import org.maclan.server.XdebugFeature;
 import org.maclan.server.XdebugListenerSession;
@@ -477,10 +477,15 @@ public class XdebugSessionDialog extends JDialog {
 	private void setSession(XdebugListenerSession xdebugSession)
 			throws Exception {
 		
+		// Check input object.
+		if (xdebugSession == null) {
+			return;
+		}
+		
 		// Display session ID.
 		textSessionId.setText(String.valueOf(xdebugSession.getSessionId()));
 		
-		XdebugClientParameters clientParameters = xdebugSession.getClientParameters();
+		CurrentXdebugClientData clientParameters = xdebugSession.getCurrentClientData();
 		
 		if (clientParameters != null) {
 			

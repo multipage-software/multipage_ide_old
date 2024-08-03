@@ -72,8 +72,11 @@ public class PacketChannel {
         
         Obj<Boolean> acceptNewConnection = new Obj<>(true);
         
+        int objectId = hashCode();
+        String objectIdText = String.valueOf(objectId);
+        
         // Create thread that accepts incoming connections.
-        RepeatedTask.loopNonBlocking("AcceptXdebugConnecions", 0, 100, (running, exception) -> {
+        RepeatedTask.loopNonBlocking("AcceptXdebugConnections" + objectIdText, 0, 100, (running, exception) -> {
         	
         	// Set event that accepts incoming connections from input socket.
         	if (acceptNewConnection.ref) {

@@ -167,7 +167,7 @@ public class GeneralGui {
 		AnchorDialog.setDefaultData();
 		HelpDialog.setDefaultData();
 		CssResourcesUrlsPanel.setDefaultData();
-		
+		LogConsoles.setDefaultData();
 	}
 
 	/**
@@ -217,6 +217,7 @@ public class GeneralGui {
 		AnchorDialog.serializeData(inputStream);
 		HelpDialog.serializeData(inputStream);
 		CssResourcesUrlsPanel.serializeData(inputStream);
+		LogConsoles.serializeData(inputStream);
 	}
 
 	/**
@@ -265,6 +266,7 @@ public class GeneralGui {
 		AnchorDialog.serializeData(outputStream);
 		HelpDialog.serializeData(outputStream);
 		CssResourcesUrlsPanel.serializeData(outputStream);
+		LogConsoles.serializeData(outputStream);
 	}
 	
 	/**

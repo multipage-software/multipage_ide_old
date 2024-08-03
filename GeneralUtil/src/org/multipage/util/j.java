@@ -98,7 +98,7 @@ public class j {
 	}
 	
 	/**
-	 * Log formatted message on stdout or stderr or on "test"
+	 * Logged formatted message on stdout or stderr or on "test"
 	 * displayDelta - if is true, the delta time between time stamps is displayed.
 	 * @param consoleIndex - index of Eclipse output console; if the index is 0 or negative, then use STDOUT 
 	 * @param color - if console index is greater then 0 the value sets the color of the console message
@@ -114,7 +114,7 @@ public class j {
 		long currentTimeMs = System.currentTimeMillis();
 		long timeDeltaMs = currentTimeMs - lastTimeStampMs;
 		
-		Timestamp timeStamp = new Timestamp(lastTimeStampMs);
+		Timestamp timeStamp = new Timestamp(currentTimeMs);
 		String timeStampText = logTimeSpan ? new SimpleDateFormat("kk:mm:ss.SSS").format(timeStamp) + ": " : "";
 		lastTimeStampMs = currentTimeMs;
 		

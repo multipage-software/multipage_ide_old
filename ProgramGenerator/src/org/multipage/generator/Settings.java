@@ -38,8 +38,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.maclan.MiddleUtility;
-import org.maclan.server.DebugListener;
 import org.maclan.server.ProgramServlet;
+import org.maclan.server.XdebugListener;
 import org.multipage.addinloader.AddInLoader;
 import org.multipage.addins.ProgramAddIns;
 import org.multipage.basic.ProgramBasic;
@@ -122,7 +122,7 @@ public class Settings extends JDialog {
 		enableDebugging = enable;
 		
 		// Switch on or off debugging of code
-		DebugListener.setDebugPhpListener(new CallbackNoArg() {
+		XdebugListener.setDebugPhpListener(new CallbackNoArg() {
 			@Override
 			public Object run() {
 				return enableDebugging;

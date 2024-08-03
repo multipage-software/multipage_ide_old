@@ -98,6 +98,11 @@ public class XdebugClient {
 	 * Callback lambda function.
 	 */
 	private Function<XdebugCommand, XdebugClientResponse> processCommandLambda = null;
+	
+	/**
+	 * Server ready flag.
+	 */
+	private boolean serverReady = false;
 		
 	/**
 	 * Debugger encoding.
@@ -572,7 +577,7 @@ public class XdebugClient {
 			String propertyName = command.getArgument("-n");
 			
 			if ("server_ready".equals(propertyName)) {
-				debugInfo.setServerReady(true);
+				setServerReady();
 			}
 			
 			XdebugClientResponse resultPacket = setPropertyResponse(command, server);
@@ -645,7 +650,7 @@ public class XdebugClient {
 			
 			// Get stack response.
 			XdebugClientResponse resultPacket = getStackGetResponse(command, server);
-            return resultPacket;
+			return resultPacket;
 		}
 		// On get context information.
 		else if ("context_get".equals(commandName)) {
@@ -766,6 +771,23 @@ public class XdebugClient {
 	}
 	
 	/**
+	 * Set server ready.
+	 */
+	public void setServerReady() {
+		
+		serverReady = true;
+	}
+	
+	/**
+	 * Get server ready flag.
+	 * @return
+	 */
+	public boolean isServerReady() {
+		
+		return serverReady;
+	}
+	
+	/**
 	 * Notify server that a breakpoint has been resolved.
 	 * @throws Exception 
 	 */
@@ -843,18 +865,7 @@ public class XdebugClient {
 		int areaContextId = CONTEXTS.get(AREA_CONTEXT);
 
 		// For Area Server context.
-		if (contextId == areaServerContextId) {
-			
-			AreaServerState state = areaServer.state;
-
-			switch (propertyName) {
-			// Get Area Server debugger information.
-			case "debug_info":
-				response = XdebugClientResponse.createDebugInfo(command, state);
-				break;
-			}
-		}
-		else if (contextId == localContextId) {
+		if (contextId == localContextId) {
 			
 			String propertyType = command.getArgument("-t");
 			
@@ -959,21 +970,39 @@ public class XdebugClient {
 	private XdebugClientResponse getStackGetResponse(XdebugCommand command, AreaServer areaServer)
 			throws Exception {
 		
+		// Get current thread ID and name.
+		DebugInfo debugInfo = areaServer.state.debugInfo;
+		
+		long processId = -1L;
+		String processName = "";
+		long threadId = -1L;
+		String threadName = "";
+		
+		if (debugInfo != null) {
+			
+			processId = debugInfo.getProcessId();
+			processName = debugInfo.getProcessName();
+			
+			threadId = debugInfo.getThreadId();
+			threadName = debugInfo.getThreadName();
+		}
+		
 		// Get stack list.
-		LinkedList<XdebugAreaServerStackLevel> stack = new LinkedList<XdebugAreaServerStackLevel>();
+		LinkedList<XdebugStackLevel> stack = new LinkedList<XdebugStackLevel>();
 		AreaServerState state = areaServer.state;
 		
 		int levelNumber = 0;
 		while (state != null) {
 			
-			stack.add(new XdebugAreaServerStackLevel(levelNumber, "eval", state));
+			stack.add(new XdebugStackLevel(levelNumber, "eval", state));
 			
 			state = state.parentState;
 			levelNumber++;
 		}
 		
 		// Create response packet.
-		XdebugClientResponse stackGetResponse = XdebugClientResponse.createStackGetResult(command, stack);
+		XdebugClientResponse stackGetResponse = XdebugClientResponse.createStackGetResult(command, processId, processName,
+				threadId, threadName, stack);
 		return stackGetResponse;
 	}
 	

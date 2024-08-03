@@ -23,17 +23,16 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.DefaultCellEditor;
-import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -69,18 +68,15 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import org.maclan.server.AreaServerSignal;
-import org.maclan.server.DebugListener;
-import org.maclan.server.DebugListenerSession;
-import org.maclan.server.DebugTagInfo;
+import org.maclan.server.CurrentXdebugClientData;
 import org.maclan.server.DebugWatchItem;
 import org.maclan.server.DebugWatchItemType;
-import org.maclan.server.DebugInfo;
-import org.maclan.server.XdebugAreaServerStackLevel;
 import org.maclan.server.XdebugClient;
-import org.maclan.server.XdebugClientParameters;
-import org.maclan.server.XdebugClientResponse;
+import org.maclan.server.XdebugListener;
 import org.maclan.server.XdebugListenerSession;
+import org.maclan.server.XdebugProcess;
+import org.maclan.server.XdebugStackLevel;
+import org.maclan.server.XdebugThread;
 import org.multipage.gui.AlertWithTimeout;
 import org.multipage.gui.ApplicationEvents;
 import org.multipage.gui.Images;
@@ -89,14 +85,11 @@ import org.multipage.gui.StateInputStream;
 import org.multipage.gui.StateOutputStream;
 import org.multipage.gui.TextFieldEx;
 import org.multipage.gui.Utility;
-import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
-import org.w3c.dom.Node;
 
 /**
- * This is GUI for debugging
+ * This is GUI for debugging.
  * @author vakol
  *
  */
@@ -106,6 +99,8 @@ public class DebugViewer extends JFrame {
 	 * Version
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	// $hide>>$
 	
 	/**
 	 * GUI watchdog timeout in ms.
@@ -133,241 +128,24 @@ public class DebugViewer extends JFrame {
 	private static final int WATCHED_VALUE_TYPE_COLUMN_INDEX = 4;
 	
 	/**
-	 * Xdebug process node.
-	 */
-	@SuppressWarnings("serial")
-	private static class XdebugProcessNode extends DefaultMutableTreeNode {
-		
-		/**
-		 * Constructor.
-		 */
-		public XdebugProcessNode(XdebugListenerSession session) {
-			
-			setUserObject(session);
-		}
-		
-		/**
-		 * Get Xdebug session.
-		 */
-		public XdebugListenerSession getXdebugSession() {
-			
-			Object userObject = getUserObject();
-			if (!(userObject instanceof XdebugListenerSession)) {
-				return null;
-			}
-			
-			XdebugListenerSession xdebugSession = (XdebugListenerSession) userObject;
-			return xdebugSession;
-		}
-		
-		/**
-		 * Get process ID.
-		 * @return
-		 */
-		public long getPid() {
-
-			long pid = -1L;
-			XdebugListenerSession xdebugSession = getXdebugSession();
-			if (xdebugSession != null) {
-				pid = xdebugSession.getPid();
-			}
-			return pid;
-		}
-		
-		/**
-		 * Get Xdebug process ID.
-		 */
-		@Override
-		public String toString() {
-			
-			String pidText = "unknown";
-			XdebugListenerSession xdebugSession = getXdebugSession();
-			if (xdebugSession != null) {
-				
-				XdebugClientParameters parameters = xdebugSession.getClientParameters();
-				if (parameters != null) {
-					long pid = parameters.getProcessId();
-					String pidTextFormat = Resources.getString("org.multipage.generator.textXdebugProcessId");
-					pidText = String.format(pidTextFormat, pid);
-				}
-			}
-			return pidText;
-		}
-	}
-	
-	/**
-	 * Xdebug process node.
-	 */
-	@SuppressWarnings("serial")
-	private static final class XdebugThreadNode extends XdebugProcessNode {
-		
-		/**
-		 * Constructor.
-		 * @param session
-		 */
-		public XdebugThreadNode(XdebugListenerSession session) {
-			super(session);
-		}
-		
-		/**
-		 * Get thread ID.
-		 * @return
-		 */
-		public long getTid() {
-
-			long tid = -1L;
-			XdebugListenerSession xdebugSession = getXdebugSession();
-			if (xdebugSession != null) {
-				tid = xdebugSession.getTid();
-			}
-			return tid;
-		}
-		
-		/**
-		 * Get thread name.
-		 * @return
-		 */
-		private String getThreadName() {
-
-			String treadName = "Unknown";
-			XdebugListenerSession xdebugSession = getXdebugSession();
-			if (xdebugSession != null) {
-				treadName = xdebugSession.getThreadName();
-			}
-			return treadName;
-		}
-		
-		/**
-		 * Get Xdebug process ID.
-		 */
-		@Override
-		public String toString() {
-			
-			String tidText = "unknown";
-			XdebugListenerSession xdebugSession = getXdebugSession();
-			if (xdebugSession != null) {
-				
-				XdebugClientParameters parameters = xdebugSession.getClientParameters();
-				if (parameters != null) {
-					
-					long tid = getTid();
-					String threadName = getThreadName();
-					
-					String pidTextFormat = Resources.getString("org.multipage.generator.textXdebugThreadName");
-					tidText = String.format(pidTextFormat, tid, threadName);
-				}
-			}
-			return tidText;
-		}
-	}
-	
-	// $hide>>$
-	/**
 	 * Window boundary
 	 */
-	private static Rectangle bounds;
+	private static Rectangle bounds = null;
 	
 	/**
 	 * Main splitter position.
 	 */
-	private static int mainSplitterPosition;
-	
-	/**
-	 * Text constants that are dislpayed with the dialog.
-	 */
-	private static String textConnected = "org.multipage.generator.textDebuggerConnected";
-    private static String textNotConnected = "org.multipage.generator.textDebuggerNotConnected";
-    
+	private static int mainSplitterPosition = 0;
+
     /**
-     * Load text resources.
-     */
-    private static void loadTextResources() {
-    		
-    	// Load static texts from text resources.
-		textConnected = Resources.getString(textConnected);
-		textNotConnected = Resources.getString(textNotConnected);
-    }
-    
-	/**
-	 * Set default data.
-	 */
-	public static void setDefaultData() {
-		
-		bounds = new Rectangle();
-		mainSplitterPosition = 500;
-		
-		// Load static texts from text resources.
-		loadTextResources();
-	}
-	
-	/**
-	 * Load data.
-	 * @param inputStream
-	 * @throws IOException
-	 * @throws ClassNotFoundException
-	 */
-	public static void serializeData(StateInputStream inputStream)
-			throws IOException, ClassNotFoundException {
-		
-		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
-		mainSplitterPosition = inputStream.readInt();
-		
-		// Load static texts from text resources.
-		loadTextResources();
-	}
-	
-	/**
-	 * Save data.
-	 * @param outputStream
-	 */
-	public static void seriliazeData(StateOutputStream outputStream)
-		throws IOException {
-		
-		outputStream.writeObject(bounds);
-		outputStream.writeInt(mainSplitterPosition);
-	}
-	
-	/**
 	 * Debug viewer singleton object.
 	 */
-    private static DebugViewer instance;
+    private static DebugViewer debugViewerInstance = null;
     
-    /**
-     * Get debug viewer singleton.
-     * @param parent 
-     * @return
-     */
-    public static DebugViewer getInstance(Component parent) {
-        if (instance == null) {
-            instance = new DebugViewer(parent);
-        }
-        return instance;
-    }
-    
-    /**
-     * Get debug viewer singleton.
-     * @return
-     */
-	public static DebugViewer getInstance() {
-		
-		// Delegate the call.
-		return getInstance(null);
-	}
-	
-	/**
-	 * Header to display
-	 */
-	private String header;
-	
 	/**
 	 * Lines of code to display or null if there is nothing to display
 	 */
-	private LinkedList<String> codeLines;
-	
-	/**
-	 * Script file name
-	 */
-	private String scriptFileName = "";
+	private LinkedList<String> codeLines = null;
 	
 	/**
 	 * A line number of debugger step
@@ -375,120 +153,15 @@ public class DebugViewer extends JFrame {
 	private int stepLineNumber = -1;
 	
 	/**
+	 * Sessions tree model and root node.
+	 */
+	private DefaultTreeModel treeSessionsModel = null;
+	private DefaultMutableTreeNode sessionsRootNode = null;
+	
+	/**
 	 * Watch table model.
 	 */
 	private DefaultTableModel tableWatchModel = null;
-	
-	/**
-	 * Stack list model
-	 */
-	private DefaultListModel<Node> listStackModel = null;
-	
-	/**
-	 * Class for log items.
-	 */
-	private static class LogMessage extends LoggingDialog.LoggedMessage {
-		
-		/**
-		 * List of log messages.
-		 */
-		private static LinkedList<LogMessage> listLoggedMessages = new LinkedList<LogMessage>();
-		
-		/**
-		 * Filter string.
-		 */
-		private static String filterString = "*";
-		
-		/**
-		 * Filter flags.
-		 */
-		private static boolean caseSensitive = false;
-		private static boolean wholeWords = false;
-		private static boolean exactMatch = false;
-		
-		/**
-		 * Constructor.
-		 * @param message
-		 */
-		public LogMessage(String message) {
-			super(message);
-		}
-		
-		/**
-		 * Add new log message.
-		 * @param message
-		 */
-		public static void addLogMessage(String message) {
-			
-			LogMessage logMessage = new LogMessage(message);
-			listLoggedMessages.addLast(logMessage);
-		}
-		
-		/**
-		 * Display HTML log.
-		 * @param textPane
-		 */
-		public static void displayHtmlLog(JTextPane textPane) {
-			
-			String logContent = "";
-			
-			for (LogMessage logMessage : listLoggedMessages) {
-				
-				String messageText = logMessage.getText();
-				
-				// Filter messages.
-				if (!filter(messageText)) {
-					continue;
-				}
-				
-				// Append message text.
-				logContent += messageText + "<br/>";
-			}
-			
-			// Wrap content with HTML tags.
-			logContent = String.format("<html>%s</html>", logContent);
-			textPane.setText(logContent);
-		}
-		
-		/**
-		 * Returns false if the message is filtered or true if the message passes.
-		 * @param messageText
-		 * @return
-		 */
-		private static boolean filter(String messageText) {
-
-			boolean matches = Utility.matches(messageText, filterString, caseSensitive, wholeWords, exactMatch);
-			return matches;
-		}
-
-		/**
-		 * Set filter and display filtered log messages.
-		 * @param filterString
-		 * @param caseSensitive
-		 * @param wholeWords
-		 * @param exactMatch
-		 */
-		public static void setFulltextFilter(String filterString, boolean caseSensitive, boolean wholeWords, boolean exactMatch) {
-			
-			LogMessage.filterString = !filterString.isEmpty() ?  filterString : "*";
-			LogMessage.caseSensitive = caseSensitive;
-			LogMessage.wholeWords = wholeWords;
-			LogMessage.exactMatch = exactMatch;
-		}
-	}
-	
-	/**
-	 * Display code callbacks
-	 */
-	private class DisplayCodeInterface {
-		
-		/**
-		 * Get line
-		 */
-		String line() {
-			return "";
-		}
-	}
 	
 	/**
 	 * Current debugged session.
@@ -498,7 +171,7 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Object status
 	 */
-	private Object status;
+	private Object status = null;
 	
 	/**
 	 * GUI watchdog timer.
@@ -508,23 +181,13 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Attached debug listener.
 	 */
-	private DebugListener debugListener = null;
-	
-	/**
-	 * Threads tree model.
-	 */
-	private DefaultTreeModel threadsTreeModel = null;
-	
-	/**
-	 * Threads tree root node.
-	 */
-	private DefaultMutableTreeNode threadsRootNode = null;
+	private XdebugListener debugListener = null;
 	
 	/**
 	 * Current raw source code received from the Xdebug client.
 	 */
 	private String rawSourceCode = null;
-
+	
 	// $hide<<$
 	
 	/**
@@ -569,11 +232,66 @@ public class DebugViewer extends JFrame {
 	private JLabel labelThreads;
 	private JButton buttonTest;
 	private JPanel panelThreads;
-	private JTree treeThreads;
+	private JTree treeSessions;
 	private JPopupMenu menuWatch;
 	private JMenuItem menuAddToWatch;
 	private JMenuItem menuRemoveFromWatch;
 	private JSplitPane splitPane;
+    
+	/**
+	 * Set default data.
+	 */
+	public static void setDefaultData() {
+		
+		bounds = new Rectangle();
+		mainSplitterPosition = 500;
+	}
+	
+	/**
+	 * Load data.
+	 * @param inputStream
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	public static void serializeData(StateInputStream inputStream)
+			throws IOException, ClassNotFoundException {
+		
+		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+		mainSplitterPosition = inputStream.readInt();
+	}
+	
+	/**
+	 * Save data.
+	 * @param outputStream
+	 */
+	public static void seriliazeData(StateOutputStream outputStream)
+		throws IOException {
+		
+		outputStream.writeObject(bounds);
+		outputStream.writeInt(mainSplitterPosition);
+	}
+    
+    /**
+     * Get debug viewer singleton.
+     * @param parent 
+     * @return
+     */
+    public static DebugViewer getInstance(Component parent) {
+        if (debugViewerInstance == null) {
+            debugViewerInstance = new DebugViewer(parent);
+        }
+        return debugViewerInstance;
+    }
+    
+    /**
+     * Get debug viewer singleton.
+     * @return
+     */
+	public static DebugViewer getInstance() {
+		
+		// Delegate the call.
+		return getInstance(null);
+	}
 	
     /**
      * Constructor.
@@ -639,13 +357,13 @@ public class DebugViewer extends JFrame {
 		JScrollPane scrollPaneThreads = new JScrollPane();
 		panelThreads.add(scrollPaneThreads);
 		
-		treeThreads = new JTree();
-		treeThreads.addPropertyChangeListener(new PropertyChangeListener() {
+		treeSessions = new JTree();
+		treeSessions.addPropertyChangeListener(new PropertyChangeListener() {
 			public void propertyChange(PropertyChangeEvent evt) {
 				onSelectProcessNode();
 			}
 		});
-		treeThreads.addMouseListener(new MouseAdapter() {
+		treeSessions.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				int clickCount = e.getClickCount();
@@ -654,8 +372,8 @@ public class DebugViewer extends JFrame {
 				}
 			}
 		});
-		treeThreads.setRootVisible(false);
-		scrollPaneThreads.setViewportView(treeThreads);
+		treeSessions.setRootVisible(false);
+		scrollPaneThreads.setViewportView(treeSessions);
 		
 		panelWatch = new JPanel();
 		tabbedPane.addTab("org.multipage.generator.textDebuggerWatch", null, panelWatch, null);
@@ -896,7 +614,7 @@ public class DebugViewer extends JFrame {
 	}
 
 	/**
-	 * Post creation
+	 * Post creation.
 	 */
 	private void postCreate() {
 		
@@ -906,8 +624,6 @@ public class DebugViewer extends JFrame {
 		createViews();
 		setListeners();
 		
-		initWatch();
-		
 		loadDialog();
 		
 		// Start watch dog.
@@ -915,31 +631,35 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Create views placed in this dialog that display debug information.
+	 * Create views that display debug information.
 	 */
 	private void createViews() {
 		
-		// Create thread view.
-		createThreadView();
+		// Create session view.
+		createSessionsView();
+		
+		// Create watch view.
+		createWatchView();
 	}
 	
 	/**
-	 * Create thread view.
+	 * Create sessions view.
 	 */
-	private void createThreadView() {
+	private void createSessionsView() {
 		
-		// Create thread view model.
-		threadsRootNode = new DefaultMutableTreeNode();
-		threadsTreeModel = new DefaultTreeModel(threadsRootNode);
-		treeThreads.setModel(threadsTreeModel);
+		// Create tree model.
+		sessionsRootNode = new DefaultMutableTreeNode();
+		treeSessionsModel = new DefaultTreeModel(sessionsRootNode);
+		treeSessions.setModel(treeSessionsModel);
 		
-		// Create thread view renderer.
-		treeThreads.setCellRenderer(new TreeCellRenderer() {
+		// Create session view renderer.
+		treeSessions.setCellRenderer(new TreeCellRenderer() {
 			
 			// Renderer.
 			RendererJLabel renderer = new RendererJLabel();
 			
 			// Icons for tree nodes.
+			ImageIcon sessionIcon = Images.getIcon("org/multipage/generator/images/session_icon.png");
 			ImageIcon processIcon = Images.getIcon("org/multipage/generator/images/process.png");
 			ImageIcon threadIcon = Images.getIcon("org/multipage/generator/images/thread.png");
 			ImageIcon stackLevelIcon = Images.getIcon("org/multipage/generator/images/area_node.png");
@@ -949,34 +669,39 @@ public class DebugViewer extends JFrame {
 				renderer.setPreferredSize(new Dimension(200, 24));
 			}
 			
-			// Callback function for thread nodes renderer.
+			// Callback function for the nodes renderer.
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
 					boolean leaf, int row, boolean hasFocus) {
 				
-				if (value instanceof XdebugThreadNode) {
-					renderer.setIcon(threadIcon);
-				}
-				else if (value instanceof XdebugProcessNode) {
-					renderer.setIcon(processIcon);
-				}
-				else if (value instanceof DefaultMutableTreeNode) {
+				// Check node type.
+				if (value instanceof DefaultMutableTreeNode) {
 					
+					// Get node user object.
 					DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
 					Object userObject = node.getUserObject();
-					if (userObject instanceof XdebugAreaServerStackLevel) {
-						value = userObject;
-					}
 					
-					renderer.setIcon(stackLevelIcon);
+					// Set node renderer properties and return the renderer.
+					if (userObject instanceof XdebugListenerSession) {
+						renderer.setIcon(sessionIcon);
+					}
+					else if (userObject instanceof XdebugProcess) {
+						renderer.setIcon(processIcon);
+					}
+					else if (userObject instanceof XdebugThread) {
+						renderer.setIcon(threadIcon);
+					}
+					else if (userObject instanceof XdebugStackLevel) {
+						renderer.setIcon(stackLevelIcon);
+					}
+				
+					renderer.setText(value.toString());
+					renderer.set(sel, hasFocus, row);
+					return renderer;
 				}
-				else if (value == null) {
+				else {
 					return null;
 				}
-				
-				renderer.setText(value.toString());
-				renderer.set(sel, hasFocus, row);
-				return renderer;
 			}
 		});
 	}
@@ -986,7 +711,8 @@ public class DebugViewer extends JFrame {
 	 */
 	private void startWatchDog() {
 		
-		watchdogTimer = new Timer(WATCHDOG_TIMEOUT_MS, new ActionListener() {
+		// TODO: <---UNCOMMENT IT
+		/*watchdogTimer = new Timer(WATCHDOG_TIMEOUT_MS, new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        onWatchdogTick();
 		    }
@@ -995,7 +721,7 @@ public class DebugViewer extends JFrame {
 		watchdogTimer.setCoalesce(true);
 		watchdogTimer.setInitialDelay(WATCHDOG_TIMEOUT_MS);
 		watchdogTimer.setDelay(WATCHDOG_TIMEOUT_MS);
-		watchdogTimer.start();
+		watchdogTimer.start();*/
 	}
 	
 	/**
@@ -1014,12 +740,10 @@ public class DebugViewer extends JFrame {
 	 * Attach debug listener.
 	 * @param listener
 	 */
-	public void attachDebugListener(DebugListener listener) {
+	public void attachDebugListener(XdebugListener listener) {
 		
 		// Assign debug viewer.
 		listener.setViewerComponent(this);
-		
-		// Add new lambda methods to the DebugListener object to connect callbacks comming from the debug listener (server).
 		
 		// Open Xdebug viewer.
 		listener.openDebugViever = newSession -> {
@@ -1030,7 +754,7 @@ public class DebugViewer extends JFrame {
 			try {
 				SwingUtilities.invokeLater(() -> {
 
-					// Show dialog window and display threads.
+					// Show dialog window.
 					DebugViewer.this.setVisible(true);
 				});
 			}
@@ -1038,7 +762,7 @@ public class DebugViewer extends JFrame {
 				onException("org.multipage.generator.messageXdebugProtocolException", e);
 			}
 			
-			// When ready for commands, load debugged source code information.
+			// When ready for commands ...
 			newSession.setReadyForCommands(() -> {
 				try {
 					newSession.loadClientContexts(() -> {
@@ -1058,7 +782,6 @@ public class DebugViewer extends JFrame {
 							onException(e);
 						}
 					});
-					
 				}
 				catch (Exception e) {
 					onException(e);
@@ -1074,7 +797,7 @@ public class DebugViewer extends JFrame {
 					if (breakpointResolved) {
 						
 						// Update debugger views.
-						updateViews();
+						SwingUtilities.invokeLater(() -> updateViews());
 					}
 				}
 				catch (Exception e) {
@@ -1110,133 +833,32 @@ public class DebugViewer extends JFrame {
 		if (debugListener == null) {
 			return;
 		}
-		
-		// Display sessions.
-		displayListenerSessions();
 	}
 
-	/**
-	 * Display sessions.
-	 */
-	private void displayListenerSessions() {
-		
-		// Check debug listener.
-		if (debugListener == null) {
-			return;
-		}
-		
-		// Get all opened sessions.
-		List<DebugListenerSession> sessions = debugListener.getSessions();
-		for (DebugListenerSession session : sessions) {
-			
-			if (session instanceof XdebugListenerSession) {
-				XdebugListenerSession xdebugSession = (XdebugListenerSession) session;
-				putSession(threadsRootNode, xdebugSession);
-			}
-		}
-	}
-
-	/**
-	 * Put items into the tree.
-	 * @param threadsRootNode
-	 * @param session
-	 */
-	private void putSession(DefaultMutableTreeNode threadsRootNode, XdebugListenerSession session) {
-		
-		SwingUtilities.invokeLater(() -> {
-		
-			// Get process ID.
-			long processId = session.getPid();
-			if (processId < 0) {
-				return;
-			};
-			
-			// Add new node only if it doesn't already exist.
-			int processNodeCount = threadsRootNode.getChildCount();
-			for (int index = 0; index < processNodeCount; index++) {
-				
-				// Get child node.
-				TreeNode treeNode = threadsRootNode.getChildAt(index);
-				if (!(treeNode instanceof XdebugProcessNode)) {
-					continue;
-				}
-				
-				XdebugProcessNode processNode = (XdebugProcessNode) treeNode;
-				long pid = processNode.getPid();
-				
-				// Compare process IDs. If they are equal, do not add new process node and add new thread node instead.
-				if (pid == processId) {
-					putThread(processNode, session);
-					return;
-				}
-			}
-			
-			// Add process and thread nodes.
-			XdebugProcessNode processNode = new XdebugProcessNode(session);
-			threadsRootNode.add(processNode);
-			putThread(processNode, session);
-			
-			Utility.expandAll(treeThreads, true);
-		});
-	}
-	
-	/**
-	 * Put thread node.
-	 * @param processNode
-	 * @param session
-	 */
-	private void putThread(XdebugProcessNode processNode, XdebugListenerSession session) {
-		
-		// Get thread ID.
-		long threadId = session.getTid();
-		if (threadId < 0) {
-			return;
-		};		
-		
-		// Add new thread node. If it already exists, do not add it.
-		int threadNodeCount = processNode.getChildCount();
-		for (int index = 0; index < threadNodeCount; index++) {
-			
-			// Get child node.
-			TreeNode treeNode = processNode.getChildAt(index);
-			if (!(treeNode instanceof XdebugThreadNode)) {
-				continue;
-			}
-			
-			XdebugThreadNode threadNode = (XdebugThreadNode) treeNode;
-			long tid = threadNode.getTid();	
-			
-			// Compare thread IDs. If they are equal, do not add new thread node.
-			if (tid == threadId) {
-				return;
-			}
-		}
-		
-		// Add new thread node.
-		XdebugThreadNode threadNode = new XdebugThreadNode(session);
-		processNode.add(threadNode);
-	}
-	
 	/**
 	 * Get selected Xdebug session.
 	 * @return
 	 */
 	private XdebugListenerSession getSelectedXdebugSession() {
 		
-		// Check live sessions. Removes closed sessions.
-		ensureLiveSessions();
+		if (debugListener == null) {
+			return null;
+		}
 		
-		TreePath selectedPath = treeThreads.getSelectionPath();
+		// Check live sessions. Removes closed sessions.
+		debugListener.ensureLiveSessions();
+		
+		TreePath selectedPath = treeSessions.getSelectionPath();
 		if (selectedPath == null) {
 			return currentSession;
 		}
 		
-		Object lastComponent = selectedPath.getLastPathComponent();
-		if (!(lastComponent instanceof DefaultMutableTreeNode)) {
+		Object firstComponent = selectedPath.getPathComponent(1);
+		if (!(firstComponent instanceof DefaultMutableTreeNode)) {
 			return currentSession;
 		}
 		
-		DefaultMutableTreeNode node = (DefaultMutableTreeNode) lastComponent;
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) firstComponent;
 		Object userObject = node.getUserObject();
 		if (!(userObject instanceof XdebugListenerSession)) {
 			return currentSession;
@@ -1247,12 +869,12 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Get selected stack level or null value if it is not selected.
+	 * Get selected stack level or null value if it is not ed.
 	 * @return
 	 */
-	private XdebugAreaServerStackLevel getSelectedStackLevel() {
+	private XdebugStackLevel getSelectedStackLevel() {
 		
-		TreePath selectedPath = treeThreads.getSelectionPath();
+		TreePath selectedPath = treeSessions.getSelectionPath();
 		if (selectedPath == null) {
 			return null;
 		}
@@ -1264,11 +886,11 @@ public class DebugViewer extends JFrame {
 		
 		DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) lastComponent;
 		Object userObject = treeNode.getUserObject();
-		if (!(userObject instanceof XdebugAreaServerStackLevel)) {
+		if (!(userObject instanceof XdebugStackLevel)) {
 			return null;
 		}
 		
-		XdebugAreaServerStackLevel stackLevel = (XdebugAreaServerStackLevel) userObject;
+		XdebugStackLevel stackLevel = (XdebugStackLevel) userObject;
 		return stackLevel;
 	}
 
@@ -1357,41 +979,9 @@ public class DebugViewer extends JFrame {
 	 */
 	private void closeSessions() {
 		
-		Object rootObject = threadsTreeModel.getRoot();
-		if (!(rootObject instanceof DefaultMutableTreeNode)) {
-			return;
-		}
-		
-		DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) rootObject;
-		Enumeration<? extends TreeNode> processNodes = rootNode.children();
-		
-		while (processNodes.hasMoreElements()) {
-			
-			TreeNode processNode = processNodes.nextElement();
-			Enumeration<? extends TreeNode> threadNodes = processNode.children();
-			
-			while (threadNodes.hasMoreElements()) {
-				
-				TreeNode threadNode = threadNodes.nextElement();
-				if (!(threadNode instanceof XdebugThreadNode)) {
-					continue;
-				}
-				
-				// Get Xdebug session and close it.
-				XdebugThreadNode xdebugThreadNode = (XdebugThreadNode) threadNode;
-				XdebugListenerSession session = xdebugThreadNode.getXdebugSession();
-				if (session == null) {
-					continue;
-				}
-				
-				stopSession(session, () -> session.close());
-			}
-		}
-		
-		// Remove tree nodes.
-		rootNode.removeAllChildren();
-		threadsTreeModel.reload();
-		treeThreads.updateUI();
+		// TODO: <---MAKE
+		//stopSession(session, () -> session.close());
+
 	}
 	
 	/**
@@ -1399,8 +989,16 @@ public class DebugViewer extends JFrame {
 	 */
 	protected void onSelectProcessNode() {
 		
+		// Get selected session.
+		XdebugListenerSession session = getSelectedXdebugSession();
+		if (session == null) {
+			return;
+		}
+		
+		currentSession = session;
+		
 		// Get selected stack level.
-		XdebugAreaServerStackLevel stackLevel = getSelectedStackLevel();
+		XdebugStackLevel stackLevel = getSelectedStackLevel();
 		if (stackLevel == null) {
 			return;
 		}
@@ -1408,11 +1006,8 @@ public class DebugViewer extends JFrame {
 		// Get source code from the stack level.
 		String sourceCode = stackLevel.getSourceCode();
 		
-		// Get debugged code information.
-		DebugInfo debugInfo = stackLevel.getDebuggedCodeInfo();
-		
 		// Display debugged source code..
-		SwingUtilities.invokeLater(() -> displayDebuggedSourceCode(sourceCode, debugInfo));
+		SwingUtilities.invokeLater(() -> displayDebuggedSourceCode(sourceCode, stackLevel));
 	}
 	
 	/**
@@ -1422,7 +1017,8 @@ public class DebugViewer extends JFrame {
 		
 		// Display session dialog.
 		try {
-			XdebugSessionDialog.showDialog(this, currentSession);
+			XdebugListenerSession session = getSelectedXdebugSession();
+			XdebugSessionDialog.showDialog(this, session);
 		}
 		catch (Exception e) {
 			onException(e);
@@ -1492,63 +1088,6 @@ public class DebugViewer extends JFrame {
 		menuAddToWatch.setIcon(Images.getIcon("org/multipage/generator/images/watch_debug.png"));
 		menuRemoveFromWatch.setIcon(Images.getIcon("org/multipage/generator/images/remove_icon.png"));
 	}
-
-	/**
-	 * Opens file for debugging using debug command
-	 * @param sourceUri
-	 * @throws Exception 
-	 */
-	public int openFile(String sourceUri) {
-		
-		if (sourceUri.isEmpty()) {
-			return -1;
-		}
-		
-		try {
-			URI uri = new URI(sourceUri);
-			
-			String scheme = uri.getScheme();
-			if ("file".equals(scheme)) {
-				
-				File sourceFile = new File(uri);
-				if (sourceFile.exists() && sourceFile.canRead()) {
-					
-					BufferedReader br = new BufferedReader(new FileReader(sourceFile));
-					Obj<String> sourceCode = new Obj<String>("");
-					
-					Obj<Integer> lines = new Obj<Integer>(0);
-					
-					br.lines().forEach((String line) -> {
-						sourceCode.ref += line + "\n";
-						lines.ref++;
-					});
-					br.close();
-					
-					this.header = sourceUri;
-					
-					displaySourceCode(header, sourceCode.ref);
-					scriptFileName = sourceUri;
-					
-					return lines.ref;
-				}
-			}
-			else if ("debug".equals(scheme)) {
-				
-				// Set source link for future load operation
-				this.header = sourceUri;
-
-				// Transmit the "source" statement as a signal.
-				ApplicationEvents.transmit(this, AreaServerSignal.debugStatement, "source", sourceUri);
-			}
-		}
-		catch (Exception e) {
-			
-			// Display exception.
-			Utility.show(this, "org.multipage.generator.messageDebuggerBadFileUri", sourceUri);
-		}
-		
-		return -1;
-	}
 	
 	/**
 	 * On test button clicked.
@@ -1566,32 +1105,39 @@ public class DebugViewer extends JFrame {
 		
 		try {
 			
-			// Check live sessions. Removes closed sessions.
-			ensureLiveSessions();
-			
-			// Display listener sessions.
-			displayListenerSessions();
+			// Checks live sessions and removes closed sessions.
+			debugListener.ensureLiveSessions();
 			
 			// Get selected Xdebug session.
 			Obj<XdebugListenerSession> xdebugSession = new Obj<XdebugListenerSession>();
 			xdebugSession.ref = getSelectedXdebugSession();
 			if (xdebugSession.ref == null) {
-				xdebugSession.ref = currentSession;
-			}
-			if (xdebugSession.ref == null) {
 				return;
 			}
 			
-			// Load Area Server stack.
-			final int STACK_GET_WAIT_TIMEOUT_MS = 1000;
-			Lock stackGetLock = new Lock();
-			xdebugSession.ref.stackGet(stack -> {
+			List<XdebugListenerSession> sesisons = debugListener.getSessions();
+			for (XdebugListenerSession session : sesisons) {
 				
-				// Display stack information.
-				displayStack(xdebugSession.ref, stack);
-				Lock.notify(stackGetLock);
-			});
-			Lock.waitFor(stackGetLock, STACK_GET_WAIT_TIMEOUT_MS);
+				session.stackGet(stack -> (processId, processName) -> (threadId, threadName) -> {
+					
+					// Save session stack.
+					long sessionProcessId = session.getProcessId();
+					if (sessionProcessId == -1L) {
+						
+						session.setProcessId(processId);
+						sessionProcessId = processId;
+					}
+					
+					// Put stack into session.
+					if (processId == sessionProcessId) {
+						session.putStack(processId, processName, threadId, threadName, stack);
+						
+						// Display stack information.
+						displayStack(session);
+					}
+				});
+			}
+
 			
 			String debuggedAreaName = xdebugSession.ref.getAreaName();
 			
@@ -1604,19 +1150,11 @@ public class DebugViewer extends JFrame {
 				displaySourceCode(debuggedAreaName, sourceCode);
 			});
 			
-			// Load Area Server debug information from Xdebug client.
-			xdebugSession.ref.getDebugInfo(debugInfo -> {
-				
-				xdebugSession.ref.loadThreadInfo(debugInfo);
-				xdebugSession.ref.loadSourceInfo(debugInfo);
-				displayDebuggedSourceCode(rawSourceCode, debugInfo);
-			});
-			
 			// Load watched values.
 			loadWatchListValues();
 			
 			// Get current stack.
-			XdebugAreaServerStackLevel stackLevel = getCurrentStack();
+			XdebugStackLevel stackLevel = getCurrentStack();
 			if (stackLevel != null) {
 				
 				// Get current context.
@@ -1628,11 +1166,6 @@ public class DebugViewer extends JFrame {
 					// Set watched items.
 					SwingUtilities.invokeLater(() -> {
 						
-						if (watchItems == null) {
-							removeStackLevel(stackLevel);
-							return;
-						}
-						
 						DebugWatchDialog.setWatchItems(watchItems);
 					});
 				});
@@ -1641,84 +1174,6 @@ public class DebugViewer extends JFrame {
 		catch (Exception e) {
 			onException(e);
 		}		
-	}
-	
-	/**
-	 * Ensure that sessions are opened. Remove the closed sessions.
-	 */
-	private void ensureLiveSessions() {
-		
-		if (debugListener == null) {
-			return;
-		}
-		
-		LinkedList<DebugListenerSession> sessionsToRemove = new LinkedList<>();
-		
-		// Find closed sessions.
-		List<DebugListenerSession> sessions = debugListener.getSessions();
-		for (DebugListenerSession session : sessions) {
-			
-			boolean isOpen = session.isOpen();
-			if (!isOpen) {
-				sessionsToRemove.addLast(session);
-			}
-		}
-		
-		// Remove the closed sessions.
-		debugListener.removeSessions(sessionsToRemove);
-		
-		SwingUtilities.invokeLater(() -> {
-			
-			LinkedList<DefaultMutableTreeNode> nodesToRemoveFromParent = new LinkedList<>();
-			
-			Utility.traverseElements(treeThreads, userObject -> node -> parentNode -> {
-				if (userObject instanceof XdebugListenerSession) {
-					
-					XdebugListenerSession session = (XdebugListenerSession) userObject;
-					boolean isOpen = session.isOpen();
-					if (!isOpen) {
-						
-						if (parentNode != null) {
-							nodesToRemoveFromParent.addLast(node);
-						}
-					}				
-				}
-			});
-			
-			nodesToRemoveFromParent.forEach(node ->
-				threadsTreeModel.removeNodeFromParent(node));
-			
-			treeThreads.updateUI();
-		});
-	}
-
-	/**
-	 * Remove stack level from the thread tree.
-	 * @param stackLevel
-	 */
-	private void removeStackLevel(XdebugAreaServerStackLevel stackLevel) {
-		
-		int stackLevelHash = stackLevel.hashCode();
-		LinkedList<DefaultMutableTreeNode> nodesToRemove = new LinkedList<>();
-		
-		// Find the stack level and remove it.
-		Utility.traverseElements(treeThreads, userObject -> node -> parentNode -> {
-			
-			if (userObject instanceof XdebugAreaServerStackLevel) {
-				XdebugAreaServerStackLevel foundStackLevel = (XdebugAreaServerStackLevel) userObject;
-				
-				int foundStackLevelHash = foundStackLevel.hashCode();
-				if (foundStackLevelHash == stackLevelHash) {
-					
-					// Remove the stack level.
-					nodesToRemove.addLast(node);
-				}
-			}
-		});
-		
-		nodesToRemove.forEach(node -> {
-			threadsTreeModel.removeNodeFromParent(node);
-		});
 	}
 
 	/**
@@ -1755,21 +1210,17 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Display the source code form Xdebug client with highlighted parts.
 	 * @param rawSourceCode
+	 * @param stackLevel 
 	 * @param debugInfo
 	 */
-	private void displayDebuggedSourceCode(String rawSourceCode, DebugInfo debugInfo) {
+	private void displayDebuggedSourceCode(String rawSourceCode, XdebugStackLevel stackLevel) {
 		
 		// Initializaction.
 		String sourceCode = null;
 		
-		DebugTagInfo tagInfo = debugInfo.getTagInfo();
-		if (tagInfo == null) {
-			return;
-		}
-		
 		// Mark tag beginning and end positions in source code.
-		int cmdBegin = tagInfo.getCmdBegin();
-		int cmdEnd = tagInfo.getCmdEnd();
+		int cmdBegin = stackLevel.getCmdBegin();
+		int cmdEnd = stackLevel.getCmdEnd();
 		int sourceLength = rawSourceCode.length();
 		
 		if (cmdBegin >= 0 && cmdEnd >= 0 && cmdBegin <= cmdEnd
@@ -1876,134 +1327,280 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Display Area Server stack information.
 	 * @param session 
-	 * @param stack
 	 */
-	private void displayStack(XdebugListenerSession session, LinkedList<XdebugAreaServerStackLevel> stack) {
+	private void displayStack(XdebugListenerSession session) {
 		
 		SwingUtilities.invokeLater(() -> {
 			
-			// Get displayed thread node, if it exists.
-			XdebugThreadNode threadNode = findThreadNode(session);
-			if (threadNode == null) {
-				return;
+			// Check root node of the tree view.
+			if (sessionsRootNode == null) {
+				sessionsRootNode = new DefaultMutableTreeNode("root");
+				treeSessionsModel.setRoot(sessionsRootNode);
 			}
 			
-			// Clear thread node children.
-			threadNode.removeAllChildren();
+			// Find session node.
+			int sessionId = session.getSessionId();
+			DefaultMutableTreeNode sessionNode = getSessionNode(sessionId);
 			
-			// Add stack level information to the thread node.
-			for (XdebugAreaServerStackLevel stackLevel : stack) {
+			// If the session node doesn't exist, create new one.
+			if (sessionNode == null) {
+				sessionNode = new DefaultMutableTreeNode(session);
+				sessionsRootNode.add(sessionNode);
+			}
+			
+			// Update thread nodes.
+			sessionNode.removeAllChildren();
+			
+			HashMap<Long, XdebugThread> threads = session.getThreads();
+			
+			// Sort thread IDs.
+			Set<Long> threadIds = threads.keySet();
+			ArrayList<Long> sortedThreadIds = new ArrayList<>(threadIds);
+			Collections.sort(sortedThreadIds);
+			
+			for (Long threadId : sortedThreadIds) {
 				
-				DefaultMutableTreeNode stackLevelNode = new DefaultMutableTreeNode(stackLevel);
-				threadNode.add(stackLevelNode);
+				XdebugThread thread = threads.get(threadId);
+				DefaultMutableTreeNode threadNode = new DefaultMutableTreeNode(thread);
+				sessionNode.add(threadNode);
+				
+				// Add stack levels to the thread node.
+				LinkedList<XdebugStackLevel> stack = thread.getStack();
+				for (XdebugStackLevel stackLevel : stack) {
+					
+					DefaultMutableTreeNode stackLevelNode = new DefaultMutableTreeNode(stackLevel);
+					threadNode.add(stackLevelNode);
+				}
 			}
 			
 			// Update the tree view to reflect the new stack information.
-			treeThreads.updateUI();
+			treeSessions.updateUI();
+			
+			Utility.expandAll(treeSessions, true);
 			
 			// Select the top level of the stack.
 			selectStackTop();
 		});
 	}
-
+	
 	/**
-	 * Find thread tree node for input session.
-	 * @param treeThreads
-	 * @param session
+	 * Get session node.
+	 * @param sessionId
 	 * @return
 	 */
-	private XdebugThreadNode findThreadNode(XdebugListenerSession session) {
+	private DefaultMutableTreeNode getSessionNode(int sessionId) {
 		
-		// Check tree model.
-		if (threadsTreeModel == null) {
+		// Check root node.
+		if (sessionsRootNode == null) {
 			return null;
 		}
 		
-		// Get process nodes which are child nodes of the root node.
-		Object rootObject = threadsTreeModel.getRoot();
-		if (!(rootObject instanceof DefaultMutableTreeNode)) {
-			return null;
-		}
-		
-		DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) rootObject;
-		Enumeration<TreeNode> processNodes = rootNode.children();
-		while (processNodes.hasMoreElements()) {
+		// Get session nodes.
+		Enumeration<TreeNode> sessionNodes = sessionsRootNode.children();
+		while (sessionNodes.hasMoreElements()) {
 			
-			// Get the process node.
-			TreeNode treeNode = processNodes.nextElement();
-			if (!(treeNode instanceof XdebugProcessNode)) {
+			TreeNode node = sessionNodes.nextElement();
+			if (!(node instanceof DefaultMutableTreeNode)) {
 				continue;
 			}
 			
-			// Check process node.
-			XdebugProcessNode processNode = (XdebugProcessNode) treeNode;
-			XdebugListenerSession nodeSession = processNode.getXdebugSession();
-			if (nodeSession.equals(session)) {
-				
-				// Get thread node.
-				Enumeration<TreeNode> childNodes = processNode.children();
-				
-				boolean success = childNodes.hasMoreElements();
-				if (!success) {
-					continue;
-				}
-				
-				TreeNode childNode = childNodes.nextElement();
-				if (!(childNode instanceof XdebugThreadNode)) {
-					continue;
-				}
-				
-				XdebugThreadNode threadNode = (XdebugThreadNode) childNode;
-				return threadNode;
-			}				
+			DefaultMutableTreeNode sessionNode = (DefaultMutableTreeNode) node;
+			Object userObject = sessionNode.getUserObject();
+			
+			if (!(userObject instanceof XdebugListenerSession)) {
+				continue;
+			}
+			
+			XdebugListenerSession session = (XdebugListenerSession) userObject;
+			int foundSessionId = session.getSessionId();
+			
+			// Ceck session ID and return the session object.
+			if (foundSessionId == sessionId) {
+				return sessionNode;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Select the top level of the stack.
+	 */
+	private void selectStackTop() {
+
+		// Find current stack level node.
+		DefaultMutableTreeNode currentStackNode = findCurrentStackNode();
+		if (currentStackNode == null) {
+			return;
+		}
+
+		// Get stack node path.
+		TreeNode [] nodes = currentStackNode.getPath();
+		TreePath nodePath = new TreePath(nodes);
+		
+		// Select the stack node path in the sessions tree.
+		TreeSelectionModel selectionModel = treeSessions.getSelectionModel();
+		selectionModel.clearSelection();
+		selectionModel.addSelectionPath(nodePath);
+	}
+	
+	/**
+	 * Find current stack node.
+	 * @return
+	 */
+	private DefaultMutableTreeNode findCurrentStackNode() {
+		
+		// Check current session.
+		if (currentSession == null || sessionsRootNode == null) {
+			return null;
+		}
+		
+		// Get information about current debugged client.
+		CurrentXdebugClientData currentClient = currentSession.getCurrentClientData();
+		if (currentClient == null) {
+			return null;
+		}
+		
+		// Get current process ID.
+		Long processId = currentClient.getProcessId();
+		if (processId == null || processId <= 0) {
+			return null;
+		}
+		
+		// Find process node.
+		DefaultMutableTreeNode processNode = findProcessNode(processId);
+		if (processNode == null) {
+			return null;
+		}
+		
+		// Get current thread ID.
+		Long threadId = currentClient.getThreadId();
+		if (threadId == null || threadId < 0) {
+			return null;
+		}
+		
+		// Find thread node.
+		DefaultMutableTreeNode threadNode = findThreadNode(processNode, threadId);
+		if (threadNode == null) {
+			return null;
+		}
+		
+		// Find top stack level.
+		DefaultMutableTreeNode topStackNode = findTopStackNode(threadNode);
+		return topStackNode;
+	}
+
+	/**
+	 * Find process node in the session tree.
+	 * @param processId 
+	 * @return
+	 */
+	private DefaultMutableTreeNode findProcessNode(Long processId) {
+		
+		if (sessionsRootNode == null || processId == null || processId < 0) {
+			return null;
+		}
+		
+		Enumeration<TreeNode> processNodes = sessionsRootNode.children();
+		while (processNodes.hasMoreElements()) {
+			
+			TreeNode node = processNodes.nextElement();
+			if (!(node instanceof DefaultMutableTreeNode)) {
+				continue;
+			}
+			
+			DefaultMutableTreeNode processNode = (DefaultMutableTreeNode) node;
+			Object userObject = processNode.getUserObject();
+			
+			if (!(userObject instanceof XdebugListenerSession)) {
+				continue;
+			}
+			
+			XdebugListenerSession process = (XdebugListenerSession) userObject;
+			Long foundProcessId = process.getProcessId();
+			
+			if (processId.equals(foundProcessId)) {
+				return processNode;
+			}
 		}
 		return null;
 	}
 	
 	/**
-	 * Select the top level of the stack.
+	 * Find thread node in the session tree.
+	 * @param processNode
+	 * @param threadId
+	 * @return
 	 */
-	private void selectStackTop() {
+	private DefaultMutableTreeNode findThreadNode(DefaultMutableTreeNode processNode, Long threadId) {
 		
-		// Check current session.
-		if (currentSession == null) {
-			return;
+		if (processNode == null || threadId == null || threadId < 0) {
+			return null;
 		}
 		
-		// Find current thread node.
-		XdebugThreadNode threadNode = findThreadNode(currentSession);
-		if (threadNode == null) {
-			return;
+		Enumeration<TreeNode> threadNodes = processNode.children();
+		while (threadNodes.hasMoreElements()) {
+			
+			TreeNode node = threadNodes.nextElement();
+			if (!(node instanceof DefaultMutableTreeNode)) {
+				continue;
+			}
+			
+			DefaultMutableTreeNode threadNode = (DefaultMutableTreeNode) node;
+			Object userObject = threadNode.getUserObject();
+			
+			if (!(userObject instanceof XdebugThread)) {
+				continue;
+			}
+			
+			XdebugThread thread = (XdebugThread) userObject;
+			Long foundThreadId = thread.getThreadId();
+			
+			if (threadId.equals(foundThreadId)) {
+				return threadNode;
+			}
 		}
-		
-		// Get top level of stack.
-		Enumeration<TreeNode> stackLevelNodes = threadNode.children();
-		boolean success = stackLevelNodes.hasMoreElements();
-		if (!success) {
-			return;
-		}
-		
-		// Select first child, the top of the stack.
-		TreeNode stackTopNode = stackLevelNodes.nextElement();
-		if (!(stackTopNode instanceof DefaultMutableTreeNode)) {
-			return;
-		}
-		DefaultMutableTreeNode stackTopTreeNode = (DefaultMutableTreeNode) stackTopNode;
-		TreeNode [] nodes = stackTopTreeNode.getPath();
-		TreePath nodePath = new TreePath(nodes);
-		
-		TreeSelectionModel selectionModel = treeThreads.getSelectionModel();
-		selectionModel.clearSelection();
-		selectionModel.addSelectionPath(nodePath);
+		return null;
 	}
 	
+	/**
+	 * Find top stack node.
+	 * @param threadNode
+	 * @return
+	 */
+	private DefaultMutableTreeNode findTopStackNode(DefaultMutableTreeNode threadNode) {
+		
+		if (threadNode == null) {
+			return null;
+		}
+		
+		Enumeration<TreeNode> stackNodes = threadNode.children();
+		
+		if (!stackNodes.hasMoreElements()) {
+			return null;
+		}
+		
+		TreeNode node = stackNodes.nextElement();
+		if (!(node instanceof DefaultMutableTreeNode)) {
+			return null;
+		}
+		
+		DefaultMutableTreeNode topStackNode = (DefaultMutableTreeNode) node;
+		
+		Object userObject = topStackNode.getUserObject();
+		if (!(userObject instanceof XdebugStackLevel)) {
+			return null;
+		}
+		
+		return topStackNode;
+	}
+
 	/**
 	 * Load watch list values from Xdebug client.
 	 */
 	private void loadWatchListValues() {
 		
 		// Get current stack.
-		XdebugAreaServerStackLevel stackLevel = getCurrentStack();
+		XdebugStackLevel stackLevel = getCurrentStack();
 		if (stackLevel == null) {
 			return;
 		}
@@ -2023,7 +1620,7 @@ public class DebugViewer extends JFrame {
 	 * @return
 	 * @throws Exception 
 	 */
-	private void loadWatchedValue(XdebugAreaServerStackLevel stackLevel, DebugWatchItem watchedItem) {
+	private void loadWatchedValue(XdebugStackLevel stackLevel, DebugWatchItem watchedItem) {
 		
 		try {
 			int stateHashCode = stackLevel.getStateHashCode();
@@ -2134,37 +1731,37 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Get current stack.
 	 */
-	private XdebugAreaServerStackLevel getCurrentStack() {
+	private XdebugStackLevel getCurrentStack() {
 		
 		// Get selected tree node.
-		Object currentNode = treeThreads.getLastSelectedPathComponent();
+		Object currentNode = treeSessions.getLastSelectedPathComponent();
 		if (currentNode == null) {
 			return null;
 		}
 		
 		// If the selected node is process node, get first child, it should be the thread node.
-		if (currentNode instanceof XdebugProcessNode) {
+		if (currentNode instanceof XdebugProcess) {
 			
-			XdebugProcessNode processNode = (XdebugProcessNode) currentNode;
-			int childrenCount = processNode.getChildCount();
+			XdebugProcess processNode = (XdebugProcess) currentNode;
+			int childrenCount = 0;
 			if (childrenCount <= 0) {
 				return null;
 			}
 			
-			currentNode = processNode.getChildAt(0);
+			currentNode = null;
 		}
 		
 		// If current node is thread node, get first child, it should be the stack node.
-		if (currentNode instanceof XdebugThreadNode) {
+		if (currentNode instanceof XdebugThread) {
 			
-			XdebugThreadNode threadNode = (XdebugThreadNode) currentNode;
-			int childrenCount = threadNode.getChildCount();
+			XdebugThread threadNode = (XdebugThread) currentNode;
+			int childrenCount = 0;
 			
 			if (childrenCount <= 0) {
 				return null;
 			}
 			
-			currentNode = threadNode.getChildAt(0);
+			currentNode = null;
 		}
 		
 		// If current node is stack node, return the stack object.
@@ -2175,11 +1772,11 @@ public class DebugViewer extends JFrame {
 		DefaultMutableTreeNode currentMutableNode = (DefaultMutableTreeNode) currentNode;
 		Object userObject = currentMutableNode.getUserObject();
 		
-		if (!(userObject instanceof XdebugAreaServerStackLevel)) {
+		if (!(userObject instanceof XdebugStackLevel)) {
 			return null;
 		}
 		
-		XdebugAreaServerStackLevel stackLevel = (XdebugAreaServerStackLevel) userObject;
+		XdebugStackLevel stackLevel = (XdebugStackLevel) userObject;
 		return stackLevel;
 	}
 
@@ -2319,7 +1916,7 @@ public class DebugViewer extends JFrame {
 	/**
 	 * Initialize watch window
 	 */
-	private void initWatch() {
+	private void createWatchView() {
 		
 		final int [] columnWidths = { 100, 100, 100, 100, 100 };
 		final int columnCount = columnWidths.length;
@@ -2382,90 +1979,7 @@ public class DebugViewer extends JFrame {
 		
 		tableWatch.setColumnModel(columnModel);
 	}
-
-	/**
-	 * Process context
-	 */
-	protected void processContext(int number) {
-		
-		// TODO: <---DEBUGGER REFACTOR
-		// Process context_get command
-		/*try {
-			String command = String.format("context_get -c %s", number);
-			XdebugPacket responsePacket = XdebugListener.getSingleton().postCommand(command);
-			if (responsePacket.isEmpty()) {
-				return;
-			}
-			
-			NodeList properties = responsePacket.getNodes("/response/*");
-			if (properties == null) {
-				return;
-			}
-			
-			for (int index = 0; index < properties.getLength(); index++) {
-				
-				Node property = properties.item(index);
-				if (property == null) {
-					return;
-				}
-				
-				NamedNodeMap attributes = property.getAttributes();
-				if (attributes == null) {
-					return;
-				}
-				
-				Node nameAttribute = attributes.getNamedItem("fullname");
-				if (nameAttribute == null) {
-					return;
-				}
-				
-				String variableName = nameAttribute.getNodeValue();
-				if (variableName == null) {
-					return;
-				}
-				
-				String type = responsePacket.getString(String.format("/response/property/@type", variableName));
-				if (type != null) {
-					listWatchModel.addElement(String.format("<b>%s</b> (%s)", variableName, type));
-				}
-				
-				String value = "";
-				if ("array".contentEquals(type)) {
-					
-					NodeList nodes = responsePacket.getNodes(String.format("/response/property[@fullname='%s']/*", variableName));
-					if (nodes != null) {
-						int length = nodes.getLength();
-						
-						for (int item = 0; item < length; item++) {
-							
-							Node node = nodes.item(item);
-							if (node != null) {
-								
-								String valueText = node.getTextContent();
-								valueText = new String(Utility.decodeBase64(valueText));
-								
-								Node nameNode = node.getAttributes().getNamedItem("name");
-								if (nameNode != null) {
-									String itemName = nameNode.getTextContent();
-									
-									listWatchModel.addElement(String.format("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>%s</b> => <font color='#FF0000'><b>%s</b></font>", itemName, valueText));
-								}
-							}
-						}
-					}
-				}
-				else if (!"uninitialized".contentEquals(type)) {
-					
-					value = responsePacket.getString(String.format("/response/property[@fullname='%s']/text()", variableName));
-					listWatchModel.addElement(String.format("     = <font color='#FF0000'><b>%s</b></font>", value));
-				}
-			}
-		}
-		catch (Exception e) {
-		}
-		*/
-	}
-
+	
 	/**
 	 * On step into
 	 */
@@ -2640,29 +2154,6 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Highlight given code line
-	 * @param lineNumber
-	 * @param bkColor 
-	 */
-	private void highlightCurrentStep(int lineNumber, Color color, Color bkColor) throws Exception {
-		
-		resetStepHighlight();
-		
-		if (lineNumber > 0 && color != null && bkColor != null) {
-			
-			String elementId = String.format("line%s", lineNumber);
-			
-			String foregroundColor = Utility.getCssColor(color);
-			String backgroundColor = Utility.getCssColor(bkColor);
-			
-			String cssRule = String.format("#%s {color: %s; background-color: %s;}", elementId, foregroundColor, backgroundColor);
-			setEditorCss(cssRule);
-		}
-				
-		stepLineNumber = lineNumber;
-	}
-	
-	/**
 	 * Sets CSS rule for code editor
 	 * @param rule
 	 */
@@ -2671,30 +2162,6 @@ public class DebugViewer extends JFrame {
 		HTMLDocument document = (HTMLDocument) textCode.getDocument();
 		StyleSheet documentCss = document.getStyleSheet();
 		documentCss.addRule(rule);
-	}
-
-	/**
-	 * Updates source code view
-	 */
-	private void updateSourceCodeView() {
-		
-		if (codeLines == null || codeLines.isEmpty()) {
-			return;
-		}
-		
-		final Obj<Integer> lineIdex = new Obj<Integer>(0);
-		final int count = codeLines.size();
-		
-		displaySourceCode(header, new DisplayCodeInterface() {
-			@Override
-			public String line() {
-				
-				if (lineIdex.ref >= count) {
-					return null;
-				}
-				return codeLines.get(lineIdex.ref++);
-			}
-		});
 	}
 	
 	/**
@@ -2711,8 +2178,8 @@ public class DebugViewer extends JFrame {
 		boolean exactMatch = checkExactMatch.isSelected();
 		
 		// Display filtered log.
-		LogMessage.setFulltextFilter(filterString, caseSensitive, wholeWords, exactMatch);
-		LogMessage.displayHtmlLog(textExceptions);		
+		XdebugLogMessage.setFulltextFilter(filterString, caseSensitive, wholeWords, exactMatch);
+		XdebugLogMessage.displayHtmlLog(textExceptions);		
 	}
 	
 	/**
@@ -2758,44 +2225,16 @@ public class DebugViewer extends JFrame {
 	private void logException(String message) {
 		
 		// Create new log message.
-		LogMessage.addLogMessage(message);
+		XdebugLogMessage.addLogMessage(message);
 		
 		// Get log content.
-		LogMessage.displayHtmlLog(textExceptions);
+		XdebugLogMessage.displayHtmlLog(textExceptions);
 		
 		// Select panel with exceptions.
 		int tabIndex = tabbedPane.indexOfComponent(panelExceptions);
 		if (tabIndex >= 0) {
 			tabbedPane.setSelectedIndex(tabIndex);
 		}
-	}
-	
-	/**
-	 * Write error packet to log panel.
-	 * @param errorPacket
-	 */
-	private void logException(XdebugClientResponse errorPacket) {
-		
-		// Get transaction ID.
-		String transactionId = errorPacket.getString("/response/@transaction_id");
-		
-		// Get statement name.
-		String debugStatement = errorPacket.getString("/response/@command");
-		
-		// Get error code.
-		String errorCode = errorPacket.getString("/response/error/@code");
-		
-		// Application specific code.
-		String applicationCode = errorPacket.getString("/response/error/@apperr");
-		
-		// Get response message.
-		String errorMessage = errorPacket.getString("/response/error/message/text()");
-		
-		// Format final message.
-		String finalMessage = String.format("%s\t%s\terr%s.%s:\n<b>%s</b>", transactionId, debugStatement, errorCode, applicationCode, errorMessage);
-		
-		// Write message to log panel.
-		logException(finalMessage);
 	}
 
 	/**

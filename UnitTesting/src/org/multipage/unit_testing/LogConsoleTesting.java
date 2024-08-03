@@ -70,7 +70,7 @@ public class LogConsoleTesting {
 						//System.out.format("-----------------------------\nSENDING %d. CHUNK OF MESSAGES\n-----------------------------\n", index.ref);
 						
 						for (int i = 0; i < MESSAGE_COUNT; i++) {
-							j.log(1, Color.RED, "|Hello world", i);
+							//j.log(1, Color.RED, "|Hello world", i);
 						}
 						
 						//System.out.format("\n-----------------------------\nSENDING %d SUCCESFULLY DONE  \n-----------------------------\n", index.ref);
@@ -82,7 +82,7 @@ public class LogConsoleTesting {
 						//System.out.format("-----------------------------\nSENDING %d. CHUNK OF MESSAGES\n-----------------------------\n", index.ref);
 						
 						for (int i = 0; i < MESSAGE_COUNT; i++) {
-							j.log(2, Color.GREEN, "|Hello computer world", i);
+							//j.log(2, Color.GREEN, "|Hello computer world", i);
 						}
 						
 						//System.out.format("\n-----------------------------\nSENDING %d SUCCESFULLY DONE  \n-----------------------------\n", index.ref);
@@ -94,7 +94,7 @@ public class LogConsoleTesting {
 						//System.out.format("-----------------------------\nSENDING %d. CHUNK OF MESSAGES\n-----------------------------\n", index.ref);
 						
 						for (int i = 0; i < MESSAGE_COUNT; i++) {
-							j.log(3, Color.YELLOW, "|Hello computer world", i);
+							//j.log(3, Color.YELLOW, "|Hello computer world", i);
 						}
 						
 						//System.out.format("\n-----------------------------\nSENDING %d SUCCESFULLY DONE  \n-----------------------------\n", index.ref);

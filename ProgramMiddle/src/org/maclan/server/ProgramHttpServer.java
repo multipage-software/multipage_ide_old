@@ -20,7 +20,7 @@ public abstract class ProgramHttpServer {
 	/**
 	 * Debugger client
 	 */
-	protected DebugListener debugger;
+	protected XdebugListener debugger;
 	
 	/**
 	 * Set login properties.
@@ -80,7 +80,7 @@ public abstract class ProgramHttpServer {
 	 * Returns reference to debug client
 	 * @return
 	 */
-	public DebugListener getDebugger() {
+	public XdebugListener getDebugger() {
 		
 		return debugger;
 	}

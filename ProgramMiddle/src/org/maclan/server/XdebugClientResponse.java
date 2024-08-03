@@ -8,7 +8,6 @@ package org.maclan.server;
 
 import java.io.StringReader;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -84,17 +83,13 @@ public class XdebugClientResponse {
 	private static XPathExpression xpathSuccessResponse = null;
 	private static XPathExpression xpathSourceResponse = null;
 	private static XPathExpression xpathEvalResponse = null;
-	private static XPathExpression xpathStateSlotId = null;
-	private static XPathExpression xpathStateResourceId = null;
-	private static XPathExpression xpathStateProcessId = null;
-	private static XPathExpression xpathStateThreadId = null;
-	private static XPathExpression xpathStateProcessName = null;
-	private static XPathExpression xpathStateThreadName = null;
 	private static XPathExpression xpathErrorCode = null;
 	private static XPathExpression xpathErrorMessage = null;
 	private static XPathExpression xpathContextsResponse = null;
-	private static XPathExpression xpathCmdBeginPosition = null;
-	private static XPathExpression xpathCmdEndPosition = null;
+	private static XPathExpression xpathStackProcessId = null;
+	private static XPathExpression xpathStackProcessName = null;
+	private static XPathExpression xpathStackThreadId = null;
+	private static XPathExpression xpathStackThreadName = null;
 	private static XPathExpression xpathStackRootNodes = null;
 	private static XPathExpression xpathRelativeStackLevel = null;
 	private static XPathExpression xpathRelativeStackType = null;
@@ -157,17 +152,13 @@ public class XdebugClientResponse {
 			xpathSuccessResponse = xpath.compile("/response/@success");
 			xpathSourceResponse = xpath.compile("/response/text()");
 			xpathEvalResponse = xpath.compile("/response/property/text()");
-			xpathStateSlotId = xpath.compile("/response/property[@classname='AreaServerState']/property[@classname='DebuggedCodeDescriptor']/property[@classname='TagsSource']/property[@name='slotId']/text()");
-			xpathStateResourceId = xpath.compile("/response/property[@classname='AreaServerState']/property[@classname='DebuggedCodeDescriptor']/property[@classname='TagsSource']/property[@name='resourceId']/text()");
-			xpathStateProcessId = xpath.compile("/response/property[@classname='AreaServerState']/property[@name='processId']/text()");
-			xpathStateThreadId = xpath.compile("/response/property[@classname='AreaServerState']/property[@name='threadId']/text()");
-			xpathStateProcessName = xpath.compile("/response/property[@classname='AreaServerState']/property[@name='processName']/text()");
-			xpathStateThreadName = xpath.compile("/response/property[@classname='AreaServerState']/property[@name='threadName']/text()");
 			xpathErrorCode = xpath.compile("/response/error/@code");
 			xpathErrorMessage = xpath.compile("/response/error/message/text()");
 			xpathContextsResponse = xpath.compile("/response/*");
-			xpathCmdBeginPosition = xpath.compile("/response/property[@name='debug_tag_info']/property[@name='cmdBegin']/text()");
-			xpathCmdEndPosition = xpath.compile("/response/property[@name='debug_tag_info']/property[@name='cmdEnd']/text()");
+			xpathStackProcessId = xpath.compile("/response/@process_id");
+			xpathStackProcessName = xpath.compile("/response/@process_name");
+			xpathStackThreadId = xpath.compile("/response/@thread_id");
+			xpathStackThreadName = xpath.compile("/response/@thread_name");
 			xpathStackRootNodes = xpath.compile("/response/*");
 			xpathRelativeStackLevel = xpath.compile("@level");
 			xpathRelativeStackType = xpath.compile("@type");
@@ -473,136 +464,7 @@ public class XdebugClientResponse {
 		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
 		return propertyPacket;
 	}
-	
-	/**
-	 * Creates response packet with debug information.
-	 * @param command
-	 * @param state
-	 * @return
-	 * @throws Exception 
-	 */
-	public static XdebugClientResponse createDebugInfo(XdebugCommand command, AreaServerState state)
-			throws Exception {
-
-		// Get transaction ID from the input command.
-		int transactionId = command.getTransactionId();
-        if (transactionId < 1) {
-        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
-        }
-        
-        // Create new XML DOM document object.
-        Document xml = newXmlDocument();
-        Element rootElement = xml.createElement("response");
-        rootElement.setAttribute("command", "property_get");
-        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
-        xml.appendChild(rootElement);
-        
-        final Obj<DebugInfo> debugInfo = new Obj<>(null);
-        if (state != null) {
-        	debugInfo.ref = state.debugInfo;
-        }
-        
-        // Create property tree.
-        if (debugInfo.ref != null) {
-	        createPropertyElement(xml, debugInfo.ref, "debugInfo", debugInfoElement -> {
-	        	
-	        	rootElement.appendChild(debugInfoElement);
-
-	        	// Add process ID.
-        		createPropertyValueElement(xml, "processId", INTEGER_TYPE_NAME, processIdValue -> {
-	        		
-		        	long processId = debugInfo.ref.getProcessId();
-		        	String processIdText = String.valueOf(processId);
-		        	
-		        	processIdValue.setTextContent(processIdText);
-		            debugInfoElement.appendChild(processIdValue);
-	        	});
-	        	
-	        	// Add process name.
-        		createPropertyValueElement(xml, "processName", STRING_TYPE_NAME, processNameValue -> {
-	        		
-		        	String processName = debugInfo.ref.getProcessName();
-		        	
-		        	processNameValue.setTextContent(processName);
-		            debugInfoElement.appendChild(processNameValue);
-
-	        	});
-        		
-	        	// Add thread ID.
-        		createPropertyValueElement(xml, "threadId", INTEGER_TYPE_NAME, threadIdValue -> {
-	        		
-    	            long threadId = debugInfo.ref.getThreadId();
-    	            String threadIdText = String.valueOf(threadId);
-		        	
-    	            threadIdValue.setTextContent(threadIdText);
-		            debugInfoElement.appendChild(threadIdValue);
-
-	        	});
-        		
-	        	// Add thread name.
-        		createPropertyValueElement(xml, "threadName", STRING_TYPE_NAME, threadNameValue -> {
-	        		
-		        	String threadName = debugInfo.ref.getThreadName();
-		        	
-		        	threadNameValue.setTextContent(threadName);
-		            debugInfoElement.appendChild(threadNameValue);
-
-	        	});
-        		
-        		Long resourceId = debugInfo.ref.getSourceResourceId();
-        		Long slotId = debugInfo.ref.getSourceSlotId();
-        		
-        		if (resourceId == null && slotId == null) {
-        			return false;
-        		}
-        		
-        		if (resourceId != null) {
-        			createPropertyValueElement(xml, "resourceId", INTEGER_TYPE_NAME, resourceIdValue -> {
-        				
-        				String resourceIdText = String.valueOf(resourceId);
-        				resourceIdValue.setTextContent(resourceIdText);
-        				debugInfoElement.appendChild(resourceIdValue);
-        			});
-        		}
-    		
-        		if (slotId != null) {
-	    			createPropertyValueElement(xml, "slotId", INTEGER_TYPE_NAME, slotIdValue -> {
-	    				
-	    				String slotIdText = String.valueOf(slotId);
-	    				slotIdValue.setTextContent(slotIdText);
-	    				debugInfoElement.appendChild(slotIdValue);
-	    			});
-        		}
-        		
-	        	// Add tag begin position.
-        		createPropertyValueElement(xml, "cmdBegin", INTEGER_TYPE_NAME, cmdBeginElement -> {
-	        		
-        			int cmdBegin = debugInfo.ref.getCmdBegin();
-        			String cmdBeginText = String.valueOf(cmdBegin);
-        			
-		        	cmdBeginElement.setTextContent(cmdBeginText);
-		        	debugInfoElement.appendChild(cmdBeginElement);
-	        	});
-        		
-	        	// Add tag end position.
-        		createPropertyValueElement(xml, "cmdEnd", INTEGER_TYPE_NAME, cmdEndElement -> {
-	        		
-        			int cmdEnd = debugInfo.ref.getCmdEnd();
-        			String cmdEndText = String.valueOf(cmdEnd);
-        			
-		        	cmdEndElement.setTextContent(cmdEndText);
-		        	debugInfoElement.appendChild(cmdEndElement);
-	        	});        		
-        		
-        		return true;
-	        });
-        }
-        
-        // Create and return new packet.
-		XdebugClientResponse propertyPacket = new XdebugClientResponse(xml);
-		return propertyPacket;
-	}
-	
+		
 	/**
 	 * Create property XML element.
 	 * @param xml
@@ -708,12 +570,17 @@ public class XdebugClientResponse {
 	/**
 	 * Create stack get command result.
 	 * @param command
+	 * @param processId 
+	 * @param processName 
+	 * @param threadId 
+	 * @param threadName 
 	 * @param stack 
 	 * @return
 	 * @throws Exception 
 	 */
-	public static XdebugClientResponse createStackGetResult(XdebugCommand command, LinkedList<XdebugAreaServerStackLevel> stack)
-			throws Exception {
+	public static XdebugClientResponse createStackGetResult(XdebugCommand command, long processId, String processName,
+			long threadId, String threadName, LinkedList<XdebugStackLevel> stack)
+				throws Exception {
 		
 		// Get transaction ID from the input command.
 		int transactionId = command.getTransactionId();
@@ -728,10 +595,20 @@ public class XdebugClientResponse {
         Document xml = newXmlDocument();
         Element rootElement = xml.createElement("response");
         rootElement.setAttribute("command", commandName);
+        
+        // Add process and thread information.
+        String text = String.valueOf(processId);
+        rootElement.setAttribute("process_id", text);
+        rootElement.setAttribute("process_name", processName);
+        
+        text = String.valueOf(threadId);
+        rootElement.setAttribute("thread_id", text);
+        rootElement.setAttribute("thread_name", threadName);
+        
         rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
         xml.appendChild(rootElement);
         
-        for (XdebugAreaServerStackLevel stackLevel : stack) {
+        for (XdebugStackLevel stackLevel : stack) {
         	
         	// Create stack XML element.
         	Element stackElement = xml.createElement("stack");
@@ -1046,37 +923,6 @@ public class XdebugClientResponse {
 	
 	/**
 	 * Get Xdebug XML response.
-	 * @param xmlBuffer
-	 * @return
-	 * @throws Exception 
-	 */
-	private static XdebugClientResponse getXmlContent(ByteBuffer xmlBuffer)
-				throws Exception {
-		
-		// Prepare the XML buffer for reading the XML content.
-		xmlBuffer.flip();
-		
-		// Get the length of the XML buffer. Create byte array to hold the buffer contents.
-		int arrayLength = xmlBuffer.limit();
-		byte [] bytes = new byte [arrayLength];
-		
-		// Read buffer contents into the byte array.
-		xmlBuffer.get(bytes);
-		
-		// Convert bytes into UTF-8 encoded string, the XML.
-		String xmlText = new String(bytes, "UTF-8");
-		
-		// Dalgate the call.
-		XdebugClientResponse clientResponse = getXmlContent(xmlText);
-		
-    	// Reset the XML buffer.
-    	xmlBuffer.clear();
-    	
-    	return clientResponse;
-	}
-	
-	/**
-	 * Get Xdebug XML response.
 	 * @param xmlText
 	 * @return
 	 * @throws Exception 
@@ -1104,6 +950,10 @@ public class XdebugClientResponse {
 	 */
 	public String getText() 
 			throws Exception {
+		
+		if (xml == null) {
+			return "";
+		}
 		
         String text = lsSerializer.writeToString(xml);
         return text;
@@ -1226,7 +1076,7 @@ public class XdebugClientResponse {
 	 * @param debuggerUri
 	 * @return
 	 */
-	public static XdebugClientParameters parseDebuggedUri(String debuggerUri) 
+	public static CurrentXdebugClientData parseDebuggedUri(String debuggerUri) 
 			throws Exception {
 		
 		// Create URI matcher with regular expression.
@@ -1236,7 +1086,7 @@ public class XdebugClientResponse {
 		int groupCount = matcher.groupCount();
 		if (success && groupCount == 5) {
 			
-			XdebugClientParameters clientParameters = new XdebugClientParameters();
+			CurrentXdebugClientData clientParameters = new CurrentXdebugClientData();
 			String computer = matcher.group("computer");
 		    clientParameters.setComputer(computer);
 		    String processIdText = matcher.group("pid");
@@ -1427,93 +1277,44 @@ public class XdebugClientResponse {
 	}
 	
 	/**
-	 * Retrieve Area Server debug info from the Xdebug response.
-	 * @return
-	 * @throws Exception 
-	 */
-	public DebugInfo getDebugInfo()
-			throws Exception {
-		
-		// Check command name.
-		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
-		if (!"property_get".equals(commandName)) {
-			onThrownException("org.maclan.server.messageBadXdebugCommandName", "property_get", commandName);
-		}
-		
-		DebugInfo debugInfo = new DebugInfo();
-		try {
-			// Get tag start position. 
-			String valueText = (String) xpathCmdBeginPosition.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				
-				int cmdBegin = Integer.parseInt(valueText);
-				debugInfo.setCmdBegin(cmdBegin);
-			}
-			
-			// Get tag end position. 
-			valueText = (String) xpathCmdEndPosition.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				
-				int cmdEnd = Integer.parseInt(valueText);
-				debugInfo.setCmdEnd(cmdEnd);
-			}
-			
-			// Get ID of slot that supplied current source code. 
-			 valueText = (String) xpathStateSlotId.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setSourceSlotId(Long.parseLong(valueText));
-			}
-			
-			// Get ID of resource that supplied the source code. 
-			valueText = (String) xpathStateResourceId.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setSourceResourceId(Long.parseLong(valueText));
-			}
-			
-			// Get process ID.
-			valueText = (String) xpathStateProcessId.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setProcessId(Long.parseLong(valueText));
-			}
-			
-			// Get process name.
-			valueText = (String) xpathStateProcessName.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setProcessName(valueText);
-			}	
-			
-			// Get thread ID.
-			valueText = (String) xpathStateThreadId.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setThreadId(Long.parseLong(valueText));
-			}
-			
-			// Get thread name.
-			valueText = (String) xpathStateThreadName.evaluate(xml, XPathConstants.STRING);
-			if (!valueText.isEmpty()) {
-				debugInfo.setThreadName(valueText);
-			}	
-		}
-		catch (Exception e) {
-			onThrownException(e);
-		}
-		return debugInfo;
-	}
-	
-	/**
 	 * Get Area Server stack.
+	 * @param processId 
+	 * @param processName 
+	 * @param threadId 
+	 * @param threadName 
 	 * @return
 	 * @throws XPathExpressionException 
 	 */
-	public LinkedList<XdebugAreaServerStackLevel> getXdebugAreaStack()
-			throws Exception {
+	public LinkedList<XdebugStackLevel> getXdebugAreaStack(Obj<Long> processId, Obj<String> processName,
+			Obj<Long> threadId, Obj<String> threadName)
+					throws Exception {
 		
 		String commandName = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
 		if (!"stack_get".equals(commandName)) {
 			onThrownException("org.maclan.server.messageBadXdebugCommandName", "stack_get", commandName);
 		}
 		
-		LinkedList<XdebugAreaServerStackLevel> stack = new LinkedList<>();
+		// Get process ID and process name.
+		if (processId != null) {
+			String processIdText = (String) xpathStackProcessId.evaluate(xml, XPathConstants.STRING);
+			processId.ref = Long.parseLong(processIdText);
+		}
+		
+		if (processName != null) {
+			processName.ref = (String) xpathStackProcessName.evaluate(xml, XPathConstants.STRING);
+		}
+		
+		// Get thread ID and thread name.
+		if (threadId != null) {
+			String threadIdText = (String) xpathStackThreadId.evaluate(xml, XPathConstants.STRING);
+			threadId.ref = Long.parseLong(threadIdText);
+		}
+		
+		if (threadName != null) {
+			threadName.ref = (String) xpathStackThreadName.evaluate(xml, XPathConstants.STRING);
+		}
+		
+		LinkedList<XdebugStackLevel> stack = new LinkedList<>();
 		
 		try {
 			// Get stack root, i.e. the current stack level which is level 0.
@@ -1545,7 +1346,7 @@ public class XdebugClientResponse {
 				
 				String sourceCode = (String) xpathRelativeSourceCode.evaluate(stackNode, XPathConstants.STRING);
 				
-				XdebugAreaServerStackLevel stackLevel = new XdebugAreaServerStackLevel(level, type, stateHash, cmdBegin, cmdEnd, sourceCode);
+				XdebugStackLevel stackLevel = new XdebugStackLevel(level, type, stateHash, cmdBegin, cmdEnd, sourceCode);
 				stack.add(stackLevel);
 			}
 		}
@@ -1658,16 +1459,6 @@ public class XdebugClientResponse {
 		String messageText = (String) xpathErrorMessage.evaluate(xml, XPathConstants.STRING);
 		String errorMessage = String.format("ERROR %s, Xdebug command \"%s\". %s %s", codeText, commandName, errorCodeDescription, messageText);
 		return errorMessage;
-	}
-
-	/**
-	 * Get string value.
-	 * @param xpathExpression
-	 * @return
-	 */
-	public String getString(String xpathExpression) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 	
 	/**

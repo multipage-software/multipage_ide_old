@@ -268,6 +268,10 @@ public class DebugWatchDialog extends JDialog {
 		// Load watched items.
 		comboName.removeAllItems();
 		
+		if (watchItems == null) {
+			return;
+		}
+		
 		for(DebugWatchItem item : watchItems) {
 			
 			DebugWatchItemType itemType = item.getType();

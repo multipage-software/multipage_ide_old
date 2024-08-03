@@ -173,8 +173,6 @@ import org.w3c.dom.Node;
 
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.io.xml.DomDriver;
 
 /**
  * @author
@@ -6336,5 +6334,36 @@ public class Utility {
 		
 		text = text.substring(0, position) + character + text.substring(position, length);
 		return text;
+	}
+	
+	/**
+	 * Get current process and thread information.
+	 * @param processId
+	 * @param processName
+	 * @param threadId
+	 * @param threadName
+	 */
+	public static void getProcessAndThread(Obj<Long> processId, Obj<String> processName, Obj<Long> threadId,
+			Obj<String> threadName) {
+		
+		// Get current process information.
+		ProcessHandle currentProcess = ProcessHandle.current();
+		
+		if (processId != null) {
+			processId.ref = currentProcess.pid();
+		}
+		if (processName != null) {
+			processName.ref = currentProcess.info().toString();
+		}
+		
+		// Get current thread information.
+		Thread currentThread = Thread.currentThread();
+		
+		if (threadId != null) {
+			threadId.ref = currentThread.getId();
+		}
+		if (threadName != null) {
+			threadName.ref = currentThread.getName();
+		}
 	}
 }

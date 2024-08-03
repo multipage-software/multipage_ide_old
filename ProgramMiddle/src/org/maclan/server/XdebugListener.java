@@ -9,16 +9,22 @@ package org.maclan.server;
 import java.awt.Component;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.Consumer;
 
+import org.multipage.gui.CallbackNoArg;
 import org.multipage.gui.PacketChannel;
 import org.multipage.gui.PacketSession;
+import org.multipage.util.Resources;
 
 /**
  * Xdebug listener is built-in socket server that accepts debugging requests.
  * @author vakol
  *
  */
-public class XdebugListener extends DebugListener {
+public class XdebugListener {
 	
 	/**
 	 * Default Xdebug port. It is set to port number 9004 because JVM Xdebug already uses port number 9000.
@@ -35,11 +41,20 @@ public class XdebugListener extends DebugListener {
 	 */
 	private Component debugViewerComponent = null;
 	
+    /**
+     * Invoked when a new Xdebug viewer has to be opened.
+     */
+    public Consumer<XdebugListenerSession> openDebugViever = null;
+	
 	/**
 	 * Packet channel that accepts incomming packets.
 	 */
 	private PacketChannel packetChannel = null;
 
+	/**
+	 * List of current sessions. The list is synchronized and can be edited with concurrent threads.
+	 */
+	protected List<XdebugListenerSession> sessions = Collections.synchronizedList(new LinkedList<>());
 	
     /**
      * Get singleton object.
@@ -51,11 +66,47 @@ public class XdebugListener extends DebugListener {
         }
         return instance;
     }
+    
+	/**
+	 * Get current debug listener sessions.
+	 */
+	public List<XdebugListenerSession> getSessions() {
+		
+		return sessions;
+	}
+	
+	/**
+	 * Ensure that sessions are opened. Remove the closed sessions.
+	 */
+	public void ensureLiveSessions() {
+		
+		LinkedList<XdebugListenerSession> closedSessions = new LinkedList<>();
+		
+		// Find closed sessions.
+		for (XdebugListenerSession session : sessions) {
+			
+			boolean isOpen = session.isOpen();
+			if (!isOpen) {
+				closedSessions.addLast(session);
+			}
+		}
+		
+		// Remove the closed sessions.
+		removeSessions(closedSessions);
+	}
+	
+	/**
+	 * Remove input sessions from session list.
+	 * @param sessionsToRemove
+	 */
+	public void removeSessions(List<XdebugListenerSession> sessionsToRemove) {
+		
+		sessions.removeAll(sessionsToRemove);
+	}
 	
 	/**
 	 * Remember the debug viewer component.
 	 */
-	@Override
 	public void setViewerComponent(Component debugViewerComponent) {
 		
 		this.debugViewerComponent = debugViewerComponent;
@@ -64,7 +115,6 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * Activate Xdebug listener.
 	 */
-	@Override
 	protected void activate()
 			throws Exception {
 		
@@ -134,8 +184,54 @@ public class XdebugListener extends DebugListener {
 	/**
 	 * TODO: <---MAKE On close debugger.
 	 */
-	@Override
 	public void onClose() {
+		
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param messageId
+	 * @param parameters
+	 * @throws Exception
+	 */
+	protected void onThrownException(String messageId, Object ... parameters)
+			throws Exception {
+		
+		String messageFormat = Resources.getString(messageId); 
+		String message = String.format(messageFormat, parameters);
+		Exception e = new Exception(message);
+		onThrownException(e);
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 * @throws Exception
+	 */
+	protected void onThrownException(Exception e)
+			throws Exception {
+		
+		// Override this method.
+		onException(e);
+		throw e;
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	protected void onException(Exception e) {
+		
+		// Override this method.
+		e.printStackTrace();
+	}
+	
+	/**
+	 * Set PHP debug listener.
+	 * @param callbackNoArg
+	 */
+	public static void setDebugPhpListener(CallbackNoArg callbackNoArg) {
+		// TODO: <---MAKE
 		
 	}
 }

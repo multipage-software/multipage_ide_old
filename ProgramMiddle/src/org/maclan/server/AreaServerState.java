@@ -338,6 +338,20 @@ public class AreaServerState {
 	}
 	
 	/**
+	 * Get debug client.
+	 * @return
+	 */
+	public XdebugClient getDebugClient() {
+		
+		if (debugInfo == null) {
+			return null;
+		}
+		
+		XdebugClient debugClient = debugInfo.getDebugClient();
+		return debugClient;
+	}
+	
+	/**
 	 * Get debugger information.
 	 */
 	public DebugInfo getDebugInfo() {

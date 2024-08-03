@@ -6,6 +6,8 @@
  */
 package org.maclan.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
@@ -14,10 +16,14 @@ import java.nio.channels.CompletionHandler;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.multipage.gui.Packet;
 import org.multipage.gui.PacketBlock;
@@ -33,7 +39,7 @@ import org.multipage.util.Resources;
  * @author vakol
  *
  */
-public class XdebugListenerSession extends DebugListenerSession {
+public class XdebugListenerSession {
 	
 	/**
 	 * Session constants
@@ -48,14 +54,9 @@ public class XdebugListenerSession extends DebugListenerSession {
 	public static final int ACCEPT_XDEBUG_COMMANDS = 2;
 
 	/**
-	 * Packet session.
+	 * Maximum session ID.
 	 */
-	private static PacketSession packetSession = null;
-	
-	/**
-	 * Xdebug protocol state.
-	 */
-	private int xdebugProtocolState = UNINITIALIZED;
+	private static final int MAXIMUM_SESSION_ID = 1024;
 	
 	/**
 	 * Legth of the buffer that stores lenght of the XML content.
@@ -81,12 +82,37 @@ public class XdebugListenerSession extends DebugListenerSession {
 	/**
 	 * UTF-8 encoder.
 	 */
-	private static final CharsetEncoder utf8Encoder = StandardCharsets.UTF_8.newEncoder();
+	private static final CharsetEncoder UTF8_ENCODER = StandardCharsets.UTF_8.newEncoder();
 	
 	/**
 	 * Null symbol.
 	 */
-	private PacketSymbol NULL_SYMBOL = new PacketSymbol(new byte [] { (byte) 0x00 });
+	private static final PacketSymbol NULL_SYMBOL = new PacketSymbol(new byte [] { (byte) 0x00 });
+	
+	/**
+	 * Last generated session ID.
+	 */
+	private static Obj<Integer> generatedSessionId = new Obj<Integer>(0);
+	
+	/**
+	 * Current Xdebug client parameters.
+	 */
+	private CurrentXdebugClientData currentClientData = null;
+	
+	/**
+	 * Session ID.
+	 */
+	protected int sessionId = -1;
+	
+	/**
+	 * Debugged process.
+	 */
+	private XdebugProcess process = null;
+	
+	/**
+	 * Packet session.
+	 */
+	private PacketSession packetSession = null;
 	
 	/**
 	 * Data length.
@@ -104,14 +130,24 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private String debuggedUri = null;
 	
 	/**
-	 * Client parameters.
+	 * Xdebug protocol state.
 	 */
-	private XdebugClientParameters clientParameters = null;
+	private int xdebugProtocolState = UNINITIALIZED;
 	
 	/**
-	 * Area Server debugger information.
+	 * Debug listener reference.
 	 */
-	private DebugInfo debugInfo = null;
+	protected XdebugListener listener = null;
+	
+	/**
+	 * Client socket reference.
+	 */
+	protected AsynchronousSocketChannel client = null;
+	
+	/**
+	 * Socket server reference.
+	 */
+	protected AsynchronousServerSocketChannel server = null;
 	
 	/**
 	 * Xdebug transactions.
@@ -124,6 +160,11 @@ public class XdebugListenerSession extends DebugListenerSession {
 	private final Map<String, XdebugFeature> features = Collections.synchronizedMap(new LinkedHashMap<String, XdebugFeature>());
 	
 	/**
+	 * Xdebug client contexts.
+	 */
+	private LinkedHashMap<String, Integer> contextNameMap = null;
+	
+	/**
 	 * Callback invoked when the session is ready for Xdebug commands. It is called after feature negotiation.
 	 */
 	private Runnable onReadyForCommandsLambda = null;
@@ -132,11 +173,6 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * Callback invoked when the session is receives notifications.
 	 */
 	private Consumer<XdebugClientResponse> onNotificationLambda = null;
-	
-	/**
-	 * Xdebug client contexts.
-	 */
-	private LinkedHashMap<String, Integer> contextNameMap = null;
 	
 	/**
 	 * Cosntructor.
@@ -149,8 +185,116 @@ public class XdebugListenerSession extends DebugListenerSession {
 			XdebugListener xdebugListener)
 					throws Exception {
 		
-		// Delegate the call.
-		super(server, client, xdebugListener);
+		// Set members.
+		this.sessionId = generateNewSessionId();
+		this.client = client;
+		this.server = server;
+		this.listener = xdebugListener;
+	}
+	
+	/**
+	 * Get session ID.
+	 */
+	protected static int generateNewSessionId() {
+		
+		synchronized (generatedSessionId) {	
+			if (generatedSessionId.ref < MAXIMUM_SESSION_ID) {
+				generatedSessionId.ref++;
+			}
+			else {
+				generatedSessionId.ref = 1;
+			}
+			return generatedSessionId.ref;
+		}
+	}
+	
+	/**
+	 * Get session ID.
+	 * @return
+	 */
+	public int getSessionId() {
+		
+		if (sessionId < 1 && sessionId >= MAXIMUM_SESSION_ID) {
+			sessionId = generateNewSessionId();
+		}
+		return sessionId; 
+	}
+	
+	/**
+	 * Get list of process threads.
+	 * @return
+	 */
+	public HashMap<Long, XdebugThread> getThreads() {
+		
+		if (process == null) {
+			return null;
+		}
+		
+		HashMap<Long, XdebugThread> threads = process.getThreads();
+		return threads;
+	}
+	
+	/**
+	 * Get debug client (the probe) socket address.
+	 * @throws IOException 
+	 */
+	public InetSocketAddress getClientSocket()
+			throws Exception {
+		
+		InetSocketAddress socketAddress = (InetSocketAddress) client.getRemoteAddress();
+		return socketAddress;
+	}
+	
+	/**
+	 * Get client socket channel.
+	 * @return
+	 */
+	public AsynchronousSocketChannel getClientSocketChannel() {
+		
+		return client;
+	}
+	
+	/**
+	 * Get server socket channel.
+	 * @return
+	 */
+	public AsynchronousServerSocketChannel getServerSocketChannel() {
+		
+		return server;
+	}
+	
+	/**
+	 * Check if this session is opened.
+	 * @return
+	 */
+	public boolean isOpen() {
+		
+		if (client == null) {
+			return false;
+		}
+		
+		boolean isOpen = client.isOpen();
+		return isOpen;
+	}
+	
+	/**
+	 * Send bytes to the debugging client (the debugging probe).
+	 * @param bytes
+	 * @param session
+	 * @param completionHandler
+	 */
+	protected void sendBytes(ByteBuffer bytes, XdebugTransaction transaction, CompletionHandler<Integer, XdebugTransaction> completionHandler)
+			throws Exception {
+		
+		// Write bytes.
+		synchronized (client) {
+			try {
+				client.write(bytes, transaction, completionHandler);
+			}
+			catch (Exception e) {
+				onThrownException(e);
+			}
+		}
 	}
 	
 	/**
@@ -166,9 +310,9 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * Get client parameters.
 	 * @return
 	 */
-	public XdebugClientParameters getClientParameters() {
+	public CurrentXdebugClientData getCurrentClientData() {
 		
-		return clientParameters;
+		return currentClientData;
 	}
 	
 	/**
@@ -233,7 +377,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 		XdebugListenerSession xdebugSession = new XdebugListenerSession(socketServer, socketClient, xdebugListener);
 		
 		//  Create packet session.
-		packetSession = new PacketSession("XdebugListener", socketClient) {
+		xdebugSession.packetSession = new PacketSession("XdebugListener", socketClient) {
 
 			// Delegate the calls.
 			@Override
@@ -265,7 +409,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 			throws Exception {
 		
 		debuggedUri = clientResponse.getDebuggedUri();
-		clientParameters = XdebugClientResponse.parseDebuggedUri(debuggedUri);
+		currentClientData = XdebugClientResponse.parseDebuggedUri(debuggedUri);
 	}
 	
 	/**
@@ -274,7 +418,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 */
 	public boolean isInitialized() {
 		
-		boolean initialized = (debuggedUri != null && !debuggedUri.isEmpty() && clientParameters != null && clientParameters.isInitialized());
+		boolean initialized = (debuggedUri != null && !debuggedUri.isEmpty() && currentClientData != null && currentClientData.isInitialized());
 		return initialized;
 	}
 	
@@ -288,21 +432,88 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
+	 * Set process ID.
+	 * @param processId 
+	 * @return
+	 */
+	public void setProcessId(Long processId) {
+		
+		if (processId == null) {
+			return;
+		}
+		
+		if (currentClientData == null) {
+			currentClientData = new CurrentXdebugClientData();
+		}
+		currentClientData.setProcessId(processId);
+	}
+	
+	/**
+	 * Get process ID.
+	 * @return
+	 */
+	public long getProcessId() {
+		
+		if (currentClientData == null) {
+			return -1L;
+		}
+		return currentClientData.getProcessId();
+	}
+	
+	/**
+	 * Set process name.
+	 * @param processId 
+	 * @param processName
+	 */
+	private void setCurrentProcess(Long processId, String processName) {
+		
+		if (currentClientData == null) {
+			currentClientData = new CurrentXdebugClientData();
+		}
+		
+		if (processId != null) {
+			currentClientData.setProcessId(processId);
+		}
+		if (processName != null) {
+			currentClientData.setProcessName(processName);
+		}
+		
+		if (process == null) {
+			process = new XdebugProcess();
+		}
+		process.setProcess(processId, processName);
+	}
+	
+	/**
 	 * Get session thread ID.
 	 * @return
 	 */
-	@Override
-	public long getTid() {
-
-		long threadId = -1L;
+	public long getThreadId() {
 		
-		if (clientParameters != null) {
-			Long tid = clientParameters.getThreadId();
-			if (tid != null) {
-				threadId = tid;
+		if (currentClientData != null) {
+			
+			Long threadId = currentClientData.getThreadId();
+			if (threadId != null) {
+				return threadId;
 			}
 		}
-		return threadId;
+		return -1L;
+	}
+	
+	/**
+	 * Get name of the session thread.
+	 * @return
+	 */
+	public String getThreadName() {
+		
+		if (currentClientData != null) {
+			
+			String threadName = currentClientData.getThreadName();
+			if (threadName != null) {
+				return threadName;
+			}
+		}
+		return "";
 	}
 	
 	/**
@@ -311,32 +522,42 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 */
 	public String getAreaName() {
 		
-		String areaName = "unknown";
-		
-		if (clientParameters != null) {
-			String name = clientParameters.getAreaName();
-			if (name != null) {
-				areaName = name;
+		if (currentClientData != null) {
+			
+			String areaName = currentClientData.getAreaName();
+			if (areaName != null) {
+				return areaName;
 			}
 		}
-		return areaName;
+		return "";
 	}
 	
 	/**
-	 * Get name of the session thread.
-	 * @return
+	 * Set input stack information for this session.
+	 * @param processId 
+	 * @param processName
+	 * @param threadId
+	 * @param threadName
+	 * @param stack
 	 */
-	public String getThreadName() {
-
-		String threadName = "Unknown";
+	public void putStack(Long processId, String processName, Long threadId, String threadName,
+			LinkedList<XdebugStackLevel> stack) {
 		
-		if (clientParameters != null) {
-			String name = clientParameters.getThreadName();
-			if (name != null) {
-				threadName = name;
-			}
+		// Set process name.
+		setCurrentProcess(processId, processName);
+		
+		if (process == null) {
+			return;
 		}
-		return threadName;
+		
+		process.putThread(threadId, threadName);
+		
+		XdebugThread thread = process.getThread(threadId);
+		if (thread == null) {
+			return;
+		}
+		
+		thread.setStack(stack);
 	}
 
 	/**
@@ -489,19 +710,6 @@ public class XdebugListenerSession extends DebugListenerSession {
 		catch (Exception e) {
 			onThrownException(e);
 		}
-	}
-	
-	/**
-	 * Get process ID.
-	 * @return
-	 */
-	@Override
-	public long getPid() {
-		
-		if (clientParameters == null) {
-			return -1L;
-		}
-		return clientParameters.getProcessId();
 	}
 	
 	/**
@@ -702,12 +910,12 @@ public class XdebugListenerSession extends DebugListenerSession {
 	
 		// Start transaction.
 		beginTransaction(transaction);
-
+		
 		// Wait for response.
 		boolean isTimeout = Lock.waitFor(transaction.responseLock, responseTimeoutMs);
 		if (isTimeout) {
 			onThrownException("org.maclan.server.messageXdebugCommandTimeout");
-		}
+		}		
 	}
 	
 	/**
@@ -742,7 +950,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 			// Send command bytes to the Xdebug client. On completion event check if the number of bytes sent macthes.
 			
 			// Encode packet bytes. Add NULL byte at the end of the message.
-			ByteBuffer buffer = utf8Encoder.encode(commandString);
+			ByteBuffer buffer = UTF8_ENCODER.encode(commandString);
 			int limit = buffer.limit();
 			buffer.position(limit - 1);
 			buffer.put(XdebugCommand.NULL_SYMBOL);
@@ -904,7 +1112,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 		// Notify result lock if it exists.
 		if (transaction.responseLock != null) {
 
-			Lock.notify(transaction.responseLock);
+			Lock.notify(transaction.responseLock);			
 		}
 	}
 
@@ -1088,54 +1296,11 @@ public class XdebugListenerSession extends DebugListenerSession {
 	}
 	
 	/**
-	 * Get Aarea Server debug info.
-	 * @param debugInfoLambda
-	 * @throws Exception 
-	 */
-	public void getDebugInfo(Consumer<DebugInfo> debugInfoLambda)
-			throws Exception {
-		
-		try {
-			// Get debugger context ID.
-			if (contextNameMap == null) {
-				onThrownException("org.maclan.server.messageXdebugContextsNotLoaded");
-			}
-			
-			Integer debuggerContextId = contextNameMap.get(XdebugClient.AREA_SERVER_CONTEXT);
-			if (debuggerContextId == null) {
-				onThrownException("org.maclan.server.messageCannotGetXdebugAreaServerContext");
-			}
-			String debuggerContextIdText = String.valueOf(debuggerContextId);
-			
-			// Get Area Server text state.
-			int transactionId = createTransaction("property_get",
-					new String [][] {{"-n", "debug_info"},
-									 {"-c", debuggerContextIdText}}, response -> {
-				
-				// Process Area Server debug information response.
-				try {
-					throwPossibleException(response);
-					
-					DebugInfo debugInfo = response.getDebugInfo();
-					debugInfoLambda.accept(debugInfo);
-				}
-				catch (Exception e) {
-					onException(e);
-				}
-			});
-			beginTransaction(transactionId);			
-		}
-		catch (Exception e) {
-			onThrownException(e);
-		}			
-	}
-	
-	/**
 	 * Get Area Server stack trace.
 	 * @param areaServerStackLambda
 	 * @throws Exception 
 	 */
-	public void stackGet(Consumer<LinkedList<XdebugAreaServerStackLevel>> areaServerStackLambda)
+	public void stackGet(Function<LinkedList<XdebugStackLevel>, BiFunction<Long, String, BiConsumer<Long, String>>> areaServerStackLambda)
 			throws Exception {
 		
 		try {
@@ -1146,40 +1311,24 @@ public class XdebugListenerSession extends DebugListenerSession {
 				try {
 					XdebugListenerSession.throwPossibleException(response);
 					
-					LinkedList<XdebugAreaServerStackLevel> stack = response.getXdebugAreaStack();
-					areaServerStackLambda.accept(stack);
+					Obj<Long> processId = new Obj<>();
+					Obj<String> processName = new Obj<>();
+					Obj<Long> threadId = new Obj<>();
+					Obj<String> threadName = new Obj<>();
+					
+					LinkedList<XdebugStackLevel> stack = response.getXdebugAreaStack(processId, processName, threadId, threadName);
+					areaServerStackLambda.apply(stack).apply(processId.ref, processName.ref).accept(threadId.ref, threadName.ref);
 				}
 				catch (Exception e) {
 					onException(e);
 				}
 			});
-			beginTransaction(transactionId);
+			
+			beginTransactionWait(transactionId, 5000/*RESPONSE_TIMEOUT_MS*/);
 		}
 		catch (Exception e) {
 			onThrownException(e);
 		}
-	}
-	
-	/**
-	 * Load Area Server debugged thread information.
-	 * @param debugInfo
-	 */
-	public void loadThreadInfo(DebugInfo debugInfo) {
-		
-		this.debugInfo = debugInfo;
-		String processName = debugInfo.getProcessName();
-		this.clientParameters.setProcessName(processName);
-		String threadName = debugInfo.getThreadName();
-		this.clientParameters.setThreadName(threadName);
-	}
-	
-	/**
-	 * Load Area Server debugged code source information.
-	 * @param debugInfo
-	 */
-	public void loadSourceInfo(DebugInfo debugInfo) {
-		
-		// TODO: <---MAKE Update information about sources of the source code (slots or resources).
 	}
 	
 	/**
@@ -1188,7 +1337,7 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * @param stackLevel
 	 * @param watchItemsLambda
 	 */
-	public void contextGet(int contextId, XdebugAreaServerStackLevel stackLevel, Consumer<LinkedList<DebugWatchItem>> watchItemsLambda)
+	public void contextGet(int contextId, XdebugStackLevel stackLevel, Consumer<LinkedList<DebugWatchItem>> watchItemsLambda)
 			throws Exception {
 		
 		try {
@@ -1216,6 +1365,19 @@ public class XdebugListenerSession extends DebugListenerSession {
 		catch (Exception e) {
 			onThrownException(e);
 		}		
+	}
+	
+	/**
+	 * Get text description.
+	 */
+	@Override
+	public String toString() {
+		
+		String computerName = currentClientData.getComputer();
+		
+		String formatText = Resources.getString("org.maclan.server.textDebugSession");
+		String description = String.format(formatText, computerName, sessionId);
+		return description;
 	}
 	
 	/**
@@ -1257,12 +1419,12 @@ public class XdebugListenerSession extends DebugListenerSession {
 	@Override
 	public boolean equals(Object obj) {
 		
-		if (clientParameters == null || !(obj instanceof XdebugListenerSession)) {
+		if (currentClientData == null || !(obj instanceof XdebugListenerSession)) {
 			return false;
 		}
 		
 		XdebugListenerSession session = (XdebugListenerSession) obj;
-		return clientParameters.equals(session.clientParameters);
+		return currentClientData.equals(session.currentClientData);
 	}
 	
 	/**
@@ -1343,6 +1505,29 @@ public class XdebugListenerSession extends DebugListenerSession {
 	 * @param e
 	 */
 	protected void onException(Throwable e) {
+		
+		// Override this method.
+		e.printStackTrace();
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 * @throws Exception
+	 */
+	protected void onThrownException(Exception e)
+			throws Exception {
+		
+		// Override this method.
+		onException(e);
+		throw e;
+	}
+	
+	/**
+	 * Fired on exception.
+	 * @param e
+	 */
+	protected void onException(Exception e) {
 		
 		// Override this method.
 		e.printStackTrace();

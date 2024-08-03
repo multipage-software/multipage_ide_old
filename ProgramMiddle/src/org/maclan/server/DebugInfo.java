@@ -6,12 +6,17 @@
  */
 package org.maclan.server;
 
+import java.awt.Color;
+
+import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
+import org.multipage.util.Obj;
 import org.multipage.util.RepeatedTask;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
- * Debugger tag information.
+ * Debug information .
  * @author vakol
  */
 public class DebugInfo {
@@ -50,11 +55,6 @@ public class DebugInfo {
 	 * Debugger lock.
 	 */
 	private Lock debuggerLock = null;
-	
-	/**
-	 * Server ready flag.
-	 */
-	private boolean serverReady = false;
 	
 	/**
 	 * Xdebug opration.
@@ -158,22 +158,6 @@ public class DebugInfo {
 	}
 	
 	/**
-	 * Get "server ready" flag.
-	 * @return
-	 */
-	public boolean getServerReady() {
-		return serverReady;
-	}
-	
-	/**
-	 * Set "server ready" flag.
-	 * @param serverReady
-	 */
-	public void setServerReady(boolean serverReady) {
-		this.serverReady = serverReady;
-	}	
-	
-	/**
 	 * Connect to debugger via Xdebug protocol.
 	 * @param server
 	 * @param ideHostName
@@ -207,18 +191,21 @@ public class DebugInfo {
 	 * Set information for Xdebug.
 	 * @param server
 	 * @param source 
-	 * @param replace
 	 */
-	public static void setDebugInfo(AreaServer server, TagsSource source, String replace) {
+	public static void setDebugInfo(AreaServer server, TagsSource source) {
 		
-		DebugInfo debugInfo = server.state.debugInfo;
+		// Create debug information.
+		DebugInfo debugInfo = server.state.getDebugInfo();
 		if (debugInfo == null) {
-			return;
+			debugInfo = new DebugInfo();
+			server.state.setDebugInfo(debugInfo);
 		}
 		
+		// Create information about source of the code.
 		DebugSourceInfo sourceInfo = debugInfo.getSourceInfo();
 		if (sourceInfo == null) {
 			sourceInfo = new DebugSourceInfo();
+			debugInfo.setSourceInfo(sourceInfo);
 		}
 		
 		Long sourceResourceId = source.resourceId;
@@ -226,6 +213,25 @@ public class DebugInfo {
 		
 		sourceInfo.setSourceResourceId(sourceResourceId);
 		sourceInfo.setSourceSlotId(sourceSlotId);
+		
+		// Create information about process and thread.
+		DebugThreadInfo threadinfo = debugInfo.getThreadInfo();
+		if (threadinfo == null) {
+			threadinfo = new DebugThreadInfo();
+			debugInfo.setThreadInfo(threadinfo);
+		}
+		
+		Obj<Long> processId = new Obj<>(-1L);
+		Obj<String> processName= new Obj<>("");
+		Obj<Long> threadId = new Obj<>(-1L);
+		Obj<String> threadName= new Obj<>("");
+		
+		Utility.getProcessAndThread(processId, processName, threadId, threadName);
+		
+		threadinfo.setProcessId(processId.ref);
+		threadinfo.setProcessName(processName.ref);
+		threadinfo.setThreadId(threadId.ref);
+		threadinfo.setThreadName(threadName.ref);
 	}
 	
 	/**
@@ -320,6 +326,7 @@ public class DebugInfo {
 		Lock debuggerLock = debugInfo.initializeDebugLock();
 		
 		debugClient.setAcceptCommands(command -> {
+			
 			try {
 				
 				// Process incoming Xdebug commands with Xdebug client. Return result packet.
@@ -341,10 +348,14 @@ public class DebugInfo {
 			}
 		});
 		
+		// Get current thread ID.
+		long threadId = Thread.currentThread().getId();
+		String threadIdText = String.valueOf(threadId);
+		
 		// Wait for server ready.
-		RepeatedTask.loopBlocking("WaitDebuggerReady", 0L, 200L, (isRunning, exception) -> {
+		RepeatedTask.loopBlocking("WaitDebuggerReady" + threadIdText, 0L, 200L, (isRunning, exception) -> {
 			
-			boolean serverReady = debugInfo.getServerReady();
+			boolean serverReady = debugClient.isServerReady();
 			if (serverReady) {
 				
 				// Send notification about resolving the breakpoint.
@@ -360,7 +371,7 @@ public class DebugInfo {
 		});
 		
 		// Wait for the continuation command.
-		RepeatedTask.loopBlocking("DebuggerLock", 0L, 0L, (isRunning, exception) -> {
+		RepeatedTask.loopBlocking("DebuggerLock" + threadIdText, 0L, 0L, (isRunning, exception) -> {
 			
 			if (!isRunning || exitDebugger) {
 				return false;
@@ -557,7 +568,7 @@ public class DebugInfo {
 		if (sourceInfo == null) {
 			return -1L;
 		}
-		long slotId = sourceInfo.getSourceSlotId();
+		Long slotId = sourceInfo.getSourceSlotId();
 		return slotId;
 	}
 	

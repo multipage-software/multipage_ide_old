@@ -1,17 +1,15 @@
 /*
- * Copyright 2010-2023 (C) vakol
+ * Copyright 2010-2024 (C) vakol
  * 
- * Created on : 10-06-2023
+ * Created on : 18-07-2024
  *
  */
 package org.maclan.server;
 
-import java.util.Objects;
-
 /**
  * Parameters of debugger client.
  */
-public class XdebugClientParameters {
+public class CurrentXdebugClientData {
 	
 	/**
 	 * Computer name.
@@ -61,23 +59,6 @@ public class XdebugClientParameters {
 		
 		boolean initialized = (computer != null && processId != null && threadId != null & areaId != null & statehash != null);
 		return initialized;
-	}
-
-	/**
-	 * Returns true value if all parameters of input object are equal to parameters of current object.
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		XdebugClientParameters other = (XdebugClientParameters) obj;
-		return Objects.equals(computer, other.computer)
-					&& Objects.equals(processId, other.processId)
-					&& Objects.equals(threadId, other.threadId);
 	}
 	
 	/**
@@ -219,7 +200,7 @@ public class XdebugClientParameters {
 	 * Get state hash code.
 	 * @return
 	 */
-	public Integer getStatehash() {
+	public Integer getStateHash() {
 		
 		return statehash;
 	}

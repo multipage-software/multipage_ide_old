@@ -62,8 +62,6 @@ public class GeneratorMain {
 	 */
 	private static final String serilizedDataLocation = "org.multipage.generator.settings";
 	
-	
-	
 	/**
 	 * Application state serializer.
 	 */

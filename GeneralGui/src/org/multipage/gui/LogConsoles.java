@@ -14,6 +14,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -60,14 +61,6 @@ public class LogConsoles extends JFrame {
 	 * Open ports that enable consoles input.
 	 */
 	public static int[] openPorts = new int[] { 48000, 48001, 48002, 48003 };
-	
-	/**
-	 * Set default data.
-	 */
-	public static void setDefaultData() {
-		
-		bounds = null;
-	}
 
 	/**
 	 * Maps console names to console objects.
@@ -111,6 +104,34 @@ public class LogConsoles extends JFrame {
 	 * Reference to main frame window of the application.
 	 */
 	protected static LogConsoles mainFrame = null;
+	
+	/**
+	 * Set default data.
+	 */
+	public static void setDefaultData() {
+		
+		bounds = null;
+	}
+	
+	/**
+	 * Write serialized dialog state.
+	 * @param outputStream
+	 */
+	public static void serializeData(StateOutputStream outputStream)
+			throws IOException {
+		
+		outputStream.writeObject(bounds);
+	}
+	
+	/**
+	 * Read serialized dialog state.
+	 * @param inputStream
+	 */
+	public static void serializeData(StateInputStream inputStream)
+			throws IOException, ClassNotFoundException {
+		
+		bounds = Utility.readInputStreamObject(inputStream, Rectangle.class);
+	}
 	
 	/**
 	 * Components.
@@ -176,8 +197,11 @@ public class LogConsoles extends JFrame {
 	 * Close the application.
 	 */
 	protected void onClosing() {
+		
+		saveDialog();
 
 		applicationState = SHUTDOWN;
+		dispose();
 	}
 
 	/**
@@ -185,7 +209,7 @@ public class LogConsoles extends JFrame {
 	 */
 	private void initComponents() {
 		setTitle("Consoles for multitasking event logs");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBounds(100, 100, 859, 621);
 
 		JMenuBar menuBar = new JMenuBar();
@@ -402,6 +426,14 @@ public class LogConsoles extends JFrame {
 		else {
 			setBounds(bounds);
 		}
+	}
+	
+	/**
+	 * Save dialog.
+	 */
+	private void saveDialog() {
+		
+		bounds = getBounds();
 	}
 	
 	/**

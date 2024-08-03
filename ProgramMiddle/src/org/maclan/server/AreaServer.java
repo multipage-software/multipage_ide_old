@@ -6,6 +6,7 @@
  */
 package org.maclan.server;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,7 @@ import org.maclan.expression.ProcedureParameter;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
+import org.multipage.util.j;
 
 /**
  * Area Server helper class.
@@ -463,6 +465,7 @@ public class AreaServer {
 		clonedState.trayMenu = state.trayMenu;
 		clonedState.newLine = state.newLine;
 		clonedState.enableMetaTags = state.enableMetaTags;
+		clonedState.debugInfo = state.debugInfo;
 		
 		return clonedState;
 	}
@@ -3880,12 +3883,15 @@ public class AreaServer {
 				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
 				if (debugging) {
 					
+					XdebugClient debugClient = server.state.getDebugClient();
+					
 					// Connect to debugger via Xdebug protocol.
-					XdebugClient debugClient = DebugInfo.connectXdebug(server, ideHost.ref, xdebugPort.ref);
+					if (debugClient == null) {
+						debugClient = DebugInfo.connectXdebug(server, ideHost.ref, xdebugPort.ref);
+					}
+					
 					// Add debug information about Xdebug protocol client.
 					DebugInfo.setDebugInfo(server, debugClient);
-					// Accept Xdebug commands from debugger dialog.
-					DebugInfo.debugPoint(server);
 				}
 				else {
 					if (breakName != null) {
@@ -4837,8 +4843,10 @@ public class AreaServer {
 							state.level = 1L;
 							
 							// Add debug information about code source.
-							TagsSource source = TagsSource.newResource(startResourceId);
-							DebugInfo.setDebugInfo(this, source, resourceText.ref);
+							if (isDebugged()) {
+								TagsSource source = TagsSource.newResource(startResourceId);
+								DebugInfo.setDebugInfo(this, source);
+							}
 						
 							// Process page text for the area.
 							state.text = new StringBuilder(resourceText.ref);
@@ -6560,7 +6568,7 @@ public class AreaServer {
 		// Process property texts.
 		processPropertyTexts(properties);
 		
-		// Shift position because of error report.
+		// Shift position because of error reporting.
 		state.position = endPosition.ref;
 		
 		// Get procedure name from properties.
@@ -6702,6 +6710,11 @@ public class AreaServer {
 		String procedureInnerText = procedure.getInnerText();
 		
 		String replaceText = "";
+		
+		// Add debug information about current procedure call and about resulting replacement.
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, procedureInnerText, replaceText);
+		// Debug point for procedure call tags.
+		DebugInfo.debugPoint(this);
 		
 		// Process the inner text.
 		replaceText = processTextCloned(processedSlotText + procedureInnerText);

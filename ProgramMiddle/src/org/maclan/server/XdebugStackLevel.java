@@ -6,13 +6,11 @@
  */
 package org.maclan.server;
 
-import java.util.LinkedList;
-
 /**
  * Area Srever stack level information for Xdebug viewer.
  * @author vakol
  */
-public class XdebugAreaServerStackLevel {
+public class XdebugStackLevel {
 	
 	/**
 	 * Stack level number.
@@ -35,22 +33,22 @@ public class XdebugAreaServerStackLevel {
 	private String sourceCode = null;
 	
 	/**
-	 * Debugged code information.
+	 * Command begin position.
 	 */
-	private DebugInfo debugInfo = null;
-
+	private int cmdBegin = 0;
+	
 	/**
-	 * Watched items.
+	 * Command end position.
 	 */
-	private LinkedList<DebugWatchItem> watchItems = null;
-
+	private int cmdEnd = 0;
+	
 	/**
 	 * Constructor.
 	 * @param type 
 	 * @param level 
 	 * @param state
 	 */
-	public XdebugAreaServerStackLevel(int level, String type, AreaServerState state) {
+	public XdebugStackLevel(int level, String type, AreaServerState state) {
 		
 		this.level = level;
 		this.type = type;
@@ -60,7 +58,8 @@ public class XdebugAreaServerStackLevel {
 			this.sourceCode = state.text.toString();
 		}
 		
-		this.setDebugInfo(state.debugInfo);
+		this.cmdBegin = state.debugInfo.getCmdBegin();
+		this.cmdEnd = state.debugInfo.getCmdEnd();
 	}
 	
 	/**
@@ -72,34 +71,15 @@ public class XdebugAreaServerStackLevel {
 	 * @param cmdEnd
 	 * @param sourceCode
 	 */
-	public XdebugAreaServerStackLevel(int level, String type, int stateHashCode, int cmdBegin, int cmdEnd, String sourceCode) {
+	public XdebugStackLevel(int level, String type, int stateHashCode, int cmdBegin, int cmdEnd, String sourceCode) {
 		
 		this.level = level;
 		this.type = type;
 		this.stateHashCode = stateHashCode;
 		this.sourceCode = sourceCode;
-		
-		if (debugInfo == null) {
-			debugInfo = new DebugInfo();
-		}
 
-		DebugTagInfo tagInfo = debugInfo.getTagInfo();
-		if (tagInfo == null) {
-			tagInfo = new DebugTagInfo();
-			debugInfo.setTagInfo(tagInfo);
-		}
-		
-		tagInfo.setCmdBegin(cmdBegin);
-		tagInfo.setCmdEnd(cmdEnd);
-	}
-	
-	/**
-	 * Set debugged code information.
-	 * @param debuggedCodeInfo
-	 */
-	public void setDebugInfo(DebugInfo debuggedCodeInfo) {
-		
-		this.debugInfo = debuggedCodeInfo;
+		this.cmdBegin = cmdBegin;
+		this.cmdEnd = cmdEnd;
 	}
 	
 	/**
@@ -143,17 +123,8 @@ public class XdebugAreaServerStackLevel {
 	 * @return
 	 */
 	public int getCmdBegin() {
-		
-		if (debugInfo == null) {
-			return -1;
-		}
-		
-		DebugTagInfo tagInfo = debugInfo.getTagInfo();
-		if (tagInfo == null) {
-			return -1;
-		}
-		
-		return tagInfo.getCmdBegin();
+			
+		return cmdBegin;
 	}
 
 	/**
@@ -162,25 +133,7 @@ public class XdebugAreaServerStackLevel {
 	 */
 	public int getCmdEnd() {
 		
-		if (debugInfo == null) {
-			return -1;
-		}
-		
-		DebugTagInfo tagInfo = debugInfo.getTagInfo();
-		if (tagInfo == null) {
-			return -1;
-		}
-		
-		return tagInfo.getCmdEnd();
-	}
-	
-	/**
-	 * Get debug information.
-	 * @param textState
-	 */
-	public DebugInfo getDebuggedCodeInfo() {
-		
-		return debugInfo;
+		return cmdEnd;
 	}
 	
 	/**
