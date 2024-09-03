@@ -38,11 +38,23 @@ public class DebugTagInfo {
 	 * Inner text.
 	 */
 	private String innerText = null;
-
+	
 	/**
-	 * Current replacement text.
+	 * Make clone of current tag information.
+	 * @return
 	 */
-	private String replacement = null;
+	public DebugTagInfo cloneTagInfo() {
+
+		DebugTagInfo clonedTagInfo = new DebugTagInfo();
+		
+		clonedTagInfo.tagName = tagName;
+		clonedTagInfo.properties = properties;
+		clonedTagInfo.cmdBegin = cmdBegin;
+		clonedTagInfo.cmdEnd = cmdEnd;
+		clonedTagInfo.innerText = innerText;
+		
+		return clonedTagInfo;
+	}
 
 	/**
 	 * Get tag name.
@@ -122,21 +134,5 @@ public class DebugTagInfo {
 	 */
 	public void setInnerText(String innerText) {
 		this.innerText = innerText;
-	}
-	
-	/**
-	 * Get tag replacement text.
-	 * @return
-	 */
-	public String getReplacement() {
-		return replacement;
-	}
-	
-	/**
-	 * Set tag replacement text.
-	 * @param replacement
-	 */
-	public void setReplacement(String replacement) {
-		this.replacement = replacement;
 	}
 }

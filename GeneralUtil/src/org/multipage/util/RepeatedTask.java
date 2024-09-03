@@ -46,6 +46,11 @@ public class RepeatedTask {
 	protected boolean running = false;
 	
 	/**
+	 * The flag is true if the task timeout is reached.
+	 */
+	private boolean isTimeout = false;
+	
+	/**
 	 * Stop flag that terminates the main loop.
 	 */
 	private boolean stop = false;
@@ -55,11 +60,13 @@ public class RepeatedTask {
 	 * @param taskName
 	 * @param startDelayMs
 	 * @param idleTimeMs
-	 * @param taskLambda (exit, exception) -> running
+	 * @param timeoutMs
+	 * @param taskLambda (exit, exception) -> returns flag "continue running"
 	 * @throws InterruptedException 
 	 */
-	public static void loopBlocking(String taskName, long startDelayMs, long idleTimeMs, BiFunction<Boolean, Obj<Exception>, Boolean> taskLambda)
-			throws Exception {
+	public static void loopBlocking(String taskName, long startDelayMs, long idleTimeMs, long timeoutMs,
+			BiFunction<Boolean, Obj<Exception>, Boolean> taskLambda)
+					throws Exception {
 		
 		// Check if the name already exists.
 		if (allTasks.containsKey(taskName)) {
@@ -81,8 +88,7 @@ public class RepeatedTask {
 		
 		// Run main loop of this task.
 		Obj<Exception> exception = new Obj<Exception>(null);
-			
-		// Task loop.
+		
 		try {
 			
 			// Delay start.
@@ -90,12 +96,34 @@ public class RepeatedTask {
 				Thread.sleep(startDelayMs);
 			}
 			
+			// Get task end time.
+			long endTimeMs = -1L;
+			boolean isTimeoutChecked = (timeoutMs >= 0L);
+			
+			if (isTimeoutChecked) {
+				long startTimeMs = System.currentTimeMillis();
+				endTimeMs = startTimeMs + timeoutMs;
+			}
+			
+			// Task loop.
 			task.running = true;
 			while (task.running && !task.stop) {
 				
 				// Invoke lambda function.
 				exception.ref = null;
 	        	task.running = taskLambda.apply(task.running, exception);
+	        	
+	        	// Check timeout and possibly end the task loop.
+	        	if (isTimeoutChecked) {
+	        		
+	        		long currentTimeMs = System.currentTimeMillis();
+	        		if (currentTimeMs >= endTimeMs) {
+	        			
+	        			task.isTimeout = true;
+	        			task.stop = true;
+		        		break;
+	        		}
+	        	}
 	        	
 	        	// Idle timeout.
 	        	Thread.sleep(idleTime);
@@ -127,11 +155,13 @@ public class RepeatedTask {
 	 * @param taskName
 	 * @param startDelayMs
 	 * @param idleTimeMs
+	 * @param timeoutMs
 	 * @param taskLambda
 	 * @throws Exception 
 	 */
-	public static void loopNonBlocking(String taskName, long startDelayMs, long idleTimeMs, BiFunction<Boolean, Obj<Exception>, Boolean> taskLambda)
-			throws Exception {
+	public static void loopNonBlocking(String taskName, long startDelayMs, long idleTimeMs, long timeoutMs,
+			BiFunction<Boolean, Obj<Exception>, Boolean> taskLambda)
+					throws Exception {
 		
 		// Check if the name already exists.
 		if (allTasks.containsKey(taskName)) {
@@ -142,7 +172,7 @@ public class RepeatedTask {
 		RepeatedTask task = new RepeatedTask();
 		task.name = taskName;
 		
-		// Trim idle timeout.
+		// Trim idle time.
 		if (idleTimeMs < 0) {
 			idleTimeMs = DEFAULT_IDLE_TIMEOUT_MS;
 		}
@@ -151,7 +181,7 @@ public class RepeatedTask {
 		// Put the new task into the list of all tasks.
 		allTasks.put(taskName, task);
 		
-		// Run main loop of this task.
+		// Run main loop thread of this task.
 		Obj<Exception> exception = new Obj<Exception>(null);
 		task.thread = new Thread(() -> {
 			
@@ -163,6 +193,16 @@ public class RepeatedTask {
 					Thread.sleep(startDelayMs);
 				}
 				
+				// Get task end time.
+				long endTimeMs = -1L;
+				boolean isTimeoutChecked = (timeoutMs >= 0L);
+				
+				if (isTimeoutChecked) {
+					long startTimeMs = System.currentTimeMillis();
+					endTimeMs = startTimeMs + timeoutMs;
+				}
+				
+				// Task loop.
 				task.running = true;
 				while (task.running && !task.stop) {
 					
@@ -170,6 +210,18 @@ public class RepeatedTask {
 					exception.ref = null;
 		        	task.running = taskLambda.apply(task.running, exception);
 
+		        	// Check timeout and possibly end the task loop.
+		        	if (isTimeoutChecked) {
+		        		
+		        		long currentTimeMs = System.currentTimeMillis();
+		        		if (currentTimeMs >= endTimeMs) {
+		        			
+		        			task.isTimeout = true;
+		        			task.stop = true;
+			        		break;
+		        		}
+		        	}
+		        	
 		        	// Idle timeout.
 		        	Thread.sleep(idleTime);
 		        	
@@ -207,6 +259,15 @@ public class RepeatedTask {
 		
 		boolean isRunning = allTasks.containsKey(name);
 		return isRunning;
+	}
+	
+	/**
+	 * Returns true if the task timeout is reached.
+	 * @return
+	 */
+	public boolean isTimeout() {
+		
+		return isTimeout;
 	}
 	
 	/**

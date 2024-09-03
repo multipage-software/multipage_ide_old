@@ -31,7 +31,23 @@ public class DebugThreadInfo {
 	 * Thread name.
 	 */
 	private String threadName = null;
-
+	
+	/**
+	 * Make clone of current thread information.
+	 * @return
+	 */
+	public DebugThreadInfo cloneThreadInfo() {
+		
+		DebugThreadInfo clonedThreadInfo = new DebugThreadInfo();
+		
+		clonedThreadInfo.processId = processId;
+		clonedThreadInfo.processName = processName;	
+		clonedThreadInfo.threadId = threadId;
+		clonedThreadInfo.threadName = threadName;
+		
+		return clonedThreadInfo;
+	}
+	
 	/**
 	 * Get process ID.
 	 * @return

@@ -43,7 +43,6 @@ public class j {
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
 	 */
-	@SuppressWarnings("resource")
 	synchronized public static void log(Object parameter, Object ... strings) {
 		
 		synchronized (synclog) {

@@ -105,7 +105,6 @@ public class j {
 	 * @param parameter - can be omitted or "out" or "err" or of type LogParameter (with type and indentation)
 	 * @param strings
 	 */
-	@SuppressWarnings("resource")
 	public synchronized static void log(int consoleIndex, Color color, Object parameter, Object ... strings) {
 
 		String type = "";

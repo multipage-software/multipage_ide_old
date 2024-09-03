@@ -54,7 +54,6 @@ import javax.swing.JTree;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpringLayout;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.DefaultTableModel;
@@ -103,14 +102,9 @@ public class DebugViewer extends JFrame {
 	// $hide>>$
 	
 	/**
-	 * GUI watchdog timeout in ms.
-	 */
-	private static final int WATCHDOG_TIMEOUT_MS = 1000;
-	
-	/**
 	 * Transaction timeout in milliseconds.
 	 */
-	private static final int TRANSACTION_TIMEOUT_MS = 3000;
+	private static final int RESPONSE_TIMEOUT_MS = 3000;
 	
 	/**
 	 * Interlinear annotation characters.
@@ -174,19 +168,9 @@ public class DebugViewer extends JFrame {
 	private Object status = null;
 	
 	/**
-	 * GUI watchdog timer.
-	 */
-	private Timer watchdogTimer = null;
-	
-	/**
 	 * Attached debug listener.
 	 */
 	private XdebugListener debugListener = null;
-	
-	/**
-	 * Current raw source code received from the Xdebug client.
-	 */
-	private String rawSourceCode = null;
 	
 	// $hide<<$
 	
@@ -554,15 +538,6 @@ public class DebugViewer extends JFrame {
 				onStepOver();
 			}
 		});
-		buttonStepOver.setPreferredSize(new Dimension(20, 20));
-		toolBar.add(buttonStepOver);
-		
-		buttonStepOut = new JButton("org.multipage.generator.textDebuggerStepOut");
-		buttonStepOut.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				onStepOut();
-			}
-		});
 		
 		buttonStepInto = new JButton("org.multipage.generator.textDebuggerStepInto");
 		buttonStepInto.addActionListener(new ActionListener() {
@@ -572,6 +547,15 @@ public class DebugViewer extends JFrame {
 		});
 		buttonStepInto.setPreferredSize(new Dimension(20, 20));
 		toolBar.add(buttonStepInto);
+		buttonStepOver.setPreferredSize(new Dimension(20, 20));
+		toolBar.add(buttonStepOver);
+		
+		buttonStepOut = new JButton("org.multipage.generator.textDebuggerStepOut");
+		buttonStepOut.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				onStepOut();
+			}
+		});
 		buttonStepOut.setPreferredSize(new Dimension(20, 20));
 		toolBar.add(buttonStepOut);
 		
@@ -625,9 +609,6 @@ public class DebugViewer extends JFrame {
 		setListeners();
 		
 		loadDialog();
-		
-		// Start watch dog.
-		startWatchDog();
 	}
 	
 	/**
@@ -707,36 +688,6 @@ public class DebugViewer extends JFrame {
 	}
 	
 	/**
-	 * Starts watch dog that polls miscelaneous debug states.
-	 */
-	private void startWatchDog() {
-		
-		// TODO: <---UNCOMMENT IT
-		/*watchdogTimer = new Timer(WATCHDOG_TIMEOUT_MS, new ActionListener() {
-		    public void actionPerformed(ActionEvent e) {
-		        onWatchdogTick();
-		    }
-		});
-		watchdogTimer.setRepeats(true);
-		watchdogTimer.setCoalesce(true);
-		watchdogTimer.setInitialDelay(WATCHDOG_TIMEOUT_MS);
-		watchdogTimer.setDelay(WATCHDOG_TIMEOUT_MS);
-		watchdogTimer.start();*/
-	}
-	
-	/**
-	 * Dospose watchdog.
-	 */
-	private void disposeWatchdog() {
-		
-		// Stop GUI watchdog.
-		if (watchdogTimer != null) {
-			watchdogTimer.stop();
-		}
-	}
-
-
-	/**
 	 * Attach debug listener.
 	 * @param listener
 	 */
@@ -776,7 +727,7 @@ public class DebugViewer extends JFrame {
 									onException("org.multipage.generator.messageDebugServerReadyError");
 								}
 							});
-							newSession.beginTransactionWait(transationId, TRANSACTION_TIMEOUT_MS);
+							newSession.beginTransactionWait(transationId, RESPONSE_TIMEOUT_MS);
 						}
 						catch (Exception e) {
 							onException(e);
@@ -808,33 +759,7 @@ public class DebugViewer extends JFrame {
 		
 		debugListener = listener;
 	}
-
-	/**
-	 * On repeated watchdog ticks.
-	 */
-	protected void onWatchdogTick() {
-		
-		// Update GUI elements.
-		try {
-			updateSessionView();			
-		}
-		catch (Exception e) {
-			onException(e);
-		}
-	}
-
-	/**
-	 * Update session view with list of current debug sessions.
-	 * @throws Exception 
-	 */
-	private void updateSessionView() throws Exception {
-		
-		// Check attached debugger.
-		if (debugListener == null) {
-			return;
-		}
-	}
-
+	
 	/**
 	 * Get selected Xdebug session.
 	 * @return
@@ -970,7 +895,6 @@ public class DebugViewer extends JFrame {
 		
 		saveDialog();
 		closeSessions();
-		disposeWatchdog();
 		dispose();
 	}
 	
@@ -979,9 +903,11 @@ public class DebugViewer extends JFrame {
 	 */
 	private void closeSessions() {
 		
-		// TODO: <---MAKE
-		//stopSession(session, () -> session.close());
-
+		List<XdebugListenerSession> sessions = debugListener.getSessions();
+		
+		sessions.forEach(session -> {
+			stopSession(session, () -> session.close());
+		});
 	}
 	
 	/**
@@ -1144,8 +1070,6 @@ public class DebugViewer extends JFrame {
 			// Load the Xdebug session source code from client.
 			xdebugSession.ref.source(sourceCode -> {
 				
-				// Remember current raw source code from Xdebug client.
-				rawSourceCode = sourceCode;
 				// Display source code in text panel.
 				displaySourceCode(debuggedAreaName, sourceCode);
 			});
@@ -2113,7 +2037,7 @@ public class DebugViewer extends JFrame {
 					onException(e);
 				}
 			});
-			xdebugSession.beginTransaction(transactionId);
+			xdebugSession.beginTransactionWait(transactionId, RESPONSE_TIMEOUT_MS);
 		}
 		catch (Exception e) {
 			onException(e);

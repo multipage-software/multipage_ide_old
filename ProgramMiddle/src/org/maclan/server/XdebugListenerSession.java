@@ -44,7 +44,7 @@ public class XdebugListenerSession {
 	/**
 	 * Session constants
 	 */
-	private static final int RESPONSE_TIMEOUT_MS = 200;
+	private static final int RESPONSE_TIMEOUT_MS = 3000;
 	
 	/**
 	 * Xdebug protocol constants.
@@ -1324,7 +1324,7 @@ public class XdebugListenerSession {
 				}
 			});
 			
-			beginTransactionWait(transactionId, 5000/*RESPONSE_TIMEOUT_MS*/);
+			beginTransactionWait(transactionId, RESPONSE_TIMEOUT_MS);
 		}
 		catch (Exception e) {
 			onThrownException(e);

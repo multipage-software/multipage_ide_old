@@ -6,7 +6,6 @@
  */
 package org.maclan.server;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +56,6 @@ import org.maclan.expression.ProcedureParameter;
 import org.multipage.gui.Utility;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
-import org.multipage.util.j;
 
 /**
  * Area Server helper class.
@@ -394,82 +392,40 @@ public class AreaServer {
 	/**
 	 * Flag indicating that the Area Server is debugged.
 	 */
-	private boolean isDebugged = false;
+	private boolean enabledDebugger = false;
 	
 	/**
 	 * Set flag indicating that the Area Server is debugged.
-	 * @param isDebugged
+	 * @param isDebuggerEnabled
 	 */
-	public void setDebugged(boolean isDebugged) {
-		this.isDebugged = isDebugged;
+	public void setDebugged(boolean isDebuggerEnabled) {
+		
+		this.enabledDebugger = isDebuggerEnabled;
 	}
 	
 	/**
 	 * Get flag indicating that the Area Server is debugged.
 	 * @return
 	 */
-	public boolean isDebugged() {
-		return isDebugged;
+	public boolean isDebuggerEnabled() {
+		
+		return enabledDebugger;
 	}
 	
 	/**
-	 * Clone server.
-	 * @param area
-	 * @param textValue
-	 * @return
+	 * Set the "debugger can visit" flag.
+	 * @param canVisit
 	 */
-	protected AreaServerState cloneServerState(Area area, String textValue) {
+	public void setDebuggerCanVisit(boolean canVisit) {
 		
-		AreaServerState clonedState = new AreaServerState();
-		clonedState.parentState = state.parentState;
-		clonedState.responseTimeoutMilliseconds = state.responseTimeoutMilliseconds;
-		clonedState.responseStartTime = state.responseStartTime;
-		clonedState.rendering = state.rendering;
-		clonedState.renderingFlags = state.renderingFlags;
-		clonedState.renderingResources = state.renderingResources;
-		clonedState.commonResourceFileNames = state.commonResourceFileNames;
-		clonedState.middle = state.middle;
-		clonedState.blocks = state.blocks;
-		clonedState.request = state.request;
-		clonedState.response = state.response;
-		clonedState.languages = state.languages;
-		clonedState.analysis = state.analysis;
-		clonedState.text = new StringBuilder(textValue);
-		clonedState.encoding = state.encoding;
-		clonedState.level = state.level;
-		clonedState.area = area;
-		clonedState.requestedArea = state.requestedArea;
-		clonedState.startArea = state.startArea;
-		clonedState.position = 0;
-		clonedState.tagStartPosition = 0;
-		clonedState.currentLanguage = state.currentLanguage;
-		clonedState.currentVersionId = state.currentVersionId;
-		clonedState.processProperties = state.processProperties;
-		clonedState.breakPointName = state.breakPointName;
-		clonedState.showLocalizedTextIds = state.showLocalizedTextIds;
-		clonedState.listener = state.listener;
-		clonedState.bookmarkReplacement = state.bookmarkReplacement;
-		clonedState.foundIncludeIdentifiers = state.foundIncludeIdentifiers;
-		clonedState.relatedAreaVersions = state.relatedAreaVersions;
-		clonedState.enablePhp = state.enablePhp;
-		clonedState.scriptingEngine = state.scriptingEngine;
-		clonedState.tabulator = state.tabulator;
-		clonedState.cssRulesCache = state.cssRulesCache;
-		clonedState.cssLookupTable = state.cssLookupTable;
-		clonedState.unzippedResourceIds = state.unzippedResourceIds;
-		clonedState.webInterfaceDirectory = state.webInterfaceDirectory;
-		clonedState.redirection = state.redirection;
-		clonedState.resourcesRenderFolder = state.resourcesRenderFolder;
-		clonedState.updatedSlots = state.updatedSlots;
-		clonedState.defaultVersionId = state.defaultVersionId;
-		clonedState.trayMenu = state.trayMenu;
-		clonedState.newLine = state.newLine;
-		clonedState.enableMetaTags = state.enableMetaTags;
-		clonedState.debugInfo = state.debugInfo;
+		DebugInfo debugInfo = state.getDebugInfo();
+		if (debugInfo == null) {
+			return;
+		}
 		
-		return clonedState;
+		debugInfo.setCanVisit(canVisit);
 	}
-
+	
 	/**
 	 * Tag processors.
 	 */
@@ -3638,7 +3594,7 @@ public class AreaServer {
 	 */
 	private static void remarksProcessor() {
 
-		fullTagProcessors.put("REM", new FullTagProcessor(){
+		fullTagProcessors.put("REM", new FullTagProcessor() {
 			@Override
 			public String processText(AreaServer server, String innerText, TagProperties properties)
 					throws Exception {
@@ -3877,23 +3833,10 @@ public class AreaServer {
 					return "";
 				}
 				
-				// Check debug flag and if it is true, run the debugger.
-				Obj<String> ideHost = new Obj<String>();
-				Obj<Integer> xdebugPort = new Obj<Integer>();
-				boolean debugging = server.state.listener.getXdebugHostPort(ideHost, xdebugPort);
-				if (debugging) {
-					
-					XdebugClient debugClient = server.state.getDebugClient();
-					
-					// Connect to debugger via Xdebug protocol.
-					if (debugClient == null) {
-						debugClient = DebugInfo.connectXdebug(server, ideHost.ref, xdebugPort.ref);
-					}
-					
-					// Add debug information about Xdebug protocol client.
-					DebugInfo.setDebugInfo(server, debugClient);
-				}
-				else {
+				// If debugger is connected set throw exception.
+				boolean debuggerSuccess = server.isDebuggerConnected();
+				if (!debuggerSuccess) {
+
 					if (breakName != null) {
 						AreaServer.throwError("server.messageProgramBreakName", breakName);
 					}
@@ -3906,6 +3849,29 @@ public class AreaServer {
 		});
 	}
 	
+	/**
+	 * Check if debugger is connected.
+	 * @return
+	 */
+	protected boolean isDebuggerConnected() {
+		
+		// Get debug flag.
+		boolean isDebugged = isDebuggerEnabled();
+		if (isDebugged) {
+			
+			// Check current Xdebug client.
+			DebugInfo debugInfo = state.debugInfo;
+			if (debugInfo != null) {
+				
+				XdebugClient debugClient = debugInfo.getDebugClient();
+				boolean debuggerSuccess = (debugClient != null);
+				
+				return debuggerSuccess;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Get server info.
 	 * @param decorated 
@@ -4401,22 +4367,22 @@ public class AreaServer {
 	 * @param textValue
 	 * @return
 	 */
-	public String processTextCloned(Area area1, String textValue)
+	public String processTextCloned(Area area, String textValue)
 		throws Exception {
 		
-		return processTextCloned(area1, textValue, true);
+		return processTextCloned(area, textValue, true);
 	}
 	
 	/**
 	 * Process text. Get error (do not throw exception).
-	 * @param area1
+	 * @param area
 	 * @param textValue
 	 * @return
 	 */
-	public String processTextClonedWithErrors(Area area1, String textValue)
+	public String processTextClonedWithErrors(Area area, String textValue)
 		throws Exception {
 		
-		return processTextCloned(area1, textValue, false);
+		return processTextCloned(area, textValue, false);
 	}
 
 	/**
@@ -4431,7 +4397,7 @@ public class AreaServer {
 		
 		// Save original server state and clone server state.
 		AreaServerState originalState = this.state;
-		AreaServerState subState = cloneServerState(area, textValue);
+		AreaServerState subState = state.cloneState(area, textValue); //cloneServerState(area, textValue);
 		subState.parentState = originalState;
 		
 		// Get current block reference.
@@ -4447,7 +4413,7 @@ public class AreaServer {
 			// Get back old state.
 			this.state.parentState = null;
 			this.state = originalState;
-			this.state.progateFromSubstate(subState);
+			this.state.progateFromSubState(subState);
 		}
 		catch (Exception e) {
 			
@@ -4465,7 +4431,7 @@ public class AreaServer {
 			// Get back old state.
 			this.state = originalState;
 			// Propagate sub state.
-			this.state.progateFromSubstate(subState);
+			this.state.progateFromSubState(subState);
 			// Return to current block.
 			this.state.blocks.popToBlockDescriptor(currentBlock);
 			
@@ -4473,7 +4439,8 @@ public class AreaServer {
 		}
 		
 		// Return sub state text.
-		return subState.text.toString();
+		String subStateText = subState.text.toString();
+		return subStateText;
 	}
 
 	/**
@@ -4843,7 +4810,7 @@ public class AreaServer {
 							state.level = 1L;
 							
 							// Add debug information about code source.
-							if (isDebugged()) {
+							if (isDebuggerEnabled()) {
 								TagsSource source = TagsSource.newResource(startResourceId);
 								DebugInfo.setDebugInfo(this, source);
 							}
@@ -4913,6 +4880,7 @@ public class AreaServer {
 							textString = response2.postProcessText(textString);
 
 							// Debugger entry point.
+							DebugInfo.setFinalDebugInfo(this);
 							DebugInfo.debugPoint(this);
 							// After the break point close the debugger.
 							closeDebugger();
@@ -6186,13 +6154,13 @@ public class AreaServer {
 		ServerUtilities.findTagEnd(state.text, positionOut);
 		state.position = positionOut.ref;
 		
-		// Call processor.
-		String replace = processor.processTag(this);
-		
 		// Add debug information about current tag.
-		DebugInfo.setDebugInfo(this, tagName, null, state.tagStartPosition, state.position, null, replace);
+		DebugInfo.setDebugInfo(this, tagName, null, state.tagStartPosition, state.position, null);
 		// Debug point for simple tags.
 		DebugInfo.debugPoint(this);
+		
+		// Call processor.
+		String replace = processor.processTag(this);
 		
 		// Use replace text.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -6229,13 +6197,38 @@ public class AreaServer {
 
 		state.position = startTagPosition.ref;
 		
-		// Call tag processor.
-		String replace = processor.processTag(this, properties);
+		// Get debug flag.
+		boolean isDebugged = isDebuggerEnabled();
+		if (isDebugged) {
+			// On BREAK tag try to connect to debugger with Xdebug protocol.
+			if ("BREAK".equals(tagName)) {
+			
+				// Connect debugger.
+				Obj<String> ideHost = new Obj<String>();
+				Obj<Integer> xdebugPort = new Obj<Integer>();
+				boolean debugProperties = state.listener.getXdebugHostPort(ideHost, xdebugPort);
+				if (debugProperties) {
+					
+					XdebugClient debugClient = state.getDebugClient();
+					
+					// Connect to debugger with Xdebug protocol.
+					if (debugClient == null) {
+						debugClient = DebugInfo.connectXdebug(this, ideHost.ref, xdebugPort.ref);
+					}
+					
+					// Add debug information about Xdebug protocol client.
+					DebugInfo.setBreakDebugInfo(this, debugClient);
+				}					
+			}			
+		}
 		
 		// Add debug information about current tag.
-		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, null, replace);
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, null);
 		// Debug point for complex single tags.
 		DebugInfo.debugPoint(this);
+		
+		// Call tag processor.
+		String replace = processor.processTag(this, properties);
 		
 		state.text.replace(state.tagStartPosition, state.position, replace);
 		state.position = state.tagStartPosition;
@@ -6345,15 +6338,18 @@ public class AreaServer {
 		// Call parser.
 		FullTagParser parser = new FullTagParser(this, tagName, state.text, state.tagStartPosition);
 		parser.parseFullCommand(innerText);
-
-		// Call processor.
-		String replace = processor.processText(this, innerText.toString(), properties);
-		state.position = parser.getPosition();
+		
+		int parserPosition = parser.getPosition();
+		String innerTextString = innerText.toString();
 		
 		// Add debug information about current tag and replacement.
-		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, innerText.toString(), replace);
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, parserPosition, innerTextString);
 		// Debug point for full tags.
 		DebugInfo.debugPoint(this);
+
+		// Call processor.
+		String replace = processor.processText(this, innerTextString, properties);
+		state.position = parserPosition;
 		
 		// Replace statement with its result.
 		state.text.replace(state.tagStartPosition, state.position, replace);
@@ -6709,15 +6705,13 @@ public class AreaServer {
 		// Get inner text.
 		String procedureInnerText = procedure.getInnerText();
 		
-		String replaceText = "";
-		
 		// Add debug information about current procedure call and about resulting replacement.
-		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, procedureInnerText, replaceText);
+		DebugInfo.setDebugInfo(this, tagName, properties, state.tagStartPosition, state.position, procedureInnerText);
 		// Debug point for procedure call tags.
 		DebugInfo.debugPoint(this);
 		
 		// Process the inner text.
-		replaceText = processTextCloned(processedSlotText + procedureInnerText);
+		String replaceText = processTextCloned(processedSlotText + procedureInnerText);
 		
 		// Get transparency of the blocks
 		boolean transparent = procedure.isTransparent() || properties.containsKey("$transparent");
@@ -7974,8 +7968,7 @@ public class AreaServer {
 	 * @param returnedValue
 	 * @return
 	 */
-	public boolean callProcedure(String name, final Object[] parameters,
-			Obj<Object> returnedValue)
+	public boolean callProcedure(String name, final Object[] parameters, Obj<Object> returnedValue)
 					throws Exception {
 		
 		returnedValue.ref = null;

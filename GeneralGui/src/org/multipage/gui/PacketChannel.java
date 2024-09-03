@@ -75,8 +75,13 @@ public class PacketChannel {
         int objectId = hashCode();
         String objectIdText = String.valueOf(objectId);
         
+        // Set timeouts.
+        long startDelayMs = 0L;
+        long idleTimeMs = 100L;
+        long timeoutMs = -1L;
+        
         // Create thread that accepts incoming connections.
-        RepeatedTask.loopNonBlocking("AcceptXdebugConnections" + objectIdText, 0, 100, (running, exception) -> {
+        RepeatedTask.loopNonBlocking("AcceptXdebugConnections" + objectIdText, startDelayMs, idleTimeMs, timeoutMs, (running, exception) -> {
         	
         	// Set event that accepts incoming connections from input socket.
         	if (acceptNewConnection.ref) {

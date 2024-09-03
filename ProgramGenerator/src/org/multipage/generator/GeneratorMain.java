@@ -304,8 +304,10 @@ public class GeneratorMain {
 			return;
 		}
 		
-		try {			
-			RepeatedTask.loopNonBlocking("GUI-WathdogThread", GUI_WATCHDOG_MS, GUI_WATCHDOG_DELAY_MS, (exit, exception) -> {
+		try {
+			final long timeoutMs = -1L;
+			
+			RepeatedTask.loopNonBlocking("GUI-WathdogThread", GUI_WATCHDOG_MS, GUI_WATCHDOG_DELAY_MS, timeoutMs, (exit, exception) -> {
 				
 	            // Check if main window is active.
 				JFrame mainFrame = GeneratorMainFrame.getFrame();

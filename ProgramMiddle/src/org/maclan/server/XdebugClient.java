@@ -27,6 +27,7 @@ import org.multipage.gui.PacketSession;
 import org.multipage.gui.PacketSymbol;
 import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
+import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 
 /**
@@ -518,7 +519,7 @@ public class XdebugClient {
 	/**
 	 * Xdebug client entry point that accepts incomming commands and sends responses to them.
 	 * @param server
-	 * @param command
+	 * @param isContinuationCommand 
 	 * @return
 	 * @throws Exception 
 	 */
@@ -583,6 +584,20 @@ public class XdebugClient {
 			XdebugClientResponse resultPacket = setPropertyResponse(command, server);
             return resultPacket;
 		}
+		// On get stack information.
+		else if ("stack_get".equals(commandName)) {
+			
+			// Get stack response.
+			XdebugClientResponse resultPacket = getStackGetResponse(command, server);
+			return resultPacket;
+		}
+		// On get context information.
+		else if ("context_get".equals(commandName)) {
+			
+			// Get context properties response.
+			XdebugClientResponse resultPacket = getContextGetResponse(command, server);
+            return resultPacket;
+		}		
 		// On evaluating an expression.
 		else if ("expr".equals(commandName)) {
 
@@ -597,7 +612,11 @@ public class XdebugClient {
 			
 			// Get run response.
 			XdebugClientResponse resultPacket = continuationCommandResponse(command, server);
-            return resultPacket;
+			
+			debugInfo.setDebugged(true);
+			debugInfo.setCanVisit(false);
+			
+            return resultPacket;				
 		}
 		// On step into command.
 		else if ("step_into".equals(commandName)) {
@@ -607,6 +626,10 @@ public class XdebugClient {
 			
 			// Get step into response.
 			XdebugClientResponse resultPacket = continuationCommandResponse(command, server);
+			
+			debugInfo.setDebugged(true);
+			debugInfo.setCanVisit(true);
+			
             return resultPacket;
 		}
 		// On step over command.
@@ -617,6 +640,10 @@ public class XdebugClient {
 			
 			// Get step over response.
 			XdebugClientResponse resultPacket = continuationCommandResponse(command, server);
+			
+			debugInfo.setDebugged(true);
+			debugInfo.setCanVisit(true);
+			
             return resultPacket;
 		}
 		// On step out command.
@@ -624,15 +651,13 @@ public class XdebugClient {
 			
 			// Set the step out operation.
 			debugInfo.setDebugOperation(XdebugOperation.step_out);
-			AreaServerState parentState = server.state.parentState;
-			if (parentState != null) {
-				
-				// Reset debug client.
-				debugInfo.setDebugClient(null);
-			}
-					
+			
 			// Get step out response.
 			XdebugClientResponse resultPacket = continuationCommandResponse(command, server);
+			
+			debugInfo.setDebugged(true);
+			debugInfo.setCanVisit(false);
+			
             return resultPacket;
 		}
 		// On stop running Area Server.
@@ -643,20 +668,10 @@ public class XdebugClient {
 			
 			// Get stop response.
 			XdebugClientResponse resultPacket = continuationCommandResponse(command, server);
-            return resultPacket;
-		}
-		// On get stack information.
-		else if ("stack_get".equals(commandName)) {
 			
-			// Get stack response.
-			XdebugClientResponse resultPacket = getStackGetResponse(command, server);
-			return resultPacket;
-		}
-		// On get context information.
-		else if ("context_get".equals(commandName)) {
+			debugInfo.setDebugged(true);
+			debugInfo.setCanVisit(false);
 			
-			// Get context properties response.
-			XdebugClientResponse resultPacket = getContextGetResponse(command, server);
             return resultPacket;
 		}
         

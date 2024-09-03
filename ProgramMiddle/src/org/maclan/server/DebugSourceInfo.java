@@ -23,6 +23,20 @@ public class DebugSourceInfo {
 	private Long sourceSlotId = null;
 	
 	/**
+	 * Make clone of current source information.
+	 * @return
+	 */
+	public DebugSourceInfo cloneSourceInfo() {
+		
+		DebugSourceInfo clonedSourceInfo = new DebugSourceInfo();
+		
+		clonedSourceInfo.sourceResourceId = sourceResourceId;
+		clonedSourceInfo.sourceSlotId = sourceSlotId;
+		
+		return clonedSourceInfo;
+	}
+	
+	/**
 	 * Get resource ID.
 	 * @return
 	 */

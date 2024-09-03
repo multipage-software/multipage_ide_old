@@ -536,7 +536,7 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 		mainFrame = this;
 		
 		// TODO: <---DEBUG Initialize logging consoles.
-		LogConsoles.main(new String [] {});
+		//LogConsoles.main(new String [] {});
 		
 		// Set close action.
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
