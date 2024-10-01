@@ -10,7 +10,6 @@ import org.multipage.gui.Utility;
 import org.multipage.util.Lock;
 import org.multipage.util.Obj;
 import org.multipage.util.RepeatedTask;
-import org.multipage.util.j;
 
 /**
  * Debug information .
@@ -174,7 +173,8 @@ public class DebugInfo {
 			throws Exception {
 		
 		// Check if the server is debugged.
-		if (!server.isDebuggerEnabled()) {
+		boolean success = server.isDebuggerEnabled();
+		if (!success) {
 			return null;
 		}
 		
@@ -202,7 +202,8 @@ public class DebugInfo {
 	public static void setBreakDebugInfo(AreaServer server, XdebugClient debugClient) {
 		
 		// Check if the server is debugged.
-		if (!server.isDebuggerEnabled()) {
+		boolean success = server.isDebuggerEnabled();
+		if (!success) {
 			return;
 		}
 		
@@ -281,7 +282,8 @@ public class DebugInfo {
 			String innerText) {
 
 		// Check if the server is debugged.
-		if (!server.isDebuggerEnabled()) {
+		boolean success = server.isDebuggerEnabled();
+		if (!success) {
 			return;
 		}
 		
@@ -328,8 +330,8 @@ public class DebugInfo {
 			throws Exception {
 		
 		// Check if the server is debugged.
-		boolean debuggerEnabled = server.isDebuggerEnabled();
-		if (!debuggerEnabled) {
+		boolean success = server.isDebuggerEnabled();
+		if (!success) {
 			return;
 		}
 		
@@ -388,29 +390,30 @@ public class DebugInfo {
 		long idleTimeMs = 200L;
 		long timeoutMs = 3000L;
 		
-		// Wait for server ready.
+		// Wait for initialized server. Send "break point resolved" notification.
 		RepeatedTask.loopBlocking("WaitDebuggerReady" + threadIdText, startDelayMs, idleTimeMs, timeoutMs, (isRunning, exception) -> {
 			
+			// If server is not ready, continue loop.
 			boolean serverReady = debugClient.isServerReady();
-			if (serverReady) {
-				
-				// Send notification about resolving the breakpoint.
-				try {
-					debugClient.notifyBreakpointResolved();
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
-				return false;
+			if (!serverReady) {
+				return true;
 			}
-			return true;
+				
+			// Send notification about resolving the breakpoint.
+			try {
+				debugClient.notifyBreakpointResolved();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			return false;
 		});
 		
 		// Set timeouts.
 		startDelayMs = 0L;
-		idleTimeMs = 0L;
+		idleTimeMs = 1L;
 		timeoutMs = -1L;
-		
+
 		// Wait for the continuation command.
 		RepeatedTask.loopBlocking("DebuggerLock" + threadIdText, startDelayMs, idleTimeMs, timeoutMs, (isRunning, exception) -> {
 			
@@ -421,6 +424,7 @@ public class DebugInfo {
 			if (isTimeout) {
 				return true;
 			}
+			
 			return false;
 		});
 		
@@ -430,6 +434,59 @@ public class DebugInfo {
 			
 			AreaServer.throwError("org.maclan.server.messageDebuggerStopOperation");
 		}
+	}
+	
+	/**
+	 * Final debug operation.
+	 * @param server
+	 * @throws Exception 
+	 */
+	public static void finalDebugPoint(AreaServer server)
+			throws Exception {
+		
+		// Check if the server is debugged.
+		boolean success = server.isDebuggerEnabled();
+		if (!success) {
+			return;
+		}
+		
+		AreaServerState state = server.state;
+		DebugInfo debugInfo = state.debugInfo;
+		if (debugInfo == null) {
+			return;
+		}
+		
+		XdebugClient debugClient = debugInfo.debugClient;
+		if (debugClient == null) {
+			return;
+		}
+		
+		boolean isConnected = debugClient.isConnected();
+		if (!isConnected) {
+			return;
+		}
+		
+		// Get current thread ID.
+		long threadId = Thread.currentThread().getId();
+		String threadIdText = String.valueOf(threadId);
+		
+		// Set timeouts.
+		long startDelayMs = 0L;
+		long idleTimeMs = 200L;
+		long timeoutMs = 3000L;
+		
+		// Wait for server final operations.
+		debugClient.notifyFinalDebugInfo();
+		
+		RepeatedTask.loopBlocking("WaitDebuggerFinish" + threadIdText, startDelayMs, idleTimeMs, timeoutMs, (isRunning, exception) -> {
+			
+			boolean serverFinished = debugClient.isServerFinished();
+			if (serverFinished) {
+				
+				return false;
+			}
+			return true;
+		});
 	}
 
 	/**

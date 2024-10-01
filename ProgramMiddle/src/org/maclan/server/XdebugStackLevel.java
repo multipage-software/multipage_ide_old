@@ -6,6 +6,10 @@
  */
 package org.maclan.server;
 
+import java.util.LinkedList;
+
+import org.multipage.util.j;
+
 /**
  * Area Srever stack level information for Xdebug viewer.
  * @author vakol
@@ -41,6 +45,11 @@ public class XdebugStackLevel {
 	 * Command end position.
 	 */
 	private int cmdEnd = 0;
+	
+	/**
+	 * Session reference.
+	 */
+	private XdebugListenerSession session = null;
 	
 	/**
 	 * Constructor.
@@ -80,6 +89,26 @@ public class XdebugStackLevel {
 
 		this.cmdBegin = cmdBegin;
 		this.cmdEnd = cmdEnd;
+	}
+	
+	/**
+	 * Set session references.
+	 * @param stack
+	 * @param xdebugListenerSession
+	 */
+	public static void setSessionReferences(LinkedList<XdebugStackLevel> stack,
+			XdebugListenerSession xdebugListenerSession) {
+		
+		stack.forEach(level -> level.session = xdebugListenerSession);
+	}
+	
+	/**
+	 * Get session.
+	 * @return
+	 */
+	public XdebugListenerSession getSession() {
+		
+		return session;
 	}
 	
 	/**
@@ -132,7 +161,6 @@ public class XdebugStackLevel {
 	 * @return
 	 */
 	public int getCmdEnd() {
-		
 		return cmdEnd;
 	}
 	
@@ -141,7 +169,14 @@ public class XdebugStackLevel {
 	 */
 	@Override
 	public String toString() {
+
+		final int maxLength = 30;
 		
-		return String.format("[%d] %s", level, sourceCode);
+		int end = sourceCode.length() - 1;
+		if (end > maxLength) {
+			end = maxLength;
+		}
+		
+		return String.format("[%d] %s", level, sourceCode).substring(0, end);
 	}
 }

@@ -2140,7 +2140,7 @@ public class AreaServer {
 
 	/**
 	 * Get resource URL.
-	 * @param area
+	 * @param areaProperty
 	 * @param resourceName
 	 * @param fileName
 	 * @param useOriginalFileName
@@ -4879,10 +4879,10 @@ public class AreaServer {
 							// Do post processing
 							textString = response2.postProcessText(textString);
 
-							// Debugger entry point.
+							// Debugger final entry point.
 							DebugInfo.setFinalDebugInfo(this);
-							DebugInfo.debugPoint(this);
-							// After the break point close the debugger.
+							DebugInfo.finalDebugPoint(this);
+							// After the final break point, close the debugger.
 							closeDebugger();
 							
 							// Try to execute Area Server API operation.
@@ -5876,7 +5876,7 @@ public class AreaServer {
 	 * Process area server text.
 	 * @param text
 	 * @param position
-	 * @param area
+	 * @param areaProperty
 	 */
 	private void processAreaServerTextAndTags()
 		throws Exception {
@@ -6138,7 +6138,7 @@ public class AreaServer {
 	/**
 	 * Process area single tags.
 	 * @param tagName 
-	 * @param area
+	 * @param areaProperty
 	 * @return
 	 */
 	private boolean processSimpleSingleTags(String tagName)
@@ -7401,7 +7401,7 @@ public class AreaServer {
 	/**
 	 * Returns area resource.
 	 * @param resourceId
-	 * @param area
+	 * @param areaProperty
 	 * @return
 	 */
 	private AreaResource resource(long resourceId, long areaId)

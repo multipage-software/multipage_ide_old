@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -27,6 +28,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.maclan.Area;
 import org.multipage.util.Obj;
 import org.multipage.util.Resources;
 import org.w3c.dom.Document;
@@ -389,6 +391,25 @@ public class XdebugClientResponse {
 	}
 	
 	/**
+	 * Create final notification.
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createFinalNotification()
+			throws Exception {
+		
+		// Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("notify");
+        rootElement.setAttribute("name", "final_debug_info");
+        xml.appendChild(rootElement);
+        
+        // Create and return  new packet.
+		XdebugClientResponse featurePacket = new XdebugClientResponse(xml);
+		return featurePacket;
+	}
+	
+	/**
 	 * Creates response to Xdebug source command.
 	 * @param command
 	 * @param sourceCode
@@ -688,13 +709,13 @@ public class XdebugClientResponse {
 			
 			Object variableValue = variable.value;
 			if (variableValue != null) {
+				
 				variableValueText = variableValue.toString();
+				variableType = variableValue.getClass();
 			}
 			else {
 				variableValueText = "null";
 			}
-			
-			variableType = variableValue.getClass();
 			
 			if (blockDescriptor.ref != null) {
 				blockName = blockDescriptor.ref.name;
@@ -733,7 +754,7 @@ public class XdebugClientResponse {
         nameElement.setTextContent(variableName);
         propertyElement.appendChild(nameElement);
         
-        // Create the name node.
+        // Create the full name node.
         Element fullNameElement = xml.createElement("fullname");
         fullNameElement.setAttribute("encoding", "none");
         fullNameElement.setTextContent(variableFullName);
@@ -746,6 +767,175 @@ public class XdebugClientResponse {
         propertyElement.appendChild(valueElement);
         
         // Create and return new packet.
+		XdebugClientResponse blockVariablePacket = new XdebugClientResponse(xml);
+		return blockVariablePacket;
+	}
+	
+	/**
+	 * Create tag property response.
+	 * @param command
+	 * @param state
+	 * @param propertyName
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createTagPropertyResponse(XdebugCommand command, AreaServerState state, String propertyName) 
+					throws Exception {
+
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get command name.
+        String commandName = command.getName();
+
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        // Try to get property full name and value.
+        String tagName = null;
+        Object value = null;
+        DebugInfo debugInfo = state.getDebugInfo();
+        if (debugInfo != null) {
+        	
+        	DebugTagInfo tagInfo = debugInfo.getTagInfo();
+        	if (tagInfo != null) {
+        		
+        		tagName = tagInfo.getTagName();
+        		if (tagName != null) {
+
+            		Properties tagProperties = tagInfo.getProperties();
+            		if (tagProperties != null) {
+            			
+            			boolean propertyExists = tagProperties.containsKey(propertyName);
+            			if (propertyExists) {
+            				
+            				value = tagProperties.get(propertyName);
+            			}
+            		}        			
+        		}
+        	}
+        }
+        
+        if (tagName == null) {
+        	tagName = "unknown";
+        }
+        
+        String propertyFullName = tagName + ':' + propertyName;
+        String propertyValueText = null;
+        String typeName = null;
+        
+        if (value != null) {
+        	propertyValueText = value.toString();
+        	typeName = value.getClass().getSimpleName();
+        }
+        else {
+        	propertyValueText = "null";
+        	typeName = "*unknown*";
+        }
+        
+        // Create the property node.
+        Element propertyElement = xml.createElement("property");
+        propertyElement.setAttribute("type", typeName);
+        propertyElement.setAttribute("children", "false");
+        rootElement.appendChild(propertyElement);
+        
+        // Create the name node.
+        Element nameElement = xml.createElement("name");
+        nameElement.setAttribute("encoding", "none");
+        nameElement.setTextContent(propertyName);
+        propertyElement.appendChild(nameElement);
+        
+        // Create the full name node.
+        Element fullNameElement = xml.createElement("fullname");
+        fullNameElement.setAttribute("encoding", "none");
+        fullNameElement.setTextContent(propertyFullName);
+        propertyElement.appendChild(fullNameElement);
+
+         // Create the value node.
+        Element valueElement = xml.createElement("value");
+        valueElement.setAttribute("encoding", "none");
+        valueElement.setTextContent(propertyValueText);
+        propertyElement.appendChild(valueElement);        
+        
+        // Create and return new packet.
+		XdebugClientResponse blockVariablePacket = new XdebugClientResponse(xml);
+		return blockVariablePacket;
+	}
+	
+	/**
+	 * Create area property response.
+	 * @param command
+	 * @param state
+	 * @param propertyName
+	 * @return
+	 * @throws Exception 
+	 */
+	public static XdebugClientResponse createAreaPropertyResponse(XdebugCommand command, AreaServerState state, String propertyName)
+			throws Exception {
+		
+		// Get transaction ID from the input command.
+		int transactionId = command.getTransactionId();
+        if (transactionId < 1) {
+        	onThrownException("org.maclan.server.messageXdebugBadTransactionId", transactionId);
+        }
+        
+        // Get command name.
+        String commandName = command.getName();
+		
+        // Create new XML DOM document object.
+        Document xml = newXmlDocument();
+        Element rootElement = xml.createElement("response");
+        rootElement.setAttribute("command", commandName);
+        rootElement.setAttribute("transaction_id", String.valueOf(transactionId));
+        xml.appendChild(rootElement);
+        
+        // TODO: <---MAKE Set area properties.
+        Area area = null;
+        switch (propertyName) {
+        case "thisArea":
+        	area = state.area;
+        	break;
+        case "requestedArea":
+        	area = state.requestedArea;
+        	break;
+        case "startArea":
+        	area = state.startArea;
+        	break;
+        }
+        String areaDescription = (area != null ? area.getDescriptionForced(true) : "*unknown*");
+
+        // Create the property node.
+        Element propertyElement = xml.createElement("property");
+        propertyElement.setAttribute("type", "Area");
+        propertyElement.setAttribute("children", "false");
+        rootElement.appendChild(propertyElement);
+        
+        // Create the name node.
+        Element nameElement = xml.createElement("name");
+        nameElement.setAttribute("encoding", "none");
+        nameElement.setTextContent(propertyName);
+        propertyElement.appendChild(nameElement);
+        
+        // Create the full name node.
+        Element fullNameElement = xml.createElement("fullname");
+        fullNameElement.setAttribute("encoding", "none");
+        fullNameElement.setTextContent(propertyName);
+        propertyElement.appendChild(fullNameElement);
+
+         // Create the value node.
+        Element valueElement = xml.createElement("value");
+        valueElement.setAttribute("encoding", "none");
+        valueElement.setTextContent(areaDescription);
+        propertyElement.appendChild(valueElement);
+		
+		// Create and return new packet.
 		XdebugClientResponse blockVariablePacket = new XdebugClientResponse(xml);
 		return blockVariablePacket;
 	}
@@ -1180,6 +1370,18 @@ public class XdebugClientResponse {
 	}
 	
 	/**
+	 * Check if it is a "final_debug_info" response.
+	 * @return
+	 */
+	public boolean isFinalDebugInfo()
+			throws Exception {
+		
+		String notificationName = (String) xpathNotificationName.evaluate(xml, XPathConstants.STRING);
+		boolean success = "final_debug_info".equals(notificationName);
+		return success;
+	}
+	
+	/**
 	 * Get source result.
 	 * @return
 	 * @throws Exception
@@ -1285,7 +1487,7 @@ public class XdebugClientResponse {
 	 * @return
 	 * @throws XPathExpressionException 
 	 */
-	public LinkedList<XdebugStackLevel> getXdebugAreaStack(Obj<Long> processId, Obj<String> processName,
+	public LinkedList<XdebugStackLevel> getXdebugAreaServerStack(Obj<Long> processId, Obj<String> processName,
 			Obj<Long> threadId, Obj<String> threadName)
 					throws Exception {
 		
@@ -1430,6 +1632,34 @@ public class XdebugClientResponse {
 		}
 		
 		return watchList;
+	}
+	
+	/**
+	 * Get debug string.
+	 * @return
+	 */
+	public String getDebugString() {
+		
+		try {
+			String command = (String) xpathResponseCommandName.evaluate(xml, XPathConstants.STRING);
+			if (command != null && !command.isEmpty()) {
+				command = "command " + command;
+				return command;
+			}
+			
+		}
+		catch (Exception e) {
+		}
+		try {
+			String notification = (String) xpathNotificationName.evaluate(xml, XPathConstants.STRING);
+			if (notification != null && !notification.isEmpty()) {
+				notification = "notification " + notification;
+				return notification;
+			}
+		}
+		catch (Exception e) {
+		}	
+		return "unknown";
 	}
 
 	/**

@@ -404,7 +404,7 @@ public class ServerCache {
 	/**
 	 * Get area start resource
 	 * @param versionId 
-	 * @param area
+	 * @param areaProperty
 	 * @return
 	 */
 	public StartResource getStartResource(long areaId, long versionId) {

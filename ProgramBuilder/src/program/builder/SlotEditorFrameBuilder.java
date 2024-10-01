@@ -12,6 +12,7 @@ import org.multipage.gui.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.util.LinkedList;
 
 import javax.swing.*;
 
@@ -24,7 +25,7 @@ import org.maclan.*;
  * @author
  *
  */
-public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotEditorGenerator {
+public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotEditorGenerator, NonCyclingReceiver {
 
 	// $hide>>$
 	/**
@@ -79,6 +80,11 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 	 * This check box does nothing.
 	 */
 	private JCheckBox checkNoOperation = new JCheckBox();
+	
+	/**
+	 * List of previous messages.
+	 */
+	private LinkedList<Message> previousMessages = new LinkedList<Message>();
 
 	// $hide<<$
 	/**
@@ -123,6 +129,10 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 	protected SlotEditorHelper helper = createCustomizedHelper();
 	private JMenu menuSlot;
 	private JMenuItem menuSlotProperties;
+	private JCheckBox checkInterpretPhp;
+	private JButton buttonDisplay;
+	private JButton buttonRender;
+	private JToggleButton toggleDebug;
 	
 	/**
 	 * Expose dialog components. Use SlotEditor for Generator interface.
@@ -375,7 +385,7 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 		});
 		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		setTitle("textSlotEditor");
-		setBounds(100, 100, 699, 575);
+		setBounds(100, 100, 753, 575);
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
 		
@@ -472,8 +482,6 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 		springLayout.putConstraint(SpringLayout.EAST, panelAccess, 160, SpringLayout.EAST, panelTypes);
 		getContentPane().add(panelAccess);
 		panelAccess.setLayout(new BorderLayout(0, 0));
-		setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{textAlias, panelEditor, buttonOk, buttonCancel, getContentPane(), labelSlotHolder, textHolder, labelAlias, panelTypes, labelValueType}));
-		getContentPane().setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{panelEditor, buttonOk, buttonCancel, labelSlotHolder, textHolder, labelAlias, panelTypes, labelValueType, textAlias}));
 		
 		checkCanHidden = new JCheckBox("builder.textIsSlotProtected");
 		checkCanHidden.addActionListener(new ActionListener() {
@@ -636,8 +644,82 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 			}
 		});
 		menuSlot.add(menuSlotProperties);
+		
+		checkInterpretPhp = new JCheckBox("org.multipage.generator.textInterpretPhp");
+		springLayout.putConstraint(SpringLayout.NORTH, checkInterpretPhp, 3, SpringLayout.SOUTH, checkCanHidden);
+		springLayout.putConstraint(SpringLayout.WEST, checkInterpretPhp, 30, SpringLayout.EAST, textSpecialValue);
+		getContentPane().add(checkInterpretPhp);
+		
+		buttonDisplay = new JButton("");
+		buttonDisplay.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onDisplayResult();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.NORTH, buttonDisplay, 12, SpringLayout.SOUTH, textHolder);
+		springLayout.putConstraint(SpringLayout.EAST, buttonDisplay, -30, SpringLayout.WEST, buttonHelp);
+		buttonDisplay.setMargin(new Insets(2, 2, 2, 2));
+		buttonDisplay.setPreferredSize(new Dimension(32, 32));
+		getContentPane().add(buttonDisplay);
+		
+		buttonRender = new JButton("");
+		buttonRender.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onRenderResult();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.EAST, buttonRender, -3, SpringLayout.WEST, buttonDisplay);
+		buttonRender.setPreferredSize(new Dimension(32, 32));
+		springLayout.putConstraint(SpringLayout.NORTH, buttonRender, 0, SpringLayout.NORTH, buttonDisplay);
+		getContentPane().add(buttonRender);
+		
+		toggleDebug = new JToggleButton("");
+		toggleDebug.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				onToggleDebug();
+			}
+		});
+		springLayout.putConstraint(SpringLayout.NORTH, toggleDebug, 0, SpringLayout.NORTH, buttonRender);
+		springLayout.putConstraint(SpringLayout.EAST, toggleDebug, -3, SpringLayout.WEST, buttonRender);
+		toggleDebug.setPreferredSize(new Dimension(32, 32));
+		toggleDebug.setMargin(new Insets(2, 2, 2, 2));
+		getContentPane().add(toggleDebug);
+		setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{textAlias, panelEditor, buttonOk, buttonCancel, getContentPane(), labelSlotHolder, textHolder, labelAlias, panelTypes, labelValueType, checkInterpretPhp, buttonDisplay, buttonRender, toggleDebug}));
+		getContentPane().setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{panelEditor, buttonOk, buttonCancel, labelSlotHolder, textHolder, labelAlias, panelTypes, labelValueType, textAlias, checkInterpretPhp, buttonDisplay, buttonRender, toggleDebug}));
+	}
+
+	/**
+	 * On display result.
+	 */
+	protected void onDisplayResult() {
+		
+		// Transmitt the display event.
+		ApplicationEvents.transmit(this, GuiSignal.displayHomePage);
 	}
 	
+	/**
+	 * On render the result.
+	 */
+	protected void onRenderResult() {
+		
+		// TODO: <---REFACTOR Transmitt event instead.
+		GeneratorMainFrame.getFrame().onRender(this);
+	}
+	
+	/**
+	 * On toggle debug button.
+	 */
+	protected void onToggleDebug() {
+		
+		final boolean selected = toggleDebug.isSelected();
+		
+		// Switch on or off debugging of PHP code
+		Settings.setEnableDebugging(selected);
+		
+		// Transmit the "enable / disable" signal.
+		ApplicationEvents.transmit(this, GuiSignal.debugging, selected);
+	}
+
 	/**
 	 * On protected flag change.
 	 */
@@ -742,6 +824,7 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 		Utility.localize(menuEditDependencies);
 		Utility.localize(menuSlot);
 		Utility.localize(menuSlotProperties);
+		Utility.localize(checkInterpretPhp);
 		
 		// Only Builder
 		Utility.localize(labelValueType);
@@ -761,12 +844,16 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 	 * Set icons.
 	 */
 	protected void setIcons() {
-
+		
+		setIconImage(Images.getImage("org/multipage/basic/images/main_icon.png"));
 		buttonOk.setIcon(Images.getIcon("org/multipage/generator/images/ok_icon.png"));
 		buttonCancel.setIcon(Images.getIcon("org/multipage/generator/images/cancel_icon.png"));
 		buttonSave.setIcon(Images.getIcon("org/multipage/generator/images/save_icon.png"));
 		buttonHelp.setIcon(Images.getIcon("org/multipage/generator/images/help_small.png"));
 		buttonSpecialValue.setIcon(Images.getIcon("org/multipage/gui/images/find_icon.png"));
+		buttonDisplay.setIcon(Images.getIcon("org/multipage/generator/images/display_home_page.png"));
+		buttonRender.setIcon(Images.getIcon("org/multipage/generator/images/render.png"));
+		toggleDebug.setIcon(Images.getIcon("org/multipage/generator/images/debug.png"));
 		menuArea.setIcon(Images.getIcon("org/multipage/gui/images/edit.png"));
 	}
 	/**
@@ -949,28 +1036,48 @@ public class SlotEditorFrameBuilder extends SlotEditorBaseFrame implements SlotE
 		
 		return true;
 	}
-
+	
+	/**
+	 * Get debug button.
+	 */
 	@Override
 	public JToggleButton getToggleDebug() {
-		// TODO Auto-generated method stub
-		return null;
+		
+		return toggleDebug;
 	}
-
+	
+	/**
+	 * Get PHP interpreter check box.
+	 */
 	@Override
 	public JCheckBox getCheckInterpretPhp() {
-		// TODO Auto-generated method stub
-		return null;
+		
+		return checkInterpretPhp;
 	}
-
+	
+	/**
+	 * Label "inheritable" is only in Multipage Generator.
+	 */
 	@Override
 	public JLabel getLabelInheritable() {
-		// TODO Auto-generated method stub
+		
 		return null;
 	}
 
+	/**
+	 * Called when slot editor is closed.
+	 */
 	@Override
 	public void close() {
-		// TODO Auto-generated method stub
 		
+	}
+	
+	/**
+	 * Return list of prevoius received messages.
+	 */
+	@Override
+	public LinkedList<Message> getPreviousMessages() {
+		
+		return previousMessages;
 	}
 }

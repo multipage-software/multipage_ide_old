@@ -20,6 +20,8 @@ public enum DebugWatchItemType {
 	tagProperty("org.maclan.server.textDebugWatchTagProperty"),
 	blockVariable("org.maclan.server.textDebugWatchBlockVariable"),
 	blockProcedure("org.maclan.server.textDebugWatchBlockProcedure"),
+	areaProperty("org.maclan.server.textDebugWatchArea"),
+	server("org.maclan.server.textDebugWatchServer"),
 	expression("org.maclan.server.textDebugWatchExpression");
 	
 	/**

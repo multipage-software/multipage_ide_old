@@ -33,6 +33,11 @@ public class XdebugProcess {
 	private HashMap<Long, XdebugThread> threads = null;
 	
 	/**
+	 * Current thread.
+	 */
+	private XdebugThread currentThread = null;
+	
+	/**
 	 * Set process ID and name.
 	 * @param processId
 	 * @param processName
@@ -95,6 +100,42 @@ public class XdebugProcess {
 		
 		XdebugThread thread = threads.get(threadId);
 		return thread;
+	}
+	
+	/**
+	 * Set current thread.
+	 * @param thread
+	 * @return
+	 */
+	public XdebugThread setCurrentThread(XdebugThread thread) {
+		
+		if (thread == null) {
+			
+			currentThread = null;
+			return null;
+		}
+		
+		long threadId = thread.getThreadId();
+		
+		boolean found = threads.containsKey(threadId);
+		if (!found) {
+			
+			currentThread = null;
+			return null;
+		}
+		
+		// Set current thread.
+		currentThread = thread;
+		return currentThread;
+	}
+	
+	/**
+	 * Get current thread.
+	 * @return
+	 */
+	public XdebugThread getCurrentThread() {
+		
+		return currentThread;
 	}
 	
 	/**

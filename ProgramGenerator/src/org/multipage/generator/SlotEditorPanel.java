@@ -381,7 +381,7 @@ public class SlotEditorPanel extends JPanel implements SlotEditorGenerator {
 	 */
 	private void initComponents() {
 		setMinimumSize(new Dimension(450, 430));
-		setBounds(100, 100, 601, 470);
+		setBounds(100, 100, 586, 470);
 		SpringLayout springLayout = new SpringLayout();
 		getContentPane().setLayout(springLayout);
 		

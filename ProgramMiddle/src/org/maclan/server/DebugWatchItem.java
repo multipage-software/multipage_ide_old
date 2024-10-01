@@ -145,9 +145,16 @@ public class DebugWatchItem {
 	@Override
 	public String toString() {
 		
+		String watchItemName;
 		if (fullName != null && !fullName.isEmpty()) {
-			return fullName;
+			watchItemName = fullName;
 		}
-		return name;
+		else {
+			watchItemName = name;
+		}
+		
+		String valueText = (value != null ? value.toString() : "null");
+		String watchItemText = String.format("%s=%s", watchItemName, valueText);
+		return watchItemText;
 	}
 }

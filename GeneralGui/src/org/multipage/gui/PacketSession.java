@@ -65,6 +65,11 @@ public class PacketSession {
 	private AsynchronousSocketChannel clientSocketChannel = null;
 	
 	/**
+	 * A flag that indicates finished session.
+	 */
+	private boolean isFinished = false;
+	
+	/**
 	 * Constructor.
 	 * @param name - name of the session
 	 */
@@ -130,7 +135,7 @@ public class PacketSession {
 				
         		// Create new handler and invoke next read operation.
 				CompletionHandler<Integer, ByteBuffer> nextCompletionHandler = newReadCompletionHandler(nextReadLambda, completedLambda, failedLambda);
-				nextReadLambda.accept(nextCompletionHandler); 
+				nextReadLambda.accept(nextCompletionHandler);
  			}
         	
 			@Override
@@ -174,10 +179,16 @@ public class PacketSession {
 		// Read exception.
 		Consumer<Throwable> readFailedLambda = readException -> {
 			
+			// On finished session.
+			if (isFinished) {
+				return;
+			}
+			
 			// If the channel is closed do not show exception.
 			if (readException instanceof AsynchronousCloseException) {
 				return;
 			}
+			
 			// Show exception.
 			onException(readException);			
 		};
@@ -604,6 +615,14 @@ public class PacketSession {
     		throws Exception {
 		
     	// Override this method.
+	}
+    
+    /**
+     * Set finished session flag.
+     */
+    public void setFinished() {
+		
+		isFinished  = true;
 	}
     
 	/**

@@ -136,7 +136,7 @@ public class LogConsole {
 			
 			// Create log packet reader when accepting socket connection.
 			@Override
-			protected PacketSession onStartListening(AsynchronousSocketChannel client) {
+			protected PacketSession onStartSession(AsynchronousSocketChannel client) {
 				LogReader logReader = new LogReader(LogConsole.this);
 				return logReader;
 			}

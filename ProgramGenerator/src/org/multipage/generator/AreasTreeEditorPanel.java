@@ -572,8 +572,10 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, No
 					
 					TreePath homeNodePath = new TreePath(node.getPath());
 					tree.addSelectionPath(homeNodePath);
+					return true;
 				}
 			}
+			return false;
 		});
 	}
 	
@@ -608,6 +610,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, No
 					success.ref = true;
 				}
 			}
+			return false;
 		});
 		
 		// Clear list selection.
@@ -1192,6 +1195,7 @@ public class AreasTreeEditorPanel extends JPanel implements TabItemInterface, No
 						tree.expandPath(pathToNode);
 					}
 				}
+				return false;
 			});
 		});
 	}

@@ -92,7 +92,6 @@ public class Lock {
 		synchronized (lock) {
 			try {
 				if (lock.notified) {
-					lock.notified = false; // reset the signal
 					return false;
 				}
 				lock.wait(milliseconds);
@@ -101,7 +100,9 @@ public class Lock {
 			}
 		}
 		
-		lock.notified = false;
+		if (lock.notified) {
+			return false;
+		}
 		
 		long delta = System.currentTimeMillis() - start;
 		if (delta >= milliseconds) {
@@ -124,7 +125,6 @@ public class Lock {
 		synchronized (lock) {
 			lock.notify();
 			lock.notified = true;
-			//j.log("err", "NTF " + lock.id);
 			if (logMessage != null)
 				j.log(logMessage);
 		}

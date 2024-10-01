@@ -2577,7 +2577,9 @@ public class LoggingDialog extends JDialog {
 				TreePath selectionPath = new TreePath(treeNode.getPath());
 				treeEvents.setSelectionPath(selectionPath);
 				treeEvents.makeVisible(selectionPath);
+				return true;
 			}
+			return false;
 		});
 	}
 
@@ -2618,7 +2620,9 @@ public class LoggingDialog extends JDialog {
 				TreePath selectionPath = new TreePath(treeNode.getPath());
 				treeMessageQueue.setSelectionPath(selectionPath);
 				treeMessageQueue.makeVisible(selectionPath);
+				return true;
 			}
+			return false;
 		});
 	}
 
@@ -2839,11 +2843,6 @@ public class LoggingDialog extends JDialog {
 		if (!isBreakPoint) {
 			return;
 		}
-
-		// TODO: place your IDE breakpoint at the next line.
-		//////////////////////////////////////////////////////
-		j.log("BREAK POINT");
-		//////////////////////////////////////////////////////
 	}
 	
 	/**

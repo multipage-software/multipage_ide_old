@@ -83,7 +83,7 @@ public class BuilderMainFrame extends GeneratorMainFrame {
 	}
 	
 	/**
-	 * Create tool bar..
+	 * Add hidden slots button to the toolbar.
 	 */
 	@Override
 	protected void addHideSlotsButton(JToolBar toolBar) {

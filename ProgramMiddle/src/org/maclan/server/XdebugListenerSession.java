@@ -77,7 +77,7 @@ public class XdebugListenerSession {
 	/**
 	 * Timeout in milliseconds of the send packet operation.
 	 */
-	private static final long SENDING_PACKET_TIMEOUT_MS = 200;
+	private static final long SENDING_PACKET_TIMEOUT_MS = 3000;
 	
 	/**
 	 * UTF-8 encoder.
@@ -165,6 +165,11 @@ public class XdebugListenerSession {
 	private LinkedHashMap<String, Integer> contextNameMap = null;
 	
 	/**
+	 * A flag that indicates whether the session is finished.
+	 */
+	private boolean isFinished = false;
+	
+	/**
 	 * Callback invoked when the session is ready for Xdebug commands. It is called after feature negotiation.
 	 */
 	private Runnable onReadyForCommandsLambda = null;
@@ -232,6 +237,59 @@ public class XdebugListenerSession {
 		
 		HashMap<Long, XdebugThread> threads = process.getThreads();
 		return threads;
+	}
+	
+	/**
+	 * Set current thread and stack level.
+	 * @param thread
+	 * @param stackLevel
+	 */
+	public void setCurrent(XdebugThread thread, XdebugStackLevel stackLevel) {
+		
+		if (process == null) {
+			return;
+		}
+		
+		thread = process.setCurrentThread(thread);
+		if (thread != null) {
+			thread.setCurrentStackLevel(stackLevel);
+		}
+	}
+	
+	/**
+	 * Get current thread and stack level.
+	 * @param threadId
+	 * @param stackLevel
+	 */
+	public void setCurrent(Long threadId, XdebugStackLevel stackLevel) {
+		
+		HashMap<Long, XdebugThread> threads = process.getThreads();
+		XdebugThread thread = threads.get(threadId);
+		
+		if (thread == null) {
+			return;
+		}
+		
+		thread.setCurrentStackLevel(stackLevel);
+	}
+	
+	/**
+	 * Get current stack level.
+	 * @return
+	 */
+	public XdebugStackLevel getCurrentStackLevel() {
+		
+		if (process == null) {
+			return null;
+		}
+		
+		XdebugThread thread = process.getCurrentThread();
+		if (thread == null) {
+			return null;
+		}
+		
+		XdebugStackLevel stackLevel = thread.getCurrentStackLevel();
+		return stackLevel;
 	}
 	
 	/**
@@ -722,6 +780,10 @@ public class XdebugListenerSession {
 	public int createTransaction(String commandName, String [][] arguments, Consumer<XdebugClientResponse> responseLambda)
 			throws Exception {
 		
+		if (isFinished) {
+			return -1;
+		}
+		
 		int transactionId = createTransaction(commandName, arguments, "", responseLambda);
 		return transactionId;
 	}
@@ -735,6 +797,10 @@ public class XdebugListenerSession {
 	 */
 	public int createTransaction(String commandName, String [][] arguments, String textData, Consumer<XdebugClientResponse> responseLambda)
 			throws Exception {
+		
+		if (isFinished) {
+			return -1;
+		}
 		
 		byte [] data = textData.getBytes();
 		int transactionId = createTransaction(commandName, arguments, data, responseLambda);
@@ -751,7 +817,10 @@ public class XdebugListenerSession {
 	public int createTransaction(String commandName, String [][] arguments, byte [] data, Consumer<XdebugClientResponse> responseLambda)
 			throws Exception {
 		
-		// Check if socket channel is open.
+		if (isFinished) {
+			return -1;
+		}
+		
 		// Check connection.
 		boolean isOpen = client.isOpen();
 		if (!isOpen) {
@@ -764,7 +833,7 @@ public class XdebugListenerSession {
 		// Prepare new transaction in the current session.
 		XdebugTransaction newTransaction = XdebugTransaction.create(command, responseLambda);
 		int transactionId = newTransaction.getId();
-		
+
 		newTransaction.setState(XdebugTransactionState.scheduled);
 		transactions.put(transactionId, newTransaction);
 		
@@ -854,6 +923,10 @@ public class XdebugListenerSession {
 	private int beginTransactions(Map<Integer, XdebugTransaction> transactions)
 			throws Exception {
 		
+		if (isFinished) {
+			return -1;
+		}
+		
 		// Initialization.
 		int lastTransactionId = -1;
 		
@@ -871,6 +944,10 @@ public class XdebugListenerSession {
 	 */
 	public void beginTransaction(int transactionId) 
 			throws Exception {
+		
+		if (isFinished) {
+			return;
+		}
 		
 		// Check transaction ID.
 		if (transactionId < 0) {
@@ -896,18 +973,21 @@ public class XdebugListenerSession {
 	public void beginTransactionWait(int transactionId, int responseTimeoutMs)
 			throws Exception {
 		
-		XdebugTransaction transaction = null;
+		if (isFinished) {
+			return;
+		}
+		
 		boolean success = transactions.containsKey(transactionId);
 		if (!success) {
 			return;
 		}
 		
 		// Get transaction object. Set response lock with timeout.
-		transaction = transactions.get(transactionId);
-	
+		final XdebugTransaction transaction = transactions.get(transactionId);
+		
 		transaction.responseLock = new Lock();
 		transaction.responseLockTimeoutMs = responseTimeoutMs;
-	
+		
 		// Start transaction.
 		beginTransaction(transaction);
 		
@@ -915,7 +995,7 @@ public class XdebugListenerSession {
 		boolean isTimeout = Lock.waitFor(transaction.responseLock, responseTimeoutMs);
 		if (isTimeout) {
 			onThrownException("org.maclan.server.messageXdebugCommandTimeout");
-		}		
+		}
 	}
 	
 	/**
@@ -924,6 +1004,10 @@ public class XdebugListenerSession {
 	 */
 	private int beginTransaction(XdebugTransaction transaction)
 			throws Exception {
+		
+		if (isFinished) {
+			return -1;
+		}
 		
 		// Initialization.
 		int transactionId = -1;
@@ -1111,8 +1195,7 @@ public class XdebugListenerSession {
 		
 		// Notify result lock if it exists.
 		if (transaction.responseLock != null) {
-
-			Lock.notify(transaction.responseLock);			
+			Lock.notify(transaction.responseLock);
 		}
 	}
 
@@ -1252,7 +1335,7 @@ public class XdebugListenerSession {
 				onException(e);
 			};
 		});
-		beginTransaction(transactionId);
+		beginTransactionWait(transactionId, RESPONSE_TIMEOUT_MS);
 	}
 	
 	/**
@@ -1316,7 +1399,9 @@ public class XdebugListenerSession {
 					Obj<Long> threadId = new Obj<>();
 					Obj<String> threadName = new Obj<>();
 					
-					LinkedList<XdebugStackLevel> stack = response.getXdebugAreaStack(processId, processName, threadId, threadName);
+					LinkedList<XdebugStackLevel> stack = response.getXdebugAreaServerStack(processId, processName, threadId, threadName);
+					XdebugStackLevel.setSessionReferences(stack, this);
+					
 					areaServerStackLambda.apply(stack).apply(processId.ref, processName.ref).accept(threadId.ref, threadName.ref);
 				}
 				catch (Exception e) {
@@ -1360,7 +1445,7 @@ public class XdebugListenerSession {
 					onException(e);
 				}
 			});
-			beginTransaction(transactionId);
+			beginTransactionWait(transactionId, RESPONSE_TIMEOUT_MS);
 		}
 		catch (Exception e) {
 			onThrownException(e);
@@ -1368,33 +1453,17 @@ public class XdebugListenerSession {
 	}
 	
 	/**
-	 * Get text description.
+	 * Set the "finshed" state.
 	 */
-	@Override
-	public String toString() {
+	public void setFinished() {
 		
-		String computerName = currentClientData.getComputer();
-		
-		String formatText = Resources.getString("org.maclan.server.textDebugSession");
-		String description = String.format(formatText, computerName, sessionId);
-		return description;
-	}
-	
-	/**
-	 * If the sesponse contains error packet, then throw the exception.
-	 * @param response
-	 * @throws Exception
-	 */
-	public static void throwPossibleException(XdebugClientResponse response)
-			throws Exception {
-
-		// Check error response.
-		boolean isError = response.isErrorPacket();
-		if (isError) {
-			response.throwPacketException();
+		isFinished = true;
+		if (packetSession != null) {
+			
+			packetSession.setFinished();
 		}
 	}
-
+	
 	/**
 	 * Close session.
 	 */
@@ -1426,6 +1495,39 @@ public class XdebugListenerSession {
 		XdebugListenerSession session = (XdebugListenerSession) obj;
 		return currentClientData.equals(session.currentClientData);
 	}
+	
+	/**
+	 * Get text description.
+	 */
+	@Override
+	public String toString() {
+		
+		if (currentClientData == null) {
+			String sessionIdText = String.valueOf(sessionId);
+			return sessionIdText;
+		}
+		
+		String computerName = currentClientData.getComputer();
+		
+		String formatText = Resources.getString("org.maclan.server.textDebugSession");
+		String description = String.format(formatText, computerName, sessionId);
+		return description;
+	}
+	
+	/**
+	 * If the sesponse contains error packet, then throw the exception.
+	 * @param response
+	 * @throws Exception
+	 */
+	public static void throwPossibleException(XdebugClientResponse response)
+			throws Exception {
+
+		// Check error response.
+		boolean isError = response.isErrorPacket();
+		if (isError) {
+			response.throwPacketException();
+		}
+	}	
 	
 	/**
 	 * Fired on Xdebug exception.

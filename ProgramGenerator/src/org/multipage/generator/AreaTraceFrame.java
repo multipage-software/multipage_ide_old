@@ -1777,7 +1777,7 @@ public class AreaTraceFrame extends JFrame {
 		Utility.traverseElements(tree, userObject -> node -> parentNode -> {
 			
 			if (!(userObject instanceof Area)) {
-				return;
+				return false;
 			}
 			
 			Area area = (Area) userObject;
@@ -1790,7 +1790,9 @@ public class AreaTraceFrame extends JFrame {
 				
 				// Expand parent item.
 			    tree.expandPath(treePath);
+			    return true;
 			}
+			return false;
 		});
 		
 		// Select area in the list view.

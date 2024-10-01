@@ -6,6 +6,7 @@
  */
 package org.multipage.gui;
 
+import java.awt.Color;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -13,6 +14,7 @@ import java.nio.channels.CompletionHandler;
 
 import org.multipage.util.Obj;
 import org.multipage.util.RepeatedTask;
+import org.multipage.util.j;
 
 /**
  * Packet channel that uses sockets, server side.
@@ -100,7 +102,7 @@ public class PacketChannel {
 	    	        		clientSocketChannel = client;
 	    	
 	    	    			// Invoke callback function.
-	    	    			PacketSession packetSession = onStartListening(client);
+	    	    			PacketSession packetSession = onStartSession(client);
 	    	    			if (packetSession == null) {
 	    	    				return;
 	    	    			}
@@ -125,11 +127,11 @@ public class PacketChannel {
 	}
 	
 	/**
-	 * Callback function called after accepting new connection to the server. 
+	 * Callback function called after accepting new connection from client to server and creating new session. 
 	 * @param client
 	 * @return
 	 */
-	protected PacketSession onStartListening(AsynchronousSocketChannel client)
+	protected PacketSession onStartSession(AsynchronousSocketChannel client)
 			throws Exception {
 		
 		// You can override this method.

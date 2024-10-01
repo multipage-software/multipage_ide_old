@@ -61,6 +61,10 @@ public class DebugTagInfo {
 	 * @return
 	 */
 	public String getTagName() {
+		
+		if (tagName == null) {
+			return "";
+		}
 		return tagName;
 	}
 

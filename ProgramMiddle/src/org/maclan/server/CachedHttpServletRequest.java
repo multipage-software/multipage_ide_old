@@ -29,13 +29,9 @@ public class CachedHttpServletRequest extends HttpServletRequestWrapper {
 	 * Constructor.
 	 * @param request
 	 */
-	public CachedHttpServletRequest(org.eclipse.jetty.server.Request request) {
+	public CachedHttpServletRequest(javax.servlet.http.HttpServletRequest request) {
 		
 		super(request);
-		
-		Enumeration<String> headers = request.getHeaderNames();
-		String header = request.getHeader("Content-Length");
-		header = request.getHeader("Content-Type");
 		
 		// Cache input stream.
 		try {

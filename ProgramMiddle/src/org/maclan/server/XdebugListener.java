@@ -131,7 +131,7 @@ public class XdebugListener {
 		
 		packetChannel = new PacketChannel() {
 			@Override
-			protected PacketSession onStartListening(AsynchronousSocketChannel client) {
+			protected PacketSession onStartSession(AsynchronousSocketChannel client) {
 				
 				PacketSession packetSession = XdebugListener.this.onOpenDebugViewer(client);
 				return packetSession;

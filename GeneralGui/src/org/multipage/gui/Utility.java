@@ -35,6 +35,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.geom.Rectangle2D;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -4952,12 +4953,12 @@ public class Utility {
 	 * @param tree
 	 * @param object
 	 */
-	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Consumer<DefaultMutableTreeNode>>> callbackFunctions) {
+	public static void traverseElements(JTree tree, Function<Object, Function<DefaultMutableTreeNode, Function<DefaultMutableTreeNode, Boolean>>> callbackFunctions) {
 		
 		// Recursive function
 		class Helper {
 			
-			void consume(TreeNode node, TreeNode parent) {
+			boolean consume(TreeNode node, TreeNode parent) {
 				
 				// Check the node type
 				if (node instanceof DefaultMutableTreeNode) {
@@ -4971,8 +4972,10 @@ public class Utility {
 					}
 					
 					Object userObject = treeNode.getUserObject();
-					callbackFunctions.apply(userObject).apply(treeNode).accept(parentNode);
+					boolean stop = callbackFunctions.apply(userObject).apply(treeNode).apply(parentNode);
+					return stop;
 				}
+				return false;
 			}
 			
 			void traverseRecursively(TreeNode parentNode) {
@@ -4983,10 +4986,12 @@ public class Utility {
 					
 					// Consume the child node
 					TreeNode child = childrenEnumerator.nextElement();
-					consume(child, parentNode);
+					boolean stop = consume(child, parentNode);
 					
 					// Do recursion for the child node
-					traverseRecursively(child);
+					if (!stop) {
+						traverseRecursively(child);
+					}
 				}
 			};
 		};
@@ -6365,5 +6370,39 @@ public class Utility {
 		if (threadName != null) {
 			threadName.ref = currentThread.getName();
 		}
+	}
+	
+	/**
+	 * Disable GUI events on tree view.
+	 * @param tree
+	 */
+	public static Object disableGuiEvents(JTree tree) {
+		
+		PropertyChangeListener [] listeners = tree.getPropertyChangeListeners();
+		
+		for (PropertyChangeListener listener : listeners) {
+			tree.removePropertyChangeListener(listener);
+		}
+		return listeners;
+	}
+	
+	/**
+	 * Enable GUI events on tree view.
+	 * @param tree
+	 * @param listenersObject
+	 */
+	public static void enableGuiEvents(JTree tree, Object listenersObject) {
+		
+		if (!(listenersObject instanceof PropertyChangeListener [])) {
+			return;
+		}
+		
+		SwingUtilities.invokeLater(() -> {
+			PropertyChangeListener [] listeners = (PropertyChangeListener []) listenersObject;
+			
+			for (PropertyChangeListener listener : listeners) {
+				tree.addPropertyChangeListener(listener);
+			}			
+		});
 	}
 }

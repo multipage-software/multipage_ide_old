@@ -836,7 +836,7 @@ public class AreasDiagramPanel extends JPanel implements TabItemInterface, Closa
 
 	/**
 	 * Focus area.
-	 * @param area
+	 * @param areaProperty
 	 */
 	public void focusArea(long areaId) {
 		
@@ -1798,7 +1798,7 @@ class FavoritesModel extends AbstractListModel<Object> {
 
 	/**
 	 * Remove area.
-	 * @param area
+	 * @param areaProperty
 	 */
 	public void removeArea(long areaId) {
 		

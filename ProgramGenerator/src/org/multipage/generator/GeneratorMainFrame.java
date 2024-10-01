@@ -34,7 +34,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 
-import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
@@ -3503,7 +3502,7 @@ public class GeneratorMainFrame extends JFrame implements NonCyclingReceiver {
 
 	/**
 	 * Take area trees.
-	 * @param area
+	 * @param areaProperty
 	 * @param parentArea 
 	 */
 	public void takeAreasTrees(List<Area> areas, Area parentAreaParam) {

@@ -30,6 +30,11 @@ public class XdebugThread {
 	private LinkedList<XdebugStackLevel> stack = null;
 	
 	/**
+	 * Current stack level.
+	 */
+	private XdebugStackLevel currentStackLevel = null;
+	
+	/**
 	 * Set thread
 	 * @param threadId
 	 * @param threadName
@@ -74,6 +79,49 @@ public class XdebugThread {
 	public LinkedList<XdebugStackLevel> getStack() {
 		
 		return stack;
+	}
+	
+	/**
+	 * Set current stack level.
+	 * @param stackLevel
+	 * @return
+	 */
+	public XdebugStackLevel setCurrentStackLevel(XdebugStackLevel stackLevel) {
+		
+		if (stackLevel == null) {
+			currentStackLevel = null;
+			return null;
+		}
+		
+		XdebugStackLevel foundStackLevel = null;
+		int hashCode = stackLevel.getStateHashCode();
+		
+		for (XdebugStackLevel stackLevelItem : stack) {
+			
+			int foundhashCode = stackLevelItem.getStateHashCode();
+			if (foundhashCode == hashCode) {
+				
+				foundStackLevel = stackLevelItem;
+				break;
+			}
+		}
+		
+		if (foundStackLevel == null) {
+			currentStackLevel = null;
+			return null;
+		}
+		
+		currentStackLevel = foundStackLevel;
+		return currentStackLevel;
+	}
+	
+	/**
+	 * Get current stack level.
+	 * @return
+	 */
+	public XdebugStackLevel getCurrentStackLevel() {
+		
+		return currentStackLevel;
 	}
 	
 	/**

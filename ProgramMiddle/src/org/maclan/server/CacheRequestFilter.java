@@ -29,10 +29,10 @@ public class CacheRequestFilter implements Filter {
 			throws IOException, ServletException {
 			
 		// Chain filters for Jetty and Apache
-		if (request instanceof org.eclipse.jetty.server.Request) {
+		if (request instanceof javax.servlet.http.HttpServletRequest) {
 			
 			// Cache request when input stream needed.
-			CachedHttpServletRequest cachedRequest = new CachedHttpServletRequest((org.eclipse.jetty.server.Request) request);
+			CachedHttpServletRequest cachedRequest = new CachedHttpServletRequest((javax.servlet.http.HttpServletRequest) request);
 			chain.doFilter(cachedRequest, response);
 		}
 		else {

@@ -17,7 +17,6 @@ import org.maclan.AreaVersion;
 import org.maclan.Language;
 import org.maclan.MiddleLight;
 import org.multipage.util.Obj;
-import org.multipage.util.j;
 
 /**
  * @author user
