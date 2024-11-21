@@ -159,30 +159,15 @@ public class ProgramServlet extends FastCGIServlet {
 	}
 	
 	/**
-	 * Temporary PHP file reference.
+	 * Script extensions loaded on servlet initialization.
 	 */
-	private File temporaryPhpFile;
+	private String [] scriptExtensions;
 
 	/**
-	 * PHP error
-	 */
-	private String pageError;
-
-	/**
-	 * Script extensions
-	 */
-	private String[] scriptExtensions;
-
-	/**
-	 * Servlet 
+	 * Servlet configuration loaded on servlet initialization.
 	 */
 	private ServletConfig config;
-	
-	/**
-	 * Area server reference.
-	 */
-	private AreaServer areaServer;
-	
+
 	/**
 	 * Initialize servlet configuration
 	 */
@@ -288,6 +273,9 @@ public class ProgramServlet extends FastCGIServlet {
 	protected void handleArea(final HttpServletRequest _request, final HttpServletResponse _response)
 			throws ServletException, IOException {
 		
+		// Create area server.
+		AreaServer areaServer = new AreaServer();
+		
 		String uri = _request.getRequestURI();
 		
 		// Create private request object.
@@ -368,34 +356,28 @@ public class ProgramServlet extends FastCGIServlet {
 						// Create analysis object.
 						Analysis analysis = new Analysis();
 						
-						// Create area server.
-						areaServer = new AreaServer();
+						// Initialize server state.
+						areaServer.initServerState();
+							
+						// Set listener.
+						areaServer.setListener(new AreaServerListener() {
+							
+							@Override
+							public void onError(String message) {
+								isProgramError.ref = true;
+							}
+
+							@Override
+							public void updatedSlots(LinkedList<Long> slotIds) {
+								invokeUpdatedSlots(slotIds);
+							}
+						});
 						
-						synchronized (areaServer) {
-							
-							// Initialize server state.
-							areaServer.initServerState();
-							
-							// Set listener.
-							areaServer.setListener(new AreaServerListener() {
-								
-								@Override
-								public void onError(String message) {
-									isProgramError.ref = true;
-								}
-	
-								@Override
-								public void updatedSlots(LinkedList<Long> slotIds) {
-									invokeUpdatedSlots(slotIds);
-								}
-							});
-							
-							// Show possible text IDs.
-							areaServer.setShowLocalizedTextIds(request.getParameter("l") != null);
-							
-							// Load page.
-							processResponse = areaServer.loadAreaPage(middle, blocks, analysis, request, response);
-						}
+						// Show possible text IDs.
+						areaServer.setShowLocalizedTextIds(request.getParameter("l") != null);
+						
+						// Load page.
+						processResponse = areaServer.loadAreaPage(middle, blocks, analysis, request, response);
 						
 						// Set URI for running web application
 						Redirection redirection = areaServer.getRedirection();
@@ -435,10 +417,10 @@ public class ProgramServlet extends FastCGIServlet {
 			// If a PHP commands exist and should be interpreted, use the PHP/JavaBridge.
 			if (interpretPhp() && !isError && response.isPhpCommandExists()) {
 				
-				pageError = "";
+				String pageError = "";
 				
 				// Remove temporary PHP file
-				temporaryPhpFile = createTemporaryPhpScript(memoryOutputStream);
+				File temporaryPhpFile = createTemporaryPhpScript(areaServer, memoryOutputStream);
 				
 				// Redirect system error stream
 				StringBuilder error = new StringBuilder();
@@ -503,7 +485,7 @@ public class ProgramServlet extends FastCGIServlet {
 				}
 				
 				// Remove the script
-				removeTemporaryPhpScript();
+				removeTemporaryPhpScript(temporaryPhpFile);
 			}
 			// If no PHP commands
 			else {
@@ -522,9 +504,10 @@ public class ProgramServlet extends FastCGIServlet {
 			/*******************************/
 			/***** RUN EXTERNAL WEBAPP *****/
 			/*******************************/
+			String pageError = "";
+			
 			if (runWebApp(request)) {
 				
-				pageError = "";
 				StringBuilder error = new StringBuilder();
 				
 				// Set PHP script file
@@ -724,6 +707,7 @@ public class ProgramServlet extends FastCGIServlet {
 	 * Set PHP script filename using SCRIPT_FILENAME property set in overridden method
 	 * @throws IOException 
 	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void setScriptName(HttpServletRequest activeReq, Environment env)  {
 		
@@ -782,10 +766,11 @@ public class ProgramServlet extends FastCGIServlet {
 
 	/**
 	 * Create temporary PHP script
+	 * @param areaServer 
 	 * @param memoryOutputStream
 	 * @throws IOException 
 	 */
-	protected File createTemporaryPhpScript(ByteArrayOutputStream memoryOutputStream) throws IOException {
+	protected File createTemporaryPhpScript(AreaServer areaServer, ByteArrayOutputStream memoryOutputStream) throws IOException {
 		
 		FileOutputStream outputStream = null;
 		
@@ -847,8 +832,9 @@ public class ProgramServlet extends FastCGIServlet {
 
 	/**
 	 * Remove temporary PHP file.
+	 * @param temporaryPhpFile 
 	 */
-	protected void removeTemporaryPhpScript() {
+	protected void removeTemporaryPhpScript(File temporaryPhpFile) {
 		
 		// Try to remove temporary PHP file.
 		if (temporaryPhpFile != null && temporaryPhpFile.exists()) {
@@ -866,7 +852,7 @@ public class ProgramServlet extends FastCGIServlet {
 	protected void handlePhp(HttpServletRequest _request,
 			HttpServletResponse _response) throws ServletException, IOException {
 		
-		// Reset input stream.
+		// Rewind input stream.
 		InputStream inputStream = _request.getInputStream();
 		if (inputStream instanceof CachedInputStream) {
 			((CachedInputStream) inputStream).rewind();
